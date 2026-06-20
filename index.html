@@ -8,65 +8,65 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <a class="skip-link" href="#day-card">Aller Ã  lâ€™Ã©tape</a>
+  <a class="skip-link" href="#day-card">Aller &#xe0; l&#x2019;&#xe9;tape</a>
   <header class="hero">
     <div class="container hero__content">
       <div>
-        <p class="eyebrow">Carnet dâ€™itinÃ©rance</p>
+        <p class="eyebrow">Carnet d&#x2019;itin&#xe9;rance</p>
         <h1>Perinexus <span>Roadbook</span></h1>
-        <p class="hero__tagline">Toutes les informations utiles pour rouler lâ€™esprit libre.</p>
+        <p class="hero__tagline">Toutes les informations utiles pour rouler l&#x2019;esprit libre.</p>
       </div>
-      <div class="bike-mark" aria-hidden="true">ðŸš²</div>
+      <div class="bike-mark" aria-hidden="true">&#x1f6b2;</div>
     </div>
   </header>
 
   <main class="container layout">
     <section class="card summary" aria-labelledby="roadbook-title">
       <div id="roadbook-info" aria-live="polite">
-        <p class="loading">Chargement du roadbookâ€¦</p>
+        <p class="loading">Chargement du roadbook&#x2026;</p>
       </div>
       <div class="summary__stats" id="trip-stats" hidden>
-        <div><strong id="total-days">â€”</strong><span>Ã©tapes</span></div>
-        <div><strong id="total-distance">â€”</strong><span>kilomÃ¨tres</span></div>
-        <div><strong id="total-elevation">â€”</strong><span>mÃ¨tres D+</span></div>
+        <div><strong id="total-days">&#x2014;</strong><span>&#xe9;tapes</span></div>
+        <div><strong id="total-distance">&#x2014;</strong><span>kilom&#xe8;tres</span></div>
+        <div><strong id="total-elevation">&#x2014;</strong><span>m&#xe8;tres D+</span></div>
       </div>
     </section>
 
-    <nav class="day-nav" aria-label="Navigation entre les Ã©tapes">
-      <button id="previous-day" type="button" aria-label="Afficher le jour prÃ©cÃ©dent">â† <span>PrÃ©cÃ©dent</span></button>
+    <nav class="day-nav" aria-label="Navigation entre les &#xe9;tapes">
+      <button id="previous-day" type="button" aria-label="Afficher le jour pr&#xe9;c&#xe9;dent">&#x2190; <span>Pr&#xe9;c&#xe9;dent</span></button>
       <div class="day-nav__status">
         <span id="current-day">Jour 1</span>
         <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
       </div>
-      <button id="next-day" type="button" aria-label="Afficher le jour suivant"><span>Suivant</span> â†’</button>
+      <button id="next-day" type="button" aria-label="Afficher le jour suivant"><span>Suivant</span> &#x2192;</button>
     </nav>
 
     <section id="day-card" class="card stage" aria-labelledby="day-title" tabindex="-1">
-      <p class="eyebrow" id="stage-label">Ã‰tape</p>
-      <h2 id="day-title">Chargementâ€¦</h2>
-      <div class="stats" aria-label="Chiffres clÃ©s de lâ€™Ã©tape">
-        <div class="stat"><span aria-hidden="true">â†”</span><div><small>Distance</small><strong id="distance">â€”</strong></div></div>
-        <div class="stat"><span aria-hidden="true">â†—</span><div><small>DÃ©nivelÃ©</small><strong id="elevation">â€”</strong></div></div>
-        <div class="stat"><span aria-hidden="true">â—·</span><div><small>DurÃ©e</small><strong id="duration">â€”</strong></div></div>
+      <p class="eyebrow" id="stage-label">&#xc9;tape</p>
+      <h2 id="day-title">Chargement&#x2026;</h2>
+      <div class="stats" aria-label="Chiffres cl&#xe9;s de l&#x2019;&#xe9;tape">
+        <div class="stat"><span aria-hidden="true">&#x2194;</span><div><small>Distance</small><strong id="distance">&#x2014;</strong></div></div>
+        <div class="stat"><span aria-hidden="true">&#x2197;</span><div><small>D&#xe9;nivel&#xe9;</small><strong id="elevation">&#x2014;</strong></div></div>
+        <div class="stat"><span aria-hidden="true">&#x25f7;</span><div><small>Dur&#xe9;e</small><strong id="duration">&#x2014;</strong></div></div>
       </div>
       <div class="stage__description">
         <h3>Sur la route</h3>
-        <p id="description">Chargementâ€¦</p>
+        <p id="description">Chargement&#x2026;</p>
       </div>
     </section>
 
     <div class="details-grid">
       <section class="card detail" aria-labelledby="pois-title">
-        <div class="detail__icon" aria-hidden="true">âŒ–</div>
-        <div><h2 id="pois-title">Points dâ€™intÃ©rÃªt</h2><ul id="pois" class="tag-list"></ul></div>
+        <div class="detail__icon" aria-hidden="true">&#x2316;</div>
+        <div><h2 id="pois-title">Points d&#x2019;int&#xe9;r&#xea;t</h2><ul id="pois" class="tag-list"></ul></div>
       </section>
       <section class="card detail" aria-labelledby="supply-title">
-        <div class="detail__icon" aria-hidden="true">â™¨</div>
-        <div><h2 id="supply-title">Ravitaillement</h2><p id="supply">â€”</p></div>
+        <div class="detail__icon" aria-hidden="true">&#x2668;</div>
+        <div><h2 id="supply-title">Ravitaillement</h2><p id="supply">&#x2014;</p></div>
       </section>
       <section class="card detail" aria-labelledby="accommodation-title">
-        <div class="detail__icon" aria-hidden="true">âŒ‚</div>
-        <div><h2 id="accommodation-title">HÃ©bergement</h2><p id="accommodation">â€”</p></div>
+        <div class="detail__icon" aria-hidden="true">&#x2302;</div>
+        <div><h2 id="accommodation-title">H&#xe9;bergement</h2><p id="accommodation">&#x2014;</p></div>
       </section>
     </div>
   </main>
