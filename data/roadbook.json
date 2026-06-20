@@ -1,37 +1,82 @@
 {
-  "title": "Perinexus \u00e0 v\u00e9lo",
-  "description": "Trois jours d\u2019itin\u00e9rance \u00e0 v\u00e9lo entre voies vertes, petites routes et panoramas.",
-  "days": [
-    {
-      "title": "Mise en jambes",
-      "distance": 48,
-      "elevation": 620,
-      "duration": "4 h 15",
-      "description": "Une premi\u00e8re \u00e9tape progressive pour prendre le rythme, entre routes secondaires et voies vertes. La mont\u00e9e finale offre un beau point de vue sur la vall\u00e9e.",
-      "accommodation": "Camping municipal \u2014 accueil jusqu\u2019\u00e0 19 h",
-      "supply": "Boulangerie au km 12, supermarch\u00e9 au km 35 et fontaine au km 41",
-      "pois": ["Centre historique", "Belv\u00e9d\u00e8re", "Voie verte"]
+  "schemaVersion": 1,
+  "roadbook": {
+    "id": "perinexus-demo",
+    "title": "Perinexus \u00e0 v\u00e9lo",
+    "description": "Trois jours d\u2019itin\u00e9rance entre voies vertes, petites routes et panoramas.",
+    "locale": "fr-FR",
+    "branding": {
+      "eyebrow": "Carnet d\u2019itin\u00e9rance",
+      "title": "Perinexus Roadbook",
+      "tagline": "Toutes les informations utiles pour rouler l\u2019esprit libre.",
+      "footerTitle": "Perinexus Roadbook",
+      "footerMessage": "Bonne route !"
     },
-    {
-      "title": "La grande travers\u00e9e",
-      "distance": 63,
-      "elevation": 980,
-      "duration": "5 h 45",
-      "description": "L\u2019\u00e9tape reine du parcours, avec plusieurs ascensions r\u00e9guli\u00e8res et une longue descente panoramique. Gardez de l\u2019\u00e9nergie pour le dernier col.",
-      "accommodation": "G\u00eete d\u2019\u00e9tape \u2014 d\u00eener sur r\u00e9servation",
-      "supply": "\u00c9picerie au km 18, restaurant au km 39 et point d\u2019eau au sommet",
-      "pois": ["Col principal", "Cascade", "Table d\u2019orientation"]
-    },
-    {
-      "title": "Cap sur l\u2019arriv\u00e9e",
-      "distance": 42,
-      "elevation": 350,
-      "duration": "3 h 30",
-      "description": "Une derni\u00e8re journ\u00e9e plus roulante le long du lac, id\u00e9ale pour profiter du paysage avant de rejoindre la destination et la gare.",
-      "accommodation": "H\u00f4tel pr\u00e8s de la gare \u2014 local v\u00e9lo s\u00e9curis\u00e9",
-      "supply": "March\u00e9 au km 9, caf\u00e9 au km 27 et commerces \u00e0 l\u2019arriv\u00e9e",
-      "pois": ["Lac", "March\u00e9 couvert", "Office de tourisme"]
-    }
-  ]
+    "days": [
+      {
+        "id": "mise-en-jambes",
+        "title": "Mise en jambes",
+        "distanceKm": 48,
+        "elevationGainM": 620,
+        "durationMinutes": 255,
+        "summary": "Une premi\u00e8re \u00e9tape progressive entre routes secondaires et voies vertes. La mont\u00e9e finale offre un beau point de vue sur la vall\u00e9e.",
+        "accommodation": { "name": "Camping municipal", "details": "Accueil jusqu\u2019\u00e0 19 h" },
+        "supply": [
+          { "label": "Boulangerie", "km": 12 },
+          { "label": "Supermarch\u00e9", "km": 35 },
+          { "label": "Fontaine", "km": 41 }
+        ],
+        "pois": [
+          { "name": "Centre historique", "type": "culture" },
+          { "name": "Belv\u00e9d\u00e8re", "type": "viewpoint" },
+          { "name": "Voie verte", "type": "route" }
+        ],
+        "route": { "gpx": null, "start": null, "end": null },
+        "photos": []
+      },
+      {
+        "id": "grande-traversee",
+        "title": "La grande travers\u00e9e",
+        "distanceKm": 63,
+        "elevationGainM": 980,
+        "durationMinutes": 345,
+        "summary": "L\u2019\u00e9tape reine du parcours, avec plusieurs ascensions r\u00e9guli\u00e8res et une longue descente panoramique. Gardez de l\u2019\u00e9nergie pour le dernier col.",
+        "accommodation": { "name": "G\u00eete d\u2019\u00e9tape", "details": "D\u00eener sur r\u00e9servation" },
+        "supply": [
+          { "label": "\u00c9picerie", "km": 18 },
+          { "label": "Restaurant", "km": 39 },
+          { "label": "Point d\u2019eau", "km": 51 }
+        ],
+        "pois": [
+          { "name": "Col principal", "type": "summit" },
+          { "name": "Cascade", "type": "nature" },
+          { "name": "Table d\u2019orientation", "type": "viewpoint" }
+        ],
+        "route": { "gpx": null, "start": null, "end": null },
+        "photos": []
+      },
+      {
+        "id": "cap-sur-arrivee",
+        "title": "Cap sur l\u2019arriv\u00e9e",
+        "distanceKm": 42,
+        "elevationGainM": 350,
+        "durationMinutes": 210,
+        "summary": "Une derni\u00e8re journ\u00e9e plus roulante le long du lac, id\u00e9ale pour profiter du paysage avant de rejoindre la destination et la gare.",
+        "accommodation": { "name": "H\u00f4tel pr\u00e8s de la gare", "details": "Local v\u00e9lo s\u00e9curis\u00e9" },
+        "supply": [
+          { "label": "March\u00e9", "km": 9 },
+          { "label": "Caf\u00e9", "km": 27 },
+          { "label": "Commerces", "km": 42 }
+        ],
+        "pois": [
+          { "name": "Lac", "type": "nature" },
+          { "name": "March\u00e9 couvert", "type": "food" },
+          { "name": "Office de tourisme", "type": "service" }
+        ],
+        "route": { "gpx": null, "start": null, "end": null },
+        "photos": []
+      }
+    ]
+  }
 }
 
