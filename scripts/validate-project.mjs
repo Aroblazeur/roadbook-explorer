@@ -25,4 +25,4 @@ for (const day of payload.roadbook.days) {
 }
 
 assert.equal(roadbook.days.length, payload.roadbook.days.length);
-console.log(`Validated ${roadbook.days.length} data-driven stages and the generic HTML shell.`);
+process.stdout.write(`Validated ${roadbook.days.length} data-driven stages and the generic HTML shell.\n`);

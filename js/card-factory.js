@@ -77,8 +77,8 @@ function createMetric(day, metric) {
   return item;
 }
 
-function createDetail(icon, title, text, extraClass = "") {
-  const section = createElement("section", { className: `card detail ${extraClass}`.trim() });
+function createDetail(icon, title, text) {
+  const section = createElement("section", { className: "card detail" });
   const content = createElement("div");
   content.append(createElement("h3", { text: title }), createElement("p", { text: displayValue(text) }));
   section.append(createElement("div", { className: "detail__icon", text: icon, attributes: { "aria-hidden": "true" } }), content);

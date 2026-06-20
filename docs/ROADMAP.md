@@ -1,4 +1,4 @@
-# Feuille de route Perinexus Roadbook
+# Feuille de route Périnexus Roadbook
 
 Cette feuille de route decrit la direction du produit. Elle reste volontairement
 orientee resultats : le contenu exact d'un sprint peut evoluer, mais ses criteres
@@ -44,7 +44,7 @@ en dur dans le module Leaflet.
 
 Objectif : exploiter les traces reelles pour guider la preparation du parcours.
 
-- Charger un fichier GPX reference par `day.route.gpx`.
+- Charger un fichier GPX référencé par `day.gpx`.
 - Dessiner la trace et ajuster automatiquement l'emprise de la carte.
 - Calculer ou afficher distance, denivele et profil altimetrique.
 - Signaler clairement un GPX absent ou invalide.
