@@ -1,0 +1,49 @@
+{
+  "title": "Perinexus à vélo",
+  "description": "Roadbook d'itinérance à vélo réalisé avec Perinexus Roadbook.",
+
+  "days": [
+    {
+      "title": "Jour 1 - Départ",
+      "distance": 48,
+      "elevation": 620,
+      "duration": "4 h 15",
+      "description": "Première étape permettant de prendre le rythme du voyage avec une alternance de routes secondaires et de voies vertes.",
+      "accommodation": "Camping municipal",
+      "pois": [
+        "Centre historique",
+        "Point de vue panoramique",
+        "Boulangerie",
+        "Supermarché"
+      ]
+    },
+    {
+      "title": "Jour 2 - Traversée",
+      "distance": 63,
+      "elevation": 980,
+      "duration": "5 h 45",
+      "description": "Étape plus sportive avec plusieurs ascensions et de magnifiques paysages.",
+      "accommodation": "Gîte",
+      "pois": [
+        "Col principal",
+        "Cascade",
+        "Restaurant",
+        "Épicerie"
+      ]
+    },
+    {
+      "title": "Jour 3 - Arrivée",
+      "distance": 42,
+      "elevation": 350,
+      "duration": "3 h 30",
+      "description": "Dernière étape plus roulante permettant de rejoindre tranquillement la destination.",
+      "accommodation": "Hôtel",
+      "pois": [
+        "Lac",
+        "Office de tourisme",
+        "Marché",
+        "Gare"
+      ]
+    }
+  ]
+}
