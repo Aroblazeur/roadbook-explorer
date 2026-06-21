@@ -9,6 +9,8 @@ const VARIANTES_URL =
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
 
+const NO_STAGE_NUMBER_KEY = "__sans_numero__";
+
 const ERROR_MESSAGES = {
     NETWORK: "erreur réseau",
     INVALID_CSV: "CSV invalide",
@@ -330,16 +332,34 @@ function attachVariants(stages, variants) {
     );
 }
 
-function filterRowsByType(rows, type) {
-    return rows.filter(row => normalizeHeader(firstValue(row, ["type"]) || "") === type);
-}
-
 function buildRoadbook(etapesRows, variantesRows) {
-    const principaleRows = filterRowsByType(etapesRows, "principale");
-    const etapeVarianteRows = filterRowsByType(etapesRows, "variante");
+    // Group ALL rows by "Numero etape" — no row is discarded based on Type
+    const groups = new Map();
+    etapesRows.forEach(row => {
+        const num = firstValue(row, ["numero etape"]);
+        const key = num !== null ? String(num) : NO_STAGE_NUMBER_KEY;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+    });
 
-    console.log(`[Roadbook] Lignes type=principale : ${principaleRows.length}`);
-    console.log(`[Roadbook] Lignes type=variante (étapes) : ${etapeVarianteRows.length}`);
+    const principaleRows = [];
+    const etapeVarianteRows = [];
+
+    groups.forEach(rows => {
+        // Choose the row whose Type (normalised) contains "principale", else the first row
+        const mainIndex = Math.max(0, rows.findIndex(row =>
+            normalizeHeader(firstValue(row, ["type"]) || "").includes("principale")
+        ));
+
+        principaleRows.push(rows[mainIndex]);
+        rows.forEach((row, i) => {
+            if (i !== mainIndex) etapeVarianteRows.push(row);
+        });
+    });
+
+    console.log(`[Roadbook] Groupes (étapes uniques) : ${groups.size}`);
+    console.log(`[Roadbook] Lignes principales choisies : ${principaleRows.length}`);
+    console.log(`[Roadbook] Lignes alternatives (étapes) : ${etapeVarianteRows.length}`);
     console.log(`[Roadbook] Lignes variantes (feuille variantes) : ${variantesRows.length}`);
 
     const stages = principaleRows.map(mapEtape);
