@@ -223,11 +223,19 @@ function renderStageGpx(url) {
     const section = document.getElementById("terrain-navigation");
     const openLink = document.getElementById("terrain-gpx-open");
     const downloadLink = document.getElementById("terrain-gpx-download");
-    const valid = isSafeUrl(url);
+    const mapyUrl = window.roadbookMapViewer?.resolveMapyUrl?.(url);
+    const resolvedUrl = mapyUrl || window.roadbookMapViewer?.resolveUrl?.(url) || url;
+    const valid = isSafeUrl(resolvedUrl);
     section.hidden = !valid;
-    for (const link of [openLink, downloadLink]) {
-        if (valid) link.href = url;
-        else link.removeAttribute("href");
+    openLink.textContent = mapyUrl ? "🗺️ Ouvrir dans Mapy" : "📍 Ouvrir le GPX";
+    downloadLink.hidden = Boolean(mapyUrl);
+
+    if (valid) {
+        openLink.href = resolvedUrl;
+        downloadLink.href = resolvedUrl;
+    } else {
+        openLink.removeAttribute("href");
+        downloadLink.removeAttribute("href");
     }
 }
 

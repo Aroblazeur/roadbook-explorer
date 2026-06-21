@@ -7,7 +7,7 @@
     let requestController = null;
     let renderId = 0;
 
-    async function render(url, { fetchImpl = global.fetch } = {}) {
+    async function render(source, { fetchImpl = global.fetch } = {}) {
         const section = document.getElementById("map-section");
         const container = document.getElementById("stage-map");
         const status = document.getElementById("map-status");
@@ -18,7 +18,16 @@
         }
         clear();
 
-        if (!isSafeUrl(url)) {
+        const mapyUrl = resolveMapyUrl(source);
+        if (mapyUrl) {
+            section.hidden = false;
+            container.hidden = false;
+            renderMapyEmbed(container, status, mapyUrl);
+            return true;
+        }
+
+        const url = resolveUrl(source);
+        if (!url) {
             section.hidden = true;
             return false;
         }
@@ -146,6 +155,20 @@
         requestAnimationFrame(() => map?.invalidateSize());
     }
 
+    function renderMapyEmbed(container, status, url) {
+        const iframe = document.createElement("iframe");
+        iframe.src = url;
+        iframe.title = "Carte interactive Mapy de l’étape";
+        iframe.loading = "lazy";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.setAttribute("allowfullscreen", "");
+        iframe.setAttribute("frameborder", "0");
+        container.replaceChildren(iframe);
+        container.className = "mapy-embed";
+        status.hidden = true;
+        status.textContent = "";
+    }
+
     function showError(container, status, message) {
         if (map) {
             map.remove();
@@ -169,6 +192,29 @@
         }
     }
 
+    function resolveMapyUrl(value) {
+        if (typeof value !== "string" || !value.trim()) return null;
+        const candidate = value.trim();
+        let source = candidate;
+
+        if (/^<iframe[\s>]/i.test(candidate)) {
+            const documentNode = new DOMParser().parseFromString(candidate, "text/html");
+            source = documentNode.querySelector("iframe[src]")?.getAttribute("src") || "";
+        }
+
+        try {
+            const url = new URL(source, global.location.href);
+            const trustedHost = /(^|\.)mapy\.(?:com|cz)$/i.test(url.hostname);
+            return url.protocol === "https:" && trustedHost ? url.href : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function resolveUrl(value) {
+        return isSafeUrl(value) ? value.trim() : null;
+    }
+
     function isSafeUrl(value) {
         if (typeof value !== "string" || !value.trim()) return false;
         const candidate = value.trim();
@@ -181,5 +227,5 @@
         }
     }
 
-    global.roadbookMapViewer = Object.freeze({ render, clear });
+    global.roadbookMapViewer = Object.freeze({ render, clear, resolveUrl, resolveMapyUrl });
 })(window);
