@@ -263,67 +263,45 @@ function mapVariante(record) {
     };
 }
 
-function stageMatchKey(stage) {
-    const stageCandidates = [
-        stage.stage !== null ? String(stage.stage) : null,
-        stage.stage !== null ? `etape ${stage.stage}` : null,
-        stage.day !== null ? String(stage.day) : null,
-        stage.departure ? `${stage.departure}` : null
-    ].filter(Boolean);
-    return stageCandidates.map(value => normalizeHeader(value));
+function extractStageNumber(value) {
+    if (!value) return null;
+    const match = String(value).match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
 }
 
 function attachVariants(stages, variants) {
-    const byKey = new Map();
-    stages.forEach(stage => {
-        stageMatchKey(stage).forEach(key => {
-            if (!byKey.has(key)) byKey.set(key, stage);
-        });
-    });
-
     const byNumber = new Map();
     stages.forEach(stage => {
         if (stage.stage !== null) byNumber.set(stage.stage, stage);
     });
 
-    let inheritedReference = null;
+    let lastStageNumber = null;
     let attached = 0;
-    let disabled = 0;
-    let unmatched = 0;
+    let ignored = 0;
 
     variants.forEach(variant => {
-        if (variant.stageReference) inheritedReference = variant.stageReference;
+        const refNumber = extractStageNumber(variant.stageReference);
+        if (refNumber !== null) {
+            lastStageNumber = refNumber;
+        }
 
         if (!variant.enabled) {
-            disabled++;
             return;
         }
 
-        const effectiveReference = variant.stageReference || inheritedReference;
+        const effectiveStageNumber = refNumber !== null ? refNumber : lastStageNumber;
 
-        const referenceKeys = [
-            effectiveReference ? normalizeHeader(effectiveReference) : null,
-            variant.day ? normalizeHeader(String(variant.day)) : null
-        ].filter(Boolean);
-
-        let stage = null;
-        for (const key of referenceKeys) {
-            if (byKey.has(key)) {
-                stage = byKey.get(key);
-                break;
-            }
+        if (effectiveStageNumber === null) {
+            ignored++;
+            console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — aucune référence d'étape.`);
+            return;
         }
 
-        if (!stage && effectiveReference) {
-            const numMatch = String(effectiveReference).match(/\d+/);
-            if (numMatch) {
-                const num = parseInt(numMatch[0], 10);
-                if (byNumber.has(num)) stage = byNumber.get(num);
-            }
-        }
+        const stage = byNumber.get(effectiveStageNumber);
 
         if (!stage) {
-            unmatched++;
+            ignored++;
+            console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — étape ${effectiveStageNumber} introuvable.`);
             return;
         }
 
@@ -332,13 +310,10 @@ function attachVariants(stages, variants) {
         attached++;
     });
 
-    const active = variants.length - disabled;
-    const ignored = disabled + unmatched;
     console.log(
-        `[Roadbook] Étapes chargées : ${stages.length} | ` +
-        `Variantes lues : ${variants.length} | ` +
-        `Variantes actives : ${active} | ` +
-        `Variantes rattachées : ${attached} | ` +
+        `Étapes : ${stages.length}\n` +
+        `Variantes : ${variants.length}\n` +
+        `Variantes rattachées : ${attached}\n` +
         `Variantes ignorées : ${ignored}`
     );
 }
