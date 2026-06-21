@@ -18,7 +18,7 @@
         }
         clear();
 
-        const url = resolveUrl(source);
+        const url = resolveGpxUrl(source);
         if (!url) {
             section.hidden = true;
             return false;
@@ -224,21 +224,23 @@
         }
     }
 
-    function resolveUrl(value) {
-        return isSafeUrl(value) ? value.trim() : null;
-    }
-
-    function isSafeUrl(value) {
-        if (typeof value !== "string" || !value.trim()) return false;
+    function resolveGpxUrl(value) {
+        if (typeof value !== "string" || !value.trim()) return null;
         const candidate = value.trim();
-        const relativeGpx = /^(?:\.{0,2}\/)/.test(candidate) || /\.gpx(?:[?#].*)?$/i.test(candidate);
-        if (!/^https?:\/\//i.test(candidate) && !relativeGpx) return false;
         try {
-            return ["http:", "https:"].includes(new URL(candidate, global.location.href).protocol);
+            const url = new URL(candidate, "https://roadbook.local/");
+            const validProtocol = ["http:", "https:"].includes(url.protocol);
+            return validProtocol && /\.gpx$/i.test(url.pathname) ? candidate : null;
         } catch (error) {
-            return false;
+            return null;
         }
     }
 
-    global.roadbookMapViewer = Object.freeze({ render, renderEmbed, clear, resolveUrl, resolveMapyUrl });
+    global.roadbookMapViewer = Object.freeze({
+        render,
+        renderEmbed,
+        clear,
+        resolveGpxUrl,
+        resolveMapyUrl
+    });
 })(window);
