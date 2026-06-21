@@ -344,7 +344,7 @@ function renderVariants(variants) {
 
     if (variants.length === 0) return;
 
-    variants.forEach(variant => {
+    variants.forEach((variant, index) => {
         const block = document.createElement("article");
         block.className = "variant-block variant-card";
 
@@ -353,6 +353,9 @@ function renderVariants(variants) {
         const name = document.createElement("h3");
         name.className = "variant-title";
         name.textContent = variantDisplayLabel(variant);
+        const titleId = `variant-title-${index + 1}`;
+        name.id = titleId;
+        block.setAttribute("aria-labelledby", titleId);
         block.appendChild(name);
 
         if (courte && variant.name) {
