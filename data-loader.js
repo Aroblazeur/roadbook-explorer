@@ -193,10 +193,12 @@ function buildAccommodation(record) {
 }
 
 function mapEtape(record) {
-    const stageNumber = extractStageNumber(firstValue(record, ["etape", "étape"]));
+    const rawEtape = getEtapeValue(record);
+    const stageNumber = getStageNumberFromRecord(record);
     const dayLabel = firstValue(record, ["jour"]);
     const departure = firstValue(record, ["depart", "départ"]);
     const arrival = firstValue(record, ["arrivee", "arrivée"]);
+    console.log("[Roadbook] Etape row", { rawEtape, stageNumber, departure, arrival });
     const notes = firstValue(record, ["notes"]);
     const pois = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
     const gpx = firstValue(record, ["gpx"]);
@@ -260,6 +262,25 @@ function extractStageNumber(value) {
     return match ? parseInt(match[0], 10) : null;
 }
 
+function getEtapeValue(record) {
+    const candidates = ["etape", "étape", "Etape", "Étape"];
+    for (const key of candidates) {
+        const value = record[normalizeHeader(key)];
+        if (value !== undefined) return value;
+    }
+    // Fallback: scan normalized keys already present in record
+    const normalizedTarget = normalizeHeader("etape");
+    const matchingKey = Object.keys(record).find(k => normalizeHeader(k) === normalizedTarget);
+    return matchingKey !== undefined ? record[matchingKey] : null;
+}
+
+function getStageNumberFromRecord(record) {
+    const rawEtape = getEtapeValue(record);
+    if (!rawEtape) return null;
+    const match = String(rawEtape).match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+}
+
 function isMarkedAsPrincipale(record) {
     const raw = firstValue(record, ["etape", "étape"]);
     const normalized = normalizeHeader(raw || "");
@@ -271,7 +292,7 @@ function selectMainAndAlternativeEtapes(rows) {
     const standaloneRows = [];
 
     rows.forEach((row, index) => {
-        const stageNumber = extractStageNumber(firstValue(row, ["etape", "étape"]));
+        const stageNumber = getStageNumberFromRecord(row);
         if (stageNumber === null) {
             standaloneRows.push({ row, index });
             return;
@@ -372,8 +393,8 @@ function attachVariants(stages, variants) {
 }
 
 function mapEtapeAsVariante(record) {
-    const etapeLabel = firstValue(record, ["etape", "étape"]);
-    const stageNumber = extractStageNumber(etapeLabel);
+    const etapeLabel = getEtapeValue(record);
+    const stageNumber = getStageNumberFromRecord(record);
     const departure = firstValue(record, ["depart", "départ"]);
     const arrival = firstValue(record, ["arrivee", "arrivée"]);
     const distance = toNumber(firstValue(record, ["distance (km)"]));
