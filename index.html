@@ -39,6 +39,36 @@
       <p id="description">Chargement...</p>
     </section>
 
+    <section id="terrain-navigation" class="card terrain-navigation" aria-labelledby="terrain-navigation-title">
+      <h2 id="terrain-navigation-title">Navigation terrain</h2>
+      <p class="terrain-navigation__intro">Accès rapide aux traces et informations utiles de l'étape.</p>
+
+      <div id="terrain-gpx-group" class="terrain-group" hidden>
+        <h3>GPX de l'étape</h3>
+        <a id="terrain-gpx-link" class="terrain-button" target="_blank" rel="noopener noreferrer">Ouvrir le GPX de l'étape</a>
+      </div>
+
+      <div id="terrain-variants-group" class="terrain-group" hidden>
+        <h3>GPX des variantes actives</h3>
+        <ul id="terrain-variants" class="terrain-list"></ul>
+      </div>
+
+      <div id="terrain-links-group" class="terrain-group" hidden>
+        <h3>Liens utiles</h3>
+        <ul id="terrain-links" class="terrain-list"></ul>
+      </div>
+
+      <div id="terrain-accommodation-group" class="terrain-group" hidden>
+        <h3>Hébergement</h3>
+        <div id="terrain-accommodation"></div>
+      </div>
+
+      <div class="terrain-group terrain-copy">
+        <button id="copy-summary" class="terrain-button terrain-button--copy" type="button">Copier le résumé de l'étape</button>
+        <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
     <section id="notes-section" class="card" hidden>
       <h2>Notes</h2>
       <ul id="notes"></ul>
@@ -49,24 +79,10 @@
       <ul id="pois"></ul>
     </section>
 
-    <section class="card">
-      <h2>Hébergement</h2>
-      <div id="accommodation">Non renseigné</div>
-    </section>
-
-    <section id="variants-section" class="card" hidden>
-      <h2>Variantes et options</h2>
-      <ul id="variants" class="resource-list"></ul>
-    </section>
-
-    <section id="gpx-section" class="card" hidden>
-      <h2>Trace GPX</h2>
-      <a id="gpx-link" class="resource-link" target="_blank" rel="noopener noreferrer">Ouvrir la trace GPX</a>
-    </section>
   </main>
 
   <footer><p>Perinexus Roadbook</p></footer>
   <script src="data-loader.js"></script>
-  <script src="app.js?v=sheets-rendering-20260621"></script>
+  <script src="app.js?v=field-navigation-20260621"></script>
 </body>
 </html>

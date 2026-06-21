@@ -100,9 +100,7 @@ function displayDay(index) {
     document.getElementById("description").textContent =
         safeText(day.description, "Aucune description renseignée.");
 
-    renderAccommodation(day.accommodation);
-    renderVariants(day.variants);
-    renderGpx(day.gpx || day.route?.gpx);
+    renderFieldNavigation(day);
     renderNotes(day.noteItems || day.notes);
     updatePois(day);
 
@@ -141,13 +139,27 @@ function updatePois(day) {
 
 }
 
+function renderFieldNavigation(day) {
+    const activeVariants = Array.isArray(day.variants)
+        ? day.variants.filter(variant => variant?.enabled)
+        : [];
+    renderStageGpx(day.gpx || day.route?.gpx);
+    renderVariants(activeVariants);
+    renderUsefulLinks(activeVariants);
+    renderAccommodation(day.accommodation);
+    document.getElementById("copy-status").textContent = "";
+}
+
 function renderAccommodation(accommodation) {
-    const container = document.getElementById("accommodation");
+    const group = document.getElementById("terrain-accommodation-group");
+    const container = document.getElementById("terrain-accommodation");
     container.replaceChildren();
     if (!accommodation) {
-        container.textContent = "Non renseigné";
+        group.hidden = true;
         return;
     }
+
+    group.hidden = false;
 
     if (typeof accommodation === "string") {
         container.textContent = safeText(accommodation);
@@ -158,19 +170,18 @@ function renderAccommodation(accommodation) {
     name.className = "detail-name";
     name.textContent = safeText(accommodation.name);
     container.appendChild(name);
-    appendResource(container, accommodation.url, "Site de l'hébergement");
+    appendResource(container, accommodation.url, "Ouvrir le site de l'hébergement", "terrain-button terrain-button--secondary");
     appendResourceList(container, "Hébergements alternatifs", accommodation.alternatives);
     appendResourceList(container, "Locations maison", accommodation.houseRentals);
 }
 
 function renderVariants(variants) {
-    const section = document.getElementById("variants-section");
-    const list = document.getElementById("variants");
-    const enabled = Array.isArray(variants) ? variants.filter(variant => variant?.enabled) : [];
+    const group = document.getElementById("terrain-variants-group");
+    const list = document.getElementById("terrain-variants");
     list.replaceChildren();
-    section.hidden = enabled.length === 0;
+    group.hidden = variants.length === 0;
 
-    enabled.forEach(variant => {
+    variants.forEach(variant => {
         const item = document.createElement("li");
         const name = document.createElement("strong");
         name.textContent = safeText(variant.name, "Variante");
@@ -191,19 +202,31 @@ function renderVariants(variants) {
             description.textContent = variant.description;
             item.appendChild(description);
         }
-        appendResource(item, variant.link, "Informations");
-        appendResource(item, variant.gpx, "Trace GPX");
+        appendResource(item, variant.gpx, `Ouvrir le GPX — ${safeText(variant.name, "variante")}`, "terrain-button");
         list.appendChild(item);
     });
 }
 
-function renderGpx(url) {
-    const section = document.getElementById("gpx-section");
-    const link = document.getElementById("gpx-link");
+function renderStageGpx(url) {
+    const group = document.getElementById("terrain-gpx-group");
+    const link = document.getElementById("terrain-gpx-link");
     const valid = isSafeUrl(url);
-    section.hidden = !valid;
+    group.hidden = !valid;
     if (valid) link.href = url;
     else link.removeAttribute("href");
+}
+
+function renderUsefulLinks(variants) {
+    const group = document.getElementById("terrain-links-group");
+    const list = document.getElementById("terrain-links");
+    const links = variants.filter(variant => isSafeUrl(variant.link));
+    list.replaceChildren();
+    group.hidden = links.length === 0;
+    links.forEach(variant => {
+        const item = document.createElement("li");
+        appendResource(item, variant.link, `Informations — ${safeText(variant.name, "variante")}`, "terrain-button terrain-button--secondary");
+        list.appendChild(item);
+    });
 }
 
 function renderNotes(notes) {
@@ -227,13 +250,13 @@ function appendResourceList(container, title, values) {
     const list = document.createElement("ul");
     items.forEach((value, index) => {
         const item = document.createElement("li");
-        appendResource(item, value, `${title} ${index + 1}`);
+        appendResource(item, value, `${title} ${index + 1}`, "terrain-button terrain-button--secondary");
         list.appendChild(item);
     });
     container.append(heading, list);
 }
 
-function appendResource(container, value, label) {
+function appendResource(container, value, label, className = "resource-link") {
     if (!value) return;
     if (!isSafeUrl(value)) {
         const text = document.createElement("span");
@@ -246,18 +269,64 @@ function appendResource(container, value, label) {
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     link.textContent = label;
-    link.className = "resource-link";
+    link.className = className;
     container.appendChild(link);
 }
 
 function isSafeUrl(value) {
     if (typeof value !== "string" || !value.trim()) return false;
+    const candidate = value.trim();
+    const relativeFile = /^(?:\.{0,2}\/)/.test(candidate) || /\.gpx(?:[?#].*)?$/i.test(candidate);
+    if (!/^https?:\/\//i.test(candidate) && !relativeFile) return false;
     try {
-        const url = new URL(value, window.location.href);
+        const url = new URL(candidate, window.location.href);
         return ["http:", "https:"].includes(url.protocol);
     } catch (error) {
         return false;
     }
+}
+
+async function copyCurrentDaySummary() {
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+    const day = roadbook.days[currentDay];
+    if (!day) return;
+    const accommodation = typeof day.accommodation === "string"
+        ? day.accommodation
+        : day.accommodation?.name;
+    const summary = [
+        safeText(day.title, `Étape ${currentDay + 1}`),
+        `Départ : ${safeText(day.departure)}`,
+        `Arrivée : ${safeText(day.arrival)}`,
+        `Distance : ${formatMetric(day.distance, "km")}`,
+        `D+ : ${formatMetric(day.elevationGain ?? day.elevation, "m")}`,
+        `D− : ${formatMetric(day.elevationLoss, "m")}`,
+        `Hébergement : ${safeText(accommodation)}`
+    ].join("\n");
+
+    const status = document.getElementById("copy-status");
+    try {
+        await copyText(summary);
+        status.textContent = "Résumé copié.";
+    } catch (error) {
+        console.error("[Roadbook] Copie du résumé impossible :", error);
+        status.textContent = "Copie impossible sur cet appareil.";
+    }
+}
+
+async function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+    const input = document.createElement("textarea");
+    input.value = text;
+    input.setAttribute("readonly", "");
+    input.className = "copy-helper";
+    document.body.appendChild(input);
+    input.select();
+    const copied = document.execCommand("copy");
+    input.remove();
+    if (!copied) throw new Error("Clipboard API unavailable");
 }
 
 function safeText(value, fallback = "Non renseigné") {
@@ -325,6 +394,10 @@ document
 document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
+
+document
+    .getElementById("copy-summary")
+    .addEventListener("click", copyCurrentDaySummary);
 
 updateButtons();
 initializeRoadbook();
