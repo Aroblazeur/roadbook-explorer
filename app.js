@@ -10,7 +10,6 @@ let roadbook = null;
 let currentDay = 0;
 let accommodationEnrichmentIndex = new Map();
 let poiEnrichmentIndex = new Map();
-const VARIANT_TITLE_HASH_MULTIPLIER = 31;
 
 /**
  * Chargement des données
@@ -337,31 +336,24 @@ function variantDisplayLabel(variant) {
 }
 
 function variantTitleIdBase(variant) {
-    const source = JSON.stringify({
-        type: variant?.type || "",
-        name: variant?.name || "",
-        departure: variant?.departure || "",
-        arrival: variant?.arrival || "",
-        distance: variant?.distance ?? "",
-        elevationGain: variant?.elevationGain ?? "",
-        elevationLoss: variant?.elevationLoss ?? "",
-        distanceExtra: variant?.distanceExtra ?? "",
-        elevationGainExtra: variant?.elevationGainExtra ?? "",
-        elevationLossExtra: variant?.elevationLossExtra ?? "",
-        description: variant?.description || "",
-        link: variant?.link || "",
-        gpx: variant?.gpx || ""
-    });
-    return `variant-title-${hashTextToBase36(source)}`;
-}
+    const parts = [
+        variant?.type,
+        variant?.name,
+        variant?.departure,
+        variant?.arrival,
+        variant?.stageReference,
+        variant?.day
+    ]
+        .map(value => safeText(value, "")
+            .trim()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""))
+        .filter(Boolean);
 
-function hashTextToBase36(value) {
-    const text = String(value || "");
-    let hash = 0;
-    for (let index = 0; index < text.length; index += 1) {
-        hash = ((hash * VARIANT_TITLE_HASH_MULTIPLIER) + text.charCodeAt(index)) >>> 0;
-    }
-    return hash.toString(36);
+    return `variant-title-${parts.join("-") || "alternative"}`;
 }
 
 function renderVariants(variants) {
@@ -373,7 +365,7 @@ function renderVariants(variants) {
 
     if (variants.length === 0) return;
 
-    const usedTitleIds = new Set();
+    const titleIdCounts = new Map();
 
     variants.forEach(variant => {
         const block = document.createElement("article");
@@ -385,13 +377,9 @@ function renderVariants(variants) {
         name.className = "variant-title";
         name.textContent = variantDisplayLabel(variant);
         const baseTitleId = variantTitleIdBase(variant);
-        let titleId = baseTitleId;
-        let duplicateIndex = 1;
-        while (usedTitleIds.has(titleId)) {
-            titleId = `${baseTitleId}-${duplicateIndex}`;
-            duplicateIndex += 1;
-        }
-        usedTitleIds.add(titleId);
+        const duplicateIndex = (titleIdCounts.get(baseTitleId) || 0) + 1;
+        titleIdCounts.set(baseTitleId, duplicateIndex);
+        const titleId = duplicateIndex === 1 ? baseTitleId : `${baseTitleId}-${duplicateIndex}`;
         name.id = titleId;
         block.setAttribute("aria-labelledby", titleId);
         block.appendChild(name);
