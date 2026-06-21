@@ -142,7 +142,7 @@ function displayDay(index) {
 
     const stageGpxUrl = day.gpx || day.route?.gpx;
     const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
-    renderFieldNavigation(day, stageGpxUrl, mapVisible);
+    renderFieldNavigation(day);
     renderNotes(day.noteItems || day.notes);
     updatePois(day);
 
@@ -151,27 +151,32 @@ function displayDay(index) {
 }
 
 function renderStageMapEmbed(mapEmbedUrl, gpxUrl) {
+    const resolvedGpx = resolveStageGpxUrl(gpxUrl);
     const viewer = window.roadbookMapViewer;
     if (!viewer || typeof viewer.renderEmbed !== "function") {
-        document.getElementById("map-embed-section").hidden = true;
-        renderMapGpxActions(false, null);
+        const section = document.getElementById("map-embed-section");
+        if (section) section.hidden = !resolvedGpx;
+        renderMapGpxActions(resolvedGpx);
         return false;
     }
     const mapVisible = viewer.renderEmbed(mapEmbedUrl);
-    const resolvedGpx = resolveStageGpxUrl(gpxUrl);
-    renderMapGpxActions(mapVisible, resolvedGpx);
+    if (!mapVisible && resolvedGpx) {
+        const section = document.getElementById("map-embed-section");
+        if (section) section.hidden = false;
+    }
+    renderMapGpxActions(resolvedGpx);
     return mapVisible;
 }
 
-function renderMapGpxActions(mapVisible, gpxUrl) {
+function renderMapGpxActions(gpxUrl) {
     const actions = document.getElementById("map-gpx-actions");
     const downloadLink = document.getElementById("map-gpx-download");
     if (!actions || !downloadLink) return;
 
-    const showGpxInMapSection = Boolean(mapVisible && gpxUrl);
-    actions.hidden = !showGpxInMapSection;
+    const showGpx = Boolean(gpxUrl);
+    actions.hidden = !showGpx;
 
-    if (showGpxInMapSection) {
+    if (showGpx) {
         downloadLink.href = gpxUrl;
     } else {
         downloadLink.removeAttribute("href");
@@ -250,9 +255,8 @@ function findPoiEnrichment(name) {
     return key ? poiEnrichmentIndex.get(key) || null : null;
 }
 
-function renderFieldNavigation(day, stageGpxUrl, mapVisible) {
+function renderFieldNavigation(day) {
     const activeVariants = Array.isArray(day.variants) ? day.variants : [];
-    renderStageGpx(stageGpxUrl, mapVisible);
     renderVariants(activeVariants);
     renderAccommodation(day.accommodation);
     document.getElementById("copy-status").textContent = "";
@@ -336,21 +340,6 @@ function renderVariants(variants) {
     }
     appendGpxActions(content, variant.gpx, safeText(variant.name, "Alternative"));
     appendResource(content, variant.link, "Ouvrir le lien de l'alternative", "terrain-button terrain-button--secondary");
-}
-
-function renderStageGpx(url, mapVisible = false) {
-    const section = document.getElementById("terrain-navigation");
-    const downloadLink = document.getElementById("terrain-gpx-download");
-    const resolvedUrl = resolveStageGpxUrl(url);
-    const valid = Boolean(resolvedUrl);
-    const showStandaloneGpx = valid && !mapVisible;
-    section.hidden = !showStandaloneGpx;
-
-    if (showStandaloneGpx) {
-        downloadLink.href = resolvedUrl;
-    } else {
-        downloadLink.removeAttribute("href");
-    }
 }
 
 function resolveStageGpxUrl(url) {
