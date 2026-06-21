@@ -217,10 +217,11 @@ function findPoiEnrichment(name) {
 function resolvePoiEntry(poi) {
     const sourceName = typeof poi === "object" ? poi?.name || poi?.label : poi;
     const sourceDescription = typeof poi === "object" ? safeText(poi?.description, "") : "";
-    const sourceImage = typeof poi === "object" && isSafeUrl(poi?.image) ? poi.image : "";
+    const sourceImage = typeof poi === "object" ? safeText(poi?.image, "") : "";
     const name = safeText(sourceName, "Point d'intérêt");
     const metadata = findPoiEnrichment(name);
-    const image = metadata?.image || sourceImage || "";
+    const imageCandidate = metadata?.image || sourceImage || "";
+    const image = isSafeUrl(imageCandidate) ? imageCandidate : "";
     const description = metadata?.description || sourceDescription || "";
 
     return {
@@ -272,13 +273,16 @@ function renderPoiList(list, pois) {
 
     list.classList.toggle("poi-list--enriched", hasEnrichedPoi);
 
-    entries.forEach(entry => {
-        if (!hasEnrichedPoi) {
+    if (!hasEnrichedPoi) {
+        entries.forEach(entry => {
             const item = document.createElement("li");
             item.textContent = entry.name;
             list.appendChild(item);
-            return;
-        }
+        });
+        return;
+    }
+
+    entries.forEach(entry => {
         appendPoiCard(list, entry);
     });
 }
