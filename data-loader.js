@@ -16,7 +16,8 @@ const ERROR_MESSAGES = {
 };
 
 const REQUIRED_ETAPES_HEADERS = [
-    "etape",
+    "numero etape",
+    "type",
     "jour",
     "depart",
     "arrivee",
@@ -193,12 +194,10 @@ function buildAccommodation(record) {
 }
 
 function mapEtape(record) {
-    const rawEtape = getEtapeValue(record);
-    const stageNumber = getStageNumberFromRecord(record);
+    const stageNumber = toNumber(firstValue(record, ["numero etape"]));
     const dayLabel = firstValue(record, ["jour"]);
     const departure = firstValue(record, ["depart", "départ"]);
     const arrival = firstValue(record, ["arrivee", "arrivée"]);
-    console.log("[Roadbook] Etape row", { rawEtape, stageNumber, departure, arrival });
     const notes = firstValue(record, ["notes"]);
     const pois = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
     const gpx = firstValue(record, ["gpx"]);
@@ -232,13 +231,49 @@ function mapEtape(record) {
     };
 }
 
+function mapEtapeVarianteFromEtape(record) {
+    const stageNumber = toNumber(firstValue(record, ["numero etape"]));
+    const departure = firstValue(record, ["depart", "départ"]);
+    const arrival = firstValue(record, ["arrivee", "arrivée"]);
+    const distance = toNumber(firstValue(record, ["distance (km)"]));
+    const elevationGain = toNumber(firstValue(record, ["d+ (m)"]));
+    const elevationLoss = toNumber(firstValue(record, ["d− (m)", "d- (m)"]));
+    const gpx = firstValue(record, ["gpx"]);
+    const pois = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
+    const notes = firstValue(record, ["notes"]);
+    const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
+    const routeLabel = [departure, arrival].filter(Boolean).join(" → ");
+
+    return {
+        stageReference: stageNumber,
+        day: toNumber(firstValue(record, ["jour"])),
+        name: routeLabel || `Variante étape ${stageNumber ?? "?"}`,
+        type: "variante",
+        departure,
+        arrival,
+        distance,
+        elevationGain,
+        elevationLoss,
+        distanceExtra: null,
+        elevationGainExtra: null,
+        elevationLossExtra: null,
+        pointsOfInterest: pois,
+        description: notes,
+        link: null,
+        gpx,
+        mapEmbedUrl,
+        enabled: true
+    };
+}
+
 function mapVariante(record) {
-    const stageReference =
+    const stageReference = toNumber(
         firstValue(record, [
             "etape principale associe",
             "etape principale associé",
             "etape principale associee"
-        ]) ?? firstValueByPrefix(record, "etape principale associ");
+        ])
+    );
 
     return {
         stageReference,
@@ -256,126 +291,29 @@ function mapVariante(record) {
     };
 }
 
-function extractStageNumber(value) {
-    if (!value) return null;
-    const match = String(value).match(/\d+/);
-    return match ? parseInt(match[0], 10) : null;
-}
-
-function getEtapeValue(record) {
-    const candidates = ["etape", "étape", "Etape", "Étape"];
-    for (const key of candidates) {
-        const value = record[normalizeHeader(key)];
-        if (value !== undefined) return value;
-    }
-    // Fallback: scan normalized keys already present in record
-    const normalizedTarget = normalizeHeader("etape");
-    const matchingKey = Object.keys(record).find(k => normalizeHeader(k) === normalizedTarget);
-    return matchingKey !== undefined ? record[matchingKey] : null;
-}
-
-function getStageNumberFromRecord(record) {
-    const rawEtape = getEtapeValue(record);
-    if (!rawEtape) return null;
-    const match = String(rawEtape).match(/\d+/);
-    return match ? parseInt(match[0], 10) : null;
-}
-
-function isMarkedAsPrincipale(record) {
-    const raw = firstValue(record, ["etape", "étape"]);
-    const normalized = normalizeHeader(raw || "");
-    return /\(\s*principale\s*\)/.test(normalized);
-}
-
-function selectMainAndAlternativeEtapes(rows) {
-    const groupedByStage = new Map();
-    const standaloneRows = [];
-
-    rows.forEach((row, index) => {
-        const stageNumber = getStageNumberFromRecord(row);
-        if (stageNumber === null) {
-            standaloneRows.push({ row, index });
-            return;
-        }
-        if (!groupedByStage.has(stageNumber)) {
-            groupedByStage.set(stageNumber, []);
-        }
-        groupedByStage.get(stageNumber).push({ row, index });
-    });
-
-    // Log groupes construits
-    groupedByStage.forEach((groupRows, stageNumber) => {
-        const labels = groupRows.map(item => firstValue(item.row, ["etape", "étape"]) || `Étape ${stageNumber}`);
-        console.log(`[Roadbook] Groupe étape ${stageNumber} (${labels.length} ligne(s)) :`, labels);
-    });
-
-    const mainRowsWithIndex = [];
-    const alternativeRows = [];
-    const retainedMainRows = [];
-    const movedAlternativeRows = [];
-
-    groupedByStage.forEach((groupRows, stageNumber) => {
-        const principaleIndex = groupRows.findIndex(item => isMarkedAsPrincipale(item.row));
-        const selectedIndex = principaleIndex >= 0 ? principaleIndex : 0;
-        const selected = groupRows[selectedIndex];
-        mainRowsWithIndex.push(selected);
-        const selectedLabel = firstValue(selected.row, ["etape", "étape"]) || `Étape ${stageNumber}`;
-        retainedMainRows.push(selectedLabel);
-        console.log(`[Roadbook] Étape ${stageNumber} → principale retenue : "${selectedLabel}"`);
-
-        groupRows.forEach((item, index) => {
-            if (index === selectedIndex) return;
-            alternativeRows.push(item.row);
-            const altLabel = firstValue(item.row, ["etape", "étape"]) || `Étape ${stageNumber}`;
-            movedAlternativeRows.push(altLabel);
-            console.log(`[Roadbook] Étape ${stageNumber} → déplacée en alternative : "${altLabel}"`);
-        });
-    });
-
-    standaloneRows.forEach(item => {
-        mainRowsWithIndex.push(item);
-        retainedMainRows.push(firstValue(item.row, ["etape", "étape"]) || "Étape ?");
-    });
-
-    mainRowsWithIndex.sort((a, b) => a.index - b.index);
-
-    return {
-        mainRows: mainRowsWithIndex.map(item => item.row),
-        alternativeRows,
-        retainedMainRows,
-        movedAlternativeRows
-    };
-}
-
 function attachVariants(stages, variants) {
     const byNumber = new Map();
     stages.forEach(stage => {
         if (stage.stage !== null) byNumber.set(stage.stage, stage);
     });
 
-    let lastStageNumber = null;
     let attached = 0;
     let unmatched = 0;
 
     variants.forEach(variant => {
-        const refNumber = extractStageNumber(variant.stageReference);
-        if (refNumber !== null) {
-            lastStageNumber = refNumber;
-        }
+        const refNumber = toNumber(variant.stageReference);
 
-        const effectiveStageNumber = refNumber !== null ? refNumber : lastStageNumber;
-
-        if (effectiveStageNumber === null) {
+        if (refNumber === null) {
             unmatched++;
             console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — aucune référence d'étape.`);
             return;
         }
 
-        const stage = byNumber.get(effectiveStageNumber);
+        const stage = byNumber.get(refNumber);
 
         if (!stage) {
             unmatched++;
-            console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — étape ${effectiveStageNumber} introuvable.`);
+            console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — étape ${refNumber} introuvable.`);
             return;
         }
 
@@ -392,45 +330,29 @@ function attachVariants(stages, variants) {
     );
 }
 
-function mapEtapeAsVariante(record) {
-    const etapeLabel = getEtapeValue(record);
-    const stageNumber = getStageNumberFromRecord(record);
-    const departure = firstValue(record, ["depart", "départ"]);
-    const arrival = firstValue(record, ["arrivee", "arrivée"]);
-    const distance = toNumber(firstValue(record, ["distance (km)"]));
-    const elevationGain = toNumber(firstValue(record, ["d+ (m)"]));
-    const elevationLoss = toNumber(firstValue(record, ["d− (m)", "d- (m)"]));
-    const gpx = firstValue(record, ["gpx"]);
-    const pois = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
-    const notes = firstValue(record, ["notes"]);
-    const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
-    const routeLabel = [departure, arrival].filter(Boolean).join(" → ");
+function filterRowsByType(rows, type) {
+    return rows.filter(row => normalizeHeader(firstValue(row, ["type"]) || "") === type);
+}
 
-    const descriptionParts = [];
-    if (Number.isFinite(distance)) descriptionParts.push(`Distance : ${distance} km`);
-    if (Number.isFinite(elevationGain)) descriptionParts.push(`D+ : ${elevationGain} m`);
-    if (Number.isFinite(elevationLoss)) descriptionParts.push(`D− : ${elevationLoss} m`);
-    if (notes) descriptionParts.push(notes);
+function buildRoadbook(etapesRows, variantesRows) {
+    const principaleRows = filterRowsByType(etapesRows, "principale");
+    const etapeVarianteRows = filterRowsByType(etapesRows, "variante");
+
+    console.log(`[Roadbook] Lignes type=principale : ${principaleRows.length}`);
+    console.log(`[Roadbook] Lignes type=variante (étapes) : ${etapeVarianteRows.length}`);
+    console.log(`[Roadbook] Lignes variantes (feuille variantes) : ${variantesRows.length}`);
+
+    const stages = principaleRows.map(mapEtape);
+    const etapeVariantes = etapeVarianteRows.map(mapEtapeVarianteFromEtape);
+    const sheetVariantes = variantesRows.map(mapVariante);
+
+    attachVariants(stages, [...etapeVariantes, ...sheetVariantes]);
 
     return {
-        stageReference: stageNumber !== null ? String(stageNumber) : "",
-        day: toNumber(firstValue(record, ["jour"])),
-        name: etapeLabel || `Alternative${routeLabel ? ` — ${routeLabel}` : ""}`,
-        type: "Alternative (étapes principales)",
-        departure,
-        arrival,
-        distance,
-        elevationGain,
-        elevationLoss,
-        distanceExtra: null,
-        elevationGainExtra: null,
-        elevationLossExtra: null,
-        pointsOfInterest: pois,
-        description: descriptionParts.length ? descriptionParts.join(" · ") : null,
-        link: null,
-        gpx,
-        mapEmbedUrl,
-        enabled: true
+        title: "Perinexus à vélo",
+        description: "Roadbook d'itinérance à vélo.",
+        stages,
+        days: stages.map(stage => ({ ...stage }))
     };
 }
 
@@ -458,40 +380,10 @@ async function loadGoogleSheetRoadbook() {
     const etapesRows = parseCsv(etapesCsv);
     const variantesRows = parseCsv(variantesCsv);
 
-    console.log("[Roadbook] URL variantes utilisée :", VARIANTES_URL);
-    console.log("[Roadbook] Nombre de lignes variantes lues :", variantesRows.length);
-    if (variantesRows.length > 0) {
-        console.log("[Roadbook] Première ligne variante parsée :", variantesRows[0]);
-    }
-
     ensureSchema(etapesRows, REQUIRED_ETAPES_HEADERS);
     ensureSchema(variantesRows, REQUIRED_VARIANTES_HEADERS);
 
-    const {
-        mainRows,
-        alternativeRows,
-        retainedMainRows,
-        movedAlternativeRows
-    } = selectMainAndAlternativeEtapes(etapesRows);
-
-    console.log("[Roadbook] Lignes principales retenues :", retainedMainRows);
-    console.log("[Roadbook] Lignes déplacées en alternatives :", movedAlternativeRows);
-
-    const stages = mainRows.map(mapEtape);
-    const sheetAlternatives = alternativeRows.map(mapEtapeAsVariante);
-    const variants = variantesRows.map(mapVariante);
-
-    if (sheetAlternatives.length > 0) {
-        attachVariants(stages, sheetAlternatives);
-    }
-    attachVariants(stages, variants);
-
-    return {
-        title: "Perinexus à vélo",
-        description: "Roadbook d'itinérance à vélo.",
-        stages,
-        days: stages.map(stage => ({ ...stage }))
-    };
+    return buildRoadbook(etapesRows, variantesRows);
 }
 
 async function loadFallbackRoadbook() {
