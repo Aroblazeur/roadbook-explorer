@@ -195,6 +195,30 @@ function buildAccommodation(record) {
     };
 }
 
+function createVariant(fields = {}) {
+    return {
+        stageReference: null,
+        day: null,
+        name: null,
+        type: null,
+        departure: null,
+        arrival: null,
+        distance: null,
+        elevationGain: null,
+        elevationLoss: null,
+        distanceExtra: null,
+        elevationGainExtra: null,
+        elevationLossExtra: null,
+        pointsOfInterest: [],
+        description: null,
+        link: null,
+        gpx: null,
+        mapEmbedUrl: null,
+        enabled: true,
+        ...fields
+    };
+}
+
 function mapEtape(record) {
     const stageNumber = toNumber(firstValue(record, ["numero etape"]));
     const dayLabel = firstValue(record, ["jour"]);
@@ -246,7 +270,7 @@ function mapEtapeVarianteFromEtape(record) {
     const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
     const routeLabel = [departure, arrival].filter(Boolean).join(" → ");
 
-    return {
+    return createVariant({
         stageReference: stageNumber,
         day: toNumber(firstValue(record, ["jour"])),
         name: routeLabel || `Variante étape ${stageNumber ?? "?"}`,
@@ -265,7 +289,7 @@ function mapEtapeVarianteFromEtape(record) {
         gpx,
         mapEmbedUrl,
         enabled: true
-    };
+    });
 }
 
 function mapVariante(record) {
@@ -273,15 +297,21 @@ function mapVariante(record) {
         firstValue(record, [
             "etape principale associe",
             "etape principale associé",
-            "etape principale associee"
+            "etape principale associee",
+            "numero etape",
+            "etape"
         ])
     );
+    const type = firstValue(record, ["type"]) || "option";
 
-    return {
+    return createVariant({
         stageReference,
         day: toNumber(firstValue(record, ["jour"])),
-        name: firstValue(record, ["nom variante"]),
-        type: firstValue(record, ["type"]),
+        name:
+            firstValue(record, ["nom variante", "nom option", "nom"]) ||
+            type ||
+            `Alternative étape ${stageReference ?? "?"}`,
+        type,
         distanceExtra: toNumber(firstValue(record, ["distance supplementaire (km)", "distance supplémentaire (km)"])),
         elevationGainExtra: toNumber(firstValue(record, ["d+ supplementaire (m)", "d+ supplémentaire (m)"])),
         elevationLossExtra: toNumber(firstValue(record, ["d− supplementaire (m)", "d− supplémentaire (m)", "d- supplementaire (m)", "d- supplémentaire (m)"])),
@@ -290,7 +320,7 @@ function mapVariante(record) {
         link: firstValue(record, ["lien"]),
         gpx: firstValue(record, ["gpx"]),
         enabled: true
-    };
+    });
 }
 
 function attachVariants(stages, variants) {
@@ -319,8 +349,13 @@ function attachVariants(stages, variants) {
             return;
         }
 
-        stage.variants.push(variant);
-        stage.pois.push(...variant.pointsOfInterest);
+        if (!Array.isArray(stage.variants)) stage.variants = [];
+        stage.variants.push({
+            ...variant,
+            pointsOfInterest: Array.isArray(variant.pointsOfInterest)
+                ? [...variant.pointsOfInterest]
+                : []
+        });
         attached++;
     });
 
