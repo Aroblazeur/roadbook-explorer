@@ -1,0 +1,7 @@
+{
+  "name": "perinexus-roadbook",
+  "private": true,
+  "scripts": {
+    "enrich:accommodations": "node scripts/enrich-accommodations.js"
+  }
+}
