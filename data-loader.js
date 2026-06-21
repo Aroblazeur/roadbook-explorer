@@ -6,7 +6,8 @@ const ETAPES_URL =
 const VARIANTES_URL =
     "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=Variante%20et%20option";
 
-const FALLBACK_PATHS = ["data/roadbook.json", "roadbook.json"];
+// Only list fallback files that are part of the current project tree.
+const FALLBACK_PATHS = ["roadbook.json"];
 
 const ERROR_MESSAGES = {
     NETWORK: "erreur réseau",
@@ -279,6 +280,8 @@ async function fetchCsv(url) {
 }
 
 async function loadGoogleSheetRoadbook() {
+    console.info("[Roadbook] Source Google Sheets tentée.");
+
     const [etapesCsv, variantesCsv] = await Promise.all([
         fetchCsv(ETAPES_URL),
         fetchCsv(VARIANTES_URL)
@@ -335,18 +338,39 @@ async function loadFallbackRoadbook() {
         return JSON.parse(content);
     }
 
+    const validPaths = FALLBACK_PATHS.filter(path =>
+        typeof path === "string" && path.trim() !== "" && !path.startsWith("data/")
+    );
+
+    if (!validPaths.length) {
+        const error = new Error("aucun chemin JSON local valide configuré");
+        console.warn(`[Roadbook] Fallback JSON ignoré : ${error.message}.`);
+        throw error;
+    }
+
     let lastError = null;
 
-    for (const path of FALLBACK_PATHS) {
+    for (const path of validPaths) {
+        console.info(`[Roadbook] Fallback JSON tenté : ${path}.`);
         try {
             const response = await fetch(path);
             if (!response.ok) {
                 lastError = new Error(`HTTP ${response.status}`);
+                console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${lastError.message}.`);
                 continue;
             }
-            return response.json();
+            const content = await response.text();
+            try {
+                return JSON.parse(content);
+            } catch (error) {
+                lastError = new Error(`JSON invalide dans ${path}`);
+                console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${lastError.message}.`);
+                continue;
+            }
         } catch (error) {
             lastError = error;
+            const reason = error && error.message ? error.message : "erreur inconnue";
+            console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${reason}.`);
         }
 
         try {
@@ -367,7 +391,7 @@ function logFallbackError(error) {
     }
 }
 
-async function loadRoadbookData() {
+async function loadRoadbook() {
     try {
         return await loadGoogleSheetRoadbook();
     } catch (error) {
@@ -375,17 +399,16 @@ async function loadRoadbookData() {
         try {
             return await loadFallbackRoadbook();
         } catch (fallbackError) {
-            // Keep explicit HTTP status from Sheets so server-side failures stay distinguishable from local fallback issues.
-            if (typeof error?.message === "string" && error.message.startsWith("HTTP ")) {
-                throw error;
-            }
-            throw fallbackError;
+            const sheetsReason = error && error.message ? error.message : "erreur inconnue";
+            const fallbackReason = fallbackError && fallbackError.message ? fallbackError.message : "erreur inconnue";
+            console.error(`[Roadbook] Aucune source disponible. Google Sheets : ${sheetsReason}. Fallback JSON : ${fallbackReason}.`);
+            throw new Error("Roadbook indisponible : Google Sheets et le fichier JSON local n'ont pas pu être chargés.");
         }
     }
 }
 
 if (typeof window !== "undefined") {
-    window.loadRoadbookData = loadRoadbookData;
+    window.loadRoadbook = loadRoadbook;
 }
 
 if (typeof module !== "undefined" && module.exports) {
@@ -395,6 +418,6 @@ if (typeof module !== "undefined" && module.exports) {
         parseCsv,
         loadGoogleSheetRoadbook,
         loadFallbackRoadbook,
-        loadRoadbookData
+        loadRoadbook
     };
 }

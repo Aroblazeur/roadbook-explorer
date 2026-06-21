@@ -1,5 +1,7 @@
 "use strict";
 
+console.log("APP.JS VERSION GOOGLE SHEETS ACTIVE");
+
 /**
  * =====================================================
  * Perinexus Roadbook
@@ -12,15 +14,19 @@ let currentDay = 0;
 /**
  * Chargement des données
  */
-async function loadRoadbook() {
+async function initializeRoadbook() {
 
     try {
 
-        if (typeof loadRoadbookData !== "function") {
+        if (typeof loadRoadbook !== "function") {
             throw new Error("Loader indisponible");
         }
 
-        roadbook = await loadRoadbookData();
+        roadbook = await loadRoadbook();
+
+        if (!roadbook || !Array.isArray(roadbook.days) || roadbook.days.length === 0) {
+            throw new Error("Le roadbook ne contient aucune étape exploitable.");
+        }
 
         updateSummary();
 
@@ -28,10 +34,16 @@ async function loadRoadbook() {
 
     } catch (error) {
 
-        console.error(error);
+        roadbook = null;
+        currentDay = 0;
+        console.error("[Roadbook] Chargement impossible :", error);
 
         document.getElementById("roadbook-info").textContent =
-            "Impossible de charger le roadbook.";
+            error && error.message
+                ? error.message
+                : "Impossible de charger le roadbook.";
+
+        updateButtons();
 
     }
 
@@ -41,6 +53,8 @@ async function loadRoadbook() {
  * Résumé
  */
 function updateSummary() {
+
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
 
     const info = document.getElementById("roadbook-info");
 
@@ -58,9 +72,12 @@ function updateSummary() {
  */
 function displayDay(index) {
 
-    if (!roadbook) return;
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+    if (!Number.isInteger(index) || index < 0 || index >= roadbook.days.length) return;
 
     const day = roadbook.days[index];
+
+    if (!day) return;
 
     document.getElementById("current-day").textContent =
         `Jour ${index + 1}`;
@@ -98,7 +115,9 @@ function updatePois(day) {
 
     list.innerHTML = "";
 
-    day.pois.forEach(poi => {
+    const pois = Array.isArray(day.pois) ? day.pois : [];
+
+    pois.forEach(poi => {
 
         const li = document.createElement("li");
 
@@ -115,6 +134,8 @@ function updatePois(day) {
  */
 function previousDay() {
 
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+
     if (currentDay > 0) {
 
         currentDay--;
@@ -126,6 +147,8 @@ function previousDay() {
 }
 
 function nextDay() {
+
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
 
     if (currentDay < roadbook.days.length - 1) {
 
@@ -142,11 +165,13 @@ function nextDay() {
  */
 function updateButtons() {
 
+    const hasDays = Boolean(roadbook && Array.isArray(roadbook.days) && roadbook.days.length);
+
     document.getElementById("previous-day").disabled =
-        currentDay === 0;
+        !hasDays || currentDay === 0;
 
     document.getElementById("next-day").disabled =
-        currentDay === roadbook.days.length - 1;
+        !hasDays || currentDay === roadbook.days.length - 1;
 
 }
 
@@ -161,4 +186,5 @@ document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
 
-loadRoadbook();
+updateButtons();
+initializeRoadbook();
