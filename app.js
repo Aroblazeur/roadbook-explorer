@@ -100,8 +100,9 @@ function displayDay(index) {
     document.getElementById("description").textContent =
         safeText(day.description, "Aucune description renseignée.");
 
-    renderFieldNavigation(day);
-    renderStageMapEmbed(day.mapEmbedUrl);
+    const stageGpxUrl = day.gpx || day.route?.gpx;
+    const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
+    renderFieldNavigation(day, stageGpxUrl, mapVisible);
     renderNotes(day.noteItems || day.notes);
     updatePois(day);
 
@@ -109,13 +110,32 @@ function displayDay(index) {
 
 }
 
-function renderStageMapEmbed(mapEmbedUrl) {
+function renderStageMapEmbed(mapEmbedUrl, gpxUrl) {
     const viewer = window.roadbookMapViewer;
     if (!viewer || typeof viewer.renderEmbed !== "function") {
         document.getElementById("map-embed-section").hidden = true;
-        return;
+        renderMapGpxActions(false, null);
+        return false;
     }
-    viewer.renderEmbed(mapEmbedUrl);
+    const mapVisible = viewer.renderEmbed(mapEmbedUrl);
+    const resolvedGpx = resolveStageGpxUrl(gpxUrl);
+    renderMapGpxActions(mapVisible, resolvedGpx);
+    return mapVisible;
+}
+
+function renderMapGpxActions(mapVisible, gpxUrl) {
+    const actions = document.getElementById("map-gpx-actions");
+    const downloadLink = document.getElementById("map-gpx-download");
+    if (!actions || !downloadLink) return;
+
+    const showGpxInMapSection = Boolean(mapVisible && gpxUrl);
+    actions.hidden = !showGpxInMapSection;
+
+    if (showGpxInMapSection) {
+        downloadLink.href = gpxUrl;
+    } else {
+        downloadLink.removeAttribute("href");
+    }
 }
 
 /**
@@ -149,11 +169,11 @@ function updatePois(day) {
 
 }
 
-function renderFieldNavigation(day) {
+function renderFieldNavigation(day, stageGpxUrl, mapVisible) {
     const activeVariants = Array.isArray(day.variants)
         ? day.variants.filter(variant => variant?.enabled)
         : [];
-    renderStageGpx(day.gpx || day.route?.gpx);
+    renderStageGpx(stageGpxUrl, mapVisible);
     renderVariants(activeVariants);
     renderAccommodation(day.accommodation);
     document.getElementById("copy-status").textContent = "";
@@ -217,18 +237,23 @@ function renderVariants(variants) {
     });
 }
 
-function renderStageGpx(url) {
+function renderStageGpx(url, mapVisible = false) {
     const section = document.getElementById("terrain-navigation");
     const downloadLink = document.getElementById("terrain-gpx-download");
-    const resolvedUrl = window.roadbookMapViewer?.resolveGpxUrl?.(url);
+    const resolvedUrl = resolveStageGpxUrl(url);
     const valid = Boolean(resolvedUrl);
-    section.hidden = !valid;
+    const showStandaloneGpx = valid && !mapVisible;
+    section.hidden = !showStandaloneGpx;
 
-    if (valid) {
+    if (showStandaloneGpx) {
         downloadLink.href = resolvedUrl;
     } else {
         downloadLink.removeAttribute("href");
     }
+}
+
+function resolveStageGpxUrl(url) {
+    return window.roadbookMapViewer?.resolveGpxUrl?.(url) || null;
 }
 
 function appendGpxActions(container, url, label) {
