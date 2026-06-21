@@ -173,9 +173,9 @@ function buildAccommodation(record) {
     };
 }
 
-function mapEtape(record) {
+function mapEtape(record, index) {
     const stageNumber = toNumber(firstValue(record, ["etape", "étape"]));
-    const dayNumber = toNumber(firstValue(record, ["jour"]));
+    const dayLabel = firstValue(record, ["jour"]);
     const departure = firstValue(record, ["depart", "départ"]);
     const arrival = firstValue(record, ["arrivee", "arrivée"]);
     const notes = firstValue(record, ["notes"]);
@@ -188,7 +188,7 @@ function mapEtape(record) {
 
     return {
         stage: stageNumber,
-        day: dayNumber,
+        day: dayLabel,
         departure,
         arrival,
         distance,
@@ -198,10 +198,11 @@ function mapEtape(record) {
         gpx,
         accommodation,
         variants: [],
-        title: `Jour ${dayNumber ?? "?"}${routeLabel ? ` - ${routeLabel}` : ""}`,
+        title: `Étape ${index + 1}${routeLabel ? ` - ${routeLabel}` : ""}`,
         elevation: elevationGain ?? 0,
         duration: "",
-        description: notes || "",
+        description: "",
+        noteItems: splitMulti(notes),
         pois: [],
         legacyAccommodation: accommodation.name || ""
     };
@@ -216,7 +217,7 @@ function mapVariante(record) {
         distanceExtra: toNumber(firstValue(record, ["distance supplementaire (km)", "distance supplémentaire (km)"])),
         elevationGainExtra: toNumber(firstValue(record, ["d+ supplementaire (m)", "d+ supplémentaire (m)"])),
         elevationLossExtra: toNumber(firstValue(record, ["d− supplementaire (m)", "d− supplémentaire (m)", "d- supplementaire (m)", "d- supplémentaire (m)"])),
-        pointOfInterest: firstValue(record, ["point d'intérêt", "point d'interet"]),
+        pointsOfInterest: splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"])),
         description: firstValue(record, ["description / photos"]),
         link: firstValue(record, ["lien"]),
         gpx: firstValue(record, ["gpx"]),
@@ -242,10 +243,15 @@ function attachVariants(stages, variants) {
         });
     });
 
+    let inheritedReference = null;
+
     variants.forEach(variant => {
+        if (variant.stageReference) inheritedReference = variant.stageReference;
+        if (!variant.enabled) return;
+
         const referenceKeys = [
-            normalizeHeader(variant.stageReference),
-            variant.day !== null ? normalizeHeader(String(variant.day)) : null
+            normalizeHeader(variant.stageReference || inheritedReference),
+            variant.day ? normalizeHeader(String(variant.day)) : null
         ].filter(Boolean);
 
         let stage = null;
@@ -258,9 +264,7 @@ function attachVariants(stages, variants) {
 
         if (!stage) return;
         stage.variants.push(variant);
-        if (variant.pointOfInterest) {
-            stage.pois.push(variant.pointOfInterest);
-        }
+        stage.pois.push(...variant.pointsOfInterest);
     });
 }
 
@@ -280,8 +284,6 @@ async function fetchCsv(url) {
 }
 
 async function loadGoogleSheetRoadbook() {
-    console.info("[Roadbook] Source Google Sheets tentée.");
-
     const [etapesCsv, variantesCsv] = await Promise.all([
         fetchCsv(ETAPES_URL),
         fetchCsv(VARIANTES_URL)
@@ -302,15 +304,7 @@ async function loadGoogleSheetRoadbook() {
         title: "Perinexus à vélo",
         description: "Roadbook d'itinérance à vélo.",
         stages,
-        days: stages.map(stage => ({
-            title: stage.title,
-            distance: stage.distance ?? 0,
-            elevation: stage.elevation ?? 0,
-            duration: stage.duration,
-            description: stage.description,
-            accommodation: stage.legacyAccommodation,
-            pois: stage.pois
-        }))
+        days: stages.map(stage => ({ ...stage }))
     };
 }
 
@@ -351,7 +345,6 @@ async function loadFallbackRoadbook() {
     let lastError = null;
 
     for (const path of validPaths) {
-        console.info(`[Roadbook] Fallback JSON tenté : ${path}.`);
         try {
             const response = await fetch(path);
             if (!response.ok) {

@@ -1,7 +1,5 @@
 "use strict";
 
-console.log("APP.JS VERSION GOOGLE SHEETS ACTIVE");
-
 /**
  * =====================================================
  * Perinexus Roadbook
@@ -58,12 +56,14 @@ function updateSummary() {
 
     const info = document.getElementById("roadbook-info");
 
-    info.innerHTML = `
-        <strong>${roadbook.title}</strong><br>
-        ${roadbook.description}<br><br>
-
-        Nombre d'étapes : ${roadbook.days.length}
-    `;
+    info.replaceChildren();
+    const title = document.createElement("strong");
+    title.textContent = safeText(roadbook.title, "Roadbook");
+    const description = document.createElement("p");
+    description.textContent = safeText(roadbook.description, "");
+    const count = document.createElement("p");
+    count.textContent = `Nombre d'étapes : ${roadbook.days.length}`;
+    info.append(title, description, count);
 
 }
 
@@ -83,23 +83,27 @@ function displayDay(index) {
         `Jour ${index + 1}`;
 
     document.getElementById("day-title").textContent =
-        day.title;
+        safeText(day.title, `Étape ${index + 1}`);
 
     document.getElementById("distance").textContent =
-        `${day.distance} km`;
+        formatMetric(day.distance, "km");
 
     document.getElementById("elevation").textContent =
-        `${day.elevation} m`;
+        formatMetric(day.elevationGain ?? day.elevation, "m");
+
+    document.getElementById("elevation-loss").textContent =
+        formatMetric(day.elevationLoss, "m");
 
     document.getElementById("duration").textContent =
-        day.duration;
+        safeText(day.duration);
 
     document.getElementById("description").textContent =
-        day.description;
+        safeText(day.description, "Aucune description renseignée.");
 
-    document.getElementById("accommodation").textContent =
-        day.accommodation;
-
+    renderAccommodation(day.accommodation);
+    renderVariants(day.variants);
+    renderGpx(day.gpx || day.route?.gpx);
+    renderNotes(day.noteItems || day.notes);
     updatePois(day);
 
     updateButtons();
@@ -117,16 +121,152 @@ function updatePois(day) {
 
     const pois = Array.isArray(day.pois) ? day.pois : [];
 
+    if (!pois.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "Non renseigné";
+        list.appendChild(empty);
+        return;
+    }
+
     pois.forEach(poi => {
 
         const li = document.createElement("li");
 
-        li.textContent = poi;
+        li.textContent = safeText(typeof poi === "object" ? poi.name || poi.label : poi);
 
         list.appendChild(li);
 
     });
 
+}
+
+function renderAccommodation(accommodation) {
+    const container = document.getElementById("accommodation");
+    container.replaceChildren();
+    if (!accommodation) {
+        container.textContent = "Non renseigné";
+        return;
+    }
+
+    if (typeof accommodation === "string") {
+        container.textContent = safeText(accommodation);
+        return;
+    }
+
+    const name = document.createElement("p");
+    name.className = "detail-name";
+    name.textContent = safeText(accommodation.name);
+    container.appendChild(name);
+    appendResource(container, accommodation.url, "Site de l'hébergement");
+    appendResourceList(container, "Hébergements alternatifs", accommodation.alternatives);
+    appendResourceList(container, "Locations maison", accommodation.houseRentals);
+}
+
+function renderVariants(variants) {
+    const section = document.getElementById("variants-section");
+    const list = document.getElementById("variants");
+    const enabled = Array.isArray(variants) ? variants.filter(variant => variant?.enabled) : [];
+    list.replaceChildren();
+    section.hidden = enabled.length === 0;
+
+    enabled.forEach(variant => {
+        const item = document.createElement("li");
+        const name = document.createElement("strong");
+        name.textContent = safeText(variant.name, "Variante");
+        item.appendChild(name);
+        const details = [
+            safeText(variant.type, ""),
+            Number.isFinite(variant.distanceExtra) ? `+${variant.distanceExtra} km` : "",
+            Number.isFinite(variant.elevationGainExtra) ? `D+ ${variant.elevationGainExtra} m` : "",
+            Number.isFinite(variant.elevationLossExtra) ? `D− ${variant.elevationLossExtra} m` : ""
+        ].filter(Boolean);
+        if (details.length) {
+            const text = document.createElement("p");
+            text.textContent = details.join(" · ");
+            item.appendChild(text);
+        }
+        if (variant.description) {
+            const description = document.createElement("p");
+            description.textContent = variant.description;
+            item.appendChild(description);
+        }
+        appendResource(item, variant.link, "Informations");
+        appendResource(item, variant.gpx, "Trace GPX");
+        list.appendChild(item);
+    });
+}
+
+function renderGpx(url) {
+    const section = document.getElementById("gpx-section");
+    const link = document.getElementById("gpx-link");
+    const valid = isSafeUrl(url);
+    section.hidden = !valid;
+    if (valid) link.href = url;
+    else link.removeAttribute("href");
+}
+
+function renderNotes(notes) {
+    const section = document.getElementById("notes-section");
+    const list = document.getElementById("notes");
+    const items = Array.isArray(notes) ? notes.filter(Boolean) : [];
+    list.replaceChildren();
+    section.hidden = items.length === 0;
+    items.forEach(note => {
+        const item = document.createElement("li");
+        item.textContent = safeText(note);
+        list.appendChild(item);
+    });
+}
+
+function appendResourceList(container, title, values) {
+    const items = Array.isArray(values) ? values.filter(Boolean) : [];
+    if (!items.length) return;
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    const list = document.createElement("ul");
+    items.forEach((value, index) => {
+        const item = document.createElement("li");
+        appendResource(item, value, `${title} ${index + 1}`);
+        list.appendChild(item);
+    });
+    container.append(heading, list);
+}
+
+function appendResource(container, value, label) {
+    if (!value) return;
+    if (!isSafeUrl(value)) {
+        const text = document.createElement("span");
+        text.textContent = safeText(value);
+        container.appendChild(text);
+        return;
+    }
+    const link = document.createElement("a");
+    link.href = value;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = label;
+    link.className = "resource-link";
+    container.appendChild(link);
+}
+
+function isSafeUrl(value) {
+    if (typeof value !== "string" || !value.trim()) return false;
+    try {
+        const url = new URL(value, window.location.href);
+        return ["http:", "https:"].includes(url.protocol);
+    } catch (error) {
+        return false;
+    }
+}
+
+function safeText(value, fallback = "Non renseigné") {
+    if (value === null || value === undefined || value === "") return fallback;
+    return String(value);
+}
+
+function formatMetric(value, unit) {
+    return Number.isFinite(value) ? `${value} ${unit}` : `— ${unit}`;
 }
 
 /**

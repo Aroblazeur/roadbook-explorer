@@ -157,6 +157,11 @@ button:hover{
 
 }
 
+button:disabled{
+    cursor:not-allowed;
+    opacity:.55;
+}
+
 /* =====================================================
    Statistics
    ===================================================== */
@@ -213,6 +218,38 @@ li{
 
 }
 
+.empty{
+    color:var(--text-light);
+}
+
+.detail-name{
+    font-weight:700;
+    margin-bottom:8px;
+}
+
+.resource-link{
+    display:inline-block;
+    margin:8px 10px 4px 0;
+    color:var(--primary-dark);
+    font-weight:700;
+    overflow-wrap:anywhere;
+}
+
+.resource-list{
+    padding-left:0;
+    list-style:none;
+}
+
+.resource-list > li{
+    padding:15px;
+    border:1px solid var(--border);
+    border-radius:10px;
+}
+
+#accommodation h3{
+    font-size:1rem;
+}
+
 /* =====================================================
    Footer
    ===================================================== */
@@ -249,6 +286,19 @@ footer{
 
         font-size:1.7rem;
 
+    }
+
+    .card{
+        margin:16px 0;
+        padding:18px;
+    }
+
+    .stats{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .stat{
+        padding:12px 8px;
     }
 
 }
