@@ -457,12 +457,12 @@ footer{
 }
 
 .variant-title {
-    margin: 0;
+    margin: 0 0 4px;
     font-size: 1.05rem;
 }
 
 .variant-subtitle {
-    margin: 0;
+    margin: 0 0 4px;
     color: var(--text-light);
     font-size: 0.95em;
 }
@@ -470,7 +470,7 @@ footer{
 .variant-details,
 .variant-description,
 .variant-poi-heading {
-    margin: 0;
+    margin: 2px 0;
 }
 
 .variant-poi-list {
