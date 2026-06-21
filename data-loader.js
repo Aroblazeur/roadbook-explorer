@@ -308,7 +308,7 @@ function attachVariants(stages, variants) {
 function getEtapeLabel(record) {
     const raw = firstValue(record, ["etape", "étape"]);
     const str = normalizeHeader(raw || "");
-    if (str.includes("variante") || str.includes("courte")) return "variante_courte";
+    if (str.includes("variante courte")) return "variante_courte";
     if (str.includes("principale")) return "principale";
     return null;
 }
