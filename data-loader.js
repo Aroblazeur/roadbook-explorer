@@ -277,7 +277,8 @@ function attachVariants(stages, variants) {
 
     let lastStageNumber = null;
     let attached = 0;
-    let ignored = 0;
+    let disabled = 0;
+    let unmatched = 0;
 
     variants.forEach(variant => {
         const refNumber = extractStageNumber(variant.stageReference);
@@ -286,13 +287,14 @@ function attachVariants(stages, variants) {
         }
 
         if (!variant.enabled) {
+            disabled++;
             return;
         }
 
         const effectiveStageNumber = refNumber !== null ? refNumber : lastStageNumber;
 
         if (effectiveStageNumber === null) {
-            ignored++;
+            unmatched++;
             console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — aucune référence d'étape.`);
             return;
         }
@@ -300,7 +302,7 @@ function attachVariants(stages, variants) {
         const stage = byNumber.get(effectiveStageNumber);
 
         if (!stage) {
-            ignored++;
+            unmatched++;
             console.warn(`[Roadbook] Variante ignorée : "${variant.name}" — étape ${effectiveStageNumber} introuvable.`);
             return;
         }
@@ -314,7 +316,7 @@ function attachVariants(stages, variants) {
         `Étapes : ${stages.length}\n` +
         `Variantes : ${variants.length}\n` +
         `Variantes rattachées : ${attached}\n` +
-        `Variantes ignorées : ${ignored}`
+        `Variantes ignorées : ${disabled + unmatched}`
     );
 }
 
