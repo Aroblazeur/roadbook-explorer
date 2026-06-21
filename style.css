@@ -227,27 +227,92 @@ li{
     margin-bottom:8px;
 }
 
-.resource-link{
-    display:inline-block;
-    margin:8px 10px 4px 0;
-    color:var(--primary-dark);
-    font-weight:700;
-    overflow-wrap:anywhere;
+.terrain-navigation{
+    border:2px solid rgba(46,125,50,.18);
 }
 
-.resource-list{
-    padding-left:0;
+.terrain-navigation__intro{
+    color:var(--text-light);
+    margin-top:-10px;
+    margin-bottom:20px;
+}
+
+.terrain-group{
+    padding:18px 0;
+    border-top:1px solid var(--border);
+}
+
+.terrain-group h3{
+    margin:0 0 12px;
+}
+
+.terrain-list{
+    display:grid;
+    gap:12px;
+    padding:0;
     list-style:none;
 }
 
-.resource-list > li{
-    padding:15px;
+.terrain-list > li{
+    margin:0;
+    padding:14px;
     border:1px solid var(--border);
     border-radius:10px;
+    background:#f8faf8;
 }
 
-#accommodation h3{
-    font-size:1rem;
+.terrain-button{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:52px;
+    padding:13px 18px;
+    border-radius:10px;
+    color:#fff;
+    background:var(--primary);
+    font-weight:700;
+    line-height:1.25;
+    text-align:center;
+    text-decoration:none;
+    overflow-wrap:anywhere;
+}
+
+.terrain-button:hover,
+.terrain-button:focus-visible{
+    color:#fff;
+    background:var(--primary-dark);
+}
+
+.terrain-button--secondary{
+    color:var(--primary-dark);
+    background:#e8f5e9;
+    border:1px solid rgba(46,125,50,.3);
+}
+
+.terrain-button--secondary:hover,
+.terrain-button--secondary:focus-visible{
+    color:#fff;
+}
+
+.terrain-copy{
+    padding-bottom:0;
+}
+
+#terrain-accommodation ul{
+    padding:0;
+    list-style:none;
+}
+
+.copy-status{
+    min-height:1.6em;
+    margin-top:8px;
+    color:var(--text-light);
+}
+
+.copy-helper{
+    position:fixed;
+    left:-9999px;
+    top:0;
 }
 
 /* =====================================================
@@ -299,6 +364,20 @@ footer{
 
     .stat{
         padding:12px 8px;
+    }
+
+    .terrain-group{
+        padding:16px 0;
+    }
+
+    .terrain-button{
+        width:100%;
+        min-height:56px;
+        margin:4px 0;
+    }
+
+    .terrain-list > li{
+        padding:12px;
     }
 
 }
