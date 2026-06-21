@@ -219,19 +219,14 @@ function renderVariants(variants) {
 
 function renderStageGpx(url) {
     const section = document.getElementById("terrain-navigation");
-    const openLink = document.getElementById("terrain-gpx-open");
     const downloadLink = document.getElementById("terrain-gpx-download");
     const resolvedUrl = window.roadbookMapViewer?.resolveGpxUrl?.(url);
     const valid = Boolean(resolvedUrl);
     section.hidden = !valid;
-    openLink.textContent = "📍 Ouvrir le GPX";
-    downloadLink.hidden = false;
 
     if (valid) {
-        openLink.href = resolvedUrl;
         downloadLink.href = resolvedUrl;
     } else {
-        openLink.removeAttribute("href");
         downloadLink.removeAttribute("href");
     }
 }
@@ -241,8 +236,7 @@ function appendGpxActions(container, url, label) {
     if (!resolvedUrl) return;
     const actions = document.createElement("div");
     actions.className = "gpx-actions";
-    appendResource(actions, resolvedUrl, `📍 Ouvrir le GPX — ${label}`, "terrain-button");
-    const download = appendResource(actions, resolvedUrl, `⬇ Télécharger le GPX — ${label}`, "terrain-button terrain-button--secondary");
+    const download = appendResource(actions, resolvedUrl, `⬇ Télécharger le GPX — ${label}`, "terrain-button");
     if (download) download.setAttribute("download", "");
     container.appendChild(actions);
 }
