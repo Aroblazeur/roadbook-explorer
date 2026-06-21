@@ -4,7 +4,7 @@ const ETAPES_URL =
     "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=etapes%20principales";
 
 const VARIANTES_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=Variante%20et%20option";
+    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&gid=15169789";
 
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
@@ -328,6 +328,12 @@ async function loadGoogleSheetRoadbook() {
 
     const etapesRows = parseCsv(etapesCsv);
     const variantesRows = parseCsv(variantesCsv);
+
+    console.log("[Roadbook] URL variantes utilisée :", VARIANTES_URL);
+    console.log("[Roadbook] Nombre de lignes variantes lues :", variantesRows.length);
+    if (variantesRows.length > 0) {
+        console.log("[Roadbook] Première ligne variante parsée :", variantesRows[0]);
+    }
 
     ensureSchema(etapesRows, REQUIRED_ETAPES_HEADERS);
     ensureSchema(variantesRows, REQUIRED_VARIANTES_HEADERS);
