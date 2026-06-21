@@ -237,15 +237,6 @@ li{
     margin-bottom:20px;
 }
 
-.terrain-group{
-    padding:18px 0;
-    border-top:1px solid var(--border);
-}
-
-.terrain-group h3{
-    margin:0 0 12px;
-}
-
 .terrain-list{
     display:grid;
     gap:12px;
@@ -294,13 +285,34 @@ li{
     color:#fff;
 }
 
-.terrain-copy{
-    padding-bottom:0;
+.stage-copy{
+    margin-top:22px;
+    padding-top:18px;
+    border-top:1px solid var(--border);
 }
 
-#terrain-accommodation ul{
+.gpx-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+}
+
+.accommodation-card ul{
     padding:0;
     list-style:none;
+}
+
+.variants-card summary{
+    min-height:52px;
+    cursor:pointer;
+    color:var(--primary-dark);
+    font-size:1.35rem;
+    font-weight:700;
+    line-height:52px;
+}
+
+.variants-card[open] summary{
+    margin-bottom:18px;
 }
 
 .copy-status{
@@ -366,10 +378,6 @@ footer{
         padding:12px 8px;
     }
 
-    .terrain-group{
-        padding:16px 0;
-    }
-
     .terrain-button{
         width:100%;
         min-height:56px;
@@ -378,6 +386,16 @@ footer{
 
     .terrain-list > li{
         padding:12px;
+    }
+
+    .gpx-actions{
+        display:grid;
+        gap:8px;
+    }
+
+    .variants-card summary{
+        min-height:56px;
+        line-height:56px;
     }
 
 }

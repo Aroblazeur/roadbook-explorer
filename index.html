@@ -37,37 +37,30 @@
       </div>
       <h3>Description</h3>
       <p id="description">Chargement...</p>
-    </section>
-
-    <section id="terrain-navigation" class="card terrain-navigation" aria-labelledby="terrain-navigation-title">
-      <h2 id="terrain-navigation-title">Navigation terrain</h2>
-      <p class="terrain-navigation__intro">Accès rapide aux traces et informations utiles de l'étape.</p>
-
-      <div id="terrain-gpx-group" class="terrain-group" hidden>
-        <h3>GPX de l'étape</h3>
-        <a id="terrain-gpx-link" class="terrain-button" target="_blank" rel="noopener noreferrer">Ouvrir le GPX de l'étape</a>
-      </div>
-
-      <div id="terrain-variants-group" class="terrain-group" hidden>
-        <h3>GPX des variantes actives</h3>
-        <ul id="terrain-variants" class="terrain-list"></ul>
-      </div>
-
-      <div id="terrain-links-group" class="terrain-group" hidden>
-        <h3>Liens utiles</h3>
-        <ul id="terrain-links" class="terrain-list"></ul>
-      </div>
-
-      <div id="terrain-accommodation-group" class="terrain-group" hidden>
-        <h3>Hébergement</h3>
-        <div id="terrain-accommodation"></div>
-      </div>
-
-      <div class="terrain-group terrain-copy">
-        <button id="copy-summary" class="terrain-button terrain-button--copy" type="button">Copier le résumé de l'étape</button>
+      <div class="stage-copy">
+        <button id="copy-summary" class="terrain-button terrain-button--copy" type="button">Copier le résumé</button>
         <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
       </div>
     </section>
+
+    <section id="terrain-navigation" class="card terrain-navigation" aria-labelledby="terrain-navigation-title" hidden>
+      <h2 id="terrain-navigation-title">Navigation</h2>
+      <p class="terrain-navigation__intro">Accès rapide à la trace de l'étape.</p>
+      <div class="gpx-actions">
+        <a id="terrain-gpx-open" class="terrain-button" target="_blank" rel="noopener noreferrer">📍 Ouvrir le GPX</a>
+        <a id="terrain-gpx-download" class="terrain-button terrain-button--secondary" download>⬇ Télécharger le GPX</a>
+      </div>
+    </section>
+
+    <section id="accommodation-card" class="card accommodation-card">
+      <h2>Hébergement</h2>
+      <div id="accommodation">Non renseigné</div>
+    </section>
+
+    <details id="variants-section" class="card variants-card" hidden>
+      <summary>Variantes<span id="variants-count"></span></summary>
+      <ul id="variants" class="terrain-list"></ul>
+    </details>
 
     <section id="notes-section" class="card" hidden>
       <h2>Notes</h2>
@@ -83,6 +76,6 @@
 
   <footer><p>Perinexus Roadbook</p></footer>
   <script src="data-loader.js"></script>
-  <script src="app.js?v=field-navigation-20260621"></script>
+  <script src="app.js?v=terrain-ux-20260621"></script>
 </body>
 </html>
