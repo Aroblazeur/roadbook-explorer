@@ -191,6 +191,7 @@ function updatePois(day) {
     const list = document.getElementById("pois");
 
     list.innerHTML = "";
+    list.classList.remove("poi-list--enriched");
 
     const pois = Array.isArray(day.pois) ? day.pois : [];
 
@@ -202,49 +203,7 @@ function updatePois(day) {
         return;
     }
 
-    pois.forEach(poi => {
-        const name = safeText(typeof poi === "object" ? poi?.name || poi?.label : poi);
-        const metadata = findPoiEnrichment(name);
-        const li = document.createElement("li");
-
-        if (!metadata) {
-            li.textContent = name;
-            list.appendChild(li);
-            return;
-        }
-
-        li.className = "poi-card";
-
-        if (metadata.image) {
-            const image = document.createElement("img");
-            image.className = "poi-card__image";
-            image.src = metadata.image;
-            image.loading = "lazy";
-            image.alt = `Photo de ${metadata.name || name}`;
-            image.addEventListener("error", () => {
-                image.hidden = true;
-                image.removeAttribute("src");
-            }, { once: true });
-            li.appendChild(image);
-        }
-
-        const content = document.createElement("div");
-        content.className = "poi-card__content";
-        const title = document.createElement("strong");
-        title.className = "poi-card__name";
-        title.textContent = metadata.name || name;
-        content.appendChild(title);
-
-        if (metadata.description) {
-            const description = document.createElement("p");
-            description.className = "poi-card__description";
-            description.textContent = metadata.description;
-            content.appendChild(description);
-        }
-
-        li.appendChild(content);
-        list.appendChild(li);
-    });
+    renderPoiList(list, pois);
 
 }
 
@@ -253,6 +212,79 @@ function findPoiEnrichment(name) {
     if (!loader || typeof loader.normalizePoiName !== "function") return null;
     const key = loader.normalizePoiName(name);
     return key ? poiEnrichmentIndex.get(key) || null : null;
+}
+
+function resolvePoiEntry(poi) {
+    const sourceName = typeof poi === "object" ? poi?.name || poi?.label : poi;
+    const sourceDescription = typeof poi === "object" ? safeText(poi?.description, "") : "";
+    const sourceImage = typeof poi === "object" ? safeText(poi?.image, "") : "";
+    const name = safeText(sourceName, "Point d'intérêt");
+    const metadata = findPoiEnrichment(name);
+    const imageCandidate = metadata?.image || sourceImage || "";
+    const image = isSafeUrl(imageCandidate) ? imageCandidate : "";
+    const description = metadata?.description || sourceDescription || "";
+
+    return {
+        name: metadata?.name || name,
+        image,
+        description,
+        isEnriched: Boolean(image || description)
+    };
+}
+
+function appendPoiCard(list, entry) {
+    const li = document.createElement("li");
+    li.className = "poi-card";
+
+    if (entry.image) {
+        const image = document.createElement("img");
+        image.className = "poi-card__image";
+        image.src = entry.image;
+        image.loading = "lazy";
+        image.alt = `Photo de ${entry.name}`;
+        image.addEventListener("error", () => {
+            image.hidden = true;
+            image.removeAttribute("src");
+        }, { once: true });
+        li.appendChild(image);
+    }
+
+    const content = document.createElement("div");
+    content.className = "poi-card__content";
+    const title = document.createElement("strong");
+    title.className = "poi-card__name";
+    title.textContent = entry.name;
+    content.appendChild(title);
+
+    if (entry.description) {
+        const description = document.createElement("p");
+        description.className = "poi-card__description";
+        description.textContent = entry.description;
+        content.appendChild(description);
+    }
+
+    li.appendChild(content);
+    list.appendChild(li);
+}
+
+function renderPoiList(list, pois) {
+    const entries = pois.map(resolvePoiEntry);
+    const hasEnrichedPoi = entries.some(entry => entry.isEnriched);
+
+    list.classList.toggle("poi-list--enriched", hasEnrichedPoi);
+
+    if (!hasEnrichedPoi) {
+        entries.forEach(entry => {
+            const item = document.createElement("li");
+            item.textContent = entry.name;
+            list.appendChild(item);
+        });
+        return;
+    }
+
+    entries.forEach(entry => {
+        appendPoiCard(list, entry);
+    });
 }
 
 function renderFieldNavigation(day) {
@@ -361,11 +393,7 @@ function renderVariants(variants) {
             poiHeading.textContent = "Points d'intérêt :";
             block.appendChild(poiHeading);
             const poiList = document.createElement("ul");
-            variant.pointsOfInterest.forEach(poi => {
-                const poiItem = document.createElement("li");
-                poiItem.textContent = safeText(poi);
-                poiList.appendChild(poiItem);
-            });
+            renderPoiList(poiList, variant.pointsOfInterest);
             block.appendChild(poiList);
         }
 

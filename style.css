@@ -222,6 +222,17 @@ li{
     color:var(--text-light);
 }
 
+.poi-list--enriched{
+    list-style:none;
+    padding-left:0;
+    display:grid;
+    gap:10px;
+}
+
+.poi-list--enriched > li{
+    margin:0;
+}
+
 .poi-card{
     display:grid;
     grid-template-columns:minmax(120px,180px) 1fr;
