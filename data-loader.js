@@ -272,7 +272,7 @@ function mapVariante(record) {
             "etape principale associe",
             "etape principale associé",
             "etape principale associee"
-        ]) ?? firstValueByPrefix(record, "etape principale associ")
+        ])
     );
 
     return {
@@ -330,13 +330,13 @@ function attachVariants(stages, variants) {
     );
 }
 
+function filterRowsByType(rows, type) {
+    return rows.filter(row => normalizeHeader(firstValue(row, ["type"]) || "") === type);
+}
+
 function buildRoadbook(etapesRows, variantesRows) {
-    const principaleRows = etapesRows.filter(row =>
-        normalizeHeader(firstValue(row, ["type"]) || "") === "principale"
-    );
-    const etapeVarianteRows = etapesRows.filter(row =>
-        normalizeHeader(firstValue(row, ["type"]) || "") === "variante"
-    );
+    const principaleRows = filterRowsByType(etapesRows, "principale");
+    const etapeVarianteRows = filterRowsByType(etapesRows, "variante");
 
     console.log(`[Roadbook] Lignes type=principale : ${principaleRows.length}`);
     console.log(`[Roadbook] Lignes type=variante (étapes) : ${etapeVarianteRows.length}`);
