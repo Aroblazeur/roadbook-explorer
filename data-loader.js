@@ -282,6 +282,12 @@ function selectMainAndAlternativeEtapes(rows) {
         groupedByStage.get(stageNumber).push({ row, index });
     });
 
+    // Log groupes construits
+    groupedByStage.forEach((groupRows, stageNumber) => {
+        const labels = groupRows.map(item => firstValue(item.row, ["etape", "étape"]) || `Étape ${stageNumber}`);
+        console.log(`[Roadbook] Groupe étape ${stageNumber} (${labels.length} ligne(s)) :`, labels);
+    });
+
     const mainRowsWithIndex = [];
     const alternativeRows = [];
     const retainedMainRows = [];
@@ -292,12 +298,16 @@ function selectMainAndAlternativeEtapes(rows) {
         const selectedIndex = principaleIndex >= 0 ? principaleIndex : 0;
         const selected = groupRows[selectedIndex];
         mainRowsWithIndex.push(selected);
-        retainedMainRows.push(firstValue(selected.row, ["etape", "étape"]) || `Étape ${stageNumber}`);
+        const selectedLabel = firstValue(selected.row, ["etape", "étape"]) || `Étape ${stageNumber}`;
+        retainedMainRows.push(selectedLabel);
+        console.log(`[Roadbook] Étape ${stageNumber} → principale retenue : "${selectedLabel}"`);
 
         groupRows.forEach((item, index) => {
             if (index === selectedIndex) return;
             alternativeRows.push(item.row);
-            movedAlternativeRows.push(firstValue(item.row, ["etape", "étape"]) || `Étape ${stageNumber}`);
+            const altLabel = firstValue(item.row, ["etape", "étape"]) || `Étape ${stageNumber}`;
+            movedAlternativeRows.push(altLabel);
+            console.log(`[Roadbook] Étape ${stageNumber} → déplacée en alternative : "${altLabel}"`);
         });
     });
 
