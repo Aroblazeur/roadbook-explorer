@@ -238,15 +238,6 @@ function mapVariante(record) {
             "etape principale associee"
         ]) ?? firstValueByPrefix(record, "etape principale associ");
 
-    const enabledRaw =
-        firstValue(record, [
-            "activee",
-            "activée",
-            "active",
-            "activé",
-            "actif"
-        ]) ?? firstValueByPrefix(record, "activ");
-
     return {
         stageReference,
         day: toNumber(firstValue(record, ["jour"])),
@@ -259,7 +250,7 @@ function mapVariante(record) {
         description: firstValue(record, ["description / photos"]),
         link: firstValue(record, ["lien"]),
         gpx: firstValue(record, ["gpx"]),
-        enabled: toBoolean(enabledRaw)
+        enabled: true
     };
 }
 
@@ -277,18 +268,12 @@ function attachVariants(stages, variants) {
 
     let lastStageNumber = null;
     let attached = 0;
-    let disabled = 0;
     let unmatched = 0;
 
     variants.forEach(variant => {
         const refNumber = extractStageNumber(variant.stageReference);
         if (refNumber !== null) {
             lastStageNumber = refNumber;
-        }
-
-        if (!variant.enabled) {
-            disabled++;
-            return;
         }
 
         const effectiveStageNumber = refNumber !== null ? refNumber : lastStageNumber;
@@ -316,7 +301,7 @@ function attachVariants(stages, variants) {
         `Étapes : ${stages.length}\n` +
         `Variantes : ${variants.length}\n` +
         `Variantes rattachées : ${attached}\n` +
-        `Variantes ignorées : ${disabled + unmatched}`
+        `Variantes ignorées : ${unmatched}`
     );
 }
 

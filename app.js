@@ -251,9 +251,7 @@ function findPoiEnrichment(name) {
 }
 
 function renderFieldNavigation(day, stageGpxUrl, mapVisible) {
-    const activeVariants = Array.isArray(day.variants)
-        ? day.variants.filter(variant => variant?.enabled)
-        : [];
+    const activeVariants = Array.isArray(day.variants) ? day.variants : [];
     renderStageGpx(stageGpxUrl, mapVisible);
     renderVariants(activeVariants);
     renderAccommodation(day.accommodation);
