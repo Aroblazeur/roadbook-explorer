@@ -269,7 +269,8 @@ function getEtapeValue(record) {
         if (value !== undefined) return value;
     }
     // Fallback: scan normalized keys already present in record
-    const matchingKey = Object.keys(record).find(k => normalizeHeader(k) === "etape");
+    const normalizedTarget = normalizeHeader("etape");
+    const matchingKey = Object.keys(record).find(k => normalizeHeader(k) === normalizedTarget);
     return matchingKey !== undefined ? record[matchingKey] : null;
 }
 
