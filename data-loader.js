@@ -251,6 +251,7 @@ function mapVariante(record) {
 function stageMatchKey(stage) {
     const stageCandidates = [
         stage.stage !== null ? String(stage.stage) : null,
+        stage.stage !== null ? `etape ${stage.stage}` : null,
         stage.day !== null ? String(stage.day) : null,
         stage.departure ? `${stage.departure}` : null
     ].filter(Boolean);

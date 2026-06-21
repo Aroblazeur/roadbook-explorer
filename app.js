@@ -318,6 +318,18 @@ function renderVariants(variants) {
             description.textContent = variant.description;
             item.appendChild(description);
         }
+        if (Array.isArray(variant.pointsOfInterest) && variant.pointsOfInterest.length) {
+            const poiHeading = document.createElement("p");
+            poiHeading.textContent = "Points d'intérêt :";
+            item.appendChild(poiHeading);
+            const poiList = document.createElement("ul");
+            variant.pointsOfInterest.forEach(poi => {
+                const poiItem = document.createElement("li");
+                poiItem.textContent = safeText(poi);
+                poiList.appendChild(poiItem);
+            });
+            item.appendChild(poiList);
+        }
         appendGpxActions(item, variant.gpx, safeText(variant.name, "variante"));
         appendResource(item, variant.link, "Ouvrir le lien de la variante", "terrain-button terrain-button--secondary");
         list.appendChild(item);
