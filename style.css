@@ -319,15 +319,6 @@ li{
     overflow:hidden;
 }
 
-#stage-map{
-    width:100%;
-    height:clamp(320px,45vw,460px);
-    border:1px solid var(--border);
-    border-radius:10px;
-    background:#e7eee8;
-    z-index:0;
-}
-
 #stage-map-embed{
     width:100%;
     height:clamp(280px,38vw,340px);
@@ -351,16 +342,6 @@ li{
     border-radius:10px;
     color:var(--text-light);
     background:#f8faf8;
-}
-
-.leaflet-container{
-    font:inherit;
-}
-
-.leaflet-control-zoom a{
-    width:40px;
-    height:40px;
-    line-height:40px;
 }
 
 .copy-status{
@@ -444,10 +425,6 @@ footer{
     .variants-card summary{
         min-height:56px;
         line-height:56px;
-    }
-
-    #stage-map{
-        height:320px;
     }
 
     #stage-map-embed{

@@ -101,24 +101,12 @@ function displayDay(index) {
         safeText(day.description, "Aucune description renseignée.");
 
     renderFieldNavigation(day);
-    renderStageMap(day.gpx || day.route?.gpx);
     renderStageMapEmbed(day.mapEmbedUrl);
     renderNotes(day.noteItems || day.notes);
     updatePois(day);
 
     updateButtons();
 
-}
-
-function renderStageMap(gpxUrl) {
-    const viewer = window.roadbookMapViewer;
-    if (!viewer || typeof viewer.render !== "function") {
-        document.getElementById("map-section").hidden = true;
-        return;
-    }
-    viewer.render(gpxUrl).catch(() => {
-        document.getElementById("map-section").hidden = true;
-    });
 }
 
 function renderStageMapEmbed(mapEmbedUrl) {
