@@ -306,6 +306,34 @@ li{
     list-style:none;
 }
 
+.accommodation-card li{
+    margin:12px 0;
+}
+
+.accommodation-resource{
+    display:grid;
+    gap:10px;
+    width:min(100%,520px);
+    margin:12px 0;
+}
+
+.accommodation-resource__image{
+    display:block;
+    width:100%;
+    height:clamp(150px,24vw,220px);
+    object-fit:cover;
+    border-radius:12px;
+    background:#e7eee8;
+}
+
+.accommodation-resource__image[hidden]{
+    display:none;
+}
+
+.accommodation-resource .terrain-button{
+    width:100%;
+}
+
 .variants-card summary{
     min-height:52px;
     cursor:pointer;
@@ -419,6 +447,14 @@ footer{
 
     .terrain-list > li{
         padding:12px;
+    }
+
+    .accommodation-resource{
+        width:100%;
+    }
+
+    .accommodation-resource__image{
+        height:160px;
     }
 
     .gpx-actions{

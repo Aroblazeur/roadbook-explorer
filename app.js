@@ -8,6 +8,7 @@
 
 let roadbook = null;
 let currentDay = 0;
+let accommodationEnrichmentIndex = new Map();
 
 /**
  * Chargement des données
@@ -15,6 +16,8 @@ let currentDay = 0;
 async function initializeRoadbook() {
 
     try {
+
+        const enrichmentPromise = loadOptionalAccommodationEnrichment();
 
         if (typeof loadRoadbook !== "function") {
             throw new Error("Loader indisponible");
@@ -29,6 +32,9 @@ async function initializeRoadbook() {
         updateSummary();
 
         displayDay(currentDay);
+
+        accommodationEnrichmentIndex = await enrichmentPromise;
+        renderCurrentAccommodation();
 
     } catch (error) {
 
@@ -45,6 +51,20 @@ async function initializeRoadbook() {
 
     }
 
+}
+
+function loadOptionalAccommodationEnrichment() {
+    const loader = window.accommodationEnrichmentLoader;
+    if (!loader || typeof loader.loadAccommodationEnrichment !== "function") {
+        return Promise.resolve(new Map());
+    }
+    return loader.loadAccommodationEnrichment();
+}
+
+function renderCurrentAccommodation() {
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+    const day = roadbook.days[currentDay];
+    if (day) renderAccommodation(day.accommodation);
 }
 
 /**
@@ -192,11 +212,17 @@ function renderAccommodation(accommodation) {
         return;
     }
 
+    const mainMetadata = findAccommodationEnrichment(accommodation.url);
     const name = document.createElement("p");
     name.className = "detail-name";
-    name.textContent = safeText(accommodation.name);
+    name.textContent = safeText(mainMetadata?.name || accommodation.name);
     container.appendChild(name);
-    appendResource(container, accommodation.url, "Ouvrir le site de l'hébergement", "terrain-button terrain-button--secondary");
+    appendAccommodationResource(
+        container,
+        accommodation.url,
+        "Ouvrir le site de l'hébergement",
+        mainMetadata
+    );
     appendResourceList(container, "Hébergements alternatifs", accommodation.alternatives);
     appendResourceList(container, "Locations maison", accommodation.houseRentals);
 }
@@ -287,10 +313,47 @@ function appendResourceList(container, title, values) {
     const list = document.createElement("ul");
     items.forEach((value, index) => {
         const item = document.createElement("li");
-        appendResource(item, value, `${title} ${index + 1}`, "terrain-button terrain-button--secondary");
+        appendAccommodationResource(
+            item,
+            value,
+            `${title} ${index + 1}`,
+            findAccommodationEnrichment(value)
+        );
         list.appendChild(item);
     });
     container.append(heading, list);
+}
+
+function appendAccommodationResource(container, url, fallbackLabel, metadata) {
+    if (!url) return null;
+    const label = metadata?.name || fallbackLabel;
+
+    if (!metadata?.image) {
+        return appendResource(container, url, label, "terrain-button terrain-button--secondary");
+    }
+
+    const resource = document.createElement("div");
+    resource.className = "accommodation-resource";
+    const image = document.createElement("img");
+    image.className = "accommodation-resource__image";
+    image.src = metadata.image;
+    image.loading = "lazy";
+    image.alt = `Photo de ${metadata.name || "l'hébergement"}`;
+    image.addEventListener("error", () => {
+        image.hidden = true;
+        image.removeAttribute("src");
+    }, { once: true });
+    resource.appendChild(image);
+    appendResource(resource, url, label, "terrain-button terrain-button--secondary");
+    container.appendChild(resource);
+    return resource;
+}
+
+function findAccommodationEnrichment(url) {
+    const loader = window.accommodationEnrichmentLoader;
+    if (!loader || typeof loader.normalizeAccommodationUrl !== "function") return null;
+    const key = loader.normalizeAccommodationUrl(url);
+    return key ? accommodationEnrichmentIndex.get(key) || null : null;
 }
 
 function appendResource(container, value, label, className = "resource-link") {
