@@ -10,6 +10,7 @@ let roadbook = null;
 let currentDay = 0;
 let accommodationEnrichmentIndex = new Map();
 let poiEnrichmentIndex = new Map();
+let durationRequestId = 0;
 
 const TRAVELER_NOTES_FORM_URL =
     "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform";
@@ -138,8 +139,7 @@ function displayDay(index) {
     document.getElementById("elevation-loss").textContent =
         formatMetric(day.elevationLoss, "m");
 
-    document.getElementById("duration").textContent =
-        safeText(day.duration);
+    renderEstimatedDuration(day, index);
 
     const stageGpxUrl = day.gpx || day.route?.gpx;
     const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
@@ -149,6 +149,31 @@ function displayDay(index) {
 
     updateButtons();
 
+}
+
+function renderEstimatedDuration(day, index) {
+    const durationElement = document.getElementById("duration");
+    const estimator = window.roadbookDurationEstimator;
+    const requestId = ++durationRequestId;
+
+    if (!estimator || typeof estimator.estimateStageDuration !== "function") {
+        durationElement.textContent = safeText(day.duration);
+        return;
+    }
+
+    const fallbackHours = estimator.estimateFallbackHours(
+        day.distance,
+        day.elevationGain ?? day.elevation
+    );
+    durationElement.textContent = estimator.formatDuration(fallbackHours) || safeText(day.duration);
+
+    const gpxUrl = resolveStageGpxUrl(day.gpx || day.route?.gpx) || "";
+    estimator.estimateStageDuration(day, { gpxUrl }).then(result => {
+        if (requestId !== durationRequestId || currentDay !== index) return;
+        if (result?.formatted) durationElement.textContent = result.formatted;
+    }).catch(error => {
+        console.warn(`[Durée] Estimation impossible : ${error.message}. Fallback conservé.`);
+    });
 }
 
 function renderStageMapEmbed(mapEmbedUrl, gpxUrl) {
