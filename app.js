@@ -130,16 +130,7 @@ function displayDay(index) {
     document.getElementById("day-title").textContent =
         safeText(day.title, `Étape ${day.stage || (index + 1)}`);
 
-    document.getElementById("distance").textContent =
-        formatMetric(day.distance, "km");
-
-    document.getElementById("elevation").textContent =
-        formatMetric(day.elevationGain ?? day.elevation, "m");
-
-    document.getElementById("elevation-loss").textContent =
-        formatMetric(day.elevationLoss, "m");
-
-    renderEstimatedDuration(day, index);
+    renderStageMetricsAndDuration(day, index);
 
     const stageGpxUrl = day.gpx || day.route?.gpx;
     const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
@@ -151,29 +142,51 @@ function displayDay(index) {
 
 }
 
-function renderEstimatedDuration(day, index) {
+function renderStageMetricsAndDuration(day, index) {
     const durationElement = document.getElementById("duration");
     const estimator = window.roadbookDurationEstimator;
     const requestId = ++durationRequestId;
 
     if (!estimator || typeof estimator.estimateStageDuration !== "function") {
+        document.getElementById("distance").textContent = formatDistanceMetric(day.distance);
+        document.getElementById("elevation").textContent = formatElevationMetric(day.elevationGain);
+        document.getElementById("elevation-loss").textContent = formatElevationMetric(day.elevationLoss);
         durationElement.textContent = safeText(day.duration);
         return;
     }
 
+    const sheetMetrics = estimator.sheetStageMetrics(day);
+    renderStageMetricValues(sheetMetrics);
     const fallbackHours = estimator.estimateFallbackHours(
-        day.distance,
-        day.elevationGain ?? day.elevation
+        sheetMetrics.distanceKm,
+        sheetMetrics.elevationGainM
     );
     durationElement.textContent = estimator.formatDuration(fallbackHours) || safeText(day.duration);
 
     const gpxUrl = resolveStageGpxUrl(day.gpx || day.route?.gpx) || "";
     estimator.estimateStageDuration(day, { gpxUrl }).then(result => {
         if (requestId !== durationRequestId || currentDay !== index) return;
+        renderStageMetricValues(result?.metrics);
         if (result?.formatted) durationElement.textContent = result.formatted;
     }).catch(error => {
         console.warn(`[Durée] Estimation impossible : ${error.message}. Fallback conservé.`);
     });
+}
+
+function renderStageMetricValues(metrics) {
+    document.getElementById("distance").textContent = formatDistanceMetric(metrics?.distanceKm);
+    document.getElementById("elevation").textContent = formatElevationMetric(metrics?.elevationGainM);
+    document.getElementById("elevation-loss").textContent = formatElevationMetric(metrics?.elevationLossM);
+}
+
+function formatDistanceMetric(value) {
+    if (!Number.isFinite(value)) return "— km";
+    const rounded = Math.round(value * 10) / 10;
+    return `${rounded.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km`;
+}
+
+function formatElevationMetric(value) {
+    return Number.isFinite(value) ? `${Math.round(value)} m` : "— m";
 }
 
 function renderStageMapEmbed(mapEmbedUrl, gpxUrl) {
