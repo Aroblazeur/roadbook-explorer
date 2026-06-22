@@ -58,13 +58,28 @@ function toBoolean(value) {
     return ["1", "true", "vrai", "oui", "active", "activee", "activé", "activée", "x"].includes(normalized);
 }
 
-function splitMulti(value) {
+function splitMulti(value, { preserveEmpty = false } = {}) {
     const normalized = normalizeValue(value);
     if (!normalized) return [];
-    return normalized
+    const parts = normalized
         .split("---")
-        .map(part => part.trim())
-        .filter(Boolean);
+        .map(part => part.trim());
+    return preserveEmpty ? parts : parts.filter(Boolean);
+}
+
+function buildPoiEntries(record) {
+    const names = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
+    const images = splitMulti(firstValue(record, ["images poi", "image poi"]), { preserveEmpty: true });
+    const regions = splitMulti(
+        firstValue(record, ["région", "region"]) ?? firstValueByPrefix(record, "region"),
+        { preserveEmpty: true }
+    );
+
+    return names.map((name, index) => ({
+        name,
+        image: images[index] || "",
+        region: regions[index] || ""
+    }));
 }
 
 function parseCsv(csvText) {
@@ -225,7 +240,7 @@ function mapEtape(record) {
     const departure = firstValue(record, ["depart", "départ"]);
     const arrival = firstValue(record, ["arrivee", "arrivée"]);
     const notes = firstValue(record, ["notes"]);
-    const pois = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
+    const pois = buildPoiEntries(record);
     const gpx = firstValue(record, ["gpx"]);
     const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
     const distance = toNumber(firstValue(record, ["distance (km)"]));
@@ -265,7 +280,7 @@ function mapEtapeVarianteFromEtape(record) {
     const elevationGain = toNumber(firstValue(record, ["d+ (m)"]));
     const elevationLoss = toNumber(firstValue(record, ["d− (m)", "d- (m)"]));
     const gpx = firstValue(record, ["gpx"]);
-    const pois = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
+    const pois = buildPoiEntries(record);
     const notes = firstValue(record, ["notes"]);
     const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
     const routeLabel = [departure, arrival].filter(Boolean).join(" → ");
@@ -315,7 +330,7 @@ function mapVariante(record) {
         distanceExtra: toNumber(firstValue(record, ["distance supplementaire (km)", "distance supplémentaire (km)"])),
         elevationGainExtra: toNumber(firstValue(record, ["d+ supplementaire (m)", "d+ supplémentaire (m)"])),
         elevationLossExtra: toNumber(firstValue(record, ["d− supplementaire (m)", "d− supplémentaire (m)", "d- supplementaire (m)", "d- supplémentaire (m)"])),
-        pointsOfInterest: splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"])),
+        pointsOfInterest: buildPoiEntries(record),
         description: firstValue(record, ["description / photos"]),
         link: firstValue(record, ["lien"]),
         gpx: firstValue(record, ["gpx"]),

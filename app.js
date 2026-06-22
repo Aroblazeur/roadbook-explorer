@@ -218,18 +218,21 @@ function resolvePoiEntry(poi) {
     const sourceName = typeof poi === "object" ? poi?.name || poi?.label : poi;
     const sourceDescription = typeof poi === "object" ? safeText(poi?.description, "") : "";
     const sourceImage = typeof poi === "object" ? safeText(poi?.image, "") : "";
+    const sourceRegion = typeof poi === "object" ? safeText(poi?.region, "") : "";
     const name = safeText(sourceName, "Point d'intérêt");
     const metadata = findPoiEnrichment(name);
-    const imageCandidate = metadata?.image || sourceImage || "";
+    const imageCandidate = sourceImage || metadata?.image || "";
     const image = isSafeUrl(imageCandidate) ? imageCandidate : "";
     const description = metadata?.description || sourceDescription || "";
+    const coordinates = metadata?.coordinates || null;
 
     return {
         name: metadata?.name || name,
         image,
+        region: sourceRegion,
         description,
-        coordinates: metadata?.coordinates || null,
-        isEnriched: Boolean(image || description)
+        coordinates,
+        isEnriched: Boolean(image || sourceRegion || description || coordinates)
     };
 }
 
@@ -256,6 +259,13 @@ function appendPoiCard(list, entry) {
     title.className = "poi-card__name";
     title.textContent = entry.name;
     content.appendChild(title);
+
+    if (entry.region) {
+        const region = document.createElement("p");
+        region.className = "variant-subtitle";
+        region.textContent = entry.region;
+        content.appendChild(region);
+    }
 
     if (entry.description) {
         const description = document.createElement("p");

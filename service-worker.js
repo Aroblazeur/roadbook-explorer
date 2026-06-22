@@ -1,7 +1,7 @@
 "use strict";
 
-const CACHE_NAME = "perinexus-roadbook-v1";
-const VERSION = "poi-enrichment-20260621";
+const CACHE_NAME = "perinexus-roadbook-poi-sheet-20260622";
+const VERSION = "poi-sheet-20260622";
 
 const CORE_ASSETS = [
     "./",
