@@ -109,7 +109,7 @@ async function enrichPoi(name, existingItem) {
             imageStatus: imageInfo.imageStatus,
             description: shortDescription(entity ? (entityDescription(entity) || candidate?.description) : ""),
             coordinates: coordinatesFromClaims(entity?.claims?.P625),
-            source: entity ? "wikidata" : imageInfo.imageSource.startsWith("commons") ? "wikimedia-commons" : "wikidata",
+            source: resolvePoiSource({ entity, imageSource: imageInfo.imageSource }),
             status
         };
     } catch (error) {
@@ -239,7 +239,7 @@ async function searchCommonsFiles(search) {
         generator: "search",
         gsrnamespace: "6",
         gsrlimit: "8",
-        gsrsearch: `"${search}"`,
+        gsrsearch: `"${String(search || "").replace(/"/g, '\\"')}"`,
         prop: "imageinfo",
         iiprop: "url"
     }).toString();
@@ -260,13 +260,13 @@ function scoreCommonsCandidate(title, originalName, query) {
     const titleText = normalizeCommonsTitle(title);
     const normalizedOriginal = normalizeSearchText(originalName);
     const normalizedQuery = normalizeSearchText(query.search);
-    const titleTokens = meaningfulTokens(titleText);
+    const titleTokens = new Set(meaningfulTokens(titleText));
     const originalTokens = meaningfulTokens(originalName);
     const locationTokens = meaningfulTokens(query.location || "");
 
     if (!titleText || !originalTokens.length) return -100;
 
-    const containsAllOriginalTokens = originalTokens.every(token => titleTokens.includes(token));
+    const containsAllOriginalTokens = originalTokens.every(token => titleTokens.has(token));
     if (!containsAllOriginalTokens) return -100;
 
     let score = 0;
@@ -274,11 +274,11 @@ function scoreCommonsCandidate(title, originalName, query) {
     if (titleText.includes(normalizedOriginal)) score = Math.max(score, 110);
     if (titleText.includes(normalizedQuery)) score = Math.max(score, 105);
 
-    const overlap = originalTokens.filter(token => titleTokens.includes(token)).length;
+    const overlap = originalTokens.filter(token => titleTokens.has(token)).length;
     score = Math.max(score, Math.round((overlap / originalTokens.length) * 90));
 
     if (locationTokens.length > 0) {
-        const locationMatch = locationTokens.some(token => titleTokens.includes(token));
+        const locationMatch = locationTokens.some(token => titleTokens.has(token));
         if (!locationMatch && !titleText.includes(normalizedQuery)) return -100;
         if (locationMatch) score += 8;
     }
@@ -335,7 +335,7 @@ function preserveExistingPoi(name, item) {
         imageStatus: imageInfo.imageStatus,
         description: safeText(item?.description),
         coordinates: safeCoordinates(item?.coordinates),
-        source: safeText(item?.source) || (imageInfo.imageSource.startsWith("commons") ? "wikimedia-commons" : "wikidata"),
+        source: safeText(item?.source) || resolvePoiSource({ imageSource: imageInfo.imageSource }),
         status: safeText(item?.status) || "ok"
     };
 }
@@ -545,6 +545,13 @@ function safeCoordinates(value) {
     const lat = Number(value?.lat);
     const lng = Number(value?.lng);
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+function resolvePoiSource({ entity, imageSource } = {}) {
+    if (entity) return "wikidata";
+    if (safeText(imageSource).startsWith("commons")) return "wikimedia-commons";
+    if (safeText(imageSource) === "wikidata-p18") return "wikidata";
+    return "";
 }
 
 function splitMulti(value) {
