@@ -38,7 +38,8 @@
             index.set(key, {
                 name: safeText(item.name),
                 image: safeImageUrl(item.image),
-                description: safeDescription(item.description)
+                description: safeDescription(item.description),
+                coordinates: safeCoordinates(item.coordinates)
             });
         });
         return index;
@@ -75,6 +76,16 @@
     function safeDescription(value) {
         const description = safeText(value);
         return /https?:\/\//i.test(description) || /wikipedia/i.test(description) ? "" : description;
+    }
+
+    function safeCoordinates(value) {
+        if (!value || typeof value !== "object") return null;
+        const lat = Number(value.lat);
+        const lng = Number(value.lng);
+        return Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+               Number.isFinite(lng) && lng >= -180 && lng <= 180
+            ? { lat, lng }
+            : null;
     }
 
     function safeText(value) {

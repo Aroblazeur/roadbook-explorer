@@ -228,6 +228,7 @@ function resolvePoiEntry(poi) {
         name: metadata?.name || name,
         image,
         description,
+        coordinates: metadata?.coordinates || null,
         isEnriched: Boolean(image || description)
     };
 }
@@ -261,6 +262,17 @@ function appendPoiCard(list, entry) {
         description.className = "poi-card__description";
         description.textContent = entry.description;
         content.appendChild(description);
+    }
+
+    if (entry.coordinates) {
+        const { lat, lng } = entry.coordinates;
+        const mapLink = document.createElement("a");
+        mapLink.className = "terrain-button terrain-button--secondary poi-card__map-link";
+        mapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+        mapLink.target = "_blank";
+        mapLink.rel = "noopener noreferrer";
+        mapLink.textContent = "Ouvrir sur la carte";
+        content.appendChild(mapLink);
     }
 
     li.appendChild(content);
