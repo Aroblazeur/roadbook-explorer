@@ -50,6 +50,11 @@
       <ul id="pois"></ul>
     </section>
 
+    <section id="primary-accommodation-card" class="card accommodation-card" hidden>
+      <h2>Hébergement principal</h2>
+      <div id="primary-accommodation"></div>
+    </section>
+
     <section id="map-embed-section" class="card map-card" aria-labelledby="map-embed-title" hidden>
       <h2 id="map-embed-title">Carte interactive</h2>
       <div id="stage-map-embed" class="mapy-embed" role="region" aria-label="Carte interactive Mapy de l'étape"></div>
@@ -64,20 +69,20 @@
       <div id="variant-content"></div>
     </section>
 
-    <section id="accommodation-card" class="card accommodation-card">
-      <h2>Hébergement</h2>
-      <div id="accommodation">Non renseigné</div>
+    <section id="alternative-accommodation-card" class="card accommodation-card" hidden>
+      <h2 id="alternative-accommodation-title">Hébergements alternatifs</h2>
+      <div id="alternative-accommodation"></div>
     </section>
 
   </main>
 
   <footer><p>Perinexus Roadbook</p></footer>
-  <script src="data-loader.js?v=gpx-metric-fallback-20260622"></script>
-  <script src="map-viewer.js?v=gpx-metric-fallback-20260622"></script>
-  <script src="accommodation-enrichment-loader.js?v=gpx-metric-fallback-20260622"></script>
-  <script src="poi-enrichment-loader.js?v=gpx-metric-fallback-20260622"></script>
-  <script src="duration-estimator.js?v=gpx-metric-fallback-20260622"></script>
-  <script src="app.js?v=gpx-metric-fallback-20260622"></script>
+  <script src="data-loader.js?v=accommodation-layout-20260622"></script>
+  <script src="map-viewer.js?v=accommodation-layout-20260622"></script>
+  <script src="accommodation-enrichment-loader.js?v=accommodation-layout-20260622"></script>
+  <script src="poi-enrichment-loader.js?v=accommodation-layout-20260622"></script>
+  <script src="duration-estimator.js?v=accommodation-layout-20260622"></script>
+  <script src="app.js?v=accommodation-layout-20260622"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

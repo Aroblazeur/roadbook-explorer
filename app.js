@@ -355,31 +355,65 @@ function renderFieldNavigation(day) {
 }
 
 function renderAccommodation(accommodation) {
-    const container = document.getElementById("accommodation");
+    renderPrimaryAccommodation(accommodation);
+    renderAlternativeAccommodation(accommodation);
+}
+
+function renderPrimaryAccommodation(accommodation) {
+    const section = document.getElementById("primary-accommodation-card");
+    const container = document.getElementById("primary-accommodation");
     container.replaceChildren();
-    if (!accommodation) {
-        container.textContent = "Non renseigné";
-        return;
-    }
 
     if (typeof accommodation === "string") {
-        container.textContent = safeText(accommodation);
+        const name = safeText(accommodation, "");
+        section.hidden = !name;
+        if (!name) return;
+        const detail = document.createElement("p");
+        detail.className = "detail-name";
+        detail.textContent = name;
+        container.appendChild(detail);
         return;
     }
 
-    const mainMetadata = findAccommodationEnrichment(accommodation.url);
-    const name = document.createElement("p");
-    name.className = "detail-name";
-    name.textContent = safeText(mainMetadata?.name || accommodation.name);
-    container.appendChild(name);
-    appendAccommodationResource(
-        container,
-        accommodation.url,
-        "Ouvrir le site de l'hébergement",
-        mainMetadata
-    );
-    appendResourceList(container, "Hébergements alternatifs", accommodation.alternatives);
-    appendResourceList(container, "Locations maison", accommodation.houseRentals);
+    const mainUrl = safeText(accommodation?.url, "");
+    const mainMetadata = findAccommodationEnrichment(mainUrl);
+    const mainName = safeText(mainMetadata?.name || accommodation?.name, "");
+    section.hidden = !mainName && !mainUrl;
+    if (section.hidden) return;
+
+    if (mainName) {
+        const name = document.createElement("p");
+        name.className = "detail-name";
+        name.textContent = mainName;
+        container.appendChild(name);
+    }
+    appendAccommodationResource(container, mainUrl, "Ouvrir le site de l'hébergement", mainMetadata);
+}
+
+function renderAlternativeAccommodation(accommodation) {
+    const section = document.getElementById("alternative-accommodation-card");
+    const title = document.getElementById("alternative-accommodation-title");
+    const container = document.getElementById("alternative-accommodation");
+    container.replaceChildren();
+
+    const alternatives = Array.isArray(accommodation?.alternatives)
+        ? accommodation.alternatives.filter(Boolean)
+        : [];
+    const houseRentals = Array.isArray(accommodation?.houseRentals)
+        ? accommodation.houseRentals.filter(Boolean)
+        : [];
+
+    section.hidden = alternatives.length === 0 && houseRentals.length === 0;
+    if (section.hidden) return;
+
+    title.textContent = alternatives.length && houseRentals.length
+        ? "Hébergements alternatifs / locations maison"
+        : alternatives.length
+            ? "Hébergements alternatifs"
+            : "Locations maison";
+
+    appendResourceList(container, "Hébergements alternatifs", alternatives, houseRentals.length > 0);
+    appendResourceList(container, "Locations maison", houseRentals, alternatives.length > 0);
 }
 
 function isVarianteCourte(type) {
@@ -587,11 +621,9 @@ function isSafeNotePhoto(value) {
     );
 }
 
-function appendResourceList(container, title, values) {
+function appendResourceList(container, title, values, showHeading = true) {
     const items = Array.isArray(values) ? values.filter(Boolean) : [];
     if (!items.length) return;
-    const heading = document.createElement("h3");
-    heading.textContent = title;
     const list = document.createElement("ul");
     items.forEach((value, index) => {
         const item = document.createElement("li");
@@ -603,7 +635,13 @@ function appendResourceList(container, title, values) {
         );
         list.appendChild(item);
     });
-    container.append(heading, list);
+    if (showHeading) {
+        const heading = document.createElement("h3");
+        heading.textContent = title;
+        container.append(heading, list);
+    } else {
+        container.appendChild(list);
+    }
 }
 
 function appendAccommodationResource(container, url, fallbackLabel, metadata) {
