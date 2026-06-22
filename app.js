@@ -11,6 +11,10 @@ let currentDay = 0;
 let accommodationEnrichmentIndex = new Map();
 let poiEnrichmentIndex = new Map();
 
+const TRAVELER_NOTES_FORM_URL =
+    "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform";
+const TRAVELER_NOTES_STAGE_FIELD = "entry.521193530";
+
 /**
  * Chargement des données
  */
@@ -143,7 +147,7 @@ function displayDay(index) {
     const stageGpxUrl = day.gpx || day.route?.gpx;
     const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
     renderFieldNavigation(day);
-    renderNotes(day.noteItems || day.notes);
+    renderNotes(day.noteItems || day.notes, day.stage || (index + 1));
     updatePois(day);
 
     updateButtons();
@@ -468,17 +472,85 @@ function appendGpxActions(container, url, label) {
     container.appendChild(actions);
 }
 
-function renderNotes(notes) {
+function renderNotes(notes, stageNumber) {
     const section = document.getElementById("notes-section");
+    const title = document.getElementById("notes-title");
     const list = document.getElementById("notes");
-    const items = Array.isArray(notes) ? notes.filter(Boolean) : [];
+    const addButton = document.getElementById("add-note");
+    const items = Array.isArray(notes)
+        ? notes.map(normalizeNoteEntry).filter(note => note.text)
+        : [];
+
     list.replaceChildren();
-    section.hidden = items.length === 0;
+    section.hidden = false;
+    title.textContent = `Notes (${items.length})`;
+    list.hidden = items.length === 0;
+    addButton.href = buildTravelerNotesFormUrl(stageNumber);
+    addButton.hidden = false;
+
     items.forEach(note => {
         const item = document.createElement("li");
-        item.textContent = safeText(note);
+        item.className = "note-item";
+        const text = document.createElement("p");
+        text.className = "note-item__text";
+        text.textContent = note.text;
+        item.appendChild(text);
+
+        if (isSafeNotePhoto(note.photo)) {
+            const image = document.createElement("img");
+            image.className = "note-item__photo";
+            image.src = note.photo;
+            image.loading = "lazy";
+            image.alt = "Photo associée à la note";
+            image.addEventListener("error", () => {
+                image.hidden = true;
+                image.removeAttribute("src");
+            }, { once: true });
+            item.appendChild(image);
+        }
+
         list.appendChild(item);
     });
+}
+
+function buildTravelerNotesFormUrl(stageNumber) {
+    const url = new URL(TRAVELER_NOTES_FORM_URL);
+    url.searchParams.set("usp", "pp_url");
+    url.searchParams.set(TRAVELER_NOTES_STAGE_FIELD, safeText(stageNumber, ""));
+    return url.href;
+}
+
+function normalizeNoteEntry(note) {
+    if (note && typeof note === "object") {
+        return {
+            text: safeText(note.text || note.note, ""),
+            photo: safeText(note.photo, "")
+        };
+    }
+    return { text: safeText(note, ""), photo: "" };
+}
+
+function isSafeNotePhoto(value) {
+    if (typeof value !== "string" || !value.trim()) return false;
+    const candidate = value.trim();
+
+    if (/^https:\/\//i.test(candidate)) {
+        try {
+            return new URL(candidate).protocol === "https:";
+        } catch (error) {
+            return false;
+        }
+    }
+
+    const path = candidate.split(/[?#]/)[0];
+    return Boolean(
+        path &&
+        !candidate.startsWith("//") &&
+        !candidate.includes("\\") &&
+        !/^[a-z][a-z0-9+.-]*:/i.test(candidate) &&
+        !path.startsWith("/") &&
+        !path.split("/").includes("..")
+    );
 }
 
 function appendResourceList(container, title, values) {

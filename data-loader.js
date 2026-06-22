@@ -6,6 +6,9 @@ const ETAPES_URL =
 const VARIANTES_URL =
     "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&gid=15169789";
 
+const TRAVELER_NOTES_URL =
+    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&gid=2067884461";
+
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
 
@@ -28,6 +31,12 @@ const REQUIRED_ETAPES_HEADERS = [
 
 const REQUIRED_VARIANTES_HEADERS = [
     "nom variante"
+];
+
+const REQUIRED_TRAVELER_NOTES_HEADERS = [
+    "etape",
+    "note",
+    "photo"
 ];
 
 function normalizeHeader(value) {
@@ -65,6 +74,58 @@ function splitMulti(value, { preserveEmpty = false } = {}) {
         .split("---")
         .map(part => part.trim());
     return preserveEmpty ? parts : parts.filter(Boolean);
+}
+
+function sanitizeNotePhotoUrl(value) {
+    const candidate = String(value ?? "").trim();
+    if (!candidate) return "";
+
+    if (/^https:\/\//i.test(candidate)) {
+        try {
+            return new URL(candidate).protocol === "https:" ? candidate : "";
+        } catch (error) {
+            return "";
+        }
+    }
+
+    const path = candidate.split(/[?#]/)[0];
+    const unsafe =
+        !path ||
+        candidate.startsWith("//") ||
+        candidate.includes("\\") ||
+        /^[a-z][a-z0-9+.-]*:/i.test(candidate) ||
+        path.startsWith("/") ||
+        path.split("/").includes("..");
+
+    return unsafe ? "" : candidate;
+}
+
+function travelerNoteStage(value) {
+    const direct = toNumber(value);
+    if (direct !== null) return direct;
+    const match = String(value ?? "").match(/\d+(?:[.,]\d+)?/);
+    return match ? toNumber(match[0]) : null;
+}
+
+function mapTravelerNote(record) {
+    return {
+        stageReference: travelerNoteStage(firstValue(record, ["etape", "étape"])),
+        text: firstValue(record, ["note"]),
+        photo: sanitizeNotePhotoUrl(firstValue(record, ["photo"]))
+    };
+}
+
+function attachTravelerNotes(stages, rows) {
+    const stagesByNumber = new Map(stages.map(stage => [stage.stage, stage]));
+    rows
+        .map(mapTravelerNote)
+        .filter(note => note.stageReference !== null && note.text)
+        .forEach(note => {
+            const stage = stagesByNumber.get(note.stageReference);
+            if (!stage) return;
+            if (!Array.isArray(stage.noteItems)) stage.noteItems = [];
+            stage.noteItems.push({ text: note.text, photo: note.photo });
+        });
 }
 
 function buildPoiEntries(record) {
@@ -141,18 +202,24 @@ function parseCsv(csvText) {
     const [headers, ...dataRows] = rows;
     const normalizedHeaders = headers.map(header => normalizeHeader(header));
 
-    return dataRows.map(values => {
+    const records = dataRows.map(values => {
         const record = {};
         normalizedHeaders.forEach((header, index) => {
             record[header] = normalizeValue(values[index]);
         });
         return record;
     });
+
+    Object.defineProperty(records, "headers", {
+        value: normalizedHeaders,
+        enumerable: false
+    });
+    return records;
 }
 
 function ensureSchema(rows, requiredHeaders) {
-    const sample = rows[0] || {};
-    const missing = requiredHeaders.filter(header => !(header in sample));
+    const headers = rows[0] ? Object.keys(rows[0]) : (rows.headers || []);
+    const missing = requiredHeaders.filter(header => !headers.includes(header));
     if (missing.length > 0) {
         throw new Error(ERROR_MESSAGES.INVALID_SCHEMA);
     }
@@ -382,7 +449,7 @@ function attachVariants(stages, variants) {
     );
 }
 
-function buildRoadbook(etapesRows, variantesRows) {
+function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
     // Group ALL rows by "Numero etape" — no row is discarded based on Type
     const groups = new Map();
     etapesRows.forEach(row => {
@@ -430,6 +497,8 @@ function buildRoadbook(etapesRows, variantesRows) {
     attachVariants(stages, alternativesFromEtapes);
     attachVariants(stages, variantesFromSecondSheet);
 
+    attachTravelerNotes(stages, travelerNotesRows);
+
     return {
         title: "Perinexus à vélo",
         description: "Roadbook d'itinérance à vélo.",
@@ -454,9 +523,22 @@ async function fetchCsv(url) {
 }
 
 async function loadGoogleSheetRoadbook() {
-    const [etapesCsv, variantesCsv] = await Promise.all([
+    const travelerNotesPromise = fetchCsv(TRAVELER_NOTES_URL)
+        .then(csv => {
+            const rows = parseCsv(csv);
+            ensureSchema(rows, REQUIRED_TRAVELER_NOTES_HEADERS);
+            return rows;
+        })
+        .catch(error => {
+            const reason = error?.message || "erreur inconnue";
+            console.warn(`[Roadbook] Notes voyageurs indisponibles : ${reason}.`);
+            return [];
+        });
+
+    const [etapesCsv, variantesCsv, travelerNotesRows] = await Promise.all([
         fetchCsv(ETAPES_URL),
-        fetchCsv(VARIANTES_URL)
+        fetchCsv(VARIANTES_URL),
+        travelerNotesPromise
     ]);
 
     const etapesRows = parseCsv(etapesCsv);
@@ -465,7 +547,7 @@ async function loadGoogleSheetRoadbook() {
     ensureSchema(etapesRows, REQUIRED_ETAPES_HEADERS);
     ensureSchema(variantesRows, REQUIRED_VARIANTES_HEADERS);
 
-    return buildRoadbook(etapesRows, variantesRows);
+    return buildRoadbook(etapesRows, variantesRows, travelerNotesRows);
 }
 
 async function loadFallbackRoadbook() {
@@ -568,7 +650,11 @@ if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         ETAPES_URL,
         VARIANTES_URL,
+        TRAVELER_NOTES_URL,
         parseCsv,
+        sanitizeNotePhotoUrl,
+        mapTravelerNote,
+        attachTravelerNotes,
         sanitizeMapEmbedUrl,
         loadGoogleSheetRoadbook,
         loadFallbackRoadbook,

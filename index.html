@@ -64,9 +64,10 @@
       <div id="variant-content"></div>
     </section>
 
-    <section id="notes-section" class="card" hidden>
-      <h2>Notes</h2>
+    <section id="notes-section" class="card notes-card">
+      <h2 id="notes-title">Notes (0)</h2>
       <ul id="notes"></ul>
+      <a id="add-note" class="terrain-button notes-card__add" target="_blank" rel="noopener noreferrer" hidden>➕ Ajouter une note</a>
     </section>
 
     <section class="card">
@@ -77,11 +78,11 @@
   </main>
 
   <footer><p>Perinexus Roadbook</p></footer>
-  <script src="data-loader.js?v=poi-sheet-20260622"></script>
-  <script src="map-viewer.js?v=poi-sheet-20260622"></script>
-  <script src="accommodation-enrichment-loader.js?v=poi-sheet-20260622"></script>
-  <script src="poi-enrichment-loader.js?v=poi-sheet-20260622"></script>
-  <script src="app.js?v=poi-sheet-20260622"></script>
+  <script src="data-loader.js?v=traveler-notes-20260622"></script>
+  <script src="map-viewer.js?v=traveler-notes-20260622"></script>
+  <script src="accommodation-enrichment-loader.js?v=traveler-notes-20260622"></script>
+  <script src="poi-enrichment-loader.js?v=traveler-notes-20260622"></script>
+  <script src="app.js?v=traveler-notes-20260622"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

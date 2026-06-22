@@ -223,6 +223,44 @@ li{
     color:var(--text-light);
 }
 
+#notes{
+    list-style:none;
+    padding-left:0;
+    display:grid;
+    gap:12px;
+}
+
+.note-item{
+    margin:0;
+    padding:14px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:#f8faf8;
+}
+
+.note-item__text{
+    margin:0;
+    line-height:1.55;
+    white-space:pre-wrap;
+}
+
+.note-item__photo{
+    display:block;
+    width:100%;
+    max-height:420px;
+    margin-top:12px;
+    object-fit:cover;
+    border-radius:10px;
+}
+
+.note-item__photo[hidden]{
+    display:none;
+}
+
+.notes-card__add{
+    margin-top:14px;
+}
+
 .poi-list--enriched{
     list-style:none;
     padding-left:0;
