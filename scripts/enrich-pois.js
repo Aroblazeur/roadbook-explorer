@@ -18,7 +18,7 @@ const USER_AGENT = "PerinexusRoadbookPOITool/1.0 (+https://github.com/Aroblazeur
 const COMMONS_EXACT_SOURCE = "commons-exact";
 const COMMONS_VARIANT_SOURCE = "commons-variant";
 const COMMONS_SOURCES = new Set([COMMONS_EXACT_SOURCE, COMMONS_VARIANT_SOURCE]);
-const COMMONS_LOCATION_VARIANTS = (process.env.POI_COMMONS_LOCATION_VARIANTS || "Costa Brava,Catalunya,Girona")
+const COMMONS_LOCATION_VARIANTS = (process.env.POI_COMMONS_LOCATION_VARIANTS || "Cadaqués,Costa Brava,Catalunya,Girona")
     .split(",")
     .map(normalizeWhitespace)
     .filter(Boolean);
@@ -443,14 +443,28 @@ function collectPoiNames(rows) {
 
 function buildSearchQueries(name) {
     const original = normalizeWhitespace(name);
+    const accentless = removeAccents(original);
     const translated = original
         .replace(/\bvoie\s+verte\s+du\b/i, "Via Verda del")
         .replace(/\bvoie\s+verte\s+de\s+la\b/i, "Via Verda de la");
     const distinctive = original.replace(
-        /^(?:voie\s+verte\s+(?:du|de\s+la)|via\s+verda\s+(?:del|de\s+la)|platja\s+(?:de\s+la|de\s+l['’]|d['’]en)?|cala\s+(?:de\s+la|de\s+l['’]|d['’]en)?)/i,
+        /^(?:voie\s+verte\s+(?:du|de\s+la)|via\s+verda\s+(?:del|de\s+la)|platja\s+(?:de\s+la\s+|de\s+l['']\s*|d['']\s*en\s+|(?!\s))\s*|cala\s+(?:de\s+la\s+|de\s+l['']\s*|d['']\s*en\s+|(?!\s))\s*|plage\s+(?:de\s+la\s+|de\s+l['']\s*|du\s+|(?!\s))\s*)/i,
         ""
     ).trim();
-    return [...new Set([original, translated, distinctive].filter(value => value.length >= 3))];
+    const LOCATION_SUFFIXES = ["Cadaqués", "Costa Brava", "Girona"];
+    const locationVariants = LOCATION_SUFFIXES.flatMap(suffix => {
+        const variants = [`${original} ${suffix}`];
+        if (distinctive && distinctive !== original) variants.push(`${distinctive} ${suffix}`);
+        return variants;
+    });
+    const candidates = [
+        original,
+        translated !== original ? translated : null,
+        accentless !== original ? accentless : null,
+        distinctive !== original ? distinctive : null,
+        ...locationVariants
+    ].filter(value => value && value.length >= 3);
+    return [...new Set(candidates)];
 }
 
 function normalizeCommonsTitle(title) {
