@@ -65,6 +65,12 @@ const COMMONS_SCORE_CONTAINS_QUERY = 105;
 const COMMONS_SCORE_TOKEN_OVERLAP = 90;
 const COMMONS_SCORE_EXACT_PREFIX_BONUS = 10;
 const COMMONS_SCORE_LOCATION_BONUS = 8;
+const COMMONS_SCORE_INVALID_MATCH = -100;
+const MIN_TOKEN_LENGTH = 3;
+const MAX_LATITUDE = 90;
+const MAX_LONGITUDE = 180;
+// Exact-name searches accept slightly lower scores because the API query is already narrow.
+// Variant searches add regional context, so they require stronger title confirmation.
 const COMMONS_THRESHOLD_EXACT = 85;
 const COMMONS_THRESHOLD_VARIANT = 92;
 
@@ -262,7 +268,7 @@ async function searchCommonsFiles(search) {
 
 function selectCommonsImageResult(results, originalName, query) {
     let best = null;
-    (Array.isArray(results) ? results : []).forEach(result => {
+    results.forEach(result => {
         const score = scoreCommonsCandidate(result?.title, originalName, query);
         if (!best || score > best.score) best = { result, score };
     });
@@ -277,10 +283,10 @@ function scoreCommonsCandidate(title, originalName, query) {
     const originalTokens = meaningfulTokensFromNormalized(normalizedOriginal);
     const locationTokens = meaningfulTokens(query.location || "");
 
-    if (!titleText || !originalTokens.length) return -100;
+    if (!titleText || !originalTokens.length) return COMMONS_SCORE_INVALID_MATCH;
 
     const containsAllOriginalTokens = originalTokens.every(token => titleTokens.has(token));
-    if (!containsAllOriginalTokens) return -100;
+    if (!containsAllOriginalTokens) return COMMONS_SCORE_INVALID_MATCH;
 
     let score = 0;
     if (titleText === normalizedOriginal) score = Math.max(score, COMMONS_SCORE_EXACT_MATCH);
@@ -292,7 +298,7 @@ function scoreCommonsCandidate(title, originalName, query) {
 
     if (locationTokens.length > 0) {
         const locationMatch = locationTokens.some(token => titleTokens.has(token));
-        if (!locationMatch && !titleText.includes(normalizedQuery)) return -100;
+        if (!locationMatch && !titleText.includes(normalizedQuery)) return COMMONS_SCORE_INVALID_MATCH;
         if (locationMatch) score += COMMONS_SCORE_LOCATION_BONUS;
     }
 
@@ -324,7 +330,9 @@ function buildCommonsImageQueries(name) {
     }).filter(item => normalizeWhitespace(item.search));
     const unique = new Map();
     queries.forEach(item => {
-        unique.set(normalizeSearchText(item.search), item);
+        const key = normalizeSearchText(item.search);
+        const current = unique.get(key);
+        if (!current || current.imageSource !== COMMONS_EXACT_SOURCE) unique.set(key, item);
     });
     return [...unique.values()];
 }
@@ -469,13 +477,13 @@ function meaningfulTokensFromNormalized(value) {
     return [...new Set(
         String(value || "")
             .split(" ")
-            .filter(token => token.length >= 3)
+            .filter(token => token.length >= MIN_TOKEN_LENGTH)
     )].filter(token => !COMMONS_GENERIC_TOKENS.has(token));
 }
 
 function scoreCandidate(candidate, queries) {
     const description = normalizeSearchText(candidate.description);
-    if (/homonymie|disambiguation|desambiguacion/.test(description)) return -100;
+    if (/homonymie|disambiguation|desambiguacion/.test(description)) return COMMONS_SCORE_INVALID_MATCH;
 
     const candidateTexts = [candidate.label, candidate.match?.text]
         .map(normalizeSearchText)
@@ -491,8 +499,8 @@ function scoreCandidate(candidate, queries) {
             if (candidateText.includes(query) || query.includes(candidateText)) {
                 best = Math.max(best, 72);
             }
-            const queryTokens = new Set(query.split(" ").filter(token => token.length > 2));
-            const candidateTokens = new Set(candidateText.split(" ").filter(token => token.length > 2));
+            const queryTokens = new Set(query.split(" ").filter(token => token.length >= MIN_TOKEN_LENGTH));
+            const candidateTokens = new Set(candidateText.split(" ").filter(token => token.length >= MIN_TOKEN_LENGTH));
             const intersection = [...queryTokens].filter(token => candidateTokens.has(token)).length;
             const denominator = Math.max(queryTokens.size, candidateTokens.size, 1);
             best = Math.max(best, Math.round((intersection / denominator) * 65));
@@ -564,7 +572,10 @@ function safeHttpUrl(value) {
 function safeCoordinates(value) {
     const lat = Number(value?.lat);
     const lng = Number(value?.lng);
-    return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+    return Number.isFinite(lat)
+        && Number.isFinite(lng)
+        && Math.abs(lat) <= MAX_LATITUDE
+        && Math.abs(lng) <= MAX_LONGITUDE
         ? { lat, lng }
         : null;
 }
