@@ -7,7 +7,7 @@ const VARIANTES_URL =
     "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&gid=15169789";
 
 const TRAVELER_NOTES_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&gid=2067884461";
+    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=Notes%20voyageurs";
 
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
