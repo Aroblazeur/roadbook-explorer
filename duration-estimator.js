@@ -5,10 +5,24 @@
     const FLAT_SPEED_KMH = 11;
     const CLIMB_METERS_PER_HOUR = 600;
     const PAUSE_HOURS = 0.5;
+    const ELEVATION_NOISE_THRESHOLD_M = 3;
 
     function finiteNumber(value) {
+        if (value === null || value === undefined || value === "") return null;
         const number = Number(value);
         return Number.isFinite(number) ? number : null;
+    }
+
+    function sheetStageMetrics(stage) {
+        const hasElevationGain = Object.prototype.hasOwnProperty.call(stage || {}, "elevationGain");
+        const elevationGain = finiteNumber(stage?.elevationGain);
+        return {
+            distanceKm: finiteNumber(stage?.distance),
+            elevationGainM: elevationGain ?? (
+                hasElevationGain ? null : finiteNumber(stage?.elevation)
+            ),
+            elevationLossM: finiteNumber(stage?.elevationLoss)
+        };
     }
 
     function fallbackSpeed(elevationGain) {
@@ -98,17 +112,20 @@
 
         const hasCompleteElevation = points.every(point => point.elevation !== null);
         let elevationGainM = null;
+        let elevationLossM = null;
         if (hasCompleteElevation) {
             elevationGainM = 0;
+            elevationLossM = 0;
             sequences.forEach(sequence => {
                 for (let index = 1; index < sequence.length; index += 1) {
                     const difference = sequence[index].elevation - sequence[index - 1].elevation;
-                    if (difference > 0) elevationGainM += difference;
+                    if (difference >= ELEVATION_NOISE_THRESHOLD_M) elevationGainM += difference;
+                    if (difference <= -ELEVATION_NOISE_THRESHOLD_M) elevationLossM += Math.abs(difference);
                 }
             });
         }
 
-        return { distanceKm, elevationGainM };
+        return { distanceKm, elevationGainM, elevationLossM };
     }
 
     function absoluteUrl(value) {
@@ -134,36 +151,50 @@
                 return response.text();
             })
             .then(text => ({ metrics: parseGpxMetrics(text), error: null }))
-            .catch(error => {
-                console.warn(`[Durée] GPX indisponible (${url}) : ${error.message}. Fallback utilisé.`);
-                return { metrics: null, error };
-            });
+            .catch(error => ({ metrics: null, error }));
 
         GPX_CACHE.set(url, request);
         return request;
     }
 
     async function estimateStageDuration(stage, { gpxUrl = "", fetchImpl = global.fetch } = {}) {
-        const sheetDistance = finiteNumber(stage?.distance);
-        const sheetElevation = finiteNumber(stage?.elevationGain ?? stage?.elevation);
-        const fallbackHours = estimateFallbackHours(sheetDistance, sheetElevation);
+        const sheetMetrics = sheetStageMetrics(stage);
+        const fallbackHours = estimateFallbackHours(
+            sheetMetrics.distanceKm,
+            sheetMetrics.elevationGainM
+        );
 
         if (!gpxUrl) {
-            return { hours: fallbackHours, formatted: formatDuration(fallbackHours), source: "fallback" };
+            return {
+                hours: fallbackHours,
+                formatted: formatDuration(fallbackHours),
+                source: "fallback",
+                metrics: sheetMetrics
+            };
         }
 
-        const { metrics } = await loadGpxMetrics(gpxUrl, fetchImpl);
-        if (!metrics) {
-            return { hours: fallbackHours, formatted: formatDuration(fallbackHours), source: "fallback" };
+        const { metrics: gpxMetrics } = await loadGpxMetrics(gpxUrl, fetchImpl);
+        if (!gpxMetrics) {
+            return {
+                hours: fallbackHours,
+                formatted: formatDuration(fallbackHours),
+                source: "fallback",
+                metrics: sheetMetrics
+            };
         }
 
-        const elevation = metrics.elevationGainM ?? sheetElevation ?? 0;
-        const hours = estimateGpxHours(metrics.distanceKm, elevation);
+        const finalMetrics = {
+            distanceKm: sheetMetrics.distanceKm ?? gpxMetrics.distanceKm,
+            elevationGainM: sheetMetrics.elevationGainM ?? gpxMetrics.elevationGainM,
+            elevationLossM: sheetMetrics.elevationLossM ?? gpxMetrics.elevationLossM
+        };
+        const hours = estimateGpxHours(finalMetrics.distanceKm, finalMetrics.elevationGainM);
         return {
             hours,
             formatted: formatDuration(hours),
             source: "gpx",
-            metrics: { ...metrics, elevationGainM: elevation }
+            metrics: finalMetrics,
+            gpxMetrics
         };
     }
 
@@ -174,6 +205,7 @@
         fallbackSpeed,
         formatDuration,
         parseGpxMetrics,
+        sheetStageMetrics,
         cacheSize: () => GPX_CACHE.size,
         clearCache: () => GPX_CACHE.clear()
     });

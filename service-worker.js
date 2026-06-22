@@ -1,7 +1,7 @@
 "use strict";
 
-const CACHE_NAME = "perinexus-roadbook-duration-estimator-20260622";
-const VERSION = "duration-estimator-20260622";
+const CACHE_NAME = "perinexus-roadbook-gpx-metric-fallback-20260622";
+const VERSION = "gpx-metric-fallback-20260622";
 
 const CORE_ASSETS = [
     "./",
