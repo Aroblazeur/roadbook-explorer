@@ -69,7 +69,7 @@ const COMMONS_SCORE_INVALID_MATCH = -100;
 const MIN_TOKEN_LENGTH = 3;
 const MAX_LATITUDE = 90;
 const MAX_LONGITUDE = 180;
-// Exact-name searches accept slightly lower scores because the API query is already narrow.
+// Exact-name searches use a lower threshold because the API query is already narrow.
 // Variant searches add regional context, so they require stronger title confirmation.
 const COMMONS_THRESHOLD_EXACT = 85;
 const COMMONS_THRESHOLD_VARIANT = 92;
@@ -298,7 +298,7 @@ function scoreCommonsCandidate(title, originalName, query) {
 
     if (locationTokens.length > 0) {
         const locationMatch = locationTokens.some(token => titleTokens.has(token));
-        if (!locationMatch && !titleText.includes(normalizedQuery)) return COMMONS_SCORE_INVALID_MATCH;
+        if (!(locationMatch || titleText.includes(normalizedQuery))) return COMMONS_SCORE_INVALID_MATCH;
         if (locationMatch) score += COMMONS_SCORE_LOCATION_BONUS;
     }
 
@@ -332,7 +332,7 @@ function buildCommonsImageQueries(name) {
     queries.forEach(item => {
         const key = normalizeSearchText(item.search);
         const current = unique.get(key);
-        if (!current || current.imageSource !== COMMONS_EXACT_SOURCE) unique.set(key, item);
+        if (!current || item.imageSource === COMMONS_EXACT_SOURCE) unique.set(key, item);
     });
     return [...unique.values()];
 }
@@ -477,8 +477,8 @@ function meaningfulTokensFromNormalized(value) {
     return [...new Set(
         String(value || "")
             .split(" ")
-            .filter(token => token.length >= MIN_TOKEN_LENGTH)
-    )].filter(token => !COMMONS_GENERIC_TOKENS.has(token));
+            .filter(token => token.length >= MIN_TOKEN_LENGTH && !COMMONS_GENERIC_TOKENS.has(token))
+    )];
 }
 
 function scoreCandidate(candidate, queries) {
@@ -662,9 +662,7 @@ function normalizeWhitespace(value) {
 }
 
 function removeAccents(value) {
-    return safeText(value)
-        .replace(/\s+/g, " ")
-        .trim()
+    return normalizeWhitespace(safeText(value))
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 }
