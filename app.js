@@ -141,9 +141,6 @@ function displayDay(index) {
     document.getElementById("duration").textContent =
         safeText(day.duration);
 
-    document.getElementById("description").textContent =
-        safeText(day.description, "Aucune description renseignée.");
-
     const stageGpxUrl = day.gpx || day.route?.gpx;
     const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
     renderFieldNavigation(day);
@@ -317,7 +314,6 @@ function renderFieldNavigation(day) {
     const activeVariants = Array.isArray(day.variants) ? day.variants : [];
     renderVariants(activeVariants);
     renderAccommodation(day.accommodation);
-    document.getElementById("copy-status").textContent = "";
 }
 
 function renderAccommodation(accommodation) {
@@ -635,49 +631,6 @@ function isSafeUrl(value) {
     }
 }
 
-async function copyCurrentDaySummary() {
-    if (!roadbook || !Array.isArray(roadbook.days)) return;
-    const day = roadbook.days[currentDay];
-    if (!day) return;
-    const accommodation = typeof day.accommodation === "string"
-        ? day.accommodation
-        : day.accommodation?.name;
-    const summary = [
-        `Jour : ${safeText(day.day, currentDay + 1)}`,
-        `Départ : ${safeText(day.departure)}`,
-        `Arrivée : ${safeText(day.arrival)}`,
-        `Distance : ${formatMetric(day.distance, "km")}`,
-        `D+ : ${formatMetric(day.elevationGain ?? day.elevation, "m")}`,
-        `D− : ${formatMetric(day.elevationLoss, "m")}`,
-        `Hébergement : ${safeText(accommodation)}`
-    ].join("\n");
-
-    const status = document.getElementById("copy-status");
-    try {
-        await copyText(summary);
-        status.textContent = "Résumé copié.";
-    } catch (error) {
-        console.error("[Roadbook] Copie du résumé impossible :", error);
-        status.textContent = "Copie impossible sur cet appareil.";
-    }
-}
-
-async function copyText(text) {
-    if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-        return;
-    }
-    const input = document.createElement("textarea");
-    input.value = text;
-    input.setAttribute("readonly", "");
-    input.className = "copy-helper";
-    document.body.appendChild(input);
-    input.select();
-    const copied = document.execCommand("copy");
-    input.remove();
-    if (!copied) throw new Error("Clipboard API unavailable");
-}
-
 function safeText(value, fallback = "Non renseigné") {
     if (value === null || value === undefined || value === "") return fallback;
     return String(value);
@@ -743,10 +696,6 @@ document
 document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
-
-document
-    .getElementById("copy-summary")
-    .addEventListener("click", copyCurrentDaySummary);
 
 updateButtons();
 initializeRoadbook();

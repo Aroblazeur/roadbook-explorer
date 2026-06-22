@@ -376,12 +376,6 @@ li{
     color:#fff;
 }
 
-.stage-copy{
-    margin-top:22px;
-    padding-top:18px;
-    border-top:1px solid var(--border);
-}
-
 .gpx-actions{
     display:flex;
     flex-wrap:wrap;
@@ -452,18 +446,6 @@ li{
     border-radius:10px;
     color:var(--text-light);
     background:#f8faf8;
-}
-
-.copy-status{
-    min-height:1.6em;
-    margin-top:8px;
-    color:var(--text-light);
-}
-
-.copy-helper{
-    position:fixed;
-    left:-9999px;
-    top:0;
 }
 
 /* =====================================================

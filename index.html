@@ -37,31 +37,6 @@
         <div class="stat"><span class="label">D−</span><span id="elevation-loss">— m</span></div>
         <div class="stat"><span class="label">Durée</span><span id="duration">Non renseigné</span></div>
       </div>
-      <h3>Description</h3>
-      <p id="description">Chargement...</p>
-      <div class="stage-copy">
-        <button id="copy-summary" class="terrain-button terrain-button--copy" type="button">Copier le résumé</button>
-        <p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
-      </div>
-    </section>
-
-    <section id="map-embed-section" class="card map-card" aria-labelledby="map-embed-title" hidden>
-      <h2 id="map-embed-title">Carte interactive</h2>
-      <div id="stage-map-embed" class="mapy-embed" role="region" aria-label="Carte interactive Mapy de l'étape"></div>
-      <div id="map-gpx-actions" class="gpx-actions map-gpx-actions" hidden>
-        <a id="map-gpx-download" class="terrain-button" download>⬇ Télécharger le GPX</a>
-      </div>
-      <p id="map-embed-status" class="map-status" role="status" aria-live="polite" hidden></p>
-    </section>
-
-    <section id="accommodation-card" class="card accommodation-card">
-      <h2>Hébergement</h2>
-      <div id="accommodation">Non renseigné</div>
-    </section>
-
-    <section id="variants-section" class="card variants-card" hidden>
-      <h2>Alternatives proposées</h2>
-      <div id="variant-content"></div>
     </section>
 
     <section id="notes-section" class="card notes-card">
@@ -75,14 +50,33 @@
       <ul id="pois"></ul>
     </section>
 
+    <section id="map-embed-section" class="card map-card" aria-labelledby="map-embed-title" hidden>
+      <h2 id="map-embed-title">Carte interactive</h2>
+      <div id="stage-map-embed" class="mapy-embed" role="region" aria-label="Carte interactive Mapy de l'étape"></div>
+      <div id="map-gpx-actions" class="gpx-actions map-gpx-actions" hidden>
+        <a id="map-gpx-download" class="terrain-button" download>⬇ Télécharger le GPX</a>
+      </div>
+      <p id="map-embed-status" class="map-status" role="status" aria-live="polite" hidden></p>
+    </section>
+
+    <section id="variants-section" class="card variants-card" hidden>
+      <h2>Alternatives proposées</h2>
+      <div id="variant-content"></div>
+    </section>
+
+    <section id="accommodation-card" class="card accommodation-card">
+      <h2>Hébergement</h2>
+      <div id="accommodation">Non renseigné</div>
+    </section>
+
   </main>
 
   <footer><p>Perinexus Roadbook</p></footer>
-  <script src="data-loader.js?v=traveler-notes-source-20260622"></script>
-  <script src="map-viewer.js?v=traveler-notes-source-20260622"></script>
-  <script src="accommodation-enrichment-loader.js?v=traveler-notes-source-20260622"></script>
-  <script src="poi-enrichment-loader.js?v=traveler-notes-source-20260622"></script>
-  <script src="app.js?v=traveler-notes-source-20260622"></script>
+  <script src="data-loader.js?v=layout-cleanup-20260622"></script>
+  <script src="map-viewer.js?v=layout-cleanup-20260622"></script>
+  <script src="accommodation-enrichment-loader.js?v=layout-cleanup-20260622"></script>
+  <script src="poi-enrichment-loader.js?v=layout-cleanup-20260622"></script>
+  <script src="app.js?v=layout-cleanup-20260622"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
