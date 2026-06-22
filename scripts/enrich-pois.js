@@ -113,8 +113,9 @@ async function enrichPoi(name, existingItem) {
             status
         };
     } catch (error) {
+        const preservedPoi = preserveExistingPoi(name, existingItem);
         return {
-            ...emptyPoi(name, "error"),
+            ...(preservedPoi || emptyPoi(name, "error")),
             error: formatError(error)
         };
     }
@@ -324,6 +325,21 @@ function preserveExistingImage(item) {
     };
 }
 
+function preserveExistingPoi(name, item) {
+    const imageInfo = preserveExistingImage(item);
+    if (!imageInfo) return null;
+    return {
+        name,
+        image: imageInfo.image,
+        imageSource: imageInfo.imageSource,
+        imageStatus: imageInfo.imageStatus,
+        description: safeText(item?.description),
+        coordinates: safeCoordinates(item?.coordinates),
+        source: safeText(item?.source) || (imageInfo.imageSource.startsWith("commons") ? "wikimedia-commons" : "wikidata"),
+        status: safeText(item?.status) || "ok"
+    };
+}
+
 function inferLegacyImageSource(item) {
     if (!safeText(item?.image)) return "";
     return item?.source === "wikidata" ? "wikidata-p18" : "wikimedia-commons";
@@ -523,6 +539,12 @@ function safeHttpUrl(value) {
     } catch (error) {
         return "";
     }
+}
+
+function safeCoordinates(value) {
+    const lat = Number(value?.lat);
+    const lng = Number(value?.lng);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
 function splitMulti(value) {
