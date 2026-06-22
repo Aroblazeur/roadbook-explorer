@@ -273,8 +273,8 @@ function scoreCommonsCandidate(title, originalName, query) {
     const titleText = normalizeCommonsTitle(title);
     const normalizedOriginal = normalizeSearchText(originalName);
     const normalizedQuery = normalizeSearchText(query.search);
-    const titleTokens = new Set(meaningfulTokens(titleText));
-    const originalTokens = meaningfulTokens(originalName);
+    const titleTokens = new Set(meaningfulTokensFromNormalized(titleText));
+    const originalTokens = meaningfulTokensFromNormalized(normalizedOriginal);
     const locationTokens = meaningfulTokens(query.location || "");
 
     if (!titleText || !originalTokens.length) return -100;
@@ -310,24 +310,23 @@ function commonsScoreThreshold(query) {
 function buildCommonsImageQueries(name) {
     const original = normalizeWhitespace(name);
     const accentless = removeAccents(original);
-    return [...new Map(
-        COMMONS_QUERY_VARIANTS
-            .flatMap(variant => {
-                const base = variant.suffix ? `${original} ${variant.suffix}` : original;
-                const items = [{ search: base, location: variant.suffix, imageSource: variant.imageSource }];
-                if (accentless && accentless !== original) {
-                    const accentlessSearch = variant.suffix ? `${accentless} ${variant.suffix}` : accentless;
-                    items.push({
-                        search: accentlessSearch,
-                        location: variant.suffix,
-                        imageSource: variant.imageSource
-                    });
-                }
-                return items;
-            })
-            .filter(item => normalizeWhitespace(item.search))
-            .map(item => [normalizeSearchText(item.search), item])
-    ).values()];
+    const queries = COMMONS_QUERY_VARIANTS.flatMap(variant => {
+        const base = variant.suffix ? `${original} ${variant.suffix}` : original;
+        const items = [{ search: base, location: variant.suffix, imageSource: variant.imageSource }];
+        if (accentless && accentless !== original) {
+            items.push({
+                search: variant.suffix ? `${accentless} ${variant.suffix}` : accentless,
+                location: variant.suffix,
+                imageSource: variant.imageSource
+            });
+        }
+        return items;
+    }).filter(item => normalizeWhitespace(item.search));
+    const unique = new Map();
+    queries.forEach(item => {
+        unique.set(normalizeSearchText(item.search), item);
+    });
+    return [...unique.values()];
 }
 
 function preserveExistingImage(item) {
@@ -463,9 +462,15 @@ function commonsFileRedirectUrl(title) {
 }
 
 function meaningfulTokens(value) {
-    return [...new Set(normalizeSearchText(value)
-        .split(" ")
-        .filter(token => token.length >= 3 && !COMMONS_GENERIC_TOKENS.has(token)))];
+    return meaningfulTokensFromNormalized(normalizeSearchText(value));
+}
+
+function meaningfulTokensFromNormalized(value) {
+    return [...new Set(
+        String(value || "")
+            .split(" ")
+            .filter(token => token.length >= 3)
+    )].filter(token => !COMMONS_GENERIC_TOKENS.has(token));
 }
 
 function scoreCandidate(candidate, queries) {
@@ -559,7 +564,9 @@ function safeHttpUrl(value) {
 function safeCoordinates(value) {
     const lat = Number(value?.lat);
     const lng = Number(value?.lng);
-    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+    return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+        ? { lat, lng }
+        : null;
 }
 
 function resolvePoiSource({ entity, imageSource } = {}) {
@@ -644,7 +651,9 @@ function normalizeWhitespace(value) {
 }
 
 function removeAccents(value) {
-    return normalizeWhitespace(value)
+    return safeText(value)
+        .replace(/\s+/g, " ")
+        .trim()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 }
