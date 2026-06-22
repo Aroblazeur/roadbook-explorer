@@ -1,7 +1,7 @@
 "use strict";
 
-const CACHE_NAME = "perinexus-roadbook-layout-cleanup-20260622";
-const VERSION = "layout-cleanup-20260622";
+const CACHE_NAME = "perinexus-roadbook-duration-estimator-20260622";
+const VERSION = "duration-estimator-20260622";
 
 const CORE_ASSETS = [
     "./",
@@ -12,6 +12,7 @@ const CORE_ASSETS = [
     `map-viewer.js?v=${VERSION}`,
     `accommodation-enrichment-loader.js?v=${VERSION}`,
     `poi-enrichment-loader.js?v=${VERSION}`,
+    `duration-estimator.js?v=${VERSION}`,
     "manifest.webmanifest",
     "icons/icon.svg",
     "data/accommodation-enrichment.json",
