@@ -220,10 +220,7 @@ function renderRoadbookCurrentSummary(container, summary) {
 
     appendSummaryMap(section, summary.mapEmbedUrl, {
         title: "Carte interactive du tracé total actuel",
-        className: "roadbook-current-summary__map mapy-embed",
-        linkClassName: "roadbook-current-summary__map-link",
-        link: summary.link,
-        linkLabel: "Ouvrir le tracé total actuel dans un nouvel onglet"
+        className: "roadbook-current-summary__map mapy-embed"
     });
     appendSummaryLink(section, summary.link, "Voir le tracé total actuel", "roadbook-current-summary__actions");
 
