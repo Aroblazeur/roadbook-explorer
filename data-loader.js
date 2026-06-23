@@ -9,6 +9,9 @@ const VARIANTES_URL =
 const TRAVELER_NOTES_URL =
     "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=Notes%20voyageurs";
 
+const ADDED_ACCOMMODATION_URL =
+    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=ajout%20hebergement";
+
 // Les exports CSV Google Sheets ne fournissent pas les métadonnées du fichier.
 // Modifier cette constante si le nom du Google Sheet change.
 const ROADBOOK_TITLE = "pirenexus a vélo";
@@ -41,6 +44,18 @@ const REQUIRED_TRAVELER_NOTES_HEADERS = [
     "etape",
     "note",
     "photo"
+];
+
+const ADDED_ACCOMMODATION_STAGE_HEADERS = ["etape", "numero etape", "étape"];
+const ADDED_ACCOMMODATION_URL_HEADERS = [
+    "url hebergement",
+    "url hébergement",
+    "url de l'hebergement",
+    "url de l'hébergement",
+    "url",
+    "lien hebergement",
+    "lien hébergement",
+    "lien"
 ];
 
 function normalizeHeader(value) {
@@ -129,6 +144,74 @@ function attachTravelerNotes(stages, rows) {
             if (!stage) return;
             if (!Array.isArray(stage.noteItems)) stage.noteItems = [];
             stage.noteItems.push({ text: note.text, photo: note.photo });
+        });
+}
+
+function normalizeUrlKey(value) {
+    const url = normalizeValue(value);
+    if (!url) return "";
+    try {
+        const parsed = new URL(url);
+        parsed.hash = "";
+        parsed.hostname = parsed.hostname.toLowerCase();
+        parsed.pathname = parsed.pathname.replace(/\/+$/, "") || "/";
+        return parsed.href.toLowerCase();
+    } catch (error) {
+        return url.trim().replace(/\/+$/, "").toLowerCase();
+    }
+}
+
+function compactKey(value) {
+    return normalizeHeader(value).replace(/[^a-z0-9]/g, "");
+}
+
+function firstAddedAccommodationStageValue(record) {
+    return (
+        firstValue(record, ADDED_ACCOMMODATION_STAGE_HEADERS) ??
+        firstValueByPrefix(record, "etape") ??
+        firstValueByPrefix(record, "étape") ??
+        record[Object.keys(record).find(key => compactKey(key).endsWith("tape"))] ??
+        null
+    );
+}
+
+function firstAddedAccommodationUrlValue(record) {
+    const direct = firstValue(record, ADDED_ACCOMMODATION_URL_HEADERS);
+    if (direct) return direct;
+
+    const urlKey = Object.keys(record).find(key => {
+        const compact = compactKey(key);
+        return compact === "url" || compact.startsWith("url") || compact.includes("lien");
+    });
+
+    return urlKey ? record[urlKey] : null;
+}
+
+function mapAddedAccommodation(record) {
+    return {
+        stageReference: travelerNoteStage(firstAddedAccommodationStageValue(record)),
+        url: firstAddedAccommodationUrlValue(record)
+    };
+}
+
+function attachAddedAccommodations(stages, rows) {
+    const stagesByNumber = new Map(stages.map(stage => [stage.stage, stage]));
+    rows
+        .map(mapAddedAccommodation)
+        .filter(entry => entry.stageReference !== null && entry.url)
+        .forEach(entry => {
+            const stage = stagesByNumber.get(entry.stageReference);
+            if (!stage) return;
+
+            const accommodation = stage.accommodation || {};
+            if (!Array.isArray(accommodation.alternatives)) accommodation.alternatives = [];
+
+            const known = new Set(accommodation.alternatives.map(normalizeUrlKey).filter(Boolean));
+            const key = normalizeUrlKey(entry.url);
+            if (!key || known.has(key)) return;
+
+            accommodation.alternatives.push(entry.url);
+            stage.accommodation = accommodation;
         });
 }
 
@@ -530,7 +613,7 @@ function attachVariants(stages, variants) {
     );
 }
 
-function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
+function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedAccommodationRows = []) {
     const summary = buildSummary(etapesRows);
     const stageRows = etapesRows.filter(row => !isSummaryRow(row));
 
@@ -583,6 +666,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
 
     attachTravelerNotes(stages, travelerNotesRows);
     summary.stagesTotal = buildComputedStagesTotal(stages, summary.stagesTotalMarker);
+    attachAddedAccommodations(stages, addedAccommodationRows);
 
     return {
         title: ROADBOOK_TITLE || "Roadbook vélo",
@@ -621,10 +705,19 @@ async function loadGoogleSheetRoadbook() {
             return [];
         });
 
-    const [etapesCsv, variantesCsv, travelerNotesRows] = await Promise.all([
+    const addedAccommodationPromise = fetchCsv(ADDED_ACCOMMODATION_URL)
+        .then(csv => parseCsv(csv))
+        .catch(error => {
+            const reason = error?.message || "erreur inconnue";
+            console.warn(`[Roadbook] Ajouts d'hébergements indisponibles : ${reason}.`);
+            return [];
+        });
+
+    const [etapesCsv, variantesCsv, travelerNotesRows, addedAccommodationRows] = await Promise.all([
         fetchCsv(ETAPES_URL),
         fetchCsv(VARIANTES_URL),
-        travelerNotesPromise
+        travelerNotesPromise,
+        addedAccommodationPromise
     ]);
 
     const etapesRows = parseCsv(etapesCsv);
@@ -633,7 +726,7 @@ async function loadGoogleSheetRoadbook() {
     ensureSchema(etapesRows, REQUIRED_ETAPES_HEADERS);
     ensureSchema(variantesRows, REQUIRED_VARIANTES_HEADERS);
 
-    return buildRoadbook(etapesRows, variantesRows, travelerNotesRows);
+    return buildRoadbook(etapesRows, variantesRows, travelerNotesRows, addedAccommodationRows);
 }
 
 async function loadFallbackRoadbook() {
@@ -737,10 +830,13 @@ if (typeof module !== "undefined" && module.exports) {
         ETAPES_URL,
         VARIANTES_URL,
         TRAVELER_NOTES_URL,
+        ADDED_ACCOMMODATION_URL,
         parseCsv,
         sanitizeNotePhotoUrl,
         mapTravelerNote,
         attachTravelerNotes,
+        mapAddedAccommodation,
+        attachAddedAccommodations,
         sanitizeMapEmbedUrl,
         loadGoogleSheetRoadbook,
         loadFallbackRoadbook,

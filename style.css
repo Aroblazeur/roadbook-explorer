@@ -653,6 +653,10 @@ li{
     width:100%;
 }
 
+.add-accommodation-action{
+    margin-top:16px;
+}
+
 .map-card{
     overflow:hidden;
 }

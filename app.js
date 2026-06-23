@@ -16,6 +16,9 @@ let durationRequestId = 0;
 const TRAVELER_NOTES_FORM_URL =
     "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform";
 const TRAVELER_NOTES_STAGE_FIELD = "entry.521193530";
+const ADD_ACCOMMODATION_FORM_URL =
+    "https://docs.google.com/forms/d/e/1FAIpQLSccYxccGvTR1Ih3PBdWDO2Z1kI_qrlM2VnDCmkUYDDpQLormA/viewform";
+const ADD_ACCOMMODATION_STAGE_FIELD = "entry.819202802";
 const STAT_ICONS = Object.freeze({
     steps: [
         ["path", { d: "M12 21s6-5.7 6-11a6 6 0 1 0-12 0c0 5.3 6 11 6 11Z" }],
@@ -746,8 +749,9 @@ function renderFieldNavigation(day) {
 }
 
 function renderAccommodation(accommodation) {
+    const day = roadbook?.days?.[currentDay] || null;
     renderPrimaryAccommodation(accommodation);
-    renderAlternativeAccommodation(accommodation);
+    renderAlternativeAccommodation(accommodation, day?.stage || (currentDay + 1));
 }
 
 function renderPrimaryAccommodation(accommodation) {
@@ -781,7 +785,7 @@ function renderPrimaryAccommodation(accommodation) {
     appendAccommodationResource(container, mainUrl, "Ouvrir le site de l'hébergement", mainMetadata);
 }
 
-function renderAlternativeAccommodation(accommodation) {
+function renderAlternativeAccommodation(accommodation, stageNumber) {
     const section = document.getElementById("alternative-accommodation-card");
     const title = document.getElementById("alternative-accommodation-title");
     const container = document.getElementById("alternative-accommodation");
@@ -794,17 +798,41 @@ function renderAlternativeAccommodation(accommodation) {
         ? accommodation.houseRentals.filter(Boolean)
         : [];
 
-    section.hidden = alternatives.length === 0 && houseRentals.length === 0;
-    if (section.hidden) return;
+    section.hidden = false;
 
     title.textContent = alternatives.length && houseRentals.length
         ? "Hébergements alternatifs / locations maison"
         : alternatives.length
             ? "Hébergements alternatifs"
-            : "Locations maison";
+            : houseRentals.length
+                ? "Locations maison"
+                : "Hébergements alternatifs";
 
     appendResourceList(container, "Hébergements alternatifs", alternatives, houseRentals.length > 0);
     appendResourceList(container, "Locations maison", houseRentals, alternatives.length > 0);
+    appendAddAccommodationButton(container, stageNumber);
+}
+
+function appendAddAccommodationButton(container, stageNumber) {
+    const action = document.createElement("div");
+    action.className = "add-accommodation-action";
+
+    const link = document.createElement("a");
+    link.href = buildAddAccommodationFormUrl(stageNumber);
+    link.className = "terrain-button terrain-button--secondary";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "➕ Ajouter un hébergement";
+
+    action.appendChild(link);
+    container.appendChild(action);
+}
+
+function buildAddAccommodationFormUrl(stageNumber) {
+    const url = new URL(ADD_ACCOMMODATION_FORM_URL);
+    url.searchParams.set("usp", "pp_url");
+    url.searchParams.set(ADD_ACCOMMODATION_STAGE_FIELD, safeText(stageNumber, ""));
+    return url.href;
 }
 
 function isVarianteCourte(type) {
