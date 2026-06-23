@@ -191,25 +191,69 @@ button:disabled{
 
 .stats{
 
-    display:grid;
+    display:flex;
 
-    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    flex-wrap:wrap;
 
-    gap:15px;
+    align-items:center;
 
-    margin:20px 0;
+    gap:10px;
+
+    margin:14px 0;
 
 }
 
 .stat{
 
-    background:#f0f0f0;
+    display:inline-flex;
 
-    padding:15px;
+    align-items:center;
 
-    border-radius:10px;
+    gap:8px;
 
-    text-align:center;
+    min-height:42px;
+
+    padding:9px 13px;
+
+    border:1px solid rgba(46,125,50,.16);
+
+    border-radius:999px;
+
+    background:#f1f8f2;
+
+    color:var(--primary-dark);
+
+    text-align:left;
+
+    white-space:nowrap;
+
+    line-height:1.1;
+
+}
+
+.stat__icon{
+    width:20px;
+    height:20px;
+    flex:0 0 auto;
+    color:var(--primary);
+}
+
+.stat__label{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+}
+
+.stat__value{
+    font-size:.98rem;
+    font-weight:750;
+    color:var(--text);
 
 }
 
@@ -590,11 +634,12 @@ footer{
     }
 
     .stats{
-        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
     }
 
     .stat{
-        padding:12px 8px;
+        min-height:40px;
+        padding:8px 11px;
     }
 
     .terrain-button{

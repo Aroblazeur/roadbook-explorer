@@ -15,6 +15,32 @@ let durationRequestId = 0;
 const TRAVELER_NOTES_FORM_URL =
     "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform";
 const TRAVELER_NOTES_STAGE_FIELD = "entry.521193530";
+const STAT_ICONS = Object.freeze({
+    steps: [
+        ["path", { d: "M12 21s6-5.7 6-11a6 6 0 1 0-12 0c0 5.3 6 11 6 11Z" }],
+        ["circle", { cx: "12", cy: "10", r: "2.4" }]
+    ],
+    distance: [
+        ["path", { d: "M4 17 17 4l3 3L7 20 4 17Z" }],
+        ["path", { d: "M8 13 11 16" }],
+        ["path", { d: "M11 10 14 13" }],
+        ["path", { d: "M14 7 17 10" }]
+    ],
+    elevationGain: [
+        ["path", { d: "m3 18 6.5-11 4.5 7 2-3 5 7H3Z" }],
+        ["path", { d: "M16 4v6" }],
+        ["path", { d: "m13.5 6.5 2.5-2.5 2.5 2.5" }]
+    ],
+    elevationLoss: [
+        ["path", { d: "m3 18 6.5-11 4.5 7 2-3 5 7H3Z" }],
+        ["path", { d: "M16 4v6" }],
+        ["path", { d: "m13.5 7.5 2.5 2.5 2.5-2.5" }]
+    ],
+    duration: [
+        ["circle", { cx: "12", cy: "12", r: "8" }],
+        ["path", { d: "M12 8v4l3 2" }]
+    ]
+});
 
 /**
  * Chargement des données
@@ -119,11 +145,11 @@ function renderOfficialItinerarySummary(container, summary) {
     section.appendChild(heading);
 
     const stats = document.createElement("div");
-    stats.className = "official-itinerary__stats stats";
-    appendSummaryStat(stats, "Étapes", String(roadbook.days.length));
-    appendSummaryStatIfPresent(stats, "Distance", summary.distance, formatDistanceMetric);
-    appendSummaryStatIfPresent(stats, "D+", summary.elevationGain, formatElevationMetric);
-    appendSummaryStatIfPresent(stats, "D−", summary.elevationLoss, formatElevationMetric);
+    stats.className = "official-itinerary__stats stats stats--compact";
+    appendSummaryStat(stats, "steps", "Étapes", `${roadbook.days.length} étapes`);
+    appendSummaryStatIfPresent(stats, "distance", "Distance", summary.distance, formatDistanceMetric);
+    appendSummaryStatIfPresent(stats, "elevationGain", "D+", summary.elevationGain, formatElevationMetric);
+    appendSummaryStatIfPresent(stats, "elevationLoss", "D−", summary.elevationLoss, formatElevationMetric);
     section.appendChild(stats);
 
     appendSummaryMap(section, summary.mapEmbedUrl);
@@ -132,24 +158,13 @@ function renderOfficialItinerarySummary(container, summary) {
     container.appendChild(section);
 }
 
-function appendSummaryStatIfPresent(container, label, value, formatter) {
+function appendSummaryStatIfPresent(container, icon, label, value, formatter) {
     if (!Number.isFinite(value)) return;
-    appendSummaryStat(container, label, formatter(value));
+    appendSummaryStat(container, icon, label, formatter(value));
 }
 
-function appendSummaryStat(container, label, value) {
-    const item = document.createElement("div");
-    item.className = "stat";
-
-    const labelElement = document.createElement("span");
-    labelElement.className = "label";
-    labelElement.textContent = label;
-
-    const valueElement = document.createElement("span");
-    valueElement.textContent = value;
-
-    item.append(labelElement, valueElement);
-    container.appendChild(item);
+function appendSummaryStat(container, icon, label, value) {
+    container.appendChild(createStatCard({ icon, label, value }));
 }
 
 function appendSummaryMap(container, mapEmbedUrl) {
@@ -229,15 +244,15 @@ function updateRoadbookChrome(day = null) {
 }
 
 function renderStageMetricsAndDuration(day, index) {
-    const durationElement = document.getElementById("duration");
+    ensureStageStatCards();
     const estimator = window.roadbookDurationEstimator;
     const requestId = ++durationRequestId;
 
     if (!estimator || typeof estimator.estimateStageDuration !== "function") {
-        document.getElementById("distance").textContent = formatDistanceMetric(day.distance);
-        document.getElementById("elevation").textContent = formatElevationMetric(day.elevationGain);
-        document.getElementById("elevation-loss").textContent = formatElevationMetric(day.elevationLoss);
-        durationElement.textContent = safeText(day.duration);
+        updateStatValue("distance", formatDistanceMetric(day.distance));
+        updateStatValue("elevation", formatElevationMetric(day.elevationGain));
+        updateStatValue("elevation-loss", formatElevationMetric(day.elevationLoss));
+        updateStatValue("duration", safeText(day.duration));
         return;
     }
 
@@ -247,22 +262,86 @@ function renderStageMetricsAndDuration(day, index) {
         sheetMetrics.distanceKm,
         sheetMetrics.elevationGainM
     );
-    durationElement.textContent = estimator.formatDuration(fallbackHours) || safeText(day.duration);
+    updateStatValue("duration", estimator.formatDuration(fallbackHours) || safeText(day.duration));
 
     const gpxUrl = resolveStageGpxUrl(day.gpx || day.route?.gpx) || "";
     estimator.estimateStageDuration(day, { gpxUrl }).then(result => {
         if (requestId !== durationRequestId || currentDay !== index) return;
         renderStageMetricValues(result?.metrics);
-        if (result?.formatted) durationElement.textContent = result.formatted;
+        if (result?.formatted) updateStatValue("duration", result.formatted);
     }).catch(error => {
         console.warn(`[Durée] Estimation impossible : ${error.message}. Fallback conservé.`);
     });
 }
 
 function renderStageMetricValues(metrics) {
-    document.getElementById("distance").textContent = formatDistanceMetric(metrics?.distanceKm);
-    document.getElementById("elevation").textContent = formatElevationMetric(metrics?.elevationGainM);
-    document.getElementById("elevation-loss").textContent = formatElevationMetric(metrics?.elevationLossM);
+    updateStatValue("distance", formatDistanceMetric(metrics?.distanceKm));
+    updateStatValue("elevation", formatElevationMetric(metrics?.elevationGainM));
+    updateStatValue("elevation-loss", formatElevationMetric(metrics?.elevationLossM));
+}
+
+function ensureStageStatCards() {
+    const stats = document.querySelector("#day-card .stats");
+    if (!stats || stats.dataset.enhanced === "true") return;
+
+    stats.classList.add("stats--compact");
+    stats.replaceChildren(
+        createStatCard({ icon: "distance", label: "Distance", value: "— km", valueId: "distance" }),
+        createStatCard({ icon: "elevationGain", label: "D+", value: "— m", valueId: "elevation" }),
+        createStatCard({ icon: "elevationLoss", label: "D−", value: "— m", valueId: "elevation-loss" }),
+        createStatCard({ icon: "duration", label: "Durée", value: "Non renseigné", valueId: "duration" })
+    );
+    stats.dataset.enhanced = "true";
+}
+
+function createStatCard({ icon, label, value, valueId = "" }) {
+    const item = document.createElement("div");
+    item.className = "stat";
+    item.dataset.label = label;
+    item.setAttribute("aria-label", `${label} : ${value}`);
+
+    const iconElement = createStatIcon(icon);
+    const labelElement = document.createElement("span");
+    labelElement.className = "stat__label";
+    labelElement.textContent = label;
+
+    const valueElement = document.createElement("strong");
+    valueElement.className = "stat__value";
+    valueElement.textContent = value;
+    if (valueId) valueElement.id = valueId;
+
+    item.append(iconElement, labelElement, valueElement);
+    return item;
+}
+
+function createStatIcon(name) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("stat__icon");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.9");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+
+    (STAT_ICONS[name] || []).forEach(([tag, attributes]) => {
+        const child = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        Object.entries(attributes).forEach(([key, value]) => child.setAttribute(key, value));
+        svg.appendChild(child);
+    });
+
+    return svg;
+}
+
+function updateStatValue(id, value) {
+    const element = document.getElementById(id);
+    if (!element) return;
+    element.textContent = value;
+    const card = element.closest(".stat");
+    const label = card?.dataset.label;
+    if (card && label) card.setAttribute("aria-label", `${label} : ${value}`);
 }
 
 function formatDistanceMetric(value) {
