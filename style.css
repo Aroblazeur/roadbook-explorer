@@ -74,6 +74,28 @@ body{
 
 }
 
+.header-title-wrapper{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:16px;
+
+}
+
+.header-logo{
+
+    width:80px;
+
+    height:auto;
+
+    flex-shrink:0;
+
+}
+
 .header h1{
 
     font-size:2.2rem;
@@ -520,6 +542,12 @@ footer{
     button{
 
         width:100%;
+
+    }
+
+    .header-logo{
+
+        width:56px;
 
     }
 
