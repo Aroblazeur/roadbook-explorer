@@ -370,7 +370,7 @@ function displayDay(index) {
     updateRoadbookChrome(day);
 
     document.getElementById("current-day").textContent =
-        `Étape ${day.stage || (index + 1)}`;
+        day.day || `Étape ${day.stage || (index + 1)}`;
 
     document.getElementById("day-title").textContent =
         safeText(day.title, `Étape ${day.stage || (index + 1)}`);
@@ -1082,7 +1082,11 @@ function previousDay() {
 
     if (!roadbook || !Array.isArray(roadbook.days)) return;
 
-    if (currentDay > 0) {
+    if (currentView === "stage" && currentDay === 0) {
+
+        goHome();
+
+    } else if (currentDay > 0) {
 
         currentDay--;
 
@@ -1096,7 +1100,11 @@ function nextDay() {
 
     if (!roadbook || !Array.isArray(roadbook.days)) return;
 
-    if (currentDay < roadbook.days.length - 1) {
+    if (currentView === "home") {
+
+        openStage(0);
+
+    } else if (currentDay < roadbook.days.length - 1) {
 
         currentDay++;
 
@@ -1120,10 +1128,10 @@ function updateButtons() {
     const hasDays = Boolean(roadbook && Array.isArray(roadbook.days) && roadbook.days.length);
 
     document.getElementById("previous-day").disabled =
-        !hasDays || currentDay === 0;
+        !hasDays || currentView === "home";
 
     document.getElementById("next-day").disabled =
-        !hasDays || currentDay === roadbook.days.length - 1;
+        !hasDays || (currentView === "stage" && currentDay === roadbook.days.length - 1);
 
 }
 
