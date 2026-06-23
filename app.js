@@ -142,7 +142,7 @@ function renderHomePage() {
 
 function computeStagesTotal() {
     const sumFinite = arr => {
-        const valid = arr.filter(Number.isFinite);
+        const valid = arr.filter(v => Number.isFinite(v));
         return valid.length ? valid.reduce((a, b) => a + b, 0) : null;
     };
 
