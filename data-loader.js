@@ -9,6 +9,10 @@ const VARIANTES_URL =
 const TRAVELER_NOTES_URL =
     "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=Notes%20voyageurs";
 
+// Les exports CSV Google Sheets ne fournissent pas les métadonnées du fichier.
+// Modifier cette constante si le nom du Google Sheet change.
+const ROADBOOK_TITLE = "pirenexus a vélo";
+
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
 
@@ -500,7 +504,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
     attachTravelerNotes(stages, travelerNotesRows);
 
     return {
-        title: "Perinexus à vélo",
+        title: ROADBOOK_TITLE || "Roadbook vélo",
         description: "Roadbook d'itinérance à vélo.",
         stages,
         days: stages.map(stage => ({ ...stage }))

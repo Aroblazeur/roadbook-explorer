@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#2e7d32">
-  <title>Perinexus Roadbook</title>
+  <title>Roadbook vélo</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232e7d32'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-size='34' fill='white'%3EP%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
@@ -12,8 +12,7 @@
 <body>
   <header class="header">
     <div class="container">
-      <h1>🚴 Perinexus Roadbook</h1>
-      <p>Votre compagnon d'itinérance à vélo</p>
+      <h1 id="roadbook-title">Roadbook vélo</h1>
     </div>
   </header>
 
@@ -76,13 +75,13 @@
 
   </main>
 
-  <footer><p>Perinexus Roadbook</p></footer>
-  <script src="data-loader.js?v=accommodation-layout-20260622"></script>
-  <script src="map-viewer.js?v=accommodation-layout-20260622"></script>
-  <script src="accommodation-enrichment-loader.js?v=accommodation-layout-20260622"></script>
-  <script src="poi-enrichment-loader.js?v=accommodation-layout-20260622"></script>
-  <script src="duration-estimator.js?v=accommodation-layout-20260622"></script>
-  <script src="app.js?v=accommodation-layout-20260622"></script>
+  <footer><p id="footer-roadbook-title">Roadbook vélo</p></footer>
+  <script src="data-loader.js?v=dynamic-roadbook-title-20260623"></script>
+  <script src="map-viewer.js?v=dynamic-roadbook-title-20260623"></script>
+  <script src="accommodation-enrichment-loader.js?v=dynamic-roadbook-title-20260623"></script>
+  <script src="poi-enrichment-loader.js?v=dynamic-roadbook-title-20260623"></script>
+  <script src="duration-estimator.js?v=dynamic-roadbook-title-20260623"></script>
+  <script src="app.js?v=dynamic-roadbook-title-20260623"></script>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {

@@ -99,6 +99,8 @@ function updateSummary() {
 
     if (!roadbook || !Array.isArray(roadbook.days)) return;
 
+    updateRoadbookChrome();
+
     const info = document.getElementById("roadbook-info");
 
     info.replaceChildren();
@@ -124,6 +126,8 @@ function displayDay(index) {
 
     if (!day) return;
 
+    updateRoadbookChrome(day);
+
     document.getElementById("current-day").textContent =
         `Étape ${day.stage || (index + 1)}`;
 
@@ -140,6 +144,18 @@ function displayDay(index) {
 
     updateButtons();
 
+}
+
+function updateRoadbookChrome(day = null) {
+    const title = safeText(roadbook?.title, "Roadbook vélo");
+    const pageTitle = day?.title ? `${safeText(day.title)} - ${title}` : title;
+    const headerTitle = document.getElementById("roadbook-title");
+    const footerTitle = document.getElementById("footer-roadbook-title");
+
+    document.title = pageTitle;
+
+    if (headerTitle) headerTitle.textContent = title;
+    if (footerTitle) footerTitle.textContent = title;
 }
 
 function renderStageMetricsAndDuration(day, index) {
