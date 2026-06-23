@@ -323,7 +323,8 @@ function mapSummaryRow(record) {
 function buildSummary(rows) {
     const summary = {
         official: null,
-        stagesTotal: null
+        stagesTotal: null,
+        stagesTotalMarker: null
     };
 
     rows.forEach(row => {
@@ -332,11 +333,29 @@ function buildSummary(rows) {
             summary.official = mapSummaryRow(row);
         }
         if (kind === "stagesTotal") {
-            summary.stagesTotal = mapSummaryRow(row);
+            summary.stagesTotalMarker = mapSummaryRow(row);
         }
     });
 
     return summary;
+}
+
+function addFinite(values) {
+    const usable = values.filter(Number.isFinite);
+    if (!usable.length) return null;
+    return usable.reduce((total, value) => total + value, 0);
+}
+
+function buildComputedStagesTotal(stages) {
+    const source = Array.isArray(stages) ? stages : [];
+    return {
+        distance: addFinite(source.map(stage => stage.distance)),
+        elevationGain: addFinite(source.map(stage => stage.elevationGain)),
+        elevationLoss: addFinite(source.map(stage => stage.elevationLoss)),
+        mapEmbedUrl: null,
+        gpx: null,
+        link: null
+    };
 }
 
 function createVariant(fields = {}) {
@@ -563,6 +582,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
     attachVariants(stages, variantesFromSecondSheet);
 
     attachTravelerNotes(stages, travelerNotesRows);
+    summary.stagesTotal = buildComputedStagesTotal(stages);
 
     return {
         title: ROADBOOK_TITLE || "Roadbook vélo",

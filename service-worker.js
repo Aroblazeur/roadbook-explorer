@@ -1,7 +1,7 @@
 "use strict";
 
-const CACHE_NAME = "perinexus-roadbook-home-page-20260623";
-const VERSION = "roadbook-home-page-20260623";
+const CACHE_NAME = "perinexus-roadbook-computed-roadbook-totals-20260623";
+const VERSION = "computed-roadbook-totals-20260623";
 
 const CORE_ASSETS = [
     "./",
