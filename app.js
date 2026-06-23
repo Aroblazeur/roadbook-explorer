@@ -372,8 +372,7 @@ function displayDay(index) {
     document.getElementById("current-day").textContent =
         day.day || `Étape ${day.stage || (index + 1)}`;
 
-    document.getElementById("day-title").textContent =
-        safeText(day.title, `Étape ${day.stage || (index + 1)}`);
+    renderStageTitle(day, index);
 
     renderStageMetricsAndDuration(day, index);
 
@@ -385,6 +384,39 @@ function displayDay(index) {
 
     updateButtons();
 
+}
+
+function renderStageTitle(day, index) {
+    const heading = document.getElementById("day-title");
+    if (!heading) return;
+
+    const fallbackTitle = `Étape ${day.stage || (index + 1)}`;
+    const title = safeText(day.title, fallbackTitle);
+    const departure = safeText(day.departure, "");
+    const arrival = safeText(day.arrival, "");
+
+    heading.textContent = title;
+    if (!departure && !arrival) return;
+
+    const route = document.createElement("span");
+    route.className = "stage-route-links";
+    route.append(" — ");
+
+    if (departure) route.appendChild(createStageCityLink(departure));
+    if (departure && arrival) route.append(" → ");
+    if (arrival) route.appendChild(createStageCityLink(arrival));
+
+    heading.appendChild(route);
+}
+
+function createStageCityLink(city) {
+    const link = document.createElement("a");
+    link.className = "stage-city-link";
+    link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city)}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = city;
+    return link;
 }
 
 function openStage(index) {
