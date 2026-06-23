@@ -395,18 +395,18 @@ function renderStageTitle(day, index) {
     const departure = safeText(day.departure, "");
     const arrival = safeText(day.arrival, "");
 
-    heading.textContent = title;
-    if (!departure && !arrival) return;
+    const content = [document.createTextNode(title)];
+    if (departure || arrival) {
+        const route = document.createElement("span");
+        route.className = "stage-route-links";
+        route.append(" — ");
+        if (departure) route.appendChild(createStageCityLink(departure));
+        if (departure && arrival) route.append(" → ");
+        if (arrival) route.appendChild(createStageCityLink(arrival));
+        content.push(route);
+    }
 
-    const route = document.createElement("span");
-    route.className = "stage-route-links";
-    route.append(" — ");
-
-    if (departure) route.appendChild(createStageCityLink(departure));
-    if (departure && arrival) route.append(" → ");
-    if (arrival) route.appendChild(createStageCityLink(arrival));
-
-    heading.appendChild(route);
+    heading.replaceChildren(...content);
 }
 
 function createStageCityLink(city) {
