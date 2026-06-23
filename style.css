@@ -213,21 +213,9 @@ button:disabled{
 
 }
 
-.summary-title{
-    display:block;
-    font-size:1.25rem;
-    margin-bottom:6px;
-}
-
-.summary-count{
-    margin-bottom:20px;
-    color:var(--text-light);
-}
-
 .official-itinerary{
     display:grid;
     gap:16px;
-    margin-top:18px;
 }
 
 .official-itinerary h3{

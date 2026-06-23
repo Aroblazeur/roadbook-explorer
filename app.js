@@ -104,15 +104,6 @@ function updateSummary() {
     const info = document.getElementById("roadbook-info");
 
     info.replaceChildren();
-    const title = document.createElement("strong");
-    title.className = "summary-title";
-    title.textContent = safeText(roadbook.title, "Roadbook vélo");
-
-    const count = document.createElement("p");
-    count.className = "summary-count";
-    count.textContent = `Nombre total d'étapes : ${roadbook.days.length}`;
-
-    info.append(title, count);
     renderOfficialItinerarySummary(info, roadbook.summary?.official);
 
 }
@@ -129,15 +120,21 @@ function renderOfficialItinerarySummary(container, summary) {
 
     const stats = document.createElement("div");
     stats.className = "official-itinerary__stats stats";
-    appendSummaryStat(stats, "Distance", formatDistanceMetric(summary.distance));
-    appendSummaryStat(stats, "D+", formatElevationMetric(summary.elevationGain));
-    appendSummaryStat(stats, "D−", formatElevationMetric(summary.elevationLoss));
+    appendSummaryStat(stats, "Étapes", String(roadbook.days.length));
+    appendSummaryStatIfPresent(stats, "Distance", summary.distance, formatDistanceMetric);
+    appendSummaryStatIfPresent(stats, "D+", summary.elevationGain, formatElevationMetric);
+    appendSummaryStatIfPresent(stats, "D−", summary.elevationLoss, formatElevationMetric);
     section.appendChild(stats);
 
     appendSummaryMap(section, summary.mapEmbedUrl);
     appendSummaryLink(section, summary.link);
 
     container.appendChild(section);
+}
+
+function appendSummaryStatIfPresent(container, label, value, formatter) {
+    if (!Number.isFinite(value)) return;
+    appendSummaryStat(container, label, formatter(value));
 }
 
 function appendSummaryStat(container, label, value) {
