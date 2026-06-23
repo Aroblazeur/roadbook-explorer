@@ -158,7 +158,6 @@ function renderOfficialItinerarySummary(container, summary) {
 
     const stats = document.createElement("div");
     stats.className = "official-itinerary__stats stats stats--compact";
-    appendSummaryStat(stats, "steps", "Étapes", `${roadbook.days.length} étapes`);
     appendSummaryStatIfPresent(stats, "distance", "Distance", summary.distance, formatDistanceMetric);
     appendSummaryStatIfPresent(stats, "elevationGain", "D+", summary.elevationGain, formatElevationMetric);
     appendSummaryStatIfPresent(stats, "elevationLoss", "D−", summary.elevationLoss, formatElevationMetric);
