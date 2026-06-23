@@ -140,10 +140,30 @@ function renderHomePage() {
     updateSummary();
 }
 
+function computeStagesTotal() {
+    const sumFinite = arr => {
+        const valid = arr.filter(v => Number.isFinite(v));
+        return valid.length ? valid.reduce((a, b) => a + b, 0) : null;
+    };
+
+    const existing = roadbook.summary?.stagesTotal;
+    const existingHasData = existing &&
+        [existing.distance, existing.elevationGain, existing.elevationLoss].some(Number.isFinite);
+    if (existingHasData) return existing;
+
+    const days = Array.isArray(roadbook.days) ? roadbook.days : [];
+    const distance = sumFinite(days.map(d => d.distance));
+    const elevationGain = sumFinite(days.map(d => d.elevationGain));
+    const elevationLoss = sumFinite(days.map(d => d.elevationLoss));
+
+    const hasAny = [distance, elevationGain, elevationLoss].some(Number.isFinite);
+    return hasAny ? { distance, elevationGain, elevationLoss } : null;
+}
+
 function renderHomePageContent(container) {
     renderOfficialItinerarySummary(container, roadbook.summary?.official);
     renderHomeStageList(container);
-    renderRoadbookCurrentSummary(container, roadbook.summary?.stagesTotal);
+    renderRoadbookCurrentSummary(container, computeStagesTotal());
 }
 
 function renderOfficialItinerarySummary(container, summary) {
