@@ -408,6 +408,23 @@ button:disabled{
     font-weight:800;
 }
 
+.stage-route-links{
+    color:var(--text-light);
+    font-size:.92em;
+    font-weight:600;
+}
+
+.stage-city-link{
+    color:inherit;
+    text-decoration:underline;
+    text-underline-offset:2px;
+}
+
+.stage-city-link:hover,
+.stage-city-link:focus-visible{
+    color:var(--primary-dark);
+}
+
 .label{
 
     display:block;
