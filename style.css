@@ -270,7 +270,8 @@ button:disabled{
     margin:0;
 }
 
-.official-itinerary__map{
+.official-itinerary__map,
+.roadbook-current-summary__map{
     width:100%;
     height:clamp(280px,38vw,340px);
     overflow:hidden;
@@ -278,7 +279,20 @@ button:disabled{
     background:#e7eee8;
 }
 
-.official-itinerary__actions{
+.official-itinerary__map-link,
+.roadbook-current-summary__map-link{
+    display:block;
+    text-decoration:none;
+}
+
+.official-itinerary__map-link:focus-visible,
+.roadbook-current-summary__map-link:focus-visible{
+    outline:3px solid rgba(46,125,50,.35);
+    outline-offset:3px;
+}
+
+.official-itinerary__actions,
+.roadbook-current-summary__actions{
     display:flex;
     flex-wrap:wrap;
     gap:12px;
@@ -792,7 +806,8 @@ footer{
         height:300px;
     }
 
-    .official-itinerary__map{
+    .official-itinerary__map,
+    .roadbook-current-summary__map{
         height:300px;
     }
 

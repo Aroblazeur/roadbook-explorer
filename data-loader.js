@@ -346,15 +346,15 @@ function addFinite(values) {
     return usable.reduce((total, value) => total + value, 0);
 }
 
-function buildComputedStagesTotal(stages) {
+function buildComputedStagesTotal(stages, marker = null) {
     const source = Array.isArray(stages) ? stages : [];
     return {
         distance: addFinite(source.map(stage => stage.distance)),
         elevationGain: addFinite(source.map(stage => stage.elevationGain)),
         elevationLoss: addFinite(source.map(stage => stage.elevationLoss)),
-        mapEmbedUrl: null,
-        gpx: null,
-        link: null
+        mapEmbedUrl: marker?.mapEmbedUrl ?? null,
+        gpx: marker?.gpx ?? null,
+        link: marker?.link ?? null
     };
 }
 
@@ -582,7 +582,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
     attachVariants(stages, variantesFromSecondSheet);
 
     attachTravelerNotes(stages, travelerNotesRows);
-    summary.stagesTotal = buildComputedStagesTotal(stages);
+    summary.stagesTotal = buildComputedStagesTotal(stages, summary.stagesTotalMarker);
 
     return {
         title: ROADBOOK_TITLE || "Roadbook vélo",
