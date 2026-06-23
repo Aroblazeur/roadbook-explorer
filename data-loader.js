@@ -243,6 +243,34 @@ function firstValueByPrefix(record, prefix) {
     return key ? record[key] : null;
 }
 
+function normalizedStageNumberLabel(record) {
+    return normalizeHeader(firstValue(record, ["numero etape"]));
+}
+
+function summaryRowKind(record) {
+    const labels = [
+        normalizedStageNumberLabel(record),
+        normalizeHeader(firstValue(record, ["type"]))
+    ].filter(Boolean);
+
+    for (const label of labels) {
+        const compact = label.replace(/[^a-z0-9]/g, "");
+        if (label === "total" || compact === "totalofficiel") return "official";
+        if (
+            compact === "totaldesetapes" ||
+            (compact.startsWith("totaldes") && compact.endsWith("tapes"))
+        ) {
+            return "stagesTotal";
+        }
+    }
+
+    return null;
+}
+
+function isSummaryRow(record) {
+    return summaryRowKind(record) !== null;
+}
+
 function sanitizeMapEmbedUrl(value) {
     const normalized = normalizeValue(value);
     if (!normalized) return null;
@@ -279,6 +307,36 @@ function buildAccommodation(record) {
         alternatives: splitMulti(alternativesValue),
         houseRentals: splitMulti(firstValue(record, ["possibilite de location maison", "possibilité de location maison"]))
     };
+}
+
+function mapSummaryRow(record) {
+    return {
+        distance: toNumber(firstValue(record, ["distance (km)"])),
+        elevationGain: toNumber(firstValue(record, ["d+ (m)"])),
+        elevationLoss: toNumber(firstValue(record, ["d− (m)", "d- (m)"])),
+        mapEmbedUrl: sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"])),
+        gpx: firstValue(record, ["gpx"]),
+        link: firstValue(record, ["lien"])
+    };
+}
+
+function buildSummary(rows) {
+    const summary = {
+        official: null,
+        stagesTotal: null
+    };
+
+    rows.forEach(row => {
+        const kind = summaryRowKind(row);
+        if (kind === "official") {
+            summary.official = mapSummaryRow(row);
+        }
+        if (kind === "stagesTotal") {
+            summary.stagesTotal = mapSummaryRow(row);
+        }
+    });
+
+    return summary;
 }
 
 function createVariant(fields = {}) {
@@ -454,9 +512,12 @@ function attachVariants(stages, variants) {
 }
 
 function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
+    const summary = buildSummary(etapesRows);
+    const stageRows = etapesRows.filter(row => !isSummaryRow(row));
+
     // Group ALL rows by "Numero etape" — no row is discarded based on Type
     const groups = new Map();
-    etapesRows.forEach(row => {
+    stageRows.forEach(row => {
         const num = firstValue(row, ["numero etape"]);
         const key = num !== null ? String(num) : NO_STAGE_NUMBER_KEY;
         if (!groups.has(key)) groups.set(key, []);
@@ -506,6 +567,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = []) {
     return {
         title: ROADBOOK_TITLE || "Roadbook vélo",
         description: "Roadbook d'itinérance à vélo.",
+        summary,
         stages,
         days: stages.map(stage => ({ ...stage }))
     };

@@ -213,6 +213,45 @@ button:disabled{
 
 }
 
+.summary-title{
+    display:block;
+    font-size:1.25rem;
+    margin-bottom:6px;
+}
+
+.summary-count{
+    margin-bottom:20px;
+    color:var(--text-light);
+}
+
+.official-itinerary{
+    display:grid;
+    gap:16px;
+    margin-top:18px;
+}
+
+.official-itinerary h3{
+    margin:0;
+}
+
+.official-itinerary__stats{
+    margin:0;
+}
+
+.official-itinerary__map{
+    width:100%;
+    height:clamp(280px,38vw,340px);
+    overflow:hidden;
+    border-radius:12px;
+    background:#e7eee8;
+}
+
+.official-itinerary__actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+}
+
 .label{
 
     display:block;
@@ -603,6 +642,10 @@ footer{
     }
 
     #stage-map-embed{
+        height:300px;
+    }
+
+    .official-itinerary__map{
         height:300px;
     }
 

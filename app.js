@@ -105,13 +105,86 @@ function updateSummary() {
 
     info.replaceChildren();
     const title = document.createElement("strong");
-    title.textContent = safeText(roadbook.title, "Roadbook");
-    const description = document.createElement("p");
-    description.textContent = safeText(roadbook.description, "");
-    const count = document.createElement("p");
-    count.textContent = `Nombre d'étapes : ${roadbook.days.length}`;
-    info.append(title, description, count);
+    title.className = "summary-title";
+    title.textContent = safeText(roadbook.title, "Roadbook vélo");
 
+    const count = document.createElement("p");
+    count.className = "summary-count";
+    count.textContent = `Nombre total d'étapes : ${roadbook.days.length}`;
+
+    info.append(title, count);
+    renderOfficialItinerarySummary(info, roadbook.summary?.official);
+
+}
+
+function renderOfficialItinerarySummary(container, summary) {
+    if (!summary) return;
+
+    const section = document.createElement("div");
+    section.className = "official-itinerary";
+
+    const heading = document.createElement("h3");
+    heading.textContent = "Itinéraire officiel";
+    section.appendChild(heading);
+
+    const stats = document.createElement("div");
+    stats.className = "official-itinerary__stats stats";
+    appendSummaryStat(stats, "Distance", formatDistanceMetric(summary.distance));
+    appendSummaryStat(stats, "D+", formatElevationMetric(summary.elevationGain));
+    appendSummaryStat(stats, "D−", formatElevationMetric(summary.elevationLoss));
+    section.appendChild(stats);
+
+    appendSummaryMap(section, summary.mapEmbedUrl);
+    appendSummaryLink(section, summary.link);
+
+    container.appendChild(section);
+}
+
+function appendSummaryStat(container, label, value) {
+    const item = document.createElement("div");
+    item.className = "stat";
+
+    const labelElement = document.createElement("span");
+    labelElement.className = "label";
+    labelElement.textContent = label;
+
+    const valueElement = document.createElement("span");
+    valueElement.textContent = value;
+
+    item.append(labelElement, valueElement);
+    container.appendChild(item);
+}
+
+function appendSummaryMap(container, mapEmbedUrl) {
+    const mapyUrl = window.roadbookMapViewer?.resolveMapyUrl?.(mapEmbedUrl);
+    if (!mapyUrl) return;
+
+    const mapContainer = document.createElement("div");
+    mapContainer.className = "official-itinerary__map mapy-embed";
+
+    const iframe = document.createElement("iframe");
+    iframe.src = mapyUrl;
+    iframe.title = "Carte interactive de l'itinéraire officiel";
+    iframe.loading = "lazy";
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    iframe.setAttribute("width", "100%");
+    iframe.setAttribute("height", "320");
+    iframe.style.border = "none";
+    iframe.style.borderRadius = "12px";
+    iframe.setAttribute("allowfullscreen", "");
+    iframe.setAttribute("frameborder", "0");
+
+    mapContainer.appendChild(iframe);
+    container.appendChild(mapContainer);
+}
+
+function appendSummaryLink(container, link) {
+    if (!isSafeUrl(link)) return;
+
+    const action = document.createElement("div");
+    action.className = "official-itinerary__actions";
+    appendResource(action, link, "Voir le tracé complet", "terrain-button");
+    container.appendChild(action);
 }
 
 /**
