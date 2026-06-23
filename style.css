@@ -272,6 +272,7 @@ button:disabled{
 
 .official-itinerary__map,
 .roadbook-current-summary__map{
+    position:relative;
     width:100%;
     height:clamp(280px,38vw,340px);
     overflow:hidden;
@@ -281,6 +282,9 @@ button:disabled{
 
 .official-itinerary__map-link,
 .roadbook-current-summary__map-link{
+    position:absolute;
+    inset:0;
+    z-index:1;
     display:block;
     text-decoration:none;
 }
@@ -296,6 +300,18 @@ button:disabled{
     display:flex;
     flex-wrap:wrap;
     gap:12px;
+}
+
+.summary-map-link__label{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
 }
 
 .home-stage-list,

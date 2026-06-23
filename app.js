@@ -312,16 +312,8 @@ function appendSummaryMap(container, mapEmbedUrl, options = {}) {
         linkLabel = "Ouvrir la carte dans un nouvel onglet"
     } = options;
     const safeLink = isSafeUrl(link) ? link : null;
-    const mapContainer = document.createElement(safeLink ? "a" : "div");
+    const mapContainer = document.createElement("div");
     mapContainer.className = className;
-
-    if (safeLink) {
-        mapContainer.href = safeLink;
-        mapContainer.target = "_blank";
-        mapContainer.rel = "noopener noreferrer";
-        mapContainer.classList.add(linkClassName);
-        mapContainer.setAttribute("aria-label", linkLabel);
-    }
 
     const iframe = document.createElement("iframe");
     iframe.src = mapyUrl;
@@ -334,12 +326,24 @@ function appendSummaryMap(container, mapEmbedUrl, options = {}) {
     iframe.style.borderRadius = "12px";
     iframe.setAttribute("allowfullscreen", "");
     iframe.setAttribute("frameborder", "0");
+    mapContainer.appendChild(iframe);
+
     if (safeLink) {
-        iframe.style.pointerEvents = "none";
-        iframe.tabIndex = -1;
+        const overlay = document.createElement("a");
+        overlay.href = safeLink;
+        overlay.target = "_blank";
+        overlay.rel = "noopener noreferrer";
+        overlay.className = linkClassName;
+        overlay.setAttribute("aria-label", linkLabel);
+
+        const label = document.createElement("span");
+        label.className = "summary-map-link__label";
+        label.textContent = linkLabel;
+        overlay.appendChild(label);
+
+        mapContainer.appendChild(overlay);
     }
 
-    mapContainer.appendChild(iframe);
     container.appendChild(mapContainer);
 }
 
