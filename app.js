@@ -397,19 +397,7 @@ function renderStageTitle(day, index) {
     const title = safeText(day.title, fallbackTitle);
     const departure = safeText(day.departure, "");
     const arrival = safeText(day.arrival, "");
-
-    const content = [document.createTextNode(title)];
-    if (departure || arrival) {
-        const route = document.createElement("span");
-        route.className = "stage-route-links";
-        route.append(" — ");
-        if (departure) route.appendChild(createStageCityLink(departure));
-        if (departure && arrival) route.append(" → ");
-        if (arrival) route.appendChild(createStageCityLink(arrival));
-        content.push(route);
-    }
-
-    heading.replaceChildren(...content);
+    heading.replaceChildren(...buildStageTitleContent(title, departure, arrival));
 }
 
 function createStageCityLink(city) {
@@ -420,6 +408,51 @@ function createStageCityLink(city) {
     link.rel = "noopener noreferrer";
     link.textContent = city;
     return link;
+}
+
+function buildStageTitleContent(title, departure, arrival) {
+    const links = [];
+
+    if (departure) {
+        const departureIndex = title.indexOf(departure);
+        if (departureIndex !== -1) {
+            links.push({ index: departureIndex, city: departure });
+        }
+    }
+
+    if (arrival) {
+        const arrivalStart = links.length
+            ? links[links.length - 1].index + links[links.length - 1].city.length
+            : 0;
+        const arrivalIndex = title.indexOf(arrival, arrivalStart);
+        if (arrivalIndex !== -1) {
+            links.push({ index: arrivalIndex, city: arrival });
+        }
+    }
+
+    if (!links.length) {
+        return [document.createTextNode(title)];
+    }
+
+    const content = [];
+    let cursor = 0;
+
+    links
+        .sort((left, right) => left.index - right.index)
+        .forEach(({ index, city }) => {
+            if (index < cursor) return;
+            if (index > cursor) {
+                content.push(document.createTextNode(title.slice(cursor, index)));
+            }
+            content.push(createStageCityLink(city));
+            cursor = index + city.length;
+        });
+
+    if (cursor < title.length) {
+        content.push(document.createTextNode(title.slice(cursor)));
+    }
+
+    return content;
 }
 
 function openStage(index) {
