@@ -413,8 +413,8 @@ function createStageCityLink(city) {
 function buildStageTitleContent(title, departure, arrival) {
     if (departure && arrival) {
         const routeLabel = `${departure} → ${arrival}`;
-        const routeIndex = title.lastIndexOf(routeLabel);
-        if (routeIndex !== -1) {
+        if (title.endsWith(routeLabel)) {
+            const routeIndex = title.length - routeLabel.length;
             return [
                 document.createTextNode(title.slice(0, routeIndex)),
                 createStageCityLink(departure),
@@ -429,11 +429,11 @@ function buildStageTitleContent(title, departure, arrival) {
         return [document.createTextNode(title)];
     }
 
-    const cityIndex = title.lastIndexOf(city);
-    if (cityIndex === -1) {
+    if (!title.endsWith(city)) {
         return [document.createTextNode(title)];
     }
 
+    const cityIndex = title.length - city.length;
     return [
         document.createTextNode(title.slice(0, cityIndex)),
         createStageCityLink(city),
