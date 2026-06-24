@@ -208,7 +208,7 @@ async function enrichUrl(link, addedNamesByUrl) {
             image: resolveHttpUrl(rawImage, finalUrl),
             status: "ok",
             nameMethod: "none",
-            error: "Aucun nom exploitable (titre, og:title, schema.org, Google Maps, Nominatim)."
+            error: "Aucun nom exploitable (titre, og:title, Schema.org, Google Maps, Nominatim)."
         };
 
     } catch (error) {
@@ -447,23 +447,23 @@ function extractPlatformNameFromUrl(value) {
     const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
     const path = decodeURIComponent(parsed.pathname || "");
 
-    if (hostname.endsWith("booking.com")) {
+    if (matchesHostname(hostname, "booking.com")) {
         const match = path.match(/\/hotel\/[^/]+\/([^/?#]+)\.html?/i);
         return humanizeSlug(match?.[1] || "");
     }
-    if (hostname.endsWith("pitchup.com")) {
+    if (matchesHostname(hostname, "pitchup.com")) {
         const parts = path.split("/").filter(Boolean);
         return humanizeSlug(parts.at(-1) || "");
     }
-    if (hostname.endsWith("camping.info")) {
+    if (matchesHostname(hostname, "camping.info")) {
         const parts = path.split("/").filter(Boolean);
         return humanizeSlug(parts.at(-1) || "");
     }
-    if (hostname.endsWith("huttopia.com")) {
+    if (matchesHostname(hostname, "huttopia.com")) {
         const parts = path.split("/").filter(Boolean);
         return humanizeSlug(parts.at(-1) || "");
     }
-    if (hostname.endsWith("acsi.com") || hostname.endsWith("acsi.eu")) {
+    if (matchesHostname(hostname, "acsi.com") || matchesHostname(hostname, "acsi.eu")) {
         const parts = path.split("/").filter(Boolean);
         return humanizeSlug(parts.at(-1) || "");
     }
@@ -621,8 +621,10 @@ function normalizeAccommodationUrl(value) {
         url.hash = "";
         url.pathname = url.pathname.replace(/\/+$/g, "") || "/";
         const sortedParameters = [...url.searchParams.entries()]
-            .sort(([leftKey, leftValue], [rightKey, rightValue]) =>
-                leftKey.localeCompare(rightKey) || leftValue.localeCompare(rightValue));
+            .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+                const keyCompare = leftKey.localeCompare(rightKey);
+                return keyCompare !== 0 ? keyCompare : leftValue.localeCompare(rightValue);
+            });
         url.search = "";
         sortedParameters.forEach(([key, parameterValue]) => url.searchParams.append(key, parameterValue));
         return url.href.replace(/\/$/, "");
@@ -633,9 +635,9 @@ function normalizeAccommodationUrl(value) {
 
 function extractSchemaContext(html) {
     const context = { names: [], addresses: [], coordinates: [], sameAsUrls: [], images: [] };
-    const scripts = String(html || "").match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+    const scripts = String(html || "").match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
     scripts.forEach(script => {
-        const json = script.replace(/<script\b[^>]*>/i, "").replace(/<\/script>\s*$/i, "").trim();
+        const json = (script.match(/<script\b[^>]*>([\s\S]*?)<\/script>\s*$/i)?.[1] || "").trim();
         if (!json) return;
         let parsed;
         try {
