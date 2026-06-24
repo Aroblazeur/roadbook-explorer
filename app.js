@@ -45,6 +45,17 @@ const STAT_ICONS = Object.freeze({
         ["path", { d: "M12 8v4l3 2" }]
     ]
 });
+const GENERIC_ACCOMMODATION_METADATA_NAMES = Object.freeze([
+    "booking",
+    "booking.com",
+    "airbnb",
+    "airbnb.fr",
+    "hotels.com",
+    "expedia",
+    "tripadvisor",
+    "vrbo",
+    "abritel"
+].map(normalizeAccommodationText));
 
 /**
  * Chargement des données
@@ -509,18 +520,7 @@ function normalizeAutomaticAccommodationName(name, url = "") {
     if (!value) return "";
 
     const normalized = normalizeAccommodationText(value);
-    const genericNames = [
-        "booking",
-        "booking.com",
-        "airbnb",
-        "airbnb.fr",
-        "hotels.com",
-        "expedia",
-        "tripadvisor",
-        "vrbo",
-        "abritel"
-    ].map(normalizeAccommodationText);
-    if (genericNames.includes(normalized)) return "";
+    if (GENERIC_ACCOMMODATION_METADATA_NAMES.includes(normalized)) return "";
 
     const inferredHostName = inferAccommodationNameFromUrl(url);
     if (inferredHostName && normalized === normalizeAccommodationText(inferredHostName)) return "";
@@ -554,16 +554,16 @@ function deriveAccommodationNameFromMapUrl(url) {
             parsed.searchParams.get("title")
         ];
 
-        if (hostname.includes("google.") && parsed.pathname.includes("/maps")) {
+        if (isGoogleMapsHostname(hostname) && parsed.pathname.includes("/maps")) {
             return firstMeaningfulAccommodationLabel(candidates);
         }
 
-        if (hostname.includes("mapy.com")) {
+        if (matchesHostname(hostname, "mapy.com")) {
             const slug = parsed.pathname.split("/").filter(Boolean).pop() || "";
             return firstMeaningfulAccommodationLabel([...candidates, slug]);
         }
 
-        if (hostname.includes("openstreetmap.org")) {
+        if (matchesHostname(hostname, "openstreetmap.org")) {
             return firstMeaningfulAccommodationLabel(candidates);
         }
     } catch (error) {
@@ -579,6 +579,14 @@ function firstMeaningfulAccommodationLabel(values) {
         if (cleaned) return cleaned;
     }
     return "";
+}
+
+function isGoogleMapsHostname(hostname) {
+    return /(^|\.)google\.[a-z.]+$/i.test(hostname);
+}
+
+function matchesHostname(hostname, expectedDomain) {
+    return hostname === expectedDomain || hostname.endsWith(`.${expectedDomain}`);
 }
 
 function cleanAccommodationLocationLabel(value) {
