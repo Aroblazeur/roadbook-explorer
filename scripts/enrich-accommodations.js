@@ -417,6 +417,7 @@ function isGenericPlatformName(value) {
         "booking",
         "booking.com",
         "airbnb",
+        "airbnb.fr",
         "airbnbfr",
         "hotels.com",
         "expedia",
@@ -530,7 +531,6 @@ function deriveAccommodationNameFromMapUrl(url) {
 function extractGoogleMapsPlaceFromPath(pathname = "") {
     const match = String(pathname).match(/\/place\/([^/]+)/i);
     return match ? cleanAccommodationLocationLabel(match[1]) : "";
-}
 }
 
 function resolveHttpUrl(value, baseUrl) {
@@ -842,6 +842,7 @@ function printReport(index, total, item) {
     console.log(`[${index}/${total}] ${item.url}`);
     console.log(`  Colonne : ${item.sourceColumn} · Étape : ${item.stage}`);
     console.log(`  Nom     : ${item.name || "non trouvé"}`);
+    console.log(`  Méthode : ${item.nameMethod || "inconnue"}`);
     console.log(`  Image   : ${item.image || "non trouvée"}`);
     console.log(`  Statut  : ${item.status}${item.error ? ` · ${item.error}` : ""}`);
 }
