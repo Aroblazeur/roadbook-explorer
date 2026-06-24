@@ -397,19 +397,7 @@ function renderStageTitle(day, index) {
     const title = safeText(day.title, fallbackTitle);
     const departure = safeText(day.departure, "");
     const arrival = safeText(day.arrival, "");
-
-    const content = [document.createTextNode(title)];
-    if (departure || arrival) {
-        const route = document.createElement("span");
-        route.className = "stage-route-links";
-        route.append(" — ");
-        if (departure) route.appendChild(createStageCityLink(departure));
-        if (departure && arrival) route.append(" → ");
-        if (arrival) route.appendChild(createStageCityLink(arrival));
-        content.push(route);
-    }
-
-    heading.replaceChildren(...content);
+    heading.replaceChildren(...buildStageTitleContent(title, departure, arrival));
 }
 
 function createStageCityLink(city) {
@@ -420,6 +408,50 @@ function createStageCityLink(city) {
     link.rel = "noopener noreferrer";
     link.textContent = city;
     return link;
+}
+
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildStageTitleContent(title, departure, arrival) {
+    if (departure && arrival) {
+        const routeMatch = title.match(
+            new RegExp(
+                `^(.*)(${escapeRegExp(departure)})(\\s*(?:→|->|[-–—])\\s*)(${escapeRegExp(arrival)})(\\s*)$`
+            )
+        );
+        if (routeMatch) {
+            const content = [document.createTextNode(routeMatch[1]), createStageCityLink(departure), document.createTextNode(routeMatch[3]), createStageCityLink(arrival)];
+            if (routeMatch[5]) {
+                content.push(document.createTextNode(routeMatch[5]));
+            }
+            return content;
+        }
+    }
+
+    const city = departure || arrival;
+    if (!city) {
+        return [document.createTextNode(title)];
+    }
+
+    const cityAtEndPattern = new RegExp(`${escapeRegExp(city)}\\s*$`);
+    if (!cityAtEndPattern.test(title)) {
+        return [document.createTextNode(title)];
+    }
+
+    const cityIndex = title.lastIndexOf(city);
+    const previousChar = cityIndex > 0 ? title[cityIndex - 1] : "";
+    if (previousChar && /[\p{L}\p{N}]/u.test(previousChar)) {
+        return [document.createTextNode(title)];
+    }
+
+    const trailingWhitespace = title.slice(cityIndex + city.length);
+    const content = [document.createTextNode(title.slice(0, cityIndex)), createStageCityLink(city)];
+    if (trailingWhitespace) {
+        content.push(document.createTextNode(trailingWhitespace));
+    }
+    return content;
 }
 
 function openStage(index) {
