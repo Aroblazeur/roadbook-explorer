@@ -435,14 +435,14 @@ function buildStageTitleContent(title, departure, arrival) {
         return [document.createTextNode(title)];
     }
 
-    const cityWithTrailingWhitespace = new RegExp(`${escapeRegExp(city)}\\s*$`);
-    if (!cityWithTrailingWhitespace.test(title)) {
+    const cityAtEndPattern = new RegExp(`${escapeRegExp(city)}\\s*$`);
+    if (!cityAtEndPattern.test(title)) {
         return [document.createTextNode(title)];
     }
 
     const cityIndex = title.lastIndexOf(city);
-    const previousCharacter = cityIndex > 0 ? title[cityIndex - 1] : "";
-    if (previousCharacter && /[\p{L}\p{N}]/u.test(previousCharacter)) {
+    const previousChar = cityIndex > 0 ? title[cityIndex - 1] : "";
+    if (previousChar && /[\p{L}\p{N}]/u.test(previousChar)) {
         return [document.createTextNode(title)];
     }
 
