@@ -57,6 +57,16 @@ const ADDED_ACCOMMODATION_URL_HEADERS = [
     "lien hébergement",
     "lien"
 ];
+const ADDED_ACCOMMODATION_NAME_HEADERS = [
+    "nom",
+    "nom hebergement",
+    "nom hébergement"
+];
+const ADDED_ACCOMMODATION_PHOTO_HEADERS = [
+    "photo",
+    "photo hebergement",
+    "photo hébergement"
+];
 
 function normalizeHeader(value) {
     return String(value || "")
@@ -227,7 +237,58 @@ function firstAddedAccommodationUrlValue(record) {
 function mapAddedAccommodation(record) {
     return {
         stageReference: travelerNoteStage(firstAddedAccommodationStageValue(record)),
-        url: firstAddedAccommodationUrlValue(record)
+        url: firstAddedAccommodationUrlValue(record),
+        name: firstValue(record, ADDED_ACCOMMODATION_NAME_HEADERS),
+        photo: sanitizeImageUrl(firstValue(record, ADDED_ACCOMMODATION_PHOTO_HEADERS))
+    };
+}
+
+function normalizeAlternativeAccommodationEntry(value, { name = "", photo = "" } = {}) {
+    if (value && typeof value === "object") {
+        const url = normalizeValue(value.url ?? value.website);
+        if (!url) return null;
+        return {
+            url,
+            name: normalizeValue(value.name) || normalizeValue(name) || "",
+            photo: sanitizeImageUrl(value.photo || photo)
+        };
+    }
+
+    const url = normalizeValue(value);
+    if (!url) return null;
+    return {
+        url,
+        name: normalizeValue(name) || "",
+        photo: sanitizeImageUrl(photo)
+    };
+}
+
+function buildAlternativeAccommodationEntries(urls, names = [], photos = []) {
+    return urls
+        .map((url, index) => normalizeAlternativeAccommodationEntry(url, {
+            name: names[index] || "",
+            photo: photos[index] || ""
+        }))
+        .filter(Boolean);
+}
+
+function syncAccommodationAlternatives(accommodation) {
+    if (!accommodation || typeof accommodation !== "object") return;
+    const names = Array.isArray(accommodation?.alternativeNames) ? accommodation.alternativeNames : [];
+    const photos = Array.isArray(accommodation?.alternativePhotos) ? accommodation.alternativePhotos : [];
+    const alternatives = Array.isArray(accommodation?.alternatives) ? accommodation.alternatives : [];
+
+    accommodation.alternatives = buildAlternativeAccommodationEntries(alternatives, names, photos);
+    accommodation.alternativeNames = accommodation.alternatives.map(entry => entry.name || "");
+    accommodation.alternativePhotos = accommodation.alternatives.map(entry => entry.photo || "");
+}
+
+function syncStageAlternativeAccommodation(stage) {
+    if (!stage || typeof stage !== "object") return;
+    const firstAlternative = stage?.accommodation?.alternatives?.[0] || null;
+    stage.alternativeAccommodation = {
+        name: firstAlternative?.name || firstAlternative?.url || "",
+        photo: firstAlternative?.photo || ""
     };
 }
 
@@ -242,13 +303,36 @@ function attachAddedAccommodations(stages, rows) {
 
             const accommodation = stage.accommodation || {};
             if (!Array.isArray(accommodation.alternatives)) accommodation.alternatives = [];
+            syncAccommodationAlternatives(accommodation);
 
-            const known = new Set(accommodation.alternatives.map(normalizeUrlKey).filter(Boolean));
             const key = normalizeUrlKey(entry.url);
-            if (!key || known.has(key)) return;
+            if (!key) return;
 
-            accommodation.alternatives.push(entry.url);
+            const mainKey = normalizeUrlKey(accommodation.website || accommodation.url);
+            if (mainKey && mainKey === key) {
+                if (entry.name) accommodation.name = entry.name;
+                if (entry.photo) accommodation.photo = entry.photo;
+                stage.accommodation = accommodation;
+                syncStageAlternativeAccommodation(stage);
+                return;
+            }
+
+            const existingAlternative = accommodation.alternatives.find(item => normalizeUrlKey(item.url) === key);
+            if (existingAlternative) {
+                if (entry.name) existingAlternative.name = entry.name;
+                if (entry.photo) existingAlternative.photo = entry.photo;
+            } else {
+                accommodation.alternatives.push({
+                    url: entry.url,
+                    name: entry.name || "",
+                    photo: entry.photo || ""
+                });
+            }
+
+            accommodation.alternativeNames = accommodation.alternatives.map(item => item.name || "");
+            accommodation.alternativePhotos = accommodation.alternatives.map(item => item.photo || "");
             stage.accommodation = accommodation;
+            syncStageAlternativeAccommodation(stage);
         });
 }
 
@@ -422,18 +506,24 @@ function buildAccommodation(record) {
         "site web de l hébergement"
     ]);
     const alternatives = splitMulti(alternativesValue);
+    const alternativeNames = splitMulti(
+        firstValue(record, ["nom hebergement alternatif", "nom hébergement alternatif"]),
+        { preserveEmpty: true }
+    );
     const alternativePhotos = splitMulti(
         firstValue(record, ["photo hebergement alternatif", "photo hébergement alternatif"]),
         { preserveEmpty: true }
     ).map(sanitizeImageUrl);
+    const alternativeEntries = buildAlternativeAccommodationEntries(alternatives, alternativeNames, alternativePhotos);
 
     return {
-        name: firstValue(record, ["hebergement", "hébergement"]),
+        name: firstValue(record, ["nom hebergement", "nom hébergement", "hebergement", "hébergement"]),
         website,
         url: website,
         photo: sanitizeImageUrl(firstValue(record, ["photo hebergement principal", "photo hébergement principal"])),
-        alternatives,
-        alternativePhotos
+        alternatives: alternativeEntries,
+        alternativeNames: alternativeEntries.map(entry => entry.name || ""),
+        alternativePhotos: alternativeEntries.map(entry => entry.photo || "")
     };
 }
 
@@ -523,9 +613,10 @@ function mapEtape(record) {
     const elevationGain = toNumber(firstValue(record, ["d+ (m)"]));
     const elevationLoss = toNumber(firstValue(record, ["d− (m)", "d- (m)"]));
     const accommodation = buildAccommodation(record);
+    const firstAlternative = accommodation.alternatives[0] || null;
     const alternativeAccommodation = {
-        name: accommodation.alternatives[0] || "",
-        photo: accommodation.alternativePhotos[0] || ""
+        name: firstAlternative?.name || firstAlternative?.url || "",
+        photo: firstAlternative?.photo || ""
     };
     const accommodationType = normalizeAccommodationType(firstValue(record, ["type hebergement", "type hébergement"]));
     const routeLabel = [departure, arrival].filter(Boolean).join(" → ");
@@ -887,6 +978,8 @@ if (typeof module !== "undefined" && module.exports) {
         sanitizeNotePhotoUrl,
         mapTravelerNote,
         attachTravelerNotes,
+        buildAccommodation,
+        buildRoadbook,
         mapAddedAccommodation,
         attachAddedAccommodations,
         sanitizeMapEmbedUrl,
