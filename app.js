@@ -261,13 +261,6 @@ function createHomeStageCard(day, index) {
     number.className = "home-stage-card__number";
     number.textContent = safeText(day.stage || (index + 1), String(index + 1));
 
-    const accommodationIcon = document.createElement("span");
-    accommodationIcon.className = "home-stage-card__accommodation";
-    accommodationIcon.textContent = accommodationTypeIcon(day.accommodationType);
-    accommodationIcon.title = accommodationTypeLabel(day.accommodationType);
-    accommodationIcon.setAttribute("aria-label", accommodationTypeLabel(day.accommodationType));
-    accommodationIcon.hidden = !accommodationIcon.textContent;
-
     const content = document.createElement("span");
     content.className = "home-stage-card__content";
 
@@ -282,37 +275,146 @@ function createHomeStageCard(day, index) {
     appendSummaryStatIfPresent(stats, "elevationGain", "D+", day.elevationGain, formatElevationMetric);
     content.appendChild(stats);
 
-    const arrow = document.createElement("span");
-    arrow.className = "home-stage-card__arrow";
-    arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = "→";
+    const accommodationIcon = document.createElement("span");
+    accommodationIcon.className = "home-stage-card__accommodation";
+    setAccommodationIcon(
+        accommodationIcon,
+        day.accommodationType || accommodationNameForIcon(day.accommodation)
+    );
 
-    button.append(number, accommodationIcon, content, arrow);
+    button.append(number, content, accommodationIcon);
     return button;
 }
 
-function accommodationTypeIcon(type) {
-    const normalized = normalizeAccommodationTypeLabel(type);
-    if (normalized === "camping") return "🏕️";
-    if (normalized === "maison") return "🏠";
-    if (normalized === "les deux") return "🏕️🏠";
+function accommodationNameForIcon(accommodation) {
+    if (typeof accommodation === "string") return accommodation;
+    return accommodation?.name || accommodation?.website || accommodation?.url || "";
+}
+
+function setAccommodationIcon(element, typeOrName) {
+    const icon = getAccommodationIcon(typeOrName);
+    element.textContent = icon;
+    element.hidden = !icon;
+    if (icon) {
+        const label = getAccommodationIconLabel(typeOrName);
+        element.title = label;
+        element.setAttribute("aria-label", label);
+    } else {
+        element.removeAttribute("title");
+        element.removeAttribute("aria-label");
+    }
+}
+
+function createAccommodationIcon(typeOrName, className = "accommodation-type-icon") {
+    const icon = getAccommodationIcon(typeOrName);
+    if (!icon) return null;
+    const element = document.createElement("span");
+    element.className = className;
+    element.textContent = icon;
+    element.title = getAccommodationIconLabel(typeOrName);
+    element.setAttribute("aria-label", element.title);
+    return element;
+}
+
+function getAccommodationIcon(typeOrName) {
+    const detected = detectAccommodationKind(typeOrName);
+    if (detected === "camping") return "🏕️";
+    if (detected === "maison") return "🏠";
+    if (detected === "les deux") return "🏕️🏠";
     return "";
 }
 
-function accommodationTypeLabel(type) {
-    const normalized = normalizeAccommodationTypeLabel(type);
-    if (normalized === "camping") return "Camping";
-    if (normalized === "maison") return "Maison";
-    if (normalized === "les deux") return "Camping et maison";
+function getAccommodationIconLabel(typeOrName) {
+    const detected = detectAccommodationKind(typeOrName);
+    if (detected === "camping") return "Camping";
+    if (detected === "maison") return "Maison";
+    if (detected === "les deux") return "Camping et maison";
     return "";
 }
 
-function normalizeAccommodationTypeLabel(type) {
-    return String(type || "")
+function detectAccommodationKind(typeOrName) {
+    const normalized = normalizeAccommodationText(typeOrName);
+    if (!normalized) return "";
+    if (normalized === "camping") return "camping";
+    if (normalized === "maison") return "maison";
+    if (normalized === "les deux" || normalized === "camping maison" || normalized === "maison camping") {
+        return "les deux";
+    }
+
+    const campingKeywords = [
+        "camping",
+        "campsite",
+        "camp site",
+        "campground",
+        "campamento",
+        "acampada",
+        "acampar",
+        "zona de acampada",
+        "area de acampada",
+        "càmping",
+        "campisme",
+        "campeggio",
+        "campismo",
+        "kampeerterrein",
+        "kampeerplaats",
+        "zeltplatz",
+        "campplatz"
+    ];
+    const homeKeywords = [
+        "maison",
+        "location",
+        "gite",
+        "gîte",
+        "appartement",
+        "villa",
+        "chambre",
+        "chambres",
+        "maison d’hotes",
+        "maison d'hotes",
+        "hôtel",
+        "hotel",
+        "hostel",
+        "guesthouse",
+        "alojamiento",
+        "casa",
+        "apartamento",
+        "vivienda",
+        "alquiler",
+        "habitacion",
+        "habitación",
+        "habitaciones",
+        "pensión",
+        "pension",
+        "hostal",
+        "albergue",
+        "refugio",
+        "agroturismo",
+        "casa rural",
+        "holiday home",
+        "vacation rental",
+        "apartment"
+    ];
+    const hasCamping = campingKeywords
+        .map(normalizeAccommodationText)
+        .some(keyword => normalized.includes(keyword));
+    const hasHome = homeKeywords
+        .map(normalizeAccommodationText)
+        .some(keyword => normalized.includes(keyword));
+    if (hasCamping && hasHome) return "les deux";
+    if (hasCamping) return "camping";
+    if (hasHome) return "maison";
+    return "";
+}
+
+function normalizeAccommodationText(value) {
+    return String(value || "")
         .trim()
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[’']/g, " ")
+        .replace(/[-_/]+/g, " ")
+        .replace(/\s+/g, " ");
 }
 
 function stageRouteLabel(day, index) {
@@ -813,11 +915,11 @@ function renderFieldNavigation(day) {
 
 function renderAccommodation(accommodation) {
     const day = roadbook?.days?.[currentDay] || null;
-    renderPrimaryAccommodation(accommodation);
+    renderPrimaryAccommodation(accommodation, day?.accommodationType || "");
     renderAlternativeAccommodation(accommodation, day?.stage || (currentDay + 1));
 }
 
-function renderPrimaryAccommodation(accommodation) {
+function renderPrimaryAccommodation(accommodation, accommodationType = "") {
     const section = document.getElementById("primary-accommodation-card");
     const container = document.getElementById("primary-accommodation");
     container.replaceChildren();
@@ -828,7 +930,7 @@ function renderPrimaryAccommodation(accommodation) {
         if (!name) return;
         const detail = document.createElement("p");
         detail.className = "detail-name";
-        detail.textContent = name;
+        appendAccommodationNameWithIcon(detail, name, accommodationType || name);
         container.appendChild(detail);
         return;
     }
@@ -843,7 +945,7 @@ function renderPrimaryAccommodation(accommodation) {
     if (mainName) {
         const name = document.createElement("p");
         name.className = "detail-name";
-        name.textContent = mainName;
+        appendAccommodationNameWithIcon(name, mainName, accommodationType || mainName);
         container.appendChild(name);
     }
     appendAccommodationResource(
@@ -1112,11 +1214,13 @@ function appendResourceList(container, title, values, showHeading = true) {
         const item = document.createElement("li");
         const url = typeof value === "object" ? value.url : value;
         const photo = typeof value === "object" ? safeText(value.photo, "") : "";
+        const metadata = photo ? { image: photo } : findAccommodationEnrichment(url);
         appendAccommodationResource(
             item,
             url,
             `${title} ${index + 1}`,
-            photo ? { image: photo } : findAccommodationEnrichment(url)
+            metadata,
+            metadata?.name || url
         );
         list.appendChild(item);
     });
@@ -1129,12 +1233,20 @@ function appendResourceList(container, title, values, showHeading = true) {
     }
 }
 
-function appendAccommodationResource(container, url, fallbackLabel, metadata) {
+function appendAccommodationNameWithIcon(container, name, iconSource) {
+    const icon = createAccommodationIcon(iconSource || name);
+    if (icon) container.append(icon, document.createTextNode(" "));
+    container.appendChild(document.createTextNode(name));
+}
+
+function appendAccommodationResource(container, url, fallbackLabel, metadata, iconSource = "") {
     if (!url && !metadata?.image) return null;
     const label = metadata?.name || fallbackLabel;
+    const icon = getAccommodationIcon(iconSource || label);
+    const labelWithIcon = icon ? `${icon} ${label}` : label;
 
     if (!metadata?.image) {
-        return appendResource(container, url, label, "terrain-button terrain-button--secondary");
+        return appendResource(container, url, labelWithIcon, "terrain-button terrain-button--secondary");
     }
 
     const resource = document.createElement("div");
@@ -1150,7 +1262,7 @@ function appendAccommodationResource(container, url, fallbackLabel, metadata) {
     }, { once: true });
     resource.appendChild(image);
     if (url) {
-        appendResource(resource, url, label, "terrain-button terrain-button--secondary");
+        appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
     }
     container.appendChild(resource);
     return resource;

@@ -1,12 +1,12 @@
 "use strict";
 
-const CACHE_NAME = "perinexus-roadbook-sheet-accommodation-columns-20260624";
-const VERSION = "sheet-accommodation-columns-20260624";
+const CACHE_NAME = "perinexus-roadbook-accommodation-icons-20260624";
+const VERSION = "accommodation-icons-20260624";
 
 const CORE_ASSETS = [
     "./",
     "index.html",
-    "style.css",
+    `style.css?v=${VERSION}`,
     `app.js?v=${VERSION}`,
     `data-loader.js?v=${VERSION}`,
     `map-viewer.js?v=${VERSION}`,
