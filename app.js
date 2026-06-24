@@ -436,8 +436,7 @@ function buildStageTitleContent(title, departure, arrival) {
     const cityIndex = title.length - city.length;
     return [
         document.createTextNode(title.slice(0, cityIndex)),
-        createStageCityLink(city),
-        document.createTextNode(title.slice(cityIndex + city.length))
+        createStageCityLink(city)
     ];
 }
 
