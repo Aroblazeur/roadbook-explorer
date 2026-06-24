@@ -422,13 +422,11 @@ function buildStageTitleContent(title, departure, arrival) {
             )
         );
         if (routeMatch) {
-            return [
-                document.createTextNode(routeMatch[1]),
-                createStageCityLink(departure),
-                document.createTextNode(routeMatch[3]),
-                createStageCityLink(arrival),
-                document.createTextNode(routeMatch[5])
-            ];
+            const content = [document.createTextNode(routeMatch[1]), createStageCityLink(departure), document.createTextNode(routeMatch[3]), createStageCityLink(arrival)];
+            if (routeMatch[5]) {
+                content.push(document.createTextNode(routeMatch[5]));
+            }
+            return content;
         }
     }
 
@@ -449,7 +447,11 @@ function buildStageTitleContent(title, departure, arrival) {
     }
 
     const trailingWhitespace = title.slice(cityIndex + city.length);
-    return [document.createTextNode(title.slice(0, cityIndex)), createStageCityLink(city), document.createTextNode(trailingWhitespace)];
+    const content = [document.createTextNode(title.slice(0, cityIndex)), createStageCityLink(city)];
+    if (trailingWhitespace) {
+        content.push(document.createTextNode(trailingWhitespace));
+    }
+    return content;
 }
 
 function openStage(index) {
