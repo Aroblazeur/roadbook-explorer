@@ -56,6 +56,49 @@ const GENERIC_ACCOMMODATION_METADATA_NAMES = Object.freeze([
     "vrbo",
     "abritel"
 ]);
+const GENERIC_ACCOMMODATION_PLATFORM_HOSTS = Object.freeze([
+    "booking.com",
+    "airbnb.com",
+    "airbnb.fr",
+    "tripadvisor.com",
+    "expedia.com",
+    "hotels.com",
+    "vrbo.com",
+    "abritel.fr",
+    "google.com",
+    "google.fr",
+    "mapy.com",
+    "openstreetmap.org"
+]);
+const ACCOMMODATION_DOMAIN_WORD_HINTS = Object.freeze([
+    "camping",
+    "hostal",
+    "hostel",
+    "hotel",
+    "apartamento",
+    "apartament",
+    "appart",
+    "gite",
+    "gites",
+    "casa",
+    "maison",
+    "villa",
+    "els",
+    "les",
+    "el",
+    "la",
+    "le",
+    "vall",
+    "de",
+    "del",
+    "dels",
+    "des",
+    "can",
+    "mas",
+    "san",
+    "sant",
+    "santa"
+]);
 
 /**
  * Chargement des données
@@ -512,6 +555,9 @@ function resolveAccommodationDisplayName({ preferredName = "", url = "", fallbac
     const mapName = deriveAccommodationNameFromMapUrl(url);
     if (mapName) return mapName;
 
+    const domainName = inferAccommodationNameFromUrl(url);
+    if (domainName) return domainName;
+
     return genericAccommodationLabel(fallbackType || url);
 }
 
@@ -531,12 +577,98 @@ function normalizeAutomaticAccommodationName(name, url = "") {
 function inferAccommodationNameFromUrl(url) {
     if (!isSafeUrl(url)) return "";
     try {
-        const hostname = new URL(url, window.location.href).hostname.replace(/^www\./i, "");
-        const name = hostname.split(".")[0].replace(/[-_]+/g, " ");
-        return name.replace(/\b\p{L}/gu, character => character.toUpperCase());
+        const parsed = new URL(url, window.location.href);
+        const hostname = parsed.hostname.toLowerCase().replace(/^www\./i, "");
+
+        const platformName = inferAccommodationNameFromPlatformUrl(parsed);
+        if (platformName) return platformName;
+
+        if (isGenericAccommodationPlatformHost(hostname)) return "";
+
+        const domainLabel = hostname.split(".")[0] || "";
+        return formatAccommodationNameFromToken(domainLabel);
     } catch (error) {
         return "";
     }
+}
+
+function inferAccommodationNameFromPlatformUrl(parsedUrl) {
+    const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./i, "");
+
+    if (matchesHostname(hostname, "booking.com")) {
+        const segments = parsedUrl.pathname.split("/").filter(Boolean);
+        const hotelIndex = segments.indexOf("hotel");
+        if (hotelIndex >= 0 && segments.length > hotelIndex + 2) {
+            const fromHotelPath = formatAccommodationNameFromToken(segments[hotelIndex + 2]);
+            if (fromHotelPath) return fromHotelPath;
+        }
+        const htmlSegment = segments.find(segment => /\.html?$/i.test(segment));
+        return formatAccommodationNameFromToken(htmlSegment || "");
+    }
+
+    if (matchesHostname(hostname, "airbnb.com") || matchesHostname(hostname, "airbnb.fr")) {
+        return firstMeaningfulAccommodationLabel([
+            parsedUrl.searchParams.get("name"),
+            parsedUrl.searchParams.get("title"),
+            parsedUrl.searchParams.get("listing_name"),
+            parsedUrl.searchParams.get("description")
+        ]);
+    }
+
+    return "";
+}
+
+function isGenericAccommodationPlatformHost(hostname) {
+    return GENERIC_ACCOMMODATION_PLATFORM_HOSTS.some(domain => matchesHostname(hostname, domain));
+}
+
+function formatAccommodationNameFromToken(value) {
+    const candidate = safeText(value, "")
+        .replace(/^www\./i, "")
+        .replace(/\.[a-z]{2,}$/i, "")
+        .replace(/\.html?$/i, "")
+        .replace(/%[0-9a-f]{2}/gi, "")
+        .replace(/[?#].*$/, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (!candidate) return "";
+    if (/^\d+$/.test(candidate)) return "";
+
+    const normalizedCandidate = normalizeAccommodationText(candidate);
+    if (GENERIC_ACCOMMODATION_METADATA_NAMES.some(item => normalizeAccommodationText(item) === normalizedCandidate)) {
+        return "";
+    }
+
+    const splitWords = candidate
+        .split(" ")
+        .flatMap(token => splitAccommodationDomainToken(token.toLowerCase()));
+    const words = splitWords.filter(Boolean);
+    if (!words.length) return "";
+
+    return words.map(word => word.replace(/\b\p{L}/gu, character => character.toUpperCase())).join(" ");
+}
+
+function splitAccommodationDomainToken(token) {
+    const cleanToken = safeText(token, "").replace(/[^a-z0-9]+/gi, "").trim();
+    if (!cleanToken) return [];
+    if (cleanToken.length <= 3) return [cleanToken];
+
+    const words = [];
+    let remaining = cleanToken;
+    while (remaining.length > 3) {
+        const hint = ACCOMMODATION_DOMAIN_WORD_HINTS
+            .filter(word => remaining.startsWith(word) && remaining.length > word.length)
+            .sort((a, b) => b.length - a.length)[0];
+        if (!hint) break;
+        const next = remaining.slice(hint.length);
+        if (next.length < 3) break;
+        words.push(hint);
+        remaining = next;
+    }
+    words.push(remaining);
+
+    return words.filter(Boolean);
 }
 
 function deriveAccommodationNameFromMapUrl(url) {
