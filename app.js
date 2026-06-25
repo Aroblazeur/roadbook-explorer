@@ -104,6 +104,9 @@ const ACCOMMODATION_DOMAIN_WORD_HINTS = Object.freeze([
 ]);
 const APP_VERSION_TOKEN = resolveCurrentVersionToken();
 const APP_VERSION_LABEL = formatVersionLabel(APP_VERSION_TOKEN);
+const UPDATE_BANNER_AUTO_DISMISS_DELAY = 3200;
+const SERVICE_WORKER_ACTIVATION_TIMEOUT = 2500;
+const INITIAL_UPDATE_CHECK_DELAY = 1200;
 
 function resolveCurrentVersionToken() {
     if (typeof window !== "undefined" && typeof window.__ROADBOOK_APP_VERSION__ === "string") {
@@ -279,7 +282,7 @@ async function checkForAppUpdate({ manual = false } = {}) {
                             actionLabel: "Mettre à jour"
                         });
                     }
-                }, 3200);
+                }, UPDATE_BANNER_AUTO_DISMISS_DELAY);
             }
 
             return false;
@@ -320,7 +323,7 @@ async function activateAppUpdate() {
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
         window.setTimeout(() => {
             if (isUpdateActivationPending) window.location.reload();
-        }, 2500);
+        }, SERVICE_WORKER_ACTIVATION_TIMEOUT);
         return;
     }
 
@@ -351,7 +354,7 @@ function initializeVersionManagement() {
         observeServiceWorkerRegistration(registration);
         window.setTimeout(() => {
             checkForAppUpdate().catch(() => undefined);
-        }, 1200);
+        }, INITIAL_UPDATE_CHECK_DELAY);
     });
 
     window.addEventListener("online", () => {

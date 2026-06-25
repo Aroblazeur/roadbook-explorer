@@ -23,6 +23,10 @@ const DATA_ASSETS = [
     "data/accommodation-enrichment.json",
     "data/poi-enrichment.json"
 ];
+const PRECACHE_GROUPS = [
+    { cacheName: CACHE_NAME, assets: CORE_ASSETS },
+    { cacheName: DATA_CACHE_NAME, assets: DATA_ASSETS }
+];
 
 self.addEventListener("message", event => {
     if (event.data && event.data.type === "SKIP_WAITING") {
@@ -64,15 +68,20 @@ self.addEventListener("fetch", event => {
 });
 
 async function precacheCoreAssets() {
-    const [coreCache, dataCache] = await Promise.all([
-        caches.open(CACHE_NAME),
-        caches.open(DATA_CACHE_NAME)
-    ]);
+    const results = await Promise.allSettled(
+        PRECACHE_GROUPS.map(async ({ cacheName, assets }) => {
+            const cache = await caches.open(cacheName);
+            await cache.addAll(assets);
+        })
+    );
+
+    results.forEach((result, index) => {
+        if (result.status === "rejected") {
+            console.warn("[SW] Préchargement partiel échoué :", PRECACHE_GROUPS[index].cacheName, result.reason);
+        }
+    });
+
     self.skipWaiting();
-    await Promise.all([
-        coreCache.addAll(CORE_ASSETS),
-        dataCache.addAll(DATA_ASSETS)
-    ]);
 }
 
 async function cleanupCaches() {
