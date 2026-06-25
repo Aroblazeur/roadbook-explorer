@@ -7,7 +7,7 @@
   <title>Roadbook vélo</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232e7d32'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-size='34' fill='white'%3EP%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=accommodation-name-priority-20260624">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="header">
@@ -46,6 +46,11 @@
       </div>
     </div>
   </header>
+
+  <div id="update-banner" class="update-banner" role="status" aria-live="polite" hidden>
+    <p id="update-banner-message">Une mise à jour est disponible.</p>
+    <button id="update-banner-action" type="button">Mettre à jour</button>
+  </div>
 
   <main class="container">
     <section id="summary" class="card" aria-label="Synthèse de l'itinéraire officiel">
@@ -106,21 +111,33 @@
 
   </main>
 
-  <footer><p id="footer-roadbook-title">Roadbook vélo</p></footer>
-  <script src="data-loader.js?v=accommodation-name-priority-20260624"></script>
-  <script src="map-viewer.js?v=accommodation-name-priority-20260624"></script>
-  <script src="accommodation-enrichment-loader.js?v=accommodation-name-priority-20260624"></script>
-  <script src="poi-enrichment-loader.js?v=accommodation-name-priority-20260624"></script>
-  <script src="duration-estimator.js?v=accommodation-name-priority-20260624"></script>
-  <script src="app.js?v=accommodation-name-priority-20260624"></script>
+  <footer>
+    <p id="footer-roadbook-title">Roadbook vélo</p>
+    <p class="footer-version">Version : <span id="app-version">—</span></p>
+    <button id="check-updates-button" class="footer-link-button" type="button">Vérifier les mises à jour</button>
+  </footer>
+  <script>
+    (() => {
+      const token = document.lastModified || new Date().toISOString();
+      window.__ROADBOOK_APP_VERSION__ = token;
+    })();
+  </script>
+  <script src="data-loader.js"></script>
+  <script src="map-viewer.js"></script>
+  <script src="accommodation-enrichment-loader.js"></script>
+  <script src="poi-enrichment-loader.js"></script>
+  <script src="duration-estimator.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("service-worker.js").catch(err => {
+      const appVersion = encodeURIComponent(window.__ROADBOOK_APP_VERSION__ || "dev");
+      window.roadbookServiceWorkerRegistrationPromise = navigator.serviceWorker
+        .register(`service-worker.js?v=${appVersion}`, { updateViaCache: "none" })
+        .catch(err => {
           console.warn("[SW] Enregistrement échoué :", err);
+          return null;
         });
-      });
     }
   </script>
+  <script src="app.js"></script>
 </body>
 </html>

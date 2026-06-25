@@ -12,6 +12,9 @@ let currentView = "home";
 let accommodationEnrichmentIndex = new Map();
 let poiEnrichmentIndex = new Map();
 let durationRequestId = 0;
+let isUpdateActivationPending = false;
+let updateCheckPromise = null;
+let updateBannerVisible = false;
 
 const TRAVELER_NOTES_FORM_URL =
     "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform";
@@ -99,6 +102,253 @@ const ACCOMMODATION_DOMAIN_WORD_HINTS = Object.freeze([
     "sant",
     "santa"
 ]);
+const APP_VERSION_TOKEN = resolveCurrentVersionToken();
+const APP_VERSION_LABEL = formatVersionLabel(APP_VERSION_TOKEN);
+
+function resolveCurrentVersionToken() {
+    if (typeof window !== "undefined" && typeof window.__ROADBOOK_APP_VERSION__ === "string") {
+        return window.__ROADBOOK_APP_VERSION__;
+    }
+    if (typeof document !== "undefined" && typeof document.lastModified === "string") {
+        return document.lastModified;
+    }
+    return "version inconnue";
+}
+
+function normalizeVersionToken(token) {
+    const value = String(token || "").trim();
+    if (!value) return "";
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : value;
+}
+
+function formatVersionLabel(token) {
+    const normalized = String(token || "").trim();
+    if (!normalized) return "inconnue";
+
+    const parsed = new Date(normalized);
+    if (!Number.isFinite(parsed.getTime())) return normalized;
+
+    return parsed.toLocaleString("fr-FR", {
+        dateStyle: "short",
+        timeStyle: "short"
+    });
+}
+
+function updateVersionFooter(versionLabel = APP_VERSION_LABEL) {
+    const version = document.getElementById("app-version");
+    if (version) {
+        version.textContent = versionLabel;
+        version.title = APP_VERSION_TOKEN;
+    }
+}
+
+function getUpdateBannerElements() {
+    return {
+        banner: document.getElementById("update-banner"),
+        message: document.getElementById("update-banner-message"),
+        action: document.getElementById("update-banner-action"),
+        checkButton: document.getElementById("check-updates-button")
+    };
+}
+
+function setUpdateBanner({ visible, message, actionLabel = "Mettre à jour", busy = false }) {
+    const { banner, message: messageElement, action } = getUpdateBannerElements();
+    if (!banner || !messageElement || !action) return;
+
+    banner.hidden = !visible;
+    messageElement.textContent = message;
+    action.textContent = actionLabel;
+    action.disabled = busy;
+    updateBannerVisible = visible;
+}
+
+function setManualUpdateCheckState({ busy = false, label = "Vérifier les mises à jour" } = {}) {
+    const { checkButton } = getUpdateBannerElements();
+    if (!checkButton) return;
+    checkButton.disabled = busy;
+    checkButton.textContent = label;
+}
+
+function getServiceWorkerRegistrationPromise() {
+    if (typeof window === "undefined") return Promise.resolve(null);
+    const promise = window.roadbookServiceWorkerRegistrationPromise;
+    if (!promise || typeof promise.then !== "function") {
+        return Promise.resolve(null);
+    }
+    return promise;
+}
+
+function observeServiceWorkerRegistration(registration) {
+    if (!registration || registration.__roadbookObserved) return;
+    registration.__roadbookObserved = true;
+
+    if (registration.waiting) {
+        setUpdateBanner({
+            visible: true,
+            message: "Une mise à jour est disponible.",
+            actionLabel: "Mettre à jour"
+        });
+    }
+
+    registration.addEventListener("updatefound", () => {
+        const installing = registration.installing;
+        if (!installing) return;
+
+        installing.addEventListener("statechange", () => {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+                setUpdateBanner({
+                    visible: true,
+                    message: "Une mise à jour est disponible.",
+                    actionLabel: "Mettre à jour"
+                });
+            }
+        });
+    });
+}
+
+async function fetchLatestVersionToken() {
+    const url = `index.html?update-check=${Date.now()}`;
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    return (
+        response.headers.get("last-modified") ||
+        response.headers.get("etag") ||
+        ""
+    );
+}
+
+async function checkForAppUpdate({ manual = false } = {}) {
+    if (updateCheckPromise) return updateCheckPromise;
+
+    updateCheckPromise = (async () => {
+        if (manual) {
+            setManualUpdateCheckState({
+                busy: true,
+                label: "Vérification…"
+            });
+        }
+
+        try {
+            const latestToken = await fetchLatestVersionToken();
+            const currentToken = normalizeVersionToken(APP_VERSION_TOKEN);
+            const remoteToken = normalizeVersionToken(latestToken);
+            const registration = await getServiceWorkerRegistrationPromise();
+
+            if (registration) observeServiceWorkerRegistration(registration);
+
+            if (remoteToken && remoteToken !== currentToken) {
+                if (registration && typeof registration.update === "function") {
+                    await registration.update().catch(error => {
+                        console.warn("[SW] Vérification de mise à jour échouée :", error);
+                    });
+                }
+
+                setUpdateBanner({
+                    visible: true,
+                    message: "Une nouvelle version de l’application est disponible.",
+                    actionLabel: "Mettre à jour"
+                });
+                return true;
+            }
+
+            if (manual && !updateBannerVisible) {
+                setUpdateBanner({
+                    visible: true,
+                    message: "Vous utilisez déjà la dernière version disponible.",
+                    actionLabel: "Recharger",
+                    busy: false
+                });
+                window.setTimeout(() => {
+                    if (!isUpdateActivationPending && normalizeVersionToken(APP_VERSION_TOKEN) === currentToken) {
+                        setUpdateBanner({
+                            visible: false,
+                            message: "",
+                            actionLabel: "Mettre à jour"
+                        });
+                    }
+                }, 3200);
+            }
+
+            return false;
+        } catch (error) {
+            console.warn("[Version] Vérification impossible :", error);
+            if (manual) {
+                setUpdateBanner({
+                    visible: true,
+                    message: "Impossible de vérifier la mise à jour pour le moment.",
+                    actionLabel: "Recharger"
+                });
+            }
+            return false;
+        } finally {
+            if (manual) {
+                setManualUpdateCheckState();
+            }
+            updateCheckPromise = null;
+        }
+    })();
+
+    return updateCheckPromise;
+}
+
+async function activateAppUpdate() {
+    if (isUpdateActivationPending) return;
+    isUpdateActivationPending = true;
+
+    setUpdateBanner({
+        visible: true,
+        message: "Activation de la mise à jour…",
+        actionLabel: "Mise à jour…",
+        busy: true
+    });
+
+    const registration = await getServiceWorkerRegistrationPromise();
+    if (registration && registration.waiting) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        window.setTimeout(() => {
+            if (isUpdateActivationPending) window.location.reload();
+        }, 2500);
+        return;
+    }
+
+    window.location.reload();
+}
+
+function initializeVersionManagement() {
+    updateVersionFooter();
+
+    const { action, checkButton } = getUpdateBannerElements();
+    if (action) action.addEventListener("click", activateAppUpdate);
+    if (checkButton) {
+        checkButton.addEventListener("click", () => {
+            checkForAppUpdate({ manual: true });
+        });
+    }
+
+    if (!("serviceWorker" in navigator)) return;
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!isUpdateActivationPending) return;
+        isUpdateActivationPending = false;
+        window.location.reload();
+    });
+
+    getServiceWorkerRegistrationPromise().then(registration => {
+        if (!registration) return;
+        observeServiceWorkerRegistration(registration);
+        window.setTimeout(() => {
+            checkForAppUpdate().catch(() => undefined);
+        }, 1200);
+    });
+
+    window.addEventListener("online", () => {
+        checkForAppUpdate().catch(() => undefined);
+    });
+}
 
 /**
  * Chargement des données
@@ -1780,5 +2030,6 @@ document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
 
+initializeVersionManagement();
 updateButtons();
 initializeRoadbook();

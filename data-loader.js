@@ -18,6 +18,7 @@ const ROADBOOK_TITLE = "pirenexus a vélo";
 
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
+const NETWORK_FIRST_FETCH_OPTIONS = { cache: "no-store" };
 
 const NO_STAGE_NUMBER_KEY = "__sans_numero__";
 
@@ -823,7 +824,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedA
 async function fetchCsv(url) {
     let response;
     try {
-        response = await fetch(url);
+        response = await fetch(url, NETWORK_FIRST_FETCH_OPTIONS);
     } catch (error) {
         throw new Error(ERROR_MESSAGES.NETWORK);
     }
@@ -910,7 +911,7 @@ async function loadFallbackRoadbook() {
 
     for (const path of validPaths) {
         try {
-            const response = await fetch(path);
+            const response = await fetch(path, NETWORK_FIRST_FETCH_OPTIONS);
             if (!response.ok) {
                 lastError = new Error(`HTTP ${response.status}`);
                 console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${lastError.message}.`);
