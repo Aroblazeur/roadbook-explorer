@@ -186,29 +186,6 @@ function getServiceWorkerRegistrationPromise() {
 function observeServiceWorkerRegistration(registration) {
     if (!registration || registration.__roadbookObserved) return;
     registration.__roadbookObserved = true;
-
-    if (registration.waiting) {
-        setUpdateBanner({
-            visible: true,
-            message: "Une mise à jour est disponible.",
-            actionLabel: "Mettre à jour"
-        });
-    }
-
-    registration.addEventListener("updatefound", () => {
-        const installing = registration.installing;
-        if (!installing) return;
-
-        installing.addEventListener("statechange", () => {
-            if (installing.state === "installed" && navigator.serviceWorker.controller) {
-                setUpdateBanner({
-                    visible: true,
-                    message: "Une mise à jour est disponible.",
-                    actionLabel: "Mettre à jour"
-                });
-            }
-        });
-    });
 }
 
 async function fetchLatestVersionToken() {
@@ -251,20 +228,24 @@ async function checkForAppUpdate({ manual = false } = {}) {
             }
 
             if (registration && registration.waiting) {
-                setUpdateBanner({
-                    visible: true,
-                    message: "Une nouvelle version de l’application est disponible.",
-                    actionLabel: "Mettre à jour"
-                });
+                if (manual) {
+                    setUpdateBanner({
+                        visible: true,
+                        message: "Une nouvelle version de l'application est disponible.",
+                        actionLabel: "Mettre à jour"
+                    });
+                }
                 return true;
             }
 
             if (remoteToken && remoteToken !== currentToken) {
-                setUpdateBanner({
-                    visible: true,
-                    message: "Une nouvelle version de l’application est disponible.",
-                    actionLabel: "Mettre à jour"
-                });
+                if (manual) {
+                    setUpdateBanner({
+                        visible: true,
+                        message: "Une nouvelle version de l'application est disponible.",
+                        actionLabel: "Mettre à jour"
+                    });
+                }
                 return true;
             }
 
