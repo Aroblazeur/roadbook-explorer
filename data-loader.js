@@ -742,12 +742,18 @@ function mapSubstep(record) {
         alternativeAccommodation,
         accommodationType,
         substeps: [],
-        title: `${type || "Sous-étape"} ${stageReference !== null ? stageReference : "?"} - ${name}`,
+        title: buildSubstepTitle(type, departure, arrival, name),
         elevation: elevationGain ?? 0,
         duration: "",
         legacyAccommodation: accommodation.name || "",
         enabled: true
     };
+}
+
+function buildSubstepTitle(type, departure, arrival, name) {
+    const label = type || "Option";
+    const routeLabel = [departure, arrival].filter(Boolean).join(" → ");
+    return routeLabel ? `${label} - ${routeLabel}` : label || name || "Option";
 }
 
 function attachSubsteps(stages, substeps) {

@@ -888,7 +888,7 @@ function displayDay(index) {
 
     document.getElementById("current-day").textContent =
         day.isSubstep
-            ? `Sous-étape ${day.parentStage || day.stage || (index + 1)}`
+            ? `Étape ${day.parentStage || day.stage || (index + 1)}`
             : day.day || `Étape ${day.stage || (index + 1)}`;
 
     renderStageTitle(day, index);
@@ -910,10 +910,34 @@ function renderStageTitle(day, index) {
     if (!heading) return;
 
     const fallbackTitle = `Étape ${day.stage || (index + 1)}`;
+    if (day?.isSubstep) {
+        const type = safeText(day.type, "Option");
+        const departure = safeText(day.departure, "");
+        const arrival = safeText(day.arrival, "");
+        heading.replaceChildren(...buildSubstepTitleContent(type, departure, arrival));
+        return;
+    }
+
     const title = safeText(day.title, fallbackTitle);
     const departure = safeText(day.departure, "");
     const arrival = safeText(day.arrival, "");
     heading.replaceChildren(...buildStageTitleContent(title, departure, arrival));
+}
+
+function buildSubstepTitleContent(type, departure, arrival) {
+    const content = [document.createTextNode(type)];
+    if (!departure && !arrival) return content;
+
+    content.push(document.createElement("br"));
+    const route = document.createElement("span");
+    route.className = "stage-title-route";
+    if (departure && arrival) {
+        route.append(createStageCityLink(departure), document.createTextNode(" → "), createStageCityLink(arrival));
+    } else {
+        route.appendChild(createStageCityLink(departure || arrival));
+    }
+    content.push(route);
+    return content;
 }
 
 function createStageCityLink(city) {
