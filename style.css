@@ -474,6 +474,15 @@ button:disabled{
     font-weight:600;
 }
 
+.stage-title-route{
+    display:inline-block;
+    margin-top:6px;
+    color:var(--text-light);
+    font-size:.78em;
+    font-weight:700;
+    line-height:1.25;
+}
+
 .stage-city-link{
     color:inherit;
     text-decoration:underline;
