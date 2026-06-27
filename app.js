@@ -398,7 +398,7 @@ function accommodationNameForIcon(accommodation) {
 }
 
 function homeStageNumberLabel(day, index) {
-    if (day?.isSubstep) return "S";
+    if (day?.isSubstep) return "↳";
     return safeText(day.stage || (index + 1), String(index + 1));
 }
 
@@ -796,9 +796,7 @@ function stageRouteLabel(day, index) {
         const route = [safeText(day.departure, ""), safeText(day.arrival, "")]
             .filter(Boolean)
             .join(" → ");
-        return ["Sous-étape", name || route || safeText(day.title, `Sous-étape ${index + 1}`)]
-            .filter(Boolean)
-            .join(" · ");
+        return name || route || safeText(day.title, `Alternative ${index + 1}`);
     }
 
     const departure = safeText(day.departure, "");
