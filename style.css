@@ -337,6 +337,7 @@ button:disabled{
     background:#fff;
     color:var(--text);
     text-align:left;
+    text-decoration:none;
     box-shadow:0 2px 8px rgba(0,0,0,.04);
     transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
 }

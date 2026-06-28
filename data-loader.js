@@ -26,6 +26,9 @@ function currentRoadbookConfig() {
 }
 
 async function waitForRoadbookConfig() {
+    if (typeof window !== "undefined" && window.currentRoadbookConfig) {
+        return window.currentRoadbookConfig;
+    }
     if (typeof window !== "undefined" && window.roadbookConfigReady) {
         return window.roadbookConfigReady;
     }
