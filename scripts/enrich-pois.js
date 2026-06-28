@@ -12,7 +12,7 @@ const SHEET_URLS = [
 ];
 const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
-const OUTPUT_PATH = path.resolve(__dirname, "..", "data", "poi-enrichment.json");
+const OUTPUT_PATH = path.resolve(__dirname, "..", "roadbooks", "perinexus", "data", "poi-enrichment.json");
 const REQUEST_DELAY_MS = toNonNegativeInteger(process.env.POI_DELAY_MS, 250);
 const REQUEST_TIMEOUT_MS = toNonNegativeInteger(process.env.POI_TIMEOUT_MS, 8_000);
 const SEARCH_LANGUAGES = ["fr", "ca", "es", "en"];

@@ -34,10 +34,10 @@ La variable `ROADBOOK_SHEET_URL` permet de tester une autre URL CSV Google Sheet
 
 ## Fichier produit
 
-Le script crée si nécessaire le dossier `data/`, puis écrit :
+Le script crée si nécessaire le dossier `roadbooks/perinexus/data/`, puis écrit :
 
 ```text
-data/accommodation-enrichment.json
+roadbooks/perinexus/data/accommodation-enrichment.json
 ```
 
 Chaque entrée conserve la colonne source, l’étape, l’URL, le nom, la méthode de récupération (`nameMethod`), l’image détectée et un statut. Le Google Sheet n’est jamais modifié.

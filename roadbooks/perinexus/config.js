@@ -26,10 +26,10 @@
             })
         }),
         enrichment: Object.freeze({
-            accommodationPath: "data/accommodation-enrichment.json",
-            poiPath: "data/poi-enrichment.json"
+            accommodationPath: "roadbooks/perinexus/data/accommodation-enrichment.json",
+            poiPath: "roadbooks/perinexus/data/poi-enrichment.json"
         }),
-        fallbackJsonPaths: Object.freeze(["roadbook.json"]),
+        fallbackJsonPaths: Object.freeze(["roadbooks/perinexus/roadbook.json"]),
         options: Object.freeze({})
     });
 })(typeof window !== "undefined" ? window : globalThis);

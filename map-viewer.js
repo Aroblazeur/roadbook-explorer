@@ -54,7 +54,9 @@
         if (typeof value !== "string" || !value.trim()) return null;
         const candidate = value.trim();
         if (!/^[a-z][a-z0-9+.-]*:/i.test(candidate) && !candidate.includes("/") && !candidate.includes("\\") && !candidate.includes("..")) {
-            return /\.gpx$/i.test(candidate) ? `gpx/${candidate}` : `gpx/${candidate}.gpx`;
+            const roadbookId = (global.currentRoadbookConfig?.shortId) || "perinexus";
+            const base = `roadbooks/${roadbookId}/gpx/`;
+            return /\.gpx$/i.test(candidate) ? `${base}${candidate}` : `${base}${candidate}.gpx`;
         }
 
         try {

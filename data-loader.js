@@ -1,7 +1,7 @@
 "use strict";
 
 // Only list fallback files that are part of the current project tree.
-const FALLBACK_PATHS = ["roadbook.json"];
+const FALLBACK_PATHS = ["roadbooks/perinexus/roadbook.json"];
 const NETWORK_FIRST_FETCH_OPTIONS = { cache: "no-store" };
 
 function currentRoadbookConfig() {

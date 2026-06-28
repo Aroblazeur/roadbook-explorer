@@ -12,7 +12,7 @@ const SHEET_URL =
 const ADDED_SHEET_URL =
     process.env.ROADBOOK_ADDED_ACCOMMODATION_SHEET_URL ||
     googleSheetCsvUrl(ROADBOOK_CONFIG.sheets?.addedAccommodation?.name || "ajout hebergement");
-const OUTPUT_PATH = path.resolve(__dirname, "..", "data", "accommodation-enrichment.json");
+const OUTPUT_PATH = path.resolve(__dirname, "..", "roadbooks", "perinexus", "data", "accommodation-enrichment.json");
 const REQUEST_DELAY_MS = toPositiveInteger(process.env.ENRICH_DELAY_MS, 500);
 const REQUEST_TIMEOUT_MS = toPositiveInteger(process.env.ENRICH_TIMEOUT_MS, 10_000);
 const MAX_HTML_BYTES = 2_000_000;

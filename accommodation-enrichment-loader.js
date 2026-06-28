@@ -1,7 +1,7 @@
 "use strict";
 
 (function initializeAccommodationEnrichmentLoader(global) {
-    const DEFAULT_PATH = "data/accommodation-enrichment.json";
+    const DEFAULT_PATH = "roadbooks/perinexus/data/accommodation-enrichment.json";
 
     async function loadAccommodationEnrichment({
         path = DEFAULT_PATH,

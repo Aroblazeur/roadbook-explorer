@@ -58,10 +58,10 @@ Exemple minimal :
             })
         }),
         enrichment: Object.freeze({
-            accommodationPath: "data/accommodation-enrichment.json",
-            poiPath: "data/poi-enrichment.json"
+            accommodationPath: "roadbooks/perinexus/data/accommodation-enrichment.json",
+            poiPath: "roadbooks/perinexus/data/poi-enrichment.json"
         }),
-        fallbackJsonPaths: Object.freeze(["roadbook.json"])
+        fallbackJsonPaths: Object.freeze(["roadbooks/perinexus/roadbook.json"])
     });
 })(typeof window !== "undefined" ? window : globalThis);
 ```
@@ -79,7 +79,14 @@ style.css
 service-worker.js
 roadbooks/
 └── perinexus/
-    └── config.js
+    ├── config.js
+    ├── roadbook.json
+    ├── data/
+    │   ├── accommodation-enrichment.json
+    │   └── poi-enrichment.json
+    └── gpx/
+        ├── etape01.gpx
+        └── ...
 ```
 
 ## Notes PWA

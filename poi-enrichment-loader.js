@@ -1,7 +1,7 @@
 "use strict";
 
 (function initializePoiEnrichmentLoader(global) {
-    const DEFAULT_PATH = "data/poi-enrichment.json";
+    const DEFAULT_PATH = "roadbooks/perinexus/data/poi-enrichment.json";
 
     async function loadPoiEnrichment({
         path = DEFAULT_PATH,
