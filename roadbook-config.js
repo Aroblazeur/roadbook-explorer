@@ -12,7 +12,7 @@
         defaultId: DEFAULT_ROADBOOK_ID,
         requestedId: safeId,
         hasExplicitRoadbook: requested.explicit,
-        id: "",
+        id: safeId,
         config: null
     };
 

@@ -120,7 +120,7 @@ function getRoadbookConfig() {
 
 function roadbookId() {
     const config = getRoadbookConfig();
-    return sanitizeRoadbookId(config?.id || config?.shortId);
+    return sanitizeRoadbookId(config?.id || config?.shortId || window.roadbookContext?.id);
 }
 
 function shouldKeepRoadbookInUrl() {
@@ -244,7 +244,7 @@ async function ensureRoadbookLoaded(id) {
     }
 
     await window.loadRoadbookConfigById(safeId, { activate: true });
-    activeRoadbookId = roadbookId();
+    activeRoadbookId = safeId;
 
     const accommodationEnrichmentPromise = loadOptionalAccommodationEnrichment();
     const poiEnrichmentPromise = loadOptionalPoiEnrichment();
@@ -2105,7 +2105,6 @@ function isSafeLibraryImageSource(value) {
         candidate.startsWith("//") ||
         candidate.includes("\\") ||
         /^[a-z][a-z0-9+.-]*:/i.test(candidate) ||
-        path.startsWith("/") ||
         path.split("/").includes("..");
 
     return !unsafe;
