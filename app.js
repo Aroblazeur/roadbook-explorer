@@ -100,6 +100,21 @@ const ACCOMMODATION_DOMAIN_WORD_HINTS = Object.freeze([
     "sant",
     "santa"
 ]);
+const GENERIC_ACCOMMODATION_MAP_QUERIES = Object.freeze([
+    "camping",
+    "campsite",
+    "maison",
+    "house",
+    "hebergement",
+    "hébergement",
+    "accommodation",
+    "hotel",
+    "hôtel",
+    "hostel",
+    "gite",
+    "gîte",
+    "location"
+]);
 const APP_VERSION_TOKEN = resolveCurrentVersionToken();
 const APP_VERSION_LABEL = formatVersionLabel(APP_VERSION_TOKEN);
 
@@ -1479,7 +1494,7 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
         if (!name) return;
         const detail = document.createElement("p");
         detail.className = "detail-name";
-        appendAccommodationNameWithIcon(detail, name, accommodationType || name);
+        appendAccommodationNameWithIcon(detail, name, accommodationType || name, [name]);
         container.appendChild(detail);
         return;
     }
@@ -1494,7 +1509,12 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
     if (mainName) {
         const name = document.createElement("p");
         name.className = "detail-name";
-        appendAccommodationNameWithIcon(name, mainName, accommodationType || mainName);
+        appendAccommodationNameWithIcon(name, mainName, accommodationType || mainName, [
+            accommodation?.name,
+            accommodation?.displayName,
+            mainMetadata?.name,
+            mainUrl
+        ]);
         container.appendChild(name);
     }
     if (mainUrl || mainPhoto || mainMetadata?.image) {
@@ -1519,6 +1539,10 @@ function renderAlternativeAccommodation(accommodation, stageNumber) {
         ? accommodation.alternatives
             .map((entry, index) => ({
                 url: safeText(typeof entry === "object" ? entry?.url : entry, ""),
+                rawName: safeText(
+                    typeof entry === "object" ? entry?.name : "",
+                    ""
+                ),
                 name: safeText(
                     typeof entry === "object" ? entry?.displayName || entry?.name : "",
                     ""
@@ -1668,12 +1692,23 @@ function appendResourceList(container, title, values, showHeading = true) {
         const preferredLabel = typeof value === "object"
             ? safeText(value.displayName || value.name, "")
             : "";
+        const rawName = typeof value === "object" ? safeText(value.rawName || value.name, "") : "";
         const photo = typeof value === "object" ? safeText(value.photo, "") : "";
         const metadata = findAccommodationEnrichment(url);
+        const label = preferredLabel || metadata?.name || `${title} ${index + 1}`;
+        const detail = document.createElement("p");
+        detail.className = "detail-name detail-name--compact";
+        appendAccommodationNameWithIcon(detail, label, label, [
+            rawName,
+            preferredLabel,
+            metadata?.name,
+            url
+        ]);
+        item.appendChild(detail);
         appendAccommodationResource(
             item,
             url,
-            preferredLabel || `${title} ${index + 1}`,
+            label,
             metadata,
             preferredLabel || metadata?.name || url,
             photo
@@ -1689,10 +1724,80 @@ function appendResourceList(container, title, values, showHeading = true) {
     }
 }
 
-function appendAccommodationNameWithIcon(container, name, iconSource) {
+function appendAccommodationNameWithIcon(container, name, iconSource, mapQueryCandidates = []) {
     const icon = createAccommodationIcon(iconSource || name);
     if (icon) container.append(icon, document.createTextNode(" "));
     container.appendChild(document.createTextNode(name));
+
+    const mapLink = createAccommodationMapLink(mapQueryCandidates);
+    if (mapLink) container.append(document.createTextNode(" "), mapLink);
+}
+
+function createAccommodationMapLink(candidates) {
+    const query = bestAccommodationMapQuery(candidates);
+    if (!query) return null;
+
+    const link = document.createElement("a");
+    link.className = "accommodation-map-link";
+    link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.title = `Rechercher ${query} sur Google Maps`;
+    link.setAttribute("aria-label", `Rechercher ${query} sur Google Maps`);
+    link.appendChild(createAccommodationMapIcon());
+    return link;
+}
+
+function bestAccommodationMapQuery(candidates) {
+    const items = Array.isArray(candidates) ? candidates : [candidates];
+    for (const candidate of items) {
+        const value = cleanAccommodationMapQuery(safeText(candidate, ""));
+        if (isUsefulAccommodationMapQuery(value)) return value;
+    }
+    return "";
+}
+
+function cleanAccommodationMapQuery(value) {
+    const trimmed = safeText(value, "").trim();
+    if (!trimmed || /^https?:\/\//i.test(trimmed)) return trimmed;
+
+    const parts = trimmed
+        .split(/\s+[|–—-]\s+/)
+        .map(part => part.trim())
+        .filter(Boolean);
+
+    return parts[0] || trimmed;
+}
+
+function isUsefulAccommodationMapQuery(value) {
+    if (!value) return false;
+    if (/^https?:\/\//i.test(value)) return true;
+
+    const normalized = normalizeAccommodationText(value);
+    if (!normalized) return false;
+    if (GENERIC_ACCOMMODATION_MAP_QUERIES.some(item => normalizeAccommodationText(item) === normalized)) {
+        return false;
+    }
+    return normalized.length >= 4;
+}
+
+function createAccommodationMapIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+
+    [
+        ["path", { d: "M9 18 3.5 20.5v-15L9 3l6 3 5.5-2.5v15L15 21l-6-3Z" }],
+        ["path", { d: "M9 3v15" }],
+        ["path", { d: "M15 6v15" }]
+    ].forEach(([tag, attrs]) => {
+        const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+        svg.appendChild(element);
+    });
+
+    return svg;
 }
 
 function appendAccommodationResource(container, url, preferredLabel, metadata, iconSource = "", manualPhoto = "") {

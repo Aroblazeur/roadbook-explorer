@@ -698,6 +698,40 @@ li{
     margin:12px 0;
 }
 
+.detail-name--compact{
+    margin-bottom:8px;
+}
+
+.accommodation-map-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:1.65rem;
+    height:1.65rem;
+    margin-left:4px;
+    border-radius:999px;
+    color:var(--primary-dark);
+    background:#e8f5e9;
+    vertical-align:middle;
+    text-decoration:none;
+}
+
+.accommodation-map-link:hover,
+.accommodation-map-link:focus-visible{
+    color:#fff;
+    background:var(--primary);
+}
+
+.accommodation-map-link svg{
+    width:1rem;
+    height:1rem;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}
+
 .accommodation-resource{
     display:grid;
     gap:10px;
