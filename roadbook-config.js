@@ -3,7 +3,7 @@
 (function initializeRoadbookConfig(global) {
     const DEFAULT_ROADBOOK_ID = "perinexus";
     const CONFIG_PATH_PREFIX = "roadbooks";
-    const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
+    const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID, "alsace-canal-marne-rhin"]);
 
     const requested = resolveRequestedRoadbook(global.location);
     const safeId = sanitizeRoadbookId(requested.id) || DEFAULT_ROADBOOK_ID;
