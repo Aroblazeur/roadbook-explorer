@@ -554,7 +554,7 @@ function applyAccommodationDisplayData() {
         collection.forEach(entry => {
             const accommodation = entry?.accommodation;
             if (accommodation && typeof accommodation === "object" && !seen.has(accommodation)) {
-                hydrateAccommodationDisplay(accommodation, entry?.accommodationType || "");
+                hydrateAccommodationDisplay(accommodation);
                 seen.add(accommodation);
             }
 
@@ -569,14 +569,14 @@ function applyAccommodationDisplayData() {
     });
 }
 
-function hydrateAccommodationDisplay(accommodation, accommodationType = "") {
+function hydrateAccommodationDisplay(accommodation) {
     if (!accommodation || typeof accommodation !== "object") return;
 
     const mainUrl = safeText(accommodation.website || accommodation.url, "");
     accommodation.displayName = resolveAccommodationDisplayName({
         preferredName: accommodation.name,
         url: mainUrl,
-        fallbackType: accommodationType || accommodation.name || mainUrl
+        fallbackType: accommodation.name || mainUrl
     });
 
     const alternatives = Array.isArray(accommodation.alternatives) ? accommodation.alternatives : [];
@@ -588,7 +588,7 @@ function hydrateAccommodationDisplay(accommodation, accommodationType = "") {
         entry.displayName = resolveAccommodationDisplayName({
             preferredName: entry.name,
             url: entry.url,
-            fallbackType: entry.name || accommodationType || entry.url
+            fallbackType: entry.name || entry.url
         });
     });
 
@@ -1479,11 +1479,11 @@ function renderFieldNavigation(day) {
 
 function renderAccommodation(accommodation) {
     const day = roadbook?.days?.[currentDay] || null;
-    renderPrimaryAccommodation(accommodation, day?.accommodationType || "");
+    renderPrimaryAccommodation(accommodation);
     renderAlternativeAccommodation(accommodation, day?.stage || (currentDay + 1));
 }
 
-function renderPrimaryAccommodation(accommodation, accommodationType = "") {
+function renderPrimaryAccommodation(accommodation) {
     const section = document.getElementById("primary-accommodation-card");
     const container = document.getElementById("primary-accommodation");
     container.replaceChildren();
@@ -1494,7 +1494,7 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
         if (!name) return;
         const detail = document.createElement("p");
         detail.className = "detail-name";
-        appendAccommodationNameWithIcon(detail, name, accommodationType || name);
+        appendAccommodationNameWithIcon(detail, name);
         container.appendChild(detail);
         return;
     }
@@ -1503,22 +1503,24 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
     const mainPhoto = safeText(accommodation?.photo, "");
     const mainMetadata = findAccommodationEnrichment(mainUrl);
     const mainName = safeText(accommodation?.displayName || accommodation?.name, "");
+    const mainDisplayLabel = mainName || mainMetadata?.name || genericAccommodationLabel(mainUrl);
+    const mainIconSource = mainName || mainMetadata?.name || mainUrl;
     section.hidden = !mainName && !mainUrl && !mainPhoto && !mainMetadata?.image;
     if (section.hidden) return;
 
     if (mainName) {
         const name = document.createElement("p");
         name.className = "detail-name";
-        appendAccommodationNameWithIcon(name, mainName, accommodationType || mainName);
+        appendAccommodationNameWithIcon(name, mainName);
         container.appendChild(name);
     }
     if (mainUrl || mainPhoto || mainMetadata?.image) {
         appendAccommodationResource(
             container,
             mainUrl,
-            mainName || genericAccommodationLabel(accommodationType || mainUrl),
+            mainDisplayLabel,
             mainMetadata,
-            accommodationType || mainName,
+            mainIconSource,
             mainPhoto,
             [accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl]
         );
@@ -1694,7 +1696,7 @@ function appendResourceList(container, title, values, showHeading = true) {
         const label = preferredLabel || metadata?.name || `${title} ${index + 1}`;
         const detail = document.createElement("p");
         detail.className = "detail-name detail-name--compact";
-        appendAccommodationNameWithIcon(detail, label, label);
+        appendAccommodationNameWithIcon(detail, label);
         item.appendChild(detail);
         appendAccommodationResource(
             item,
@@ -1716,8 +1718,8 @@ function appendResourceList(container, title, values, showHeading = true) {
     }
 }
 
-function appendAccommodationNameWithIcon(container, name, iconSource) {
-    const icon = createAccommodationIcon(iconSource || name);
+function appendAccommodationNameWithIcon(container, name) {
+    const icon = createAccommodationIcon(name);
     if (icon) container.append(icon, document.createTextNode(" "));
     container.appendChild(document.createTextNode(name));
 }
