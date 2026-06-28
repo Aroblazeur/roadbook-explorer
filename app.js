@@ -1504,7 +1504,7 @@ function renderPrimaryAccommodation(accommodation) {
     const mainMetadata = findAccommodationEnrichment(mainUrl);
     const mainName = safeText(accommodation?.displayName || accommodation?.name, "");
     const mainDisplayLabel = mainName || mainMetadata?.name || genericAccommodationLabel(mainUrl);
-    const mainIconSource = mainName || mainMetadata?.name || mainUrl || mainDisplayLabel;
+    const mainIconSource = mainName || mainMetadata?.name || mainUrl;
     section.hidden = !mainName && !mainUrl && !mainPhoto && !mainMetadata?.image;
     if (section.hidden) return;
 
