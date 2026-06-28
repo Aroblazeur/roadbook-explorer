@@ -1,48 +1,87 @@
-# Perinexus Roadbook
+# Roadbook Engine
 
-Perinexus Roadbook est une application web permettant de consulter un roadbook d'itinérance à vélo de manière simple, rapide et adaptée à une utilisation sur le terrain.
+Application web SPA/PWA réutilisable pour afficher plusieurs roadbooks de voyage à vélo à partir de Google Sheets.
 
-## Objectifs
+Le moteur commun reste à la racine du projet. Chaque voyage possède uniquement sa configuration dans `roadbooks/<id>/config.js`.
 
-- Afficher un roadbook étape par étape.
-- Consulter les informations essentielles d'une journée :
-  - distance
-  - dénivelé
-  - hébergement
-  - ravitaillement
-  - points d'intérêt
-- Fonctionner sur ordinateur, tablette et smartphone.
-- Être simple, rapide et facilement personnalisable.
+## Lancer le projet
 
-## Structure du projet
+Depuis la racine :
 
-```
-perinexus-roadbook/
-├── index.html
-├── style.css
-├── app.js
-├── README.md
-├── data/
-│   └── roadbook.json
-├── assets/
-│   ├── images/
-│   ├── icons/
-│   └── gpx/
-└── docs/
+```bash
+npx serve .
 ```
 
-## Technologies
+Ou avec n’importe quel serveur statique local. Ouvrir ensuite :
 
-- HTML5
-- CSS3
-- JavaScript (Vanilla)
+- `http://localhost:3000/` pour le roadbook par défaut ;
+- `http://localhost:3000/?roadbook=perinexus` pour charger explicitement Pirenexus ;
+- `http://localhost:3000/?roadbook=perinexus&stage=3` pour ouvrir une étape précise ;
+- `http://localhost:3000/?roadbook=perinexus&stage=3&substage=1` pour ouvrir une sous-étape.
 
-## État du projet
+## Ajouter un roadbook
 
-🚧 En développement.
+Créer un dossier :
 
-La première version permettra de consulter un roadbook complet avec une navigation simple entre les journées.
+```text
+roadbooks/<identifiant>/
+└── config.js
+```
 
-## Licence
+Exemple minimal :
 
-Projet personnel.
+```js
+"use strict";
+
+(function registerRoadbookConfig(global) {
+    global.ROADBOOK_CONFIGS = global.ROADBOOK_CONFIGS || {};
+
+    global.ROADBOOK_CONFIGS.drava = Object.freeze({
+        id: "drava",
+        shortId: "drava",
+        title: "Drava à vélo",
+        googleSheetId: "ID_DU_GOOGLE_SHEET",
+        sheets: Object.freeze({
+            stages: Object.freeze({ name: "etapes principales" }),
+            substeps: Object.freeze({ name: "Variante et option" }),
+            travelerNotes: Object.freeze({ name: "Notes voyageurs" }),
+            addedAccommodation: Object.freeze({ name: "ajout hebergement" })
+        }),
+        forms: Object.freeze({
+            travelerNotes: Object.freeze({
+                url: "https://docs.google.com/forms/...",
+                stageField: "entry.xxxxx"
+            }),
+            addedAccommodation: Object.freeze({
+                url: "https://docs.google.com/forms/...",
+                stageField: "entry.yyyyy"
+            })
+        }),
+        enrichment: Object.freeze({
+            accommodationPath: "data/accommodation-enrichment.json",
+            poiPath: "data/poi-enrichment.json"
+        }),
+        fallbackJsonPaths: Object.freeze(["roadbook.json"])
+    });
+})(typeof window !== "undefined" ? window : globalThis);
+```
+
+Le roadbook demandé est sélectionné avec `?roadbook=<identifiant>`. Sans paramètre, `perinexus` est utilisé par défaut.
+
+## Structure
+
+```text
+index.html
+roadbook-config.js
+data-loader.js
+app.js
+style.css
+service-worker.js
+roadbooks/
+└── perinexus/
+    └── config.js
+```
+
+## Notes PWA
+
+Le service worker conserve un seul moteur, mais sépare les caches par identifiant de roadbook afin d’éviter les mélanges de données entre voyages.

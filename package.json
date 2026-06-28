@@ -1,5 +1,5 @@
 {
-  "name": "perinexus-roadbook",
+  "name": "roadbook-engine",
   "private": true,
   "scripts": {
     "enrich:accommodations": "node scripts/enrich-accommodations.js",

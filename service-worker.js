@@ -1,20 +1,24 @@
 "use strict";
 
-const CACHE_PREFIX = "perinexus-roadbook";
+const CACHE_PREFIX = "roadbook-engine";
+const LEGACY_CACHE_PREFIXES = ["perinexus-roadbook"];
 const CACHE_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
-const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
-const DATA_CACHE_NAME = `${CACHE_PREFIX}-data`;
+const ROADBOOK_ID = sanitizeRoadbookId(new URL(self.location.href).searchParams.get("roadbook")) || "perinexus";
+const CACHE_NAME = `${CACHE_PREFIX}-${ROADBOOK_ID}-${CACHE_VERSION}`;
+const DATA_CACHE_NAME = `${CACHE_PREFIX}-${ROADBOOK_ID}-data`;
 const STATIC_DESTINATIONS = new Set(["style", "script", "image", "font", "manifest", "audio", "video"]);
 const CORE_ASSETS = [
     "./",
     "index.html",
     "style.css",
+    "roadbook-config.js",
     "app.js",
     "data-loader.js",
     "map-viewer.js",
     "accommodation-enrichment-loader.js",
     "poi-enrichment-loader.js",
     "duration-estimator.js",
+    `roadbooks/${ROADBOOK_ID}/config.js`,
     "manifest.webmanifest",
     "icons/icon.svg",
 ];
@@ -67,6 +71,11 @@ self.addEventListener("fetch", event => {
     }
 });
 
+function sanitizeRoadbookId(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return /^[a-z0-9-]+$/.test(normalized) ? normalized : "";
+}
+
 async function precacheCoreAssets() {
     const results = await Promise.allSettled(
         PRECACHE_GROUPS.map(async ({ cacheName, assets }) => {
@@ -94,7 +103,10 @@ async function cleanupCaches() {
     const keys = await caches.keys();
     await Promise.all(
         keys
-            .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && key !== DATA_CACHE_NAME)
+            .filter(key =>
+                LEGACY_CACHE_PREFIXES.some(prefix => key.startsWith(prefix)) ||
+                (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && key !== DATA_CACHE_NAME)
+            )
             .map(key => caches.delete(key))
     );
     await self.clients.claim();

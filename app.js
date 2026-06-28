@@ -14,12 +14,6 @@ let accommodationEnrichmentIndex = new Map();
 let poiEnrichmentIndex = new Map();
 let durationRequestId = 0;
 
-const TRAVELER_NOTES_FORM_URL =
-    "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform";
-const TRAVELER_NOTES_STAGE_FIELD = "entry.521193530";
-const ADD_ACCOMMODATION_FORM_URL =
-    "https://docs.google.com/forms/d/e/1FAIpQLSccYxccGvTR1Ih3PBdWDO2Z1kI_qrlM2VnDCmkUYDDpQLormA/viewform";
-const ADD_ACCOMMODATION_STAGE_FIELD = "entry.819202802";
 const STAT_ICONS = Object.freeze({
     steps: [
         ["path", { d: "M12 21s6-5.7 6-11a6 6 0 1 0-12 0c0 5.3 6 11 6 11Z" }],
@@ -118,6 +112,32 @@ const GENERIC_ACCOMMODATION_MAP_QUERIES = Object.freeze([
 const APP_VERSION_TOKEN = resolveCurrentVersionToken();
 const APP_VERSION_LABEL = formatVersionLabel(APP_VERSION_TOKEN);
 
+function getRoadbookConfig() {
+    return window.currentRoadbookConfig || window.roadbookContext?.config || {
+        id: "perinexus",
+        shortId: "perinexus",
+        title: "Roadbook vélo",
+        forms: {},
+        enrichment: {}
+    };
+}
+
+function roadbookId() {
+    return getRoadbookConfig().id || getRoadbookConfig().shortId || "perinexus";
+}
+
+function shouldKeepRoadbookInUrl() {
+    const currentId = roadbookId();
+    const defaultId = window.roadbookContext?.defaultId || "perinexus";
+    return new URLSearchParams(window.location.search).has("roadbook") || currentId !== defaultId;
+}
+
+function setRoadbookSearchParam(params) {
+    if (shouldKeepRoadbookInUrl()) {
+        params.set("roadbook", roadbookId());
+    }
+}
+
 function resolveCurrentVersionToken() {
     if (typeof window !== "undefined" && typeof window.__ROADBOOK_APP_VERSION__ === "string") {
         return window.__ROADBOOK_APP_VERSION__;
@@ -159,6 +179,10 @@ function initializeVersionManagement() {
 async function initializeRoadbook() {
 
     try {
+
+        if (window.roadbookConfigReady) {
+            await window.roadbookConfigReady;
+        }
 
         const accommodationEnrichmentPromise = loadOptionalAccommodationEnrichment();
         const poiEnrichmentPromise = loadOptionalPoiEnrichment();
@@ -210,7 +234,9 @@ function loadOptionalAccommodationEnrichment() {
     if (!loader || typeof loader.loadAccommodationEnrichment !== "function") {
         return Promise.resolve(new Map());
     }
-    return loader.loadAccommodationEnrichment();
+    return loader.loadAccommodationEnrichment({
+        path: getRoadbookConfig().enrichment?.accommodationPath
+    });
 }
 
 function renderCurrentAccommodation() {
@@ -224,7 +250,9 @@ function loadOptionalPoiEnrichment() {
     if (!loader || typeof loader.loadPoiEnrichment !== "function") {
         return Promise.resolve(new Map());
     }
-    return loader.loadPoiEnrichment();
+    return loader.loadPoiEnrichment({
+        path: getRoadbookConfig().enrichment?.poiPath
+    });
 }
 
 function renderCurrentPois() {
@@ -1119,7 +1147,9 @@ function findSubstageIndex(stageNumber, substageNumber) {
 
 function updateUrlForHome(options = {}) {
     const url = new URL(window.location.href);
-    url.search = "";
+    const params = new URLSearchParams();
+    setRoadbookSearchParam(params);
+    url.search = params.toString();
     url.hash = "";
     updateBrowserUrl(url, options);
 }
@@ -1137,6 +1167,7 @@ function updateUrlForStage(index, options = {}) {
     if (!Number.isFinite(stageNumber) || stageNumber <= 0) return;
 
     const params = new URLSearchParams();
+    setRoadbookSearchParam(params);
     params.set("stage", String(stageNumber));
 
     if (day.isSubstep) {
@@ -1564,11 +1595,14 @@ function renderAlternativeAccommodation(accommodation, stageNumber) {
 }
 
 function appendAddAccommodationButton(container, stageNumber) {
+    const formUrl = buildAddAccommodationFormUrl(stageNumber);
+    if (!formUrl) return;
+
     const action = document.createElement("div");
     action.className = "add-accommodation-action";
 
     const link = document.createElement("a");
-    link.href = buildAddAccommodationFormUrl(stageNumber);
+    link.href = formUrl;
     link.className = "terrain-button terrain-button--secondary";
     link.target = "_blank";
     link.rel = "noopener noreferrer";
@@ -1579,9 +1613,12 @@ function appendAddAccommodationButton(container, stageNumber) {
 }
 
 function buildAddAccommodationFormUrl(stageNumber) {
-    const url = new URL(ADD_ACCOMMODATION_FORM_URL);
+    const form = getRoadbookConfig().forms?.addedAccommodation || {};
+    if (!form.url || !form.stageField) return "";
+
+    const url = new URL(form.url);
     url.searchParams.set("usp", "pp_url");
-    url.searchParams.set(ADD_ACCOMMODATION_STAGE_FIELD, safeText(stageNumber, ""));
+    url.searchParams.set(form.stageField, safeText(stageNumber, ""));
     return url.href;
 }
 
@@ -1612,8 +1649,9 @@ function renderNotes(notes, stageNumber) {
     section.hidden = false;
     title.textContent = `Notes (${items.length})`;
     list.hidden = items.length === 0;
-    addButton.href = buildTravelerNotesFormUrl(stageNumber);
-    addButton.hidden = false;
+    const formUrl = buildTravelerNotesFormUrl(stageNumber);
+    addButton.href = formUrl;
+    addButton.hidden = !formUrl;
 
     items.forEach(note => {
         const item = document.createElement("li");
@@ -1641,9 +1679,12 @@ function renderNotes(notes, stageNumber) {
 }
 
 function buildTravelerNotesFormUrl(stageNumber) {
-    const url = new URL(TRAVELER_NOTES_FORM_URL);
+    const form = getRoadbookConfig().forms?.travelerNotes || {};
+    if (!form.url || !form.stageField) return "";
+
+    const url = new URL(form.url);
     url.searchParams.set("usp", "pp_url");
-    url.searchParams.set(TRAVELER_NOTES_STAGE_FIELD, safeText(stageNumber, ""));
+    url.searchParams.set(form.stageField, safeText(stageNumber, ""));
     return url.href;
 }
 

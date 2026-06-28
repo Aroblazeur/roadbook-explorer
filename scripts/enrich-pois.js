@@ -3,10 +3,12 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
-const SHEET_ID = "1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU";
+const ROADBOOK_ID = process.env.ROADBOOK_ID || "perinexus";
+const ROADBOOK_CONFIG = loadRoadbookConfig(ROADBOOK_ID);
+const SHEET_ID = process.env.ROADBOOK_SHEET_ID || ROADBOOK_CONFIG.googleSheetId;
 const SHEET_URLS = [
-    process.env.ROADBOOK_ETAPES_URL || googleSheetCsvUrl("etapes principales"),
-    process.env.ROADBOOK_VARIANTES_URL || googleSheetCsvUrl("Variante et option")
+    process.env.ROADBOOK_ETAPES_URL || googleSheetCsvUrl(ROADBOOK_CONFIG.sheets?.stages?.name || "etapes principales"),
+    process.env.ROADBOOK_VARIANTES_URL || googleSheetCsvUrl(ROADBOOK_CONFIG.sheets?.substeps?.name || "Variante et option")
 ];
 const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
@@ -14,7 +16,7 @@ const OUTPUT_PATH = path.resolve(__dirname, "..", "data", "poi-enrichment.json")
 const REQUEST_DELAY_MS = toNonNegativeInteger(process.env.POI_DELAY_MS, 250);
 const REQUEST_TIMEOUT_MS = toNonNegativeInteger(process.env.POI_TIMEOUT_MS, 8_000);
 const SEARCH_LANGUAGES = ["fr", "ca", "es", "en"];
-const USER_AGENT = "PerinexusRoadbookPOITool/1.0 (+https://github.com/Aroblazeur/perinexus-roadbook)";
+const USER_AGENT = `RoadbookEnginePOITool/1.0 (${ROADBOOK_ID})`;
 const COMMONS_EXACT_SOURCE = "commons-exact";
 const COMMONS_VARIANT_SOURCE = "commons-variant";
 const COMMONS_SOURCES = new Set([COMMONS_EXACT_SOURCE, COMMONS_VARIANT_SOURCE]);
@@ -683,6 +685,20 @@ function removeAccents(value) {
 
 function safeText(value) {
     return typeof value === "string" ? value.trim() : "";
+}
+
+function loadRoadbookConfig(id) {
+    const configPath = path.resolve(__dirname, "..", "roadbooks", id, "config.js");
+    globalThis.ROADBOOK_CONFIGS = globalThis.ROADBOOK_CONFIGS || {};
+    try {
+        require(configPath);
+    } catch (error) {
+        throw new Error(`Configuration roadbook introuvable (${id}) : ${error.message}`);
+    }
+
+    const config = globalThis.ROADBOOK_CONFIGS[id];
+    if (!config) throw new Error(`Configuration roadbook invalide (${id}).`);
+    return config;
 }
 
 function googleSheetCsvUrl(sheetName) {

@@ -1,24 +1,56 @@
 "use strict";
 
-const ETAPES_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=etapes%20principales";
-
-const VARIANTES_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&gid=15169789";
-
-const TRAVELER_NOTES_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=Notes%20voyageurs";
-
-const ADDED_ACCOMMODATION_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=ajout%20hebergement";
-
-// Les exports CSV Google Sheets ne fournissent pas les métadonnées du fichier.
-// Modifier cette constante si le nom du Google Sheet change.
-const ROADBOOK_TITLE = "pirenexus a vélo";
-
 // Only list fallback files that are part of the current project tree.
 const FALLBACK_PATHS = ["roadbook.json"];
 const NETWORK_FIRST_FETCH_OPTIONS = { cache: "no-store" };
+
+function currentRoadbookConfig() {
+    if (typeof window !== "undefined" && window.currentRoadbookConfig) {
+        return window.currentRoadbookConfig;
+    }
+
+    if (typeof globalThis !== "undefined" && globalThis.currentRoadbookConfig) {
+        return globalThis.currentRoadbookConfig;
+    }
+
+    return {
+        id: "perinexus",
+        shortId: "perinexus",
+        title: "Roadbook vélo",
+        description: "Roadbook d'itinérance à vélo.",
+        sheets: {},
+        forms: {},
+        fallbackJsonPaths: FALLBACK_PATHS
+    };
+}
+
+async function waitForRoadbookConfig() {
+    if (typeof window !== "undefined" && window.roadbookConfigReady) {
+        return window.roadbookConfigReady;
+    }
+    return currentRoadbookConfig();
+}
+
+function googleSheetCsvUrl(sheetConfig, config = currentRoadbookConfig()) {
+    if (!sheetConfig) return "";
+    if (typeof sheetConfig === "string") {
+        return buildGoogleSheetCsvUrl(config.googleSheetId, { name: sheetConfig });
+    }
+    if (sheetConfig.url) return sheetConfig.url;
+    return buildGoogleSheetCsvUrl(sheetConfig.googleSheetId || config.googleSheetId, sheetConfig);
+}
+
+function buildGoogleSheetCsvUrl(sheetId, sheetConfig = {}) {
+    if (!sheetId) return "";
+    const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
+    url.searchParams.set("tqx", "out:csv");
+    if (sheetConfig.gid) {
+        url.searchParams.set("gid", String(sheetConfig.gid));
+    } else if (sheetConfig.name) {
+        url.searchParams.set("sheet", sheetConfig.name);
+    }
+    return url.href;
+}
 
 const ERROR_MESSAGES = {
     NETWORK: "erreur réseau",
@@ -824,7 +856,7 @@ function buildNavigableStages(stages) {
     return days;
 }
 
-function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedAccommodationRows = []) {
+function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedAccommodationRows = [], config = currentRoadbookConfig()) {
     const summary = buildSummary(etapesRows);
     const stageRows = etapesRows.filter(row => !isSummaryRow(row));
     const stages = stageRows.map(mapEtape);
@@ -842,8 +874,9 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedA
     attachAddedAccommodations(navigableStages, addedAccommodationRows);
 
     return {
-        title: ROADBOOK_TITLE || "Roadbook vélo",
-        description: "Roadbook d'itinérance à vélo.",
+        id: config.id || config.shortId || "roadbook",
+        title: config.title || "Roadbook vélo",
+        description: config.description || "Roadbook d'itinérance à vélo.",
         summary,
         stages,
         days: navigableStages
@@ -865,8 +898,19 @@ async function fetchCsv(url) {
     return response.text();
 }
 
-async function loadGoogleSheetRoadbook() {
-    const travelerNotesPromise = fetchCsv(TRAVELER_NOTES_URL)
+async function loadGoogleSheetRoadbook(config = currentRoadbookConfig()) {
+    const sheets = config.sheets || {};
+    const stagesUrl = googleSheetCsvUrl(sheets.stages || sheets.etapes || sheets.main, config);
+    const substepsUrl = googleSheetCsvUrl(sheets.substeps || sheets.variants || sheets.variantes, config);
+    const travelerNotesUrl = googleSheetCsvUrl(sheets.travelerNotes || sheets.notes, config);
+    const addedAccommodationUrl = googleSheetCsvUrl(sheets.addedAccommodation || sheets.accommodationAdditions, config);
+
+    if (!stagesUrl || !substepsUrl) {
+        throw new Error("Configuration Google Sheet incomplète.");
+    }
+
+    const travelerNotesPromise = travelerNotesUrl
+        ? fetchCsv(travelerNotesUrl)
         .then(csv => {
             const rows = parseCsv(csv);
             ensureSchema(rows, REQUIRED_TRAVELER_NOTES_HEADERS);
@@ -876,19 +920,22 @@ async function loadGoogleSheetRoadbook() {
             const reason = error?.message || "erreur inconnue";
             console.warn(`[Roadbook] Notes voyageurs indisponibles : ${reason}.`);
             return [];
-        });
+        })
+        : Promise.resolve([]);
 
-    const addedAccommodationPromise = fetchCsv(ADDED_ACCOMMODATION_URL)
+    const addedAccommodationPromise = addedAccommodationUrl
+        ? fetchCsv(addedAccommodationUrl)
         .then(csv => parseCsv(csv))
         .catch(error => {
             const reason = error?.message || "erreur inconnue";
             console.warn(`[Roadbook] Ajouts d'hébergements indisponibles : ${reason}.`);
             return [];
-        });
+        })
+        : Promise.resolve([]);
 
     const [etapesCsv, variantesCsv, travelerNotesRows, addedAccommodationRows] = await Promise.all([
-        fetchCsv(ETAPES_URL),
-        fetchCsv(VARIANTES_URL),
+        fetchCsv(stagesUrl),
+        fetchCsv(substepsUrl),
         travelerNotesPromise,
         addedAccommodationPromise
     ]);
@@ -899,10 +946,10 @@ async function loadGoogleSheetRoadbook() {
     ensureSchema(etapesRows, REQUIRED_ETAPES_HEADERS);
     ensureSchema(variantesRows, REQUIRED_VARIANTES_HEADERS);
 
-    return buildRoadbook(etapesRows, variantesRows, travelerNotesRows, addedAccommodationRows);
+    return buildRoadbook(etapesRows, variantesRows, travelerNotesRows, addedAccommodationRows, config);
 }
 
-async function loadFallbackRoadbook() {
+async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
     async function loadNodeFallback(path) {
         const isNodeRuntime =
             typeof process !== "undefined" &&
@@ -926,7 +973,10 @@ async function loadFallbackRoadbook() {
         return JSON.parse(content);
     }
 
-    const validPaths = FALLBACK_PATHS.filter(path =>
+    const fallbackPaths = Array.isArray(config.fallbackJsonPaths)
+        ? config.fallbackJsonPaths
+        : FALLBACK_PATHS;
+    const validPaths = fallbackPaths.filter(path =>
         typeof path === "string" && path.trim() !== "" && !path.startsWith("data/")
     );
 
@@ -979,12 +1029,13 @@ function logFallbackError(error) {
 }
 
 async function loadRoadbook() {
+    const config = await waitForRoadbookConfig();
     try {
-        return await loadGoogleSheetRoadbook();
+        return await loadGoogleSheetRoadbook(config);
     } catch (error) {
         logFallbackError(error);
         try {
-            return await loadFallbackRoadbook();
+            return await loadFallbackRoadbook(config);
         } catch (fallbackError) {
             const sheetsReason = error && error.message ? error.message : "erreur inconnue";
             const fallbackReason = fallbackError && fallbackError.message ? fallbackError.message : "erreur inconnue";
@@ -1000,10 +1051,9 @@ if (typeof window !== "undefined") {
 
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-        ETAPES_URL,
-        VARIANTES_URL,
-        TRAVELER_NOTES_URL,
-        ADDED_ACCOMMODATION_URL,
+        buildGoogleSheetCsvUrl,
+        googleSheetCsvUrl,
+        currentRoadbookConfig,
         parseCsv,
         sanitizeNotePhotoUrl,
         mapTravelerNote,

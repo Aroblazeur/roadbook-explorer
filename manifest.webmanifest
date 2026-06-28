@@ -1,7 +1,7 @@
 {
-  "name": "Perinexus Roadbook",
-  "short_name": "Perinexus",
-  "description": "Roadbook d'itinérance à vélo Perinexus",
+  "name": "Roadbook vélo",
+  "short_name": "Roadbook",
+  "description": "Moteur de roadbook d'itinérance à vélo",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f0f4f0",

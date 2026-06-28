@@ -111,6 +111,7 @@
       window.__ROADBOOK_APP_VERSION__ = token;
     })();
   </script>
+  <script src="roadbook-config.js"></script>
   <script src="data-loader.js"></script>
   <script src="map-viewer.js"></script>
   <script src="accommodation-enrichment-loader.js"></script>
@@ -118,9 +119,14 @@
   <script src="duration-estimator.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
-      const appVersion = encodeURIComponent(window.__ROADBOOK_APP_VERSION__ || "dev");
-      window.roadbookServiceWorkerRegistrationPromise = navigator.serviceWorker
-        .register(`service-worker.js?v=${appVersion}`, { updateViaCache: "none" })
+      const registerServiceWorker = () => {
+        const appVersion = encodeURIComponent(window.__ROADBOOK_APP_VERSION__ || "dev");
+        const roadbookId = encodeURIComponent(window.roadbookContext?.id || "perinexus");
+        return navigator.serviceWorker
+          .register(`service-worker.js?v=${appVersion}&roadbook=${roadbookId}`, { updateViaCache: "none" });
+      };
+      window.roadbookServiceWorkerRegistrationPromise = Promise.resolve(window.roadbookConfigReady)
+        .then(registerServiceWorker)
         .catch(err => {
           console.warn("[SW] Enregistrement échoué :", err);
           return null;

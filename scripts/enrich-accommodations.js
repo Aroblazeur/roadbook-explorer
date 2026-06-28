@@ -3,12 +3,15 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 
-const DEFAULT_SHEET_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=etapes%20principales";
-const SHEET_URL = process.env.ROADBOOK_SHEET_URL || DEFAULT_SHEET_URL;
-const DEFAULT_ADDED_SHEET_URL =
-    "https://docs.google.com/spreadsheets/d/1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU/gviz/tq?tqx=out:csv&sheet=ajout%20hebergement";
-const ADDED_SHEET_URL = process.env.ROADBOOK_ADDED_ACCOMMODATION_SHEET_URL || DEFAULT_ADDED_SHEET_URL;
+const ROADBOOK_ID = process.env.ROADBOOK_ID || "perinexus";
+const ROADBOOK_CONFIG = loadRoadbookConfig(ROADBOOK_ID);
+const SHEET_ID = process.env.ROADBOOK_SHEET_ID || ROADBOOK_CONFIG.googleSheetId;
+const SHEET_URL =
+    process.env.ROADBOOK_SHEET_URL ||
+    googleSheetCsvUrl(ROADBOOK_CONFIG.sheets?.stages?.name || "etapes principales");
+const ADDED_SHEET_URL =
+    process.env.ROADBOOK_ADDED_ACCOMMODATION_SHEET_URL ||
+    googleSheetCsvUrl(ROADBOOK_CONFIG.sheets?.addedAccommodation?.name || "ajout hebergement");
 const OUTPUT_PATH = path.resolve(__dirname, "..", "data", "accommodation-enrichment.json");
 const REQUEST_DELAY_MS = toPositiveInteger(process.env.ENRICH_DELAY_MS, 500);
 const REQUEST_TIMEOUT_MS = toPositiveInteger(process.env.ENRICH_TIMEOUT_MS, 10_000);
@@ -232,7 +235,7 @@ async function fetchHtml(url) {
             signal: controller.signal,
             headers: {
                 Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
-                "User-Agent": "PerinexusRoadbookMetadataTool/1.0 (+https://github.com/Aroblazeur/perinexus-roadbook)"
+                "User-Agent": `RoadbookEngineMetadataTool/1.0 (${ROADBOOK_ID})`
             }
         });
 
@@ -737,7 +740,7 @@ async function fetchJson(url, label) {
             signal: controller.signal,
             headers: {
                 Accept: "application/json",
-                "User-Agent": "PerinexusRoadbookMetadataTool/1.0 (+https://github.com/Aroblazeur/perinexus-roadbook)"
+                "User-Agent": `RoadbookEngineMetadataTool/1.0 (${ROADBOOK_ID})`
             }
         });
         if (!response.ok) throw new Error(`${label} indisponible (HTTP ${response.status})`);
@@ -788,6 +791,24 @@ function parseHostname(url) {
 function safeText(value, fallback = "") {
     const text = typeof value === "string" ? value.trim() : "";
     return text || fallback;
+}
+
+function loadRoadbookConfig(id) {
+    const configPath = path.resolve(__dirname, "..", "roadbooks", id, "config.js");
+    globalThis.ROADBOOK_CONFIGS = globalThis.ROADBOOK_CONFIGS || {};
+    try {
+        require(configPath);
+    } catch (error) {
+        throw new Error(`Configuration roadbook introuvable (${id}) : ${error.message}`);
+    }
+
+    const config = globalThis.ROADBOOK_CONFIGS[id];
+    if (!config) throw new Error(`Configuration roadbook invalide (${id}).`);
+    return config;
+}
+
+function googleSheetCsvUrl(sheetName) {
+    return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
 }
 
 function uniqueValues(values) {
