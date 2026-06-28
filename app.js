@@ -132,6 +132,17 @@ function setRoadbookSearchParam(params) {
     params.set("roadbook", roadbookId());
 }
 
+function buildRoadbookHomeUrl(id) {
+    const safeId = sanitizeRoadbookId(id);
+    if (!safeId) return window.location.href;
+
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("roadbook", safeId);
+    return url.href;
+}
+
 function sanitizeRoadbookId(value) {
     const normalized = String(value || "").trim().toLowerCase();
     return /^[a-z0-9-]+$/.test(normalized) ? normalized : "";
@@ -347,15 +358,27 @@ function drawRoadbookLibraryCards() {
 }
 
 function createRoadbookLibraryCard(item) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "roadbook-library-card";
-    button.addEventListener("click", () => {
+    const card = document.createElement("a");
+    card.className = "roadbook-library-card";
+    card.href = buildRoadbookHomeUrl(item.id);
+    card.addEventListener("click", event => {
+        if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+        ) {
+            return;
+        }
+
+        event.preventDefault();
         openRoadbook(item.id).catch(error => {
             console.error("[Roadbook] Ouverture impossible :", error);
         });
     });
-    button.setAttribute("aria-label", `Ouvrir ${safeText(item.title, item.id)}`);
+    card.setAttribute("aria-label", `Ouvrir ${safeText(item.title, item.id)}`);
 
     const cover = document.createElement("div");
     cover.className = "roadbook-library-card__cover";
@@ -392,8 +415,8 @@ function createRoadbookLibraryCard(item) {
     description.textContent = safeText(item.description, "");
     if (description.textContent) content.appendChild(description);
 
-    button.append(cover, content);
-    return button;
+    card.append(cover, content);
+    return card;
 }
 
 function computeStagesTotal() {
