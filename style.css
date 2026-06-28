@@ -733,6 +733,7 @@ li{
 }
 
 .accommodation-resource__button-wrapper{
+    display:flex;
     justify-content:space-between;
     gap:12px;
 }
