@@ -1494,7 +1494,7 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
         if (!name) return;
         const detail = document.createElement("p");
         detail.className = "detail-name";
-        appendAccommodationNameWithIcon(detail, name, accommodationType || name, [name]);
+        appendAccommodationNameWithIcon(detail, name, accommodationType || name);
         container.appendChild(detail);
         return;
     }
@@ -1509,12 +1509,7 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
     if (mainName) {
         const name = document.createElement("p");
         name.className = "detail-name";
-        appendAccommodationNameWithIcon(name, mainName, accommodationType || mainName, [
-            accommodation?.name,
-            accommodation?.displayName,
-            mainMetadata?.name,
-            mainUrl
-        ]);
+        appendAccommodationNameWithIcon(name, mainName, accommodationType || mainName);
         container.appendChild(name);
     }
     if (mainUrl || mainPhoto || mainMetadata?.image) {
@@ -1524,7 +1519,8 @@ function renderPrimaryAccommodation(accommodation, accommodationType = "") {
             mainName || genericAccommodationLabel(accommodationType || mainUrl),
             mainMetadata,
             accommodationType || mainName,
-            mainPhoto
+            mainPhoto,
+            [accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl]
         );
     }
 }
@@ -1698,12 +1694,7 @@ function appendResourceList(container, title, values, showHeading = true) {
         const label = preferredLabel || metadata?.name || `${title} ${index + 1}`;
         const detail = document.createElement("p");
         detail.className = "detail-name detail-name--compact";
-        appendAccommodationNameWithIcon(detail, label, label, [
-            rawName,
-            preferredLabel,
-            metadata?.name,
-            url
-        ]);
+        appendAccommodationNameWithIcon(detail, label, label);
         item.appendChild(detail);
         appendAccommodationResource(
             item,
@@ -1711,7 +1702,8 @@ function appendResourceList(container, title, values, showHeading = true) {
             label,
             metadata,
             preferredLabel || metadata?.name || url,
-            photo
+            photo,
+            [rawName, preferredLabel, metadata?.name, url]
         );
         list.appendChild(item);
     });
@@ -1724,13 +1716,10 @@ function appendResourceList(container, title, values, showHeading = true) {
     }
 }
 
-function appendAccommodationNameWithIcon(container, name, iconSource, mapQueryCandidates = []) {
+function appendAccommodationNameWithIcon(container, name, iconSource) {
     const icon = createAccommodationIcon(iconSource || name);
     if (icon) container.append(icon, document.createTextNode(" "));
     container.appendChild(document.createTextNode(name));
-
-    const mapLink = createAccommodationMapLink(mapQueryCandidates);
-    if (mapLink) container.append(document.createTextNode(" "), mapLink);
 }
 
 function createAccommodationMapLink(candidates) {
@@ -1800,7 +1789,7 @@ function createAccommodationMapIcon() {
     return svg;
 }
 
-function appendAccommodationResource(container, url, preferredLabel, metadata, iconSource = "", manualPhoto = "") {
+function appendAccommodationResource(container, url, preferredLabel, metadata, iconSource = "", manualPhoto = "", mapQueryCandidates = []) {
     if (!url && !metadata?.image && !manualPhoto && !metadata?.name && !preferredLabel) return null;
     const label = safeText(preferredLabel, "") || metadata?.name || "Hébergement";
     const icon = getAccommodationIcon(iconSource || label);
@@ -1815,7 +1804,22 @@ function appendAccommodationResource(container, url, preferredLabel, metadata, i
         label
     });
     if (url) {
-        appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
+        const mapLink = createAccommodationMapLink(mapQueryCandidates);
+        if (mapLink) {
+            mapLink.classList.add("accommodation-map-link--in-button");
+            const wrapper = document.createElement("div");
+            wrapper.className = "terrain-button terrain-button--secondary accommodation-resource__button-wrapper";
+            const websiteLink = document.createElement("a");
+            websiteLink.href = url;
+            websiteLink.target = "_blank";
+            websiteLink.rel = "noopener noreferrer";
+            websiteLink.className = "accommodation-resource__website-link";
+            websiteLink.textContent = labelWithIcon;
+            wrapper.append(websiteLink, mapLink);
+            resource.appendChild(wrapper);
+        } else {
+            appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
+        }
     } else {
         const text = document.createElement("span");
         text.className = "accommodation-resource__label";

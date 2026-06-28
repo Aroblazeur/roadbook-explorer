@@ -732,6 +732,35 @@ li{
     stroke-linejoin:round;
 }
 
+.accommodation-resource__button-wrapper{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+}
+
+.accommodation-resource__website-link{
+    flex:1;
+    min-width:0;
+    color:inherit;
+    font-weight:inherit;
+    text-decoration:none;
+    text-align:center;
+    overflow-wrap:anywhere;
+}
+
+.accommodation-map-link--in-button{
+    flex-shrink:0;
+    margin-left:0;
+    background:transparent;
+    border-radius:6px;
+}
+
+.accommodation-map-link--in-button:hover,
+.accommodation-map-link--in-button:focus-visible{
+    background:rgba(0,0,0,.1);
+    color:inherit;
+}
+
 .accommodation-resource{
     display:grid;
     gap:10px;
