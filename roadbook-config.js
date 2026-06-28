@@ -67,7 +67,7 @@
         const normalizedConfig = {
             id,
             shortId: id,
-            title: "Roadbook vélo",
+            title: "RoadBook Explorer",
             sheets: {},
             forms: {},
             options: {},

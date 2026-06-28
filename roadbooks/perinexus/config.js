@@ -6,7 +6,7 @@
     global.ROADBOOK_CONFIGS.perinexus = Object.freeze({
         id: "perinexus",
         shortId: "perinexus",
-        title: "pirenexus a vélo",
+        title: "RoadBook Explorer",
         description: "Roadbook d'itinérance à vélo.",
         googleSheetId: "1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU",
         sheets: Object.freeze({

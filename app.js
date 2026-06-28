@@ -2,7 +2,7 @@
 
 /**
  * =====================================================
- * Perinexus Roadbook
+ * RoadBook Explorer
  * =====================================================
  */
 
@@ -116,7 +116,7 @@ function getRoadbookConfig() {
     return window.currentRoadbookConfig || window.roadbookContext?.config || {
         id: "perinexus",
         shortId: "perinexus",
-        title: "Roadbook vélo",
+        title: "RoadBook Explorer",
         forms: {},
         enrichment: {}
     };
@@ -1071,7 +1071,7 @@ function showHomePage(options = {}) {
     setStageSectionsHidden(true);
     updateButtons();
     if (updateUrl) updateUrlForHome({ replace });
-    document.title = safeText(roadbook?.title, "Roadbook vélo");
+    document.title = safeText(roadbook?.title, "RoadBook Explorer");
 }
 
 function showStagePage() {
@@ -1223,7 +1223,7 @@ function setSectionHidden(id, hidden) {
 }
 
 function updateRoadbookChrome(day = null) {
-    const title = safeText(roadbook?.title, "Roadbook vélo");
+    const title = safeText(roadbook?.title, "RoadBook Explorer");
     const pageTitle = day?.title ? `${safeText(day.title)} - ${title}` : title;
     const headerTitle = document.getElementById("roadbook-title");
     const footerTitle = document.getElementById("footer-roadbook-title");

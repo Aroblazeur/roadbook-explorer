@@ -1,6 +1,6 @@
 {
-  "name": "Roadbook vélo",
-  "short_name": "Roadbook",
+  "name": "RoadBook Explorer",
+  "short_name": "RoadBook",
   "description": "Moteur de roadbook d'itinérance à vélo",
   "start_url": "./",
   "display": "standalone",

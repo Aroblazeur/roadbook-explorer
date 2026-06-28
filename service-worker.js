@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "roadbook-engine";
-const LEGACY_CACHE_PREFIXES = ["perinexus-roadbook"];
+const LEGACY_CACHE_PATTERNS = [/-roadbook(?:-|$)/i];
 const CACHE_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const ROADBOOK_ID = sanitizeRoadbookId(new URL(self.location.href).searchParams.get("roadbook")) || "perinexus";
 const CACHE_NAME = `${CACHE_PREFIX}-${ROADBOOK_ID}-${CACHE_VERSION}`;
@@ -104,7 +104,7 @@ async function cleanupCaches() {
     await Promise.all(
         keys
             .filter(key =>
-                LEGACY_CACHE_PREFIXES.some(prefix => key.startsWith(prefix)) ||
+                LEGACY_CACHE_PATTERNS.some(pattern => pattern.test(key)) ||
                 (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && key !== DATA_CACHE_NAME)
             )
             .map(key => caches.delete(key))

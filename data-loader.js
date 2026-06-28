@@ -16,7 +16,7 @@ function currentRoadbookConfig() {
     return {
         id: "perinexus",
         shortId: "perinexus",
-        title: "Roadbook vélo",
+        title: "RoadBook Explorer",
         description: "Roadbook d'itinérance à vélo.",
         sheets: {},
         forms: {},
@@ -875,7 +875,7 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedA
 
     return {
         id: config.id || config.shortId || "roadbook",
-        title: config.title || "Roadbook vélo",
+        title: config.title || "RoadBook Explorer",
         description: config.description || "Roadbook d'itinérance à vélo.",
         summary,
         stages,
