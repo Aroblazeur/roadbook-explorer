@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * RoadBook Explorer — Contribution API
  *
@@ -15,10 +13,10 @@
  * type de contribution, écrit la ligne, puis retourne une réponse JSON.
  */
 
-const APP_NAME = "RoadBook Explorer Contribution API";
-const APP_VERSION = "1.0.0";
+var APP_NAME = "RoadBook Explorer Contribution API";
+var APP_VERSION = "1.0.0";
 
-const SECURITY = Object.freeze({
+var SECURITY = Object.freeze({
   apiKeyEnabled: false,
   expectedApiKey: "",
   roadbookWhitelistEnabled: false,
@@ -26,7 +24,7 @@ const SECURITY = Object.freeze({
   antiSpamEnabled: false
 });
 
-const CONTRIBUTION_TYPES = Object.freeze({
+var CONTRIBUTION_TYPES = Object.freeze({
   travelerNote: Object.freeze({
     sheetName: "Notes voyageurs",
     requiredPayloadFields: ["note"],
@@ -76,7 +74,7 @@ const CONTRIBUTION_TYPES = Object.freeze({
   })
 });
 
-const RESERVED_CONTRIBUTION_TYPES = Object.freeze([
+var RESERVED_CONTRIBUTION_TYPES = Object.freeze([
   "addedPhoto",
   "correction",
   "poiSuggestion",
@@ -97,12 +95,12 @@ function doGet() {
 
 function doPost(e) {
   try {
-    const request = parseJsonRequest(e);
+    var request = parseJsonRequest(e);
 
     validateSecurity(request);
     validateBaseRequest(request);
 
-    const handler = CONTRIBUTION_TYPES[request.contributionType];
+    var handler = CONTRIBUTION_TYPES[request.contributionType];
     if (!handler) {
       return errorResponse(
         "UNSUPPORTED_CONTRIBUTION_TYPE",
@@ -118,8 +116,8 @@ function doPost(e) {
 
     validatePayload(request, handler);
 
-    const spreadsheet = SpreadsheetApp.openById(request.googleSheetId);
-    const sheet = spreadsheet.getSheetByName(handler.sheetName);
+    var spreadsheet = SpreadsheetApp.openById(request.googleSheetId);
+    var sheet = spreadsheet.getSheetByName(handler.sheetName);
     if (!sheet) {
       return errorResponse(
         "SHEET_NOT_FOUND",
@@ -132,7 +130,7 @@ function doPost(e) {
       );
     }
 
-    const rowNumber = appendContribution(sheet, handler, request);
+    var rowNumber = appendContribution(sheet, handler, request);
 
     return jsonResponse({
       ok: true,
@@ -179,7 +177,7 @@ function validateBaseRequest(request) {
 }
 
 function validatePayload(request, handler) {
-  const missingFields = handler.requiredPayloadFields.filter(function(field) {
+  var missingFields = handler.requiredPayloadFields.filter(function(field) {
     return safeString(request.payload[field]) === "";
   });
 
@@ -195,14 +193,14 @@ function validatePayload(request, handler) {
 
 function validateSecurity(request) {
   if (SECURITY.apiKeyEnabled) {
-    const providedKey = safeString(request.apiKey);
+    var providedKey = safeString(request.apiKey);
     if (!providedKey || providedKey !== SECURITY.expectedApiKey) {
       throw createError("INVALID_API_KEY", "Clé API absente ou invalide.", 403);
     }
   }
 
   if (SECURITY.roadbookWhitelistEnabled) {
-    const allowed = SECURITY.allowedRoadbookIds.indexOf(request.roadbookId) !== -1;
+    var allowed = SECURITY.allowedRoadbookIds.indexOf(request.roadbookId) !== -1;
     if (!allowed) {
       throw createError("ROADBOOK_NOT_ALLOWED", "Roadbook non autorisé.", 403);
     }
@@ -217,7 +215,7 @@ function validateSecurity(request) {
 }
 
 function appendContribution(sheet, handler, request) {
-  const headers = readHeaders(sheet);
+  var headers = readHeaders(sheet);
   if (headers.length === 0) {
     throw createError(
       "EMPTY_HEADER_ROW",
@@ -227,14 +225,14 @@ function appendContribution(sheet, handler, request) {
     );
   }
 
-  const valuesByField = handler.buildValues(request);
-  const row = headers.map(function(header) {
-    const field = resolveFieldForHeader(header, handler.fieldAliases);
+  var valuesByField = handler.buildValues(request);
+  var row = headers.map(function(header) {
+    var field = resolveFieldForHeader(header, handler.fieldAliases);
     return field ? valuesByField[field] || "" : "";
   });
 
-  const requiredHeaderFields = ["stage"].concat(handler.requiredPayloadFields);
-  const missingRequiredHeaders = requiredHeaderFields.filter(function(field) {
+  var requiredHeaderFields = ["stage"].concat(handler.requiredPayloadFields);
+  var missingRequiredHeaders = requiredHeaderFields.filter(function(field) {
     return !hasHeaderForField(headers, handler.fieldAliases[field] || []);
   });
 
@@ -255,7 +253,7 @@ function appendContribution(sheet, handler, request) {
 }
 
 function readHeaders(sheet) {
-  const lastColumn = sheet.getLastColumn();
+  var lastColumn = sheet.getLastColumn();
   if (lastColumn < 1) return [];
 
   return sheet
@@ -267,13 +265,13 @@ function readHeaders(sheet) {
 }
 
 function resolveFieldForHeader(header, aliasesByField) {
-  const normalizedHeader = normalizeText(header);
-  const fields = Object.keys(aliasesByField);
+  var normalizedHeader = normalizeText(header);
+  var fields = Object.keys(aliasesByField);
 
   for (var i = 0; i < fields.length; i++) {
-    const field = fields[i];
-    const aliases = aliasesByField[field] || [];
-    const matched = aliases.some(function(alias) {
+    var field = fields[i];
+    var aliases = aliasesByField[field] || [];
+    var matched = aliases.some(function(alias) {
       return normalizeText(alias) === normalizedHeader;
     });
     if (matched) return field;
@@ -314,7 +312,7 @@ function normalizeText(value) {
 }
 
 function createError(code, message, status, details) {
-  const error = new Error(message);
+  var error = new Error(message);
   error.code = code;
   error.status = status || 500;
   error.details = details || {};
@@ -322,7 +320,7 @@ function createError(code, message, status, details) {
 }
 
 function jsonResponse(data, status) {
-  const output = ContentService
+  var output = ContentService
     .createTextOutput(JSON.stringify({
       status: status || 200,
       timestamp: new Date().toISOString(),
