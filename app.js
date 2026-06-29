@@ -1871,14 +1871,18 @@ async function submitContributionFromButton(trigger, options) {
     const previousDisabled = button?.disabled || false;
 
     if (button) button.disabled = true;
-    setContributionStatus(button, options.pendingMessage, "pending");
+    setContributionStatus(button, options.pendingMessage, "pending", {
+        contributionType: options.contributionType,
+        stage: safeText(options.stage, ""),
+        payload: options.payload || {}
+    });
 
     try {
-        await sendContribution(options.contributionType, options.stage, options.payload);
-        setContributionStatus(button, options.successMessage, "success");
+        const result = await sendContribution(options.contributionType, options.stage, options.payload);
+        setContributionStatus(button, options.successMessage, "success", result);
     } catch (error) {
         const message = error?.message || "Envoi impossible.";
-        setContributionStatus(button, message, "error");
+        setContributionStatus(button, message, "error", error.details || {});
     } finally {
         if (button) button.disabled = previousDisabled;
     }
@@ -1891,7 +1895,7 @@ async function sendContribution(contributionType, stage, payload) {
     if (!config?.googleSheetId) throw new Error("Google Sheet ID du roadbook absent.");
     if (!roadbookId()) throw new Error("Identifiant roadbook absent.");
 
-    const body = {
+    const requestPayload = {
         roadbookId: roadbookId(),
         googleSheetId: config.googleSheetId,
         contributionType,
@@ -1899,25 +1903,91 @@ async function sendContribution(contributionType, stage, payload) {
         payload: payload || {}
     };
 
-    await fetch(endpoint, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(body)
-    });
+    console.info("[RoadBook Contribution] Payload envoyé", requestPayload);
 
-    return body;
+    let response;
+    try {
+        response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(requestPayload)
+        });
+    } catch (error) {
+        const wrapped = new Error(`Erreur réseau pendant l'envoi : ${error?.message || "échec fetch"}`);
+        wrapped.details = {
+            payload: requestPayload,
+            error: error?.message || String(error)
+        };
+        console.error("[RoadBook Contribution] Erreur réseau", wrapped.details);
+        throw wrapped;
+    }
+
+    const responseText = await response.text();
+    const parsedResponse = parseContributionResponse(responseText);
+    const result = {
+        payload: requestPayload,
+        response: {
+            httpStatus: response.status,
+            httpOk: response.ok,
+            body: parsedResponse ?? responseText
+        }
+    };
+
+    console.info("[RoadBook Contribution] Réponse reçue", result.response);
+
+    if (!response.ok || parsedResponse?.data?.ok === false || parsedResponse?.ok === false) {
+        const errorMessage =
+            parsedResponse?.data?.error?.message ||
+            parsedResponse?.error?.message ||
+            `Écriture refusée par l'endpoint (HTTP ${response.status}).`;
+        const error = new Error(errorMessage);
+        error.details = result;
+        console.error("[RoadBook Contribution] Échec d'écriture", result);
+        throw error;
+    }
+
+    return result;
 }
 
-function setContributionStatus(trigger, message, state = "") {
+function parseContributionResponse(text) {
+    if (!text) return null;
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        return null;
+    }
+}
+
+function setContributionStatus(trigger, message, state = "", details = null) {
     const status = findContributionStatus(trigger);
     if (!status) return;
 
-    status.textContent = message || "";
+    status.replaceChildren();
+    if (message) {
+        const summary = document.createElement("span");
+        summary.textContent = message;
+        status.appendChild(summary);
+    }
+
+    if (details) {
+        const pre = document.createElement("pre");
+        pre.className = "contribution-status__details";
+        pre.textContent = formatContributionDetails(details);
+        status.appendChild(pre);
+    }
+
     status.hidden = !message;
     status.dataset.state = state;
+}
+
+function formatContributionDetails(details) {
+    try {
+        return JSON.stringify(details, null, 2);
+    } catch (error) {
+        return String(details);
+    }
 }
 
 function findContributionStatus(trigger) {
