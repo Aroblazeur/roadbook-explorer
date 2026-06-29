@@ -118,6 +118,10 @@ function getRoadbookConfig() {
     return window.currentRoadbookConfig || window.roadbookContext?.config || null;
 }
 
+function contributionEndpoint() {
+    return safeText(getRoadbookConfig()?.contributionEndpoint, "");
+}
+
 function roadbookId() {
     const config = getRoadbookConfig();
     return sanitizeRoadbookId(config?.id || config?.shortId || window.roadbookContext?.id);
@@ -1786,31 +1790,144 @@ function renderAlternativeAccommodation(accommodation, stageNumber) {
 }
 
 function appendAddAccommodationButton(container, stageNumber) {
-    const formUrl = buildAddAccommodationFormUrl(stageNumber);
-    if (!formUrl) return;
+    if (!canSendContributions()) return;
 
     const action = document.createElement("div");
     action.className = "add-accommodation-action";
 
-    const link = document.createElement("a");
-    link.href = formUrl;
-    link.className = "terrain-button terrain-button--secondary";
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = "➕ Ajouter un hébergement";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "terrain-button terrain-button--secondary";
+    button.textContent = "➕ Ajouter un hébergement";
+    button.addEventListener("click", () => requestAddedAccommodation(stageNumber, button));
 
-    action.appendChild(link);
+    const status = document.createElement("p");
+    status.className = "contribution-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.hidden = true;
+
+    action.append(button, status);
     container.appendChild(action);
 }
 
-function buildAddAccommodationFormUrl(stageNumber) {
-    const form = getRoadbookConfig()?.forms?.addedAccommodation || {};
-    if (!form.url || !form.stageField) return "";
+function canSendContributions() {
+    const config = getRoadbookConfig();
+    return Boolean(contributionEndpoint() && config?.googleSheetId && roadbookId());
+}
 
-    const url = new URL(form.url);
-    url.searchParams.set("usp", "pp_url");
-    url.searchParams.set(form.stageField, safeText(stageNumber, ""));
-    return url.href;
+async function requestTravelerNote(stageNumber, trigger) {
+    const note = window.prompt("Note voyageur à ajouter :");
+    if (note === null) return;
+
+    const cleanedNote = safeText(note, "");
+    if (!cleanedNote) {
+        setContributionStatus(trigger, "Note vide : rien à envoyer.", "error");
+        return;
+    }
+
+    const photo = window.prompt("URL photo optionnelle :", "") || "";
+
+    await submitContributionFromButton(trigger, {
+        contributionType: "travelerNote",
+        stage: stageNumber,
+        payload: {
+            note: cleanedNote,
+            photo: safeText(photo, "")
+        },
+        pendingMessage: "Envoi de la note…",
+        successMessage: "Note envoyée. Recharge la page pour la voir apparaître."
+    });
+}
+
+async function requestAddedAccommodation(stageNumber, trigger) {
+    const url = window.prompt("URL de l'hébergement à ajouter :");
+    if (url === null) return;
+
+    const cleanedUrl = safeText(url, "");
+    if (!cleanedUrl) {
+        setContributionStatus(trigger, "URL vide : rien à envoyer.", "error");
+        return;
+    }
+
+    const name = window.prompt("Nom de l'hébergement optionnel :", "") || "";
+    const photo = window.prompt("URL photo optionnelle :", "") || "";
+
+    await submitContributionFromButton(trigger, {
+        contributionType: "addedAccommodation",
+        stage: stageNumber,
+        payload: {
+            url: cleanedUrl,
+            name: safeText(name, ""),
+            photo: safeText(photo, "")
+        },
+        pendingMessage: "Envoi de l'hébergement…",
+        successMessage: "Hébergement envoyé. Recharge la page pour le voir apparaître."
+    });
+}
+
+async function submitContributionFromButton(trigger, options) {
+    const button = trigger instanceof HTMLElement ? trigger : null;
+    const previousDisabled = button?.disabled || false;
+
+    if (button) button.disabled = true;
+    setContributionStatus(button, options.pendingMessage, "pending");
+
+    try {
+        await sendContribution(options.contributionType, options.stage, options.payload);
+        setContributionStatus(button, options.successMessage, "success");
+    } catch (error) {
+        const message = error?.message || "Envoi impossible.";
+        setContributionStatus(button, message, "error");
+    } finally {
+        if (button) button.disabled = previousDisabled;
+    }
+}
+
+async function sendContribution(contributionType, stage, payload) {
+    const config = getRoadbookConfig();
+    const endpoint = contributionEndpoint();
+    if (!endpoint) throw new Error("Endpoint de contribution non configuré.");
+    if (!config?.googleSheetId) throw new Error("Google Sheet ID du roadbook absent.");
+    if (!roadbookId()) throw new Error("Identifiant roadbook absent.");
+
+    const body = {
+        roadbookId: roadbookId(),
+        googleSheetId: config.googleSheetId,
+        contributionType,
+        stage: safeText(stage, ""),
+        payload: payload || {}
+    };
+
+    await fetch(endpoint, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(body)
+    });
+
+    return body;
+}
+
+function setContributionStatus(trigger, message, state = "") {
+    const status = findContributionStatus(trigger);
+    if (!status) return;
+
+    status.textContent = message || "";
+    status.hidden = !message;
+    status.dataset.state = state;
+}
+
+function findContributionStatus(trigger) {
+    if (!trigger) return null;
+
+    if (trigger.id === "add-note") {
+        return document.getElementById("notes-contribution-status");
+    }
+
+    return trigger.closest(".add-accommodation-action")?.querySelector(".contribution-status") || null;
 }
 
 function resolveStageGpxUrl(url) {
@@ -1840,9 +1957,9 @@ function renderNotes(notes, stageNumber) {
     section.hidden = false;
     title.textContent = `Notes (${items.length})`;
     list.hidden = items.length === 0;
-    const formUrl = buildTravelerNotesFormUrl(stageNumber);
-    addButton.href = formUrl;
-    addButton.hidden = !formUrl;
+    addButton.removeAttribute("href");
+    addButton.dataset.stage = safeText(stageNumber, "");
+    addButton.hidden = !canSendContributions();
 
     items.forEach(note => {
         const item = document.createElement("li");
@@ -1867,16 +1984,6 @@ function renderNotes(notes, stageNumber) {
 
         list.appendChild(item);
     });
-}
-
-function buildTravelerNotesFormUrl(stageNumber) {
-    const form = getRoadbookConfig()?.forms?.travelerNotes || {};
-    if (!form.url || !form.stageField) return "";
-
-    const url = new URL(form.url);
-    url.searchParams.set("usp", "pp_url");
-    url.searchParams.set(form.stageField, safeText(stageNumber, ""));
-    return url.href;
 }
 
 function normalizeNoteEntry(note) {
@@ -2265,6 +2372,14 @@ document
 document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
+
+document
+    .getElementById("add-note")
+    .addEventListener("click", event => {
+        event.preventDefault();
+        const stageNumber = event.currentTarget.dataset.stage || roadbook?.days?.[currentDay]?.stage || "";
+        requestTravelerNote(stageNumber, event.currentTarget);
+    });
 
 window.addEventListener("popstate", () => {
     applyNavigationFromUrl({ replace: false }).catch(error => {

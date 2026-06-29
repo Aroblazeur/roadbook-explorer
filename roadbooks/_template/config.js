@@ -16,16 +16,6 @@
             addedAccommodation: Object.freeze({ name: "ajout hebergement" }),
             configuration: Object.freeze({ name: "Configuration" })
         }),
-        forms: Object.freeze({
-            travelerNotes: Object.freeze({
-                url: "",
-                stageField: ""
-            }),
-            addedAccommodation: Object.freeze({
-                url: "",
-                stageField: ""
-            })
-        }),
         enrichment: Object.freeze({
             accommodationPath: "roadbooks/my-roadbook/data/accommodation-enrichment.json",
             poiPath: "roadbooks/my-roadbook/data/poi-enrichment.json"

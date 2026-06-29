@@ -901,6 +901,20 @@ li{
     margin-top:16px;
 }
 
+.contribution-status{
+    margin:.65rem 0 0;
+    font-size:.92rem;
+    color:var(--text-light);
+}
+
+.contribution-status[data-state="success"]{
+    color:var(--primary-dark);
+}
+
+.contribution-status[data-state="error"]{
+    color:#b3261e;
+}
+
 .map-card{
     overflow:hidden;
 }
