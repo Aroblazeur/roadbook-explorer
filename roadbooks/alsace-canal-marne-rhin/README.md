@@ -26,7 +26,7 @@ roadbooks/<id>/
 2. **Modifier `config.js`** :
    - Remplacer toutes les occurrences de `my-roadbook` par votre `<id>`.
    - Renseigner `title`, `description`, `googleSheetId`.
-   - Compléter les URLs de formulaires (`forms`) si nécessaire.
+   - Les contributions utilisent l’endpoint global Apps Script du moteur ; aucun Google Form n’est à configurer par roadbook.
 
 3. **Ajouter le script** dans `index.html` (avant `app.js`) :
    ```html

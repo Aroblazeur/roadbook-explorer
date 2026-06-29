@@ -47,16 +47,6 @@ Exemple minimal :
             travelerNotes: Object.freeze({ name: "Notes voyageurs" }),
             addedAccommodation: Object.freeze({ name: "ajout hebergement" })
         }),
-        forms: Object.freeze({
-            travelerNotes: Object.freeze({
-                url: "https://docs.google.com/forms/...",
-                stageField: "entry.xxxxx"
-            }),
-            addedAccommodation: Object.freeze({
-                url: "https://docs.google.com/forms/...",
-                stageField: "entry.yyyyy"
-            })
-        }),
         enrichment: Object.freeze({
             accommodationPath: "roadbooks/perinexus/data/accommodation-enrichment.json",
             poiPath: "roadbooks/perinexus/data/poi-enrichment.json"
@@ -67,6 +57,8 @@ Exemple minimal :
 ```
 
 Le roadbook demandé est sélectionné avec `?roadbook=<identifiant>`. Sans paramètre, la bibliothèque générale des roadbooks est affichée.
+
+Les contributions utilisateur passent par l’endpoint global Apps Script configuré dans `roadbook-config.js`. Il n’y a pas de Google Form à créer par roadbook.
 
 ## Structure
 

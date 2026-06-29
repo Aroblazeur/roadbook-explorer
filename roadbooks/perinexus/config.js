@@ -16,16 +16,6 @@
             addedAccommodation: Object.freeze({ name: "ajout hebergement" }),
             configuration: Object.freeze({ name: "Configuration" })
         }),
-        forms: Object.freeze({
-            travelerNotes: Object.freeze({
-                url: "https://docs.google.com/forms/d/e/1FAIpQLSd_m6lL7ctB7sxz8VOx2Bm7fzNYBUCmXjAZ30YUkV1EK2pmbA/viewform",
-                stageField: "entry.521193530"
-            }),
-            addedAccommodation: Object.freeze({
-                url: "https://docs.google.com/forms/d/e/1FAIpQLSccYxccGvTR1Ih3PBdWDO2Z1kI_qrlM2VnDCmkUYDDpQLormA/viewform",
-                stageField: "entry.819202802"
-            })
-        }),
         enrichment: Object.freeze({
             accommodationPath: "roadbooks/perinexus/data/accommodation-enrichment.json",
             poiPath: "roadbooks/perinexus/data/poi-enrichment.json"

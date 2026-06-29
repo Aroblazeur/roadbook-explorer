@@ -16,16 +16,6 @@
             addedAccommodation: Object.freeze({ name: "ajout hebergement" }),
             configuration: Object.freeze({ name: "Configuration" })
         }),
-        forms: Object.freeze({
-            travelerNotes: Object.freeze({
-                url: "",
-                stageField: ""
-            }),
-            addedAccommodation: Object.freeze({
-                url: "",
-                stageField: ""
-            })
-        }),
         enrichment: Object.freeze({
             accommodationPath: "roadbooks/alsace-canal-marne-rhin/data/accommodation-enrichment.json",
             poiPath: "roadbooks/alsace-canal-marne-rhin/data/poi-enrichment.json"

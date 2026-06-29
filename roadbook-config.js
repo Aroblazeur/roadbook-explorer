@@ -4,6 +4,8 @@
     const DEFAULT_ROADBOOK_ID = "perinexus";
     const CONFIG_PATH_PREFIX = "roadbooks";
     const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID, "alsace-canal-marne-rhin"]);
+    const CONTRIBUTION_ENDPOINT =
+        "https://script.google.com/macros/s/AKfycbwZrE2tTFMd-rlj2gZ0V5rtHtwktL3aUvilVRahb0eMxBbCR5KLpWFRxpqU-IwIS7nslQ/exec";
 
     const requested = resolveRequestedRoadbook(global.location);
     const safeId = sanitizeRoadbookId(requested.id) || DEFAULT_ROADBOOK_ID;
@@ -109,11 +111,13 @@
             id,
             shortId: id,
             title: "RoadBook Explorer",
+            contributionEndpoint: CONTRIBUTION_ENDPOINT,
             sheets: {},
-            forms: {},
             options: {},
             ...config
         };
+
+        normalizedConfig.contributionEndpoint = CONTRIBUTION_ENDPOINT;
 
         normalizedConfig.id = sanitizeRoadbookId(normalizedConfig.id || id) || id;
         normalizedConfig.shortId = sanitizeRoadbookId(normalizedConfig.shortId || normalizedConfig.id) || normalizedConfig.id;
