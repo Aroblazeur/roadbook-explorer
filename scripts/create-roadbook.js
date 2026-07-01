@@ -27,9 +27,9 @@ const TEMPLATE_DIR = path.join(ROADBOOKS_DIR, "_template");
 const TEMPLATE_PLACEHOLDERS = Object.freeze({
     id: "my-roadbook",
     title: "Mon Roadbook",
-    description: "Description de l'itinéraire.",
-    googleSheetIdLine: '        googleSheetId: "",'
+    description: "Description de l'itinéraire."
 });
+const GOOGLE_SHEET_ID_LINE_PATTERN = /^(\s*)googleSheetId:\s*"",\s*$/m;
 
 async function main() {
     const args = parseCliArgs(process.argv.slice(2));
@@ -118,9 +118,7 @@ async function personalizeTemplate(roadbookDir, { id, title, description, google
         fs.readFile(roadbookJsonPath, "utf8")
     ]);
 
-    const sheetIdLine = `        googleSheetId: ${JSON.stringify(googleSheetId)},`;
-
-    const configContent = replaceRequired(
+    const configContent = replaceGoogleSheetIdLine(
         replaceRequired(
             replaceRequired(
                 replaceAllRequired(configTemplate, TEMPLATE_PLACEHOLDERS.id, id, "identifiant du roadbook"),
@@ -132,9 +130,7 @@ async function personalizeTemplate(roadbookDir, { id, title, description, google
             `description: ${JSON.stringify(description)},`,
             "description du roadbook"
         ),
-        TEMPLATE_PLACEHOLDERS.googleSheetIdLine,
-        sheetIdLine,
-        "googleSheetId"
+        googleSheetId
     );
 
     const roadbookContent = replaceRequired(
@@ -155,21 +151,30 @@ async function personalizeTemplate(roadbookDir, { id, title, description, google
     ]);
 }
 
-function ensurePlaceholder(content, placeholder, label) {
+function validateContains(content, placeholder, label) {
     if (!content.includes(placeholder)) {
         throw new Error(`Template incohérent : impossible de trouver le placeholder ${label}.`);
     }
-    return content;
 }
 
 function replaceRequired(content, search, replacement, label) {
-    ensurePlaceholder(content, search, label);
+    validateContains(content, search, label);
     return content.replace(search, replacement);
 }
 
 function replaceAllRequired(content, search, replacement, label) {
-    ensurePlaceholder(content, search, label);
+    validateContains(content, search, label);
     return content.replaceAll(search, replacement);
+}
+
+function replaceGoogleSheetIdLine(content, googleSheetId) {
+    if (!GOOGLE_SHEET_ID_LINE_PATTERN.test(content)) {
+        throw new Error("Template incohérent : impossible de trouver la ligne googleSheetId.");
+    }
+    return content.replace(
+        GOOGLE_SHEET_ID_LINE_PATTERN,
+        (_, indentation) => `${indentation}googleSheetId: ${JSON.stringify(googleSheetId)},`
+    );
 }
 
 // ---------------------------------------------------------------------------
