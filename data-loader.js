@@ -174,6 +174,14 @@ function normalizeAccommodationType(value) {
     return normalized;
 }
 
+function normalizeProjectStatus(value) {
+    const normalized = normalizeHeader(value);
+    if (!normalized) return "todo";
+    if (["deja fait", "deja faits", "deja-fait"].includes(normalized)) return "done";
+    if (["a faire", "a-faire"].includes(normalized)) return "todo";
+    return "todo";
+}
+
 function sanitizeNotePhotoUrl(value) {
     const candidate = String(value ?? "").trim();
     if (!candidate) return "";
@@ -656,6 +664,10 @@ function mapEtape(record) {
     const pois = buildPoiEntries(record);
     const gpx = firstValue(record, ["gpx"]);
     const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
+    const stagePhoto = sanitizeImageUrl(
+        firstValue(record, ["photo de l'etape", "photo de l'étape", "photo de l’etape", "photo etape"]) ??
+        firstValueByPrefix(record, "photo de l")
+    );
     const distance = toNumber(firstValue(record, ["distance (km)"]));
     const elevationGain = toNumber(firstValue(record, ["d+ (m)"]));
     const elevationLoss = toNumber(firstValue(record, ["d− (m)", "d- (m)"]));
@@ -690,6 +702,7 @@ function mapEtape(record) {
         notes,
         gpx,
         mapEmbedUrl,
+        stagePhoto,
         accommodation,
         alternativeAccommodation,
         accommodationType,
@@ -894,7 +907,9 @@ function roadbookLibraryFallback(config = {}) {
         activity: config.activity || config.options?.activity || "",
         destination: config.destination || config.options?.destination || "",
         description: config.description || "Roadbook d'itinérance à vélo.",
-        coverImage: sanitizeImageUrl(config.coverImage || config.options?.coverImage || "")
+        coverImage: sanitizeImageUrl(config.coverImage || config.options?.coverImage || ""),
+        project: config.project || config.options?.project || "",
+        projectStatus: normalizeProjectStatus(config.project || config.options?.project || "")
     };
 }
 
@@ -918,17 +933,21 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
             firstValue(row, ["activite", "activité", "activity"]) ||
             firstValue(row, ["destination"]) ||
             firstValue(row, ["description", "resume", "résumé"]) ||
-            firstValue(row, ["image couverture", "image de couverture", "cover image", "cover"])
+            firstValue(row, ["image couverture", "image de couverture", "cover image", "cover"]) ||
+            firstValue(row, ["projet"])
         );
     });
 
     if (directRow) {
+        const project = firstValue(directRow, ["projet"]) || fallback.project;
         return {
             ...fallback,
             title: firstValue(directRow, ["titre", "title", "nom"]) || fallback.title,
             activity: firstValue(directRow, ["activite", "activité", "activity", "type activite", "type activité"]) || fallback.activity,
             destination: firstValue(directRow, ["destination", "lieu", "region", "région"]) || fallback.destination,
             description: firstValue(directRow, ["description", "resume", "résumé"]) || fallback.description,
+            project,
+            projectStatus: normalizeProjectStatus(project),
             coverImage: sanitizeImageUrl(
                 firstValue(directRow, [
                     "image couverture",
@@ -954,12 +973,16 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
         keyValues[normalizeHeader(key)] = value;
     });
 
+    const project = metadataValueFromObject(keyValues, ["projet"]) || fallback.project;
+
     return {
         ...fallback,
         title: metadataValueFromObject(keyValues, ["titre", "title", "nom"]) || fallback.title,
         activity: metadataValueFromObject(keyValues, ["activite", "activité", "activity", "type activite", "type activité"]) || fallback.activity,
         destination: metadataValueFromObject(keyValues, ["destination", "lieu", "region", "région"]) || fallback.destination,
         description: metadataValueFromObject(keyValues, ["description", "resume", "résumé"]) || fallback.description,
+        project,
+        projectStatus: normalizeProjectStatus(project),
         coverImage: sanitizeImageUrl(
             metadataValueFromObject(keyValues, ["image couverture", "image de couverture", "cover image", "cover", "couverture", "image"]) || fallback.coverImage
         )
