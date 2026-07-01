@@ -1632,10 +1632,26 @@ function formatElevationMetric(value) {
 function renderStageMapEmbed(mapEmbedUrl, gpxUrl) {
     const resolvedGpx = resolveStageGpxUrl(gpxUrl);
     const viewer = window.roadbookMapViewer;
+    const diagnostics = {
+        roadbookId: getRoadbookConfig()?.id || getRoadbookConfig()?.shortId || "",
+        rawGpxUrl: safeText(gpxUrl, ""),
+        mapGpxUrl: resolvedGpx || "",
+        mapEmbedUrl: safeText(mapEmbedUrl, ""),
+        hasMapyEmbed: Boolean(mapEmbedUrl),
+        mapViewerAvailable: Boolean(viewer),
+        gpxRendererAvailable: Boolean(viewer && typeof viewer.renderGpx === "function"),
+        leafletAvailable: typeof window.L !== "undefined"
+    };
+    console.info("[GPX Map Diagnostic] Initialisation", diagnostics);
+
     if (!viewer || typeof viewer.renderEmbed !== "function") {
         const section = document.getElementById("map-embed-section");
         if (section) section.hidden = !resolvedGpx;
         renderMapGpxActions(resolvedGpx);
+        logStageGpxDiagnostics(resolvedGpx, {
+            ...diagnostics,
+            reason: "map-viewer indisponible ou renderEmbed absent"
+        });
         return false;
     }
     const mapVisible = viewer.renderEmbed(mapEmbedUrl);
@@ -1644,6 +1660,13 @@ function renderStageMapEmbed(mapEmbedUrl, gpxUrl) {
         if (section) section.hidden = false;
     }
     renderMapGpxActions(resolvedGpx);
+    logStageGpxDiagnostics(resolvedGpx, {
+        ...diagnostics,
+        mapEmbedRendered: mapVisible,
+        reason: diagnostics.gpxRendererAvailable
+            ? "renderer GPX disponible"
+            : "aucun renderer GPX branché sur la carte actuelle"
+    });
     return mapVisible;
 }
 
@@ -1660,6 +1683,112 @@ function renderMapGpxActions(gpxUrl) {
     } else {
         downloadLink.removeAttribute("href");
     }
+}
+
+async function logStageGpxDiagnostics(gpxUrl, context = {}) {
+    const downloadLink = document.getElementById("map-gpx-download");
+    const downloadUrl = downloadLink?.getAttribute("href") || "";
+    console.info("[GPX Map Diagnostic] URL GPX", {
+        ...context,
+        mapGpxUrl: gpxUrl || "",
+        downloadGpxUrl: downloadUrl,
+        sameUrlForMapAndDownload: Boolean(gpxUrl) && gpxUrl === downloadUrl
+    });
+
+    if (!gpxUrl) {
+        console.warn("[GPX Map Diagnostic] Aucun GPX résolu pour la carte.");
+        return;
+    }
+
+    try {
+        const response = await fetch(gpxUrl, {
+            headers: { Accept: "application/gpx+xml, application/xml, text/xml, text/plain" }
+        });
+        console.info("[GPX Map Diagnostic] Réponse fetch", {
+            url: gpxUrl,
+            httpStatus: response.status,
+            ok: response.ok,
+            contentType: response.headers.get("content-type") || ""
+        });
+        if (!response.ok) {
+            console.error("[GPX Map Diagnostic] Chargement GPX échoué", {
+                url: gpxUrl,
+                httpStatus: response.status
+            });
+            return;
+        }
+
+        const text = await response.text();
+        console.info("[GPX Map Diagnostic] Début contenu GPX", text.slice(0, 300));
+
+        const parsed = parseGpxDiagnosticPoints(text);
+        console.info("[GPX Map Diagnostic] Parsing", {
+            success: parsed.success,
+            pointCount: parsed.points.length,
+            error: parsed.error || ""
+        });
+
+        if (!parsed.success) return;
+
+        const bounds = gpxDiagnosticBounds(parsed.points);
+        console.info("[GPX Map Diagnostic] Bounds calculés", bounds);
+        console.info("[GPX Map Diagnostic] Ajout carte / fitBounds", {
+            gpxAddedToMap: false,
+            fitBoundsExecuted: false,
+            reason: "Le moteur actuel ne possède pas de rendu GPX Leaflet ; seul le bouton téléchargement utilise cette URL."
+        });
+    } catch (error) {
+        console.error("[GPX Map Diagnostic] Erreur JavaScript ou réseau", {
+            url: gpxUrl,
+            message: error?.message || String(error)
+        });
+    }
+}
+
+function parseGpxDiagnosticPoints(xmlText) {
+    try {
+        if (typeof DOMParser !== "function") {
+            return { success: false, points: [], error: "DOMParser indisponible" };
+        }
+        const documentNode = new DOMParser().parseFromString(String(xmlText ?? ""), "application/xml");
+        if (documentNode.getElementsByTagName("parsererror").length) {
+            return { success: false, points: [], error: "XML/GPX invalide" };
+        }
+        const nodes = [
+            ...Array.from(documentNode.getElementsByTagName("trkpt")),
+            ...Array.from(documentNode.getElementsByTagName("rtept")),
+            ...Array.from(documentNode.getElementsByTagName("wpt"))
+        ];
+        const points = nodes
+            .map(node => ({
+                lat: Number(node.getAttribute("lat")),
+                lng: Number(node.getAttribute("lon"))
+            }))
+            .filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+        return {
+            success: points.length > 0,
+            points,
+            error: points.length > 0 ? "" : "Aucun point GPX exploitable"
+        };
+    } catch (error) {
+        return { success: false, points: [], error: error?.message || String(error) };
+    }
+}
+
+function gpxDiagnosticBounds(points) {
+    if (!Array.isArray(points) || !points.length) return null;
+    return points.reduce((bounds, point) => ({
+        minLat: Math.min(bounds.minLat, point.lat),
+        maxLat: Math.max(bounds.maxLat, point.lat),
+        minLng: Math.min(bounds.minLng, point.lng),
+        maxLng: Math.max(bounds.maxLng, point.lng)
+    }), {
+        minLat: points[0].lat,
+        maxLat: points[0].lat,
+        minLng: points[0].lng,
+        maxLng: points[0].lng
+    });
 }
 
 /**
