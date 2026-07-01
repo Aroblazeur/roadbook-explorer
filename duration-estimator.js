@@ -100,6 +100,7 @@
 
         const points = sequences.flat();
         if (points.length < 2) throw new Error("GPX sans trace exploitable");
+        const elevationPointCount = points.filter(point => point.elevation !== null).length;
 
         let distanceKm = 0;
         sequences.forEach(sequence => {
@@ -110,7 +111,7 @@
 
         if (!(distanceKm > 0)) throw new Error("Distance GPX indisponible");
 
-        const hasCompleteElevation = points.every(point => point.elevation !== null);
+        const hasCompleteElevation = elevationPointCount === points.length;
         let elevationGainM = null;
         let elevationLossM = null;
         if (hasCompleteElevation) {
@@ -125,7 +126,15 @@
             });
         }
 
-        return { distanceKm, elevationGainM, elevationLossM };
+        return {
+            distanceKm,
+            elevationGainM,
+            elevationLossM,
+            pointCount: points.length,
+            elevationPointCount,
+            hasElevation: elevationPointCount > 0,
+            hasCompleteElevation
+        };
     }
 
     function absoluteUrl(value) {
@@ -150,7 +159,19 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 return response.text();
             })
-            .then(text => ({ metrics: parseGpxMetrics(text), error: null }))
+            .then(text => {
+                const metrics = parseGpxMetrics(text);
+                console.info("[GPX Metrics] Diagnostic altitude", {
+                    url,
+                    pointCount: metrics.pointCount,
+                    elevationPointCount: metrics.elevationPointCount,
+                    hasCompleteElevation: metrics.hasCompleteElevation
+                });
+                if (metrics.elevationPointCount === 0) {
+                    console.info("[GPX Metrics] Ce GPX ne contient pas de données d'altitude.");
+                }
+                return { metrics, error: null };
+            })
             .catch(error => ({ metrics: null, error }));
 
         GPX_CACHE.set(url, request);

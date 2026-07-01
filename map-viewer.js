@@ -68,8 +68,15 @@
             console.info("[GPX Map] Parsing GPX", {
                 success: parsed.success,
                 pointCount: parsed.points.length,
+                elevationPointCount: parsed.elevationPointCount,
                 error: parsed.error || ""
             });
+            if (parsed.success && parsed.elevationPointCount === 0) {
+                console.info("[GPX Map] Ce GPX ne contient pas de données d'altitude.", {
+                    pointCount: parsed.points.length,
+                    elevationPointCount: parsed.elevationPointCount
+                });
+            }
 
             if (!parsed.success) {
                 throw new Error(parsed.error || "GPX sans point exploitable");
@@ -233,18 +240,28 @@
             const points = nodes
                 .map(node => ({
                     lat: Number(node.getAttribute("lat")),
-                    lng: Number(node.getAttribute("lon"))
+                    lng: Number(node.getAttribute("lon")),
+                    elevation: parseElevation(node)
                 }))
                 .filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+            const elevationPointCount = points.filter(point => point.elevation !== null).length;
 
             return {
                 success: points.length > 0,
                 points,
+                elevationPointCount,
                 error: points.length > 0 ? "" : "Aucun point GPX exploitable"
             };
         } catch (error) {
-            return { success: false, points: [], error: error?.message || String(error) };
+            return { success: false, points: [], elevationPointCount: 0, error: error?.message || String(error) };
         }
+    }
+
+    function parseElevation(node) {
+        const elevationNode = node.getElementsByTagName("ele")[0];
+        if (!elevationNode) return null;
+        const elevation = Number(String(elevationNode.textContent || "").trim().replace(",", "."));
+        return Number.isFinite(elevation) ? elevation : null;
     }
 
     function calculateBounds(points) {
