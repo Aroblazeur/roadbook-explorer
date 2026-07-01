@@ -177,8 +177,8 @@ function normalizeAccommodationType(value) {
 function normalizeProjectStatus(value) {
     const normalized = normalizeHeader(value);
     if (!normalized) return "todo";
-    if (["deja fait", "deja faits", "deja-fait"].includes(normalized)) return "done";
-    if (["a faire", "a-faire"].includes(normalized)) return "todo";
+    if (["deja fait", "deja faits", "deja-fait", "fait", "termine", "done"].includes(normalized)) return "done";
+    if (["a faire", "a-faire", "todo", "planned"].includes(normalized)) return "todo";
     return "todo";
 }
 

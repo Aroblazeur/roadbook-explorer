@@ -371,7 +371,14 @@ function createRoadbookLibraryGroups(cards) {
     const byKey = new Map(groups.map(group => [group.key, group]));
 
     cards.forEach(item => {
+        const rawProject = safeText(item.project, "");
         const key = roadbookProjectStatus(item) === "done" ? "done" : "todo";
+        console.info("[Roadbook Library] Classement projet", {
+            roadbookId: item.id || item.shortId || "",
+            rawProject,
+            normalizedProject: normalizeProjectValue(rawProject || item.projectStatus || ""),
+            category: key
+        });
         byKey.get(key).items.push(item);
     });
 
@@ -380,10 +387,19 @@ function createRoadbookLibraryGroups(cards) {
 
 function roadbookProjectStatus(item) {
     const value = item?.projectStatus || item?.project || "";
-    const normalized = normalizeAccommodationText(value);
-    if (["deja fait", "deja faits", "deja-fait"].includes(normalized)) return "done";
-    if (["a faire", "a-faire"].includes(normalized)) return "todo";
+    const normalized = normalizeProjectValue(value);
+    if (["done", "deja fait", "deja faits", "deja-fait", "fait", "termine"].includes(normalized)) return "done";
+    if (["todo", "a faire", "a-faire", "planned"].includes(normalized)) return "todo";
     return "todo";
+}
+
+function normalizeProjectValue(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
 }
 
 function createRoadbookLibraryGroup(group) {
