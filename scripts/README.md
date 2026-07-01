@@ -2,7 +2,7 @@
 
 ## Créer un nouveau roadbook
 
-`create-roadbook.js` génère automatiquement toute l'arborescence nécessaire pour un nouveau voyage.
+`create-roadbook.js` copie le template canonique `roadbooks/_template/`, puis personnalise automatiquement les placeholders nécessaires pour un nouveau voyage.
 
 ### Lancer le script
 
@@ -13,6 +13,7 @@ npm run create-roadbook
 Le script pose quelques questions interactives (identifiant, titre, description, ID du Google Sheet) et crée les fichiers suivants :
 
 ```text
+roadbooks/<id>/README.md
 roadbooks/<id>/config.js
 roadbooks/<id>/roadbook.json
 roadbooks/<id>/data/accommodation-enrichment.json
@@ -35,6 +36,8 @@ npm run create-roadbook -- --id=mon-voyage --title="Mon Voyage" --description="R
 | `--sheet-id` | ID du Google Sheet associé |
 
 Une fois le roadbook créé, accédez-y via : `index.html?roadbook=<id>`
+
+Si la structure attendue d'un roadbook évolue, mettez d'abord à jour `roadbooks/_template/` ; le script réutilisera automatiquement cette structure.
 
 ---
 

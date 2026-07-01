@@ -21,14 +21,21 @@ Ou avec n’importe quel serveur statique local. Ouvrir ensuite :
 
 ## Ajouter un roadbook
 
-Créer un dossier :
+Le plus simple est d'utiliser le script de scaffolding :
 
-```text
-roadbooks/<identifiant>/
-└── config.js
+```bash
+npm run create-roadbook -- --id=drava --title="Drava à vélo" --description="Roadbook d'itinérance." --sheet-id=ID_DU_GOOGLE_SHEET
 ```
 
-Exemple minimal :
+Le script copie le template canonique `roadbooks/_template/`, puis personnalise `config.js` et `roadbook.json`.
+
+Si vous devez le faire manuellement, copiez d'abord le template complet :
+
+```text
+cp -r roadbooks/_template roadbooks/<identifiant>
+```
+
+Puis adaptez au minimum `config.js`. Exemple :
 
 ```js
 "use strict";
@@ -45,13 +52,15 @@ Exemple minimal :
             stages: Object.freeze({ name: "etapes principales" }),
             substeps: Object.freeze({ name: "Variante et option" }),
             travelerNotes: Object.freeze({ name: "Notes voyageurs" }),
-            addedAccommodation: Object.freeze({ name: "ajout hebergement" })
+            addedAccommodation: Object.freeze({ name: "ajout hebergement" }),
+            configuration: Object.freeze({ name: "Configuration" })
         }),
         enrichment: Object.freeze({
-            accommodationPath: "roadbooks/perinexus/data/accommodation-enrichment.json",
-            poiPath: "roadbooks/perinexus/data/poi-enrichment.json"
+            accommodationPath: "roadbooks/drava/data/accommodation-enrichment.json",
+            poiPath: "roadbooks/drava/data/poi-enrichment.json"
         }),
-        fallbackJsonPaths: Object.freeze(["roadbooks/perinexus/roadbook.json"])
+        fallbackJsonPaths: Object.freeze(["roadbooks/drava/roadbook.json"]),
+        options: Object.freeze({})
     });
 })(typeof window !== "undefined" ? window : globalThis);
 ```
@@ -59,6 +68,18 @@ Exemple minimal :
 Le roadbook demandé est sélectionné avec `?roadbook=<identifiant>`. Sans paramètre, la bibliothèque générale des roadbooks est affichée.
 
 Les contributions utilisateur passent par l’endpoint global Apps Script configuré dans `roadbook-config.js`. Il n’y a pas de Google Form à créer par roadbook.
+
+## Synchronisation moteur ↔ templates
+
+`roadbooks/_template/` est la source canonique pour la structure attendue d'un roadbook.
+
+À chaque évolution du modèle Google Sheet ou de l'architecture d'un roadbook, vérifier et mettre à jour ensemble :
+
+- le moteur (`data-loader.js`) ;
+- le template Google Sheet ;
+- `roadbooks/_template/` ;
+- `roadbooks/template/README.md` si une règle métier change ;
+- le présent README si l'exemple minimal ou le flux de création évolue.
 
 ## Structure
 

@@ -21,6 +21,15 @@ const path = require("node:path");
 const readline = require("node:readline");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
+const ROADBOOKS_DIR = path.join(ROOT_DIR, "roadbooks");
+const TEMPLATE_DIR = path.join(ROADBOOKS_DIR, "_template");
+
+const TEMPLATE_PLACEHOLDERS = Object.freeze({
+    id: "my-roadbook",
+    title: "Mon Roadbook",
+    description: "Description de l'itinéraire.",
+    googleSheetIdLine: '        googleSheetId: "",'
+});
 
 async function main() {
     const args = parseCliArgs(process.argv.slice(2));
@@ -43,37 +52,22 @@ async function main() {
 
     closeReadline();
 
-    const roadbookDir = path.join(ROOT_DIR, "roadbooks", id);
+    const roadbookDir = path.join(ROADBOOKS_DIR, id);
 
     console.log(`\nCréation du roadbook "${id}"…`);
 
     try {
-        await fs.mkdir(roadbookDir);
+        await ensureTemplateIsComplete();
+        await fs.cp(TEMPLATE_DIR, roadbookDir, { recursive: true, errorOnExist: true, force: false });
     } catch (error) {
         if (error.code === "EEXIST") die(`Le dossier roadbooks/${id} existe déjà.`);
         throw error;
     }
-    await fs.mkdir(path.join(roadbookDir, "data"));
-    await fs.mkdir(path.join(roadbookDir, "gpx"));
-    await fs.mkdir(path.join(roadbookDir, "assets"));
-
-    await fs.writeFile(path.join(roadbookDir, "config.js"), buildConfigJs(id, title, description, googleSheetId), "utf8");
-    await fs.writeFile(path.join(roadbookDir, "roadbook.json"), buildRoadbookJson(title, description), "utf8");
-    await fs.writeFile(
-        path.join(roadbookDir, "data", "accommodation-enrichment.json"),
-        buildEmptyEnrichmentJson(),
-        "utf8"
-    );
-    await fs.writeFile(
-        path.join(roadbookDir, "data", "poi-enrichment.json"),
-        buildEmptyEnrichmentJson(),
-        "utf8"
-    );
-    await fs.writeFile(path.join(roadbookDir, "gpx", ".gitkeep"), "", "utf8");
-    await fs.writeFile(path.join(roadbookDir, "assets", ".gitkeep"), "", "utf8");
+    await personalizeTemplate(roadbookDir, { id, title, description, googleSheetId });
 
     console.log("\n✅ Roadbook créé avec succès !\n");
     console.log("Fichiers générés :");
+    console.log(`  roadbooks/${id}/README.md`);
     console.log(`  roadbooks/${id}/config.js`);
     console.log(`  roadbooks/${id}/roadbook.json`);
     console.log(`  roadbooks/${id}/data/accommodation-enrichment.json`);
@@ -94,85 +88,93 @@ async function main() {
 // File content generators
 // ---------------------------------------------------------------------------
 
-function buildConfigJs(id, title, description, googleSheetId) {
-    const fnName = toPascalCase(id);
-    const sheetIdLine = googleSheetId
-        ? `        googleSheetId: "${googleSheetId}",`
-        : `        // googleSheetId: "REMPLACER_PAR_L_ID_DU_GOOGLE_SHEET",`;
+async function ensureTemplateIsComplete() {
+    const requiredPaths = [
+        "README.md",
+        "config.js",
+        "roadbook.json",
+        path.join("data", "accommodation-enrichment.json"),
+        path.join("data", "poi-enrichment.json"),
+        path.join("assets", ".gitkeep"),
+        path.join("gpx", ".gitkeep")
+    ];
 
-    return `"use strict";
-
-(function register${fnName}RoadbookConfig(global) {
-    global.ROADBOOK_CONFIGS = global.ROADBOOK_CONFIGS || {};
-
-    global.ROADBOOK_CONFIGS["${id}"] = Object.freeze({
-        id: "${id}",
-        shortId: "${id}",
-        title: "${escapeJs(title)}",
-        description: "${escapeJs(description)}",
-${sheetIdLine}
-        sheets: Object.freeze({
-            stages: Object.freeze({ name: "etapes principales" }),
-            substeps: Object.freeze({ name: "Variante et option", gid: "" }),
-            travelerNotes: Object.freeze({ name: "Notes voyageurs" }),
-            addedAccommodation: Object.freeze({ name: "ajout hebergement" }),
-            configuration: Object.freeze({ name: "Configuration" })
-        }),
-        enrichment: Object.freeze({
-            accommodationPath: "roadbooks/${id}/data/accommodation-enrichment.json",
-            poiPath: "roadbooks/${id}/data/poi-enrichment.json"
-        }),
-        fallbackJsonPaths: Object.freeze(["roadbooks/${id}/roadbook.json"]),
-        options: Object.freeze({})
-    });
-})(typeof window !== "undefined" ? window : globalThis);
-`;
+    await Promise.all(requiredPaths.map(async relativePath => {
+        const absolutePath = path.join(TEMPLATE_DIR, relativePath);
+        try {
+            await fs.access(absolutePath);
+        } catch (error) {
+            throw new Error(`Template incomplet : fichier manquant ${path.relative(ROOT_DIR, absolutePath)}`);
+        }
+    }));
 }
 
-function buildRoadbookJson(title, description) {
-    const template = {
-        title,
-        description,
-        days: [
-            {
-                title: "Jour 1 - Départ",
-                distance: 0,
-                elevation: 0,
-                duration: "",
-                description: "Description de la première étape.",
-                accommodation: "",
-                pois: []
-            }
-        ]
-    };
-    return JSON.stringify(template, null, 2) + "\n";
+async function personalizeTemplate(roadbookDir, { id, title, description, googleSheetId }) {
+    const configPath = path.join(roadbookDir, "config.js");
+    const roadbookJsonPath = path.join(roadbookDir, "roadbook.json");
+
+    const [configTemplate, roadbookTemplate] = await Promise.all([
+        fs.readFile(configPath, "utf8"),
+        fs.readFile(roadbookJsonPath, "utf8")
+    ]);
+
+    const sheetIdLine = `        googleSheetId: ${JSON.stringify(googleSheetId)},`;
+
+    const configContent = replaceRequired(
+        replaceRequired(
+            replaceRequired(
+                replaceAllRequired(configTemplate, TEMPLATE_PLACEHOLDERS.id, id, "identifiant du roadbook"),
+                `title: ${JSON.stringify(TEMPLATE_PLACEHOLDERS.title)},`,
+                `title: ${JSON.stringify(title)},`,
+                "title du roadbook"
+            ),
+            `description: ${JSON.stringify(TEMPLATE_PLACEHOLDERS.description)},`,
+            `description: ${JSON.stringify(description)},`,
+            "description du roadbook"
+        ),
+        TEMPLATE_PLACEHOLDERS.googleSheetIdLine,
+        sheetIdLine,
+        "googleSheetId"
+    );
+
+    const roadbookContent = replaceRequired(
+        replaceRequired(
+            roadbookTemplate,
+            `"title": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.title)}`,
+            `"title": ${JSON.stringify(title)}`,
+            "title du roadbook"
+        ),
+        `"description": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.description)}`,
+        `"description": ${JSON.stringify(description)}`,
+        "description du roadbook"
+    );
+
+    await Promise.all([
+        fs.writeFile(configPath, configContent, "utf8"),
+        fs.writeFile(roadbookJsonPath, roadbookContent, "utf8")
+    ]);
 }
 
-function buildEmptyEnrichmentJson() {
-    return JSON.stringify({ generatedAt: new Date().toISOString(), items: [] }, null, 2) + "\n";
+function ensurePlaceholder(content, placeholder, label) {
+    if (!content.includes(placeholder)) {
+        throw new Error(`Template incohérent : impossible de trouver le placeholder ${label}.`);
+    }
+    return content;
+}
+
+function replaceRequired(content, search, replacement, label) {
+    ensurePlaceholder(content, search, label);
+    return content.replace(search, replacement);
+}
+
+function replaceAllRequired(content, search, replacement, label) {
+    ensurePlaceholder(content, search, label);
+    return content.replaceAll(search, replacement);
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function toPascalCase(id) {
-    return id
-        .split("-")
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join("");
-}
-
-function escapeJs(value) {
-    return String(value)
-        .replace(/\\/g, "\\\\")
-        .replace(/"/g, '\\"')
-        .replace(/\n/g, "\\n")
-        .replace(/\r/g, "\\r")
-        .replace(/\t/g, "\\t")
-        .replace(/\u2028/g, "\\u2028")
-        .replace(/\u2029/g, "\\u2029");
-}
 
 function parseCliArgs(argv) {
     const result = {};

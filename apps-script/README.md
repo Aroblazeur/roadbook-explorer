@@ -241,6 +241,12 @@ Pour ajouter un type :
    - `buildValues(request)`
 3. Ajouter la feuille et ses en-têtes dans chaque Google Sheet de roadbook.
 
+À chaque nouveau type de contribution ou nouvelle feuille associée, mettre aussi à jour :
+
+- `roadbooks/_template/config.js` si la configuration des feuilles change ;
+- `scripts/create-roadbook.js` si de nouveaux placeholders ou fichiers deviennent nécessaires ;
+- la documentation du template (`roadbooks/_template/README.md` et `roadbooks/template/README.md`) si une nouvelle règle est introduite.
+
 ## Sécurité future
 
 Le fichier `Code.gs` contient déjà un bloc `SECURITY` prévu pour activer plus tard :

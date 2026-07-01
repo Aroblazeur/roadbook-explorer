@@ -19,12 +19,19 @@ roadbooks/<id>/
 
 ## Créer un nouveau roadbook
 
-1. **Copier ce dossier** en le renommant avec l'identifiant de votre roadbook :
+1. **Créer le roadbook à partir du template canonique** :
+   ```bash
+   npm run create-roadbook -- --id=<id> --title="Mon voyage" --description="Roadbook d'itinérance." --sheet-id=SHEET_ID
+   ```
+
+   Le script copie ce dossier `roadbooks/_template/` puis remplace les placeholders.
+
+   Vous pouvez aussi le copier manuellement :
    ```
    cp -r roadbooks/_template roadbooks/<id>
    ```
 
-2. **Modifier `config.js`** :
+2. **Modifier `config.js`** si nécessaire :
    - Remplacer toutes les occurrences de `my-roadbook` par votre `<id>`.
    - Renseigner `title`, `description`, `googleSheetId`.
    - Les contributions utilisent l’endpoint global Apps Script du moteur ; aucun Google Form n’est à configurer par roadbook.
@@ -56,3 +63,14 @@ roadbooks/<id>/
    ```
 
 7. **Accéder au roadbook** via `?roadbook=<id>` dans l'URL.
+
+## Synchronisation obligatoire
+
+`roadbooks/_template/` est la source canonique pour la structure d'un roadbook.
+
+À chaque évolution du modèle Google Sheet ou de l'architecture attendue :
+
+- mettre à jour le moteur (`data-loader.js`) ;
+- mettre à jour ce template ;
+- vérifier que `scripts/create-roadbook.js` copie toujours ce template sans divergence ;
+- mettre à jour `roadbooks/template/README.md` et le `README.md` racine si une règle change.
