@@ -326,6 +326,22 @@ button:disabled{
     gap:14px;
 }
 
+.roadbook-library-group{
+    display:grid;
+    gap:12px;
+}
+
+.roadbook-library-group__title{
+    margin:8px 0 0;
+    color:var(--primary-dark);
+    font-size:1.15rem;
+}
+
+.roadbook-library-group__items{
+    display:grid;
+    gap:14px;
+}
+
 .roadbook-library-card{
     display:grid;
     grid-template-columns:minmax(180px,260px) minmax(0,1fr);
@@ -567,6 +583,21 @@ button:disabled{
 .stage-city-link:hover,
 .stage-city-link:focus-visible{
     color:var(--primary-dark);
+}
+
+.stage-photo{
+    margin:0 0 18px;
+    overflow:hidden;
+    border-radius:16px;
+    border:1px solid rgba(46,125,50,.14);
+    background:#e7eee8;
+}
+
+.stage-photo__image{
+    display:block;
+    width:100%;
+    max-height:420px;
+    object-fit:cover;
 }
 
 .label{
@@ -1032,6 +1063,10 @@ footer{
         grid-template-columns:1fr;
         gap:12px;
         padding:12px;
+    }
+
+    .stage-photo__image{
+        max-height:280px;
     }
 
     .home-stage-card--substep{

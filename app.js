@@ -358,7 +358,50 @@ function drawRoadbookLibraryCards() {
     }
 
     empty.hidden = true;
-    cards.forEach(item => list.appendChild(createRoadbookLibraryCard(item)));
+    createRoadbookLibraryGroups(cards)
+        .filter(group => group.items.length > 0)
+        .forEach(group => list.appendChild(createRoadbookLibraryGroup(group)));
+}
+
+function createRoadbookLibraryGroups(cards) {
+    const groups = [
+        { key: "todo", title: "À faire", items: [] },
+        { key: "done", title: "Déjà faits", items: [] }
+    ];
+    const byKey = new Map(groups.map(group => [group.key, group]));
+
+    cards.forEach(item => {
+        const key = roadbookProjectStatus(item) === "done" ? "done" : "todo";
+        byKey.get(key).items.push(item);
+    });
+
+    return groups;
+}
+
+function roadbookProjectStatus(item) {
+    const value = item?.projectStatus || item?.project || "";
+    const normalized = normalizeAccommodationText(value);
+    if (["deja fait", "deja faits", "deja-fait"].includes(normalized)) return "done";
+    if (["a faire", "a-faire"].includes(normalized)) return "todo";
+    return "todo";
+}
+
+function createRoadbookLibraryGroup(group) {
+    const section = document.createElement("section");
+    section.className = "roadbook-library-group";
+    section.setAttribute("aria-labelledby", `roadbook-library-group-${group.key}`);
+
+    const title = document.createElement("h3");
+    title.id = `roadbook-library-group-${group.key}`;
+    title.className = "roadbook-library-group__title";
+    title.textContent = group.title;
+
+    const items = document.createElement("div");
+    items.className = "roadbook-library-group__items";
+    group.items.forEach(item => items.appendChild(createRoadbookLibraryCard(item)));
+
+    section.append(title, items);
+    return section;
 }
 
 function createRoadbookLibraryCard(item) {
@@ -1076,6 +1119,7 @@ function displayDay(index, options = {}) {
     document.getElementById("current-day").textContent = navigationCenterLabel(day, index);
 
     renderStageTitle(day, index);
+    renderStagePhoto(day);
 
     renderStageMetricsAndDuration(day, index);
 
@@ -1144,6 +1188,35 @@ function buildSubstepTitleContent(type, departure, arrival) {
     }
     content.push(route);
     return content;
+}
+
+function renderStagePhoto(day) {
+    const card = document.getElementById("day-card");
+    const heading = document.getElementById("day-title");
+    if (!card || !heading) return;
+
+    const existing = card.querySelector(".stage-photo");
+    if (existing) existing.remove();
+
+    const photo = !day?.isSubstep && isSafeLibraryImageSource(day?.stagePhoto)
+        ? safeText(day.stagePhoto, "")
+        : "";
+    if (!photo) return;
+
+    const figure = document.createElement("figure");
+    figure.className = "stage-photo";
+
+    const image = document.createElement("img");
+    image.className = "stage-photo__image";
+    image.src = photo;
+    image.loading = "lazy";
+    image.alt = `Photo de ${safeText(day.title || day.name, "l'étape")}`;
+    image.addEventListener("error", () => {
+        figure.remove();
+    }, { once: true });
+
+    figure.appendChild(image);
+    heading.insertAdjacentElement("afterend", figure);
 }
 
 function createStageCityLink(city) {
