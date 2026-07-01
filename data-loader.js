@@ -590,9 +590,7 @@ function sanitizeMapEmbedUrl(value) {
 
     try {
         const url = new URL(candidate);
-        return url.origin === "https://mapy.com" && url.href.startsWith("https://mapy.com/")
-            ? url.href
-            : null;
+        return ["http:", "https:"].includes(url.protocol) ? url.href : null;
     } catch (error) {
         return null;
     }
