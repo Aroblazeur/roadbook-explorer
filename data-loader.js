@@ -162,6 +162,36 @@ function sanitizeImageUrl(value) {
     return unsafe ? "" : candidate;
 }
 
+function sanitizeRoadbookAssetName(value) {
+    const candidate = String(value ?? "").trim();
+    if (!candidate) return "";
+    if (candidate.startsWith("//") || candidate.includes("\\") || /^[a-z][a-z0-9+.-]*:/i.test(candidate)) return "";
+    if (candidate.startsWith("/") || candidate.includes("?") || candidate.includes("#")) return "";
+
+    const parts = candidate.split("/");
+    if (parts.some(part => !part || part === "." || part === "..")) return "";
+    return parts.map(part => encodeURIComponent(part)).join("/");
+}
+
+function roadbookDataAssetBase(config = currentRoadbookConfig()) {
+    const id = String(config?.id || config?.shortId || "").trim().toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(id)) return "";
+    return `roadbooks/${id}/data`;
+}
+
+function resolveRoadbookDataImage(value, config = currentRoadbookConfig()) {
+    const candidate = String(value ?? "").trim();
+    if (!candidate) return "";
+
+    if (/^https?:\/\//i.test(candidate)) {
+        return sanitizeImageUrl(candidate);
+    }
+
+    const filename = sanitizeRoadbookAssetName(candidate);
+    const base = roadbookDataAssetBase(config);
+    return filename && base ? `${base}/${filename}` : "";
+}
+
 function normalizeAccommodationType(value) {
     const normalized = normalizeHeader(value);
     if (!normalized) return "";
@@ -655,7 +685,7 @@ function buildComputedStagesTotal(stages, marker = null) {
     };
 }
 
-function mapEtape(record) {
+function mapEtape(record, config = currentRoadbookConfig()) {
     const stageNumber = toNumber(firstValue(record, ["numero etape"]));
     const dayLabel = firstValue(record, ["jour"]);
     const departure = firstValue(record, ["depart", "départ"]);
@@ -664,9 +694,10 @@ function mapEtape(record) {
     const pois = buildPoiEntries(record);
     const gpx = firstValue(record, ["gpx"]);
     const mapEmbedUrl = sanitizeMapEmbedUrl(firstValue(record, ["lien d'integration de map"]));
-    const stagePhoto = sanitizeImageUrl(
+    const stagePhoto = resolveRoadbookDataImage(
         firstValue(record, ["photo de l'etape", "photo de l'étape", "photo de l’etape", "photo etape"]) ??
-        firstValueByPrefix(record, "photo de l")
+        firstValueByPrefix(record, "photo de l"),
+        config
     );
     const distance = toNumber(firstValue(record, ["distance (km)"]));
     const elevationGain = toNumber(firstValue(record, ["d+ (m)"]));
@@ -876,7 +907,7 @@ function buildNavigableStages(stages) {
 function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedAccommodationRows = [], config = currentRoadbookConfig()) {
     const summary = buildSummary(etapesRows);
     const stageRows = etapesRows.filter(row => !isSummaryRow(row));
-    const stages = stageRows.map(mapEtape);
+    const stages = stageRows.map(row => mapEtape(row, config));
 
     console.log(`[Roadbook] Lignes principales choisies : ${stages.length}`);
     console.log(`[Roadbook] Lignes sous-étapes (feuille Variante et option) : ${variantesRows.length}`);
@@ -1192,6 +1223,8 @@ if (typeof module !== "undefined" && module.exports) {
         mapAddedAccommodation,
         attachAddedAccommodations,
         sanitizeMapEmbedUrl,
+        resolveRoadbookDataImage,
+        sanitizeRoadbookAssetName,
         loadGoogleSheetRoadbook,
         loadFallbackRoadbook,
         loadRoadbook,

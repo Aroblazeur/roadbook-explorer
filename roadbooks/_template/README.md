@@ -8,9 +8,10 @@ Ce dossier est le modèle à copier pour créer un nouveau roadbook.
 roadbooks/<id>/
 ├── config.js          # Configuration du roadbook (identifiant, titre, Google Sheet, etc.)
 ├── roadbook.json      # Données de secours (fallback si le Google Sheet est indisponible)
-├── data/              # Fichiers d'enrichissement générés par les scripts
+├── data/              # Fichiers d'enrichissement et photos d'étapes du roadbook
 │   ├── accommodation-enrichment.json
-│   └── poi-enrichment.json
+│   ├── poi-enrichment.json
+│   └── etape01.jpg
 ├── gpx/               # Fichiers GPX des étapes (ex : etape01.gpx)
 ├── assets/            # Images et ressources spécifiques au roadbook
 └── README.md          # Ce fichier
@@ -35,10 +36,23 @@ roadbooks/<id>/
 
 4. **Ajouter les fichiers GPX** dans `gpx/` (un fichier par étape).
 
-5. **Générer les enrichissements** (optionnel) :
+5. **Ajouter les photos d'étapes** dans `data/` si le Google Sheet les référence.
+
+   Dans la colonne `photo de l'étape`, vous pouvez utiliser :
+   - une URL complète : `https://example.com/photo.jpg`
+   - un nom de fichier local : `etape01.jpg`
+
+   Un nom de fichier local est automatiquement résolu vers :
+   ```
+   roadbooks/<id>/data/etape01.jpg
+   ```
+
+   N'utilisez pas de chemin absolu ni de chemin contenant `../`.
+
+6. **Générer les enrichissements** (optionnel) :
    ```bash
    npm run enrich:accommodations -- --roadbook <id>
    npm run enrich:pois -- --roadbook <id>
    ```
 
-6. **Accéder au roadbook** via `?roadbook=<id>` dans l'URL.
+7. **Accéder au roadbook** via `?roadbook=<id>` dans l'URL.
