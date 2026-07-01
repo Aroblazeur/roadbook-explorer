@@ -151,19 +151,19 @@ async function personalizeTemplate(roadbookDir, { id, title, description, google
     ]);
 }
 
-function validateContains(content, placeholder, label) {
+function ensurePlaceholderExists(content, placeholder, label) {
     if (!content.includes(placeholder)) {
         throw new Error(`Template incohérent : impossible de trouver le placeholder ${label}.`);
     }
 }
 
 function replaceRequired(content, search, replacement, label) {
-    validateContains(content, search, label);
+    ensurePlaceholderExists(content, search, label);
     return content.replace(search, replacement);
 }
 
 function replaceAllRequired(content, search, replacement, label) {
-    validateContains(content, search, label);
+    ensurePlaceholderExists(content, search, label);
     return content.replaceAll(search, replacement);
 }
 

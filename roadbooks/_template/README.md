@@ -62,7 +62,7 @@ roadbooks/<id>/
    npm run enrich:pois -- --roadbook <id>
    ```
 
-   Les fichiers `data/accommodation-enrichment.json` et `data/poi-enrichment.json` du template démarrent avec `generatedAt` vide. Cette valeur est renseignée lors d'une vraie génération d'enrichissement.
+   Les fichiers `data/accommodation-enrichment.json` et `data/poi-enrichment.json` du template démarrent avec `generatedAt: null`. Cette valeur est renseignée lors d'une vraie génération d'enrichissement.
 
 7. **Accéder au roadbook** via `?roadbook=<id>` dans l'URL.
 
