@@ -970,6 +970,14 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
 
     if (directRow) {
         const project = firstValue(directRow, ["projet"]) || fallback.project;
+        const rawCoverImage = firstValue(directRow, [
+            "image couverture",
+            "image de couverture",
+            "cover image",
+            "cover",
+            "couverture",
+            "image"
+        ]);
         return {
             ...fallback,
             title: firstValue(directRow, ["titre", "title", "nom"]) || fallback.title,
@@ -978,15 +986,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
             description: firstValue(directRow, ["description", "resume", "résumé"]) || fallback.description,
             project,
             projectStatus: normalizeProjectStatus(project),
-            coverImage: resolveRoadbookDataImage(
-                firstValue(directRow, [
-                    "image couverture",
-                    "image de couverture",
-                    "cover image",
-                    "cover",
-                    "couverture",
-                    "image"
-                ]), config) || fallback.coverImage
+            coverImage: rawCoverImage ? resolveRoadbookDataImage(rawCoverImage, config) : fallback.coverImage
         };
     }
 
@@ -1003,6 +1003,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
     });
 
     const project = metadataValueFromObject(keyValues, ["projet"]) || fallback.project;
+    const rawCoverImage = metadataValueFromObject(keyValues, ["image couverture", "image de couverture", "cover image", "cover", "couverture", "image"]);
 
     return {
         ...fallback,
@@ -1012,8 +1013,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
         description: metadataValueFromObject(keyValues, ["description", "resume", "résumé"]) || fallback.description,
         project,
         projectStatus: normalizeProjectStatus(project),
-        coverImage: resolveRoadbookDataImage(
-            metadataValueFromObject(keyValues, ["image couverture", "image de couverture", "cover image", "cover", "couverture", "image"]), config) || fallback.coverImage
+        coverImage: rawCoverImage ? resolveRoadbookDataImage(rawCoverImage, config) : fallback.coverImage
     };
 }
 
