@@ -41,7 +41,7 @@
         const { forceReload = false } = options;
         if (catalogLoadPromise && !forceReload) return catalogLoadPromise;
 
-        const fetchOptions = { cache: forceReload ? "reload" : "no-cache" };
+        const fetchOptions = { cache: forceReload ? "reload" : "no-store" };
         const catalogRequestUrl = buildCatalogRequestUrl({ forceReload });
         catalogLoadPromise = fetch(catalogRequestUrl, fetchOptions)
             .then(response => {
@@ -88,21 +88,19 @@
 
     function buildCatalogRequestUrl(options = {}) {
         const { forceReload = false } = options;
-        const base = scopeSafeHref(global.location?.href);
-        const url = new URL(CATALOG_PATH, base);
-        if (CATALOG_CACHE_BUSTER) {
-            url.searchParams.set("v", CATALOG_CACHE_BUSTER);
-        }
+        const params = new URLSearchParams();
+        if (CATALOG_CACHE_BUSTER) params.set("v", CATALOG_CACHE_BUSTER);
         if (forceReload) {
-            url.searchParams.set("update-check", "1");
-            url.searchParams.set("t", String(Date.now()));
+            params.set("update-check", "1");
+            params.set("t", String(Date.now()));
         }
+        const query = params.toString();
+        if (!global.location?.href) {
+            return query ? `${CATALOG_PATH}?${query}` : CATALOG_PATH;
+        }
+        const url = new URL(CATALOG_PATH, global.location.href);
+        params.forEach((value, key) => url.searchParams.set(key, value));
         return url.toString();
-    }
-
-    function scopeSafeHref(href) {
-        const normalized = String(href || "").trim();
-        return normalized || "http://localhost/";
     }
 
     function isCatalogIdVisible(id) {
