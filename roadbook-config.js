@@ -3,13 +3,16 @@
 (function initializeRoadbookConfig(global) {
     const DEFAULT_ROADBOOK_ID = "perinexus";
     const CONFIG_PATH_PREFIX = "roadbooks";
-    const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID, "alsace-canal-marne-rhin"]);
+    const CATALOG_PATH = `${CONFIG_PATH_PREFIX}/catalog.json`;
+    const EXCLUDED_CATALOG_IDS = new Set(["template"]);
+    const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
     const CONTRIBUTION_ENDPOINT =
         "https://script.google.com/macros/s/AKfycby9vh9snguG8M8khWWkqi2e4mrsmKsKKVNkMrIogb7BanHnoYN9v7DoP-Z08Yh7EPHK_A/exec";
 
     const requested = resolveRequestedRoadbook(global.location);
     const safeId = sanitizeRoadbookId(requested.id) || DEFAULT_ROADBOOK_ID;
-    const catalogIds = resolveCatalogIds(global.ROADBOOK_CATALOG_IDS);
+    let catalogIds = resolveCatalogIds(global.ROADBOOK_CATALOG_IDS);
+    let catalogLoadPromise = null;
     const context = {
         defaultId: DEFAULT_ROADBOOK_ID,
         requestedId: safeId,
@@ -21,6 +24,7 @@
     global.ROADBOOK_CONFIGS = global.ROADBOOK_CONFIGS || {};
     global.ROADBOOK_CATALOG_IDS = [...catalogIds];
     global.listRoadbookIds = () => [...catalogIds];
+    global.loadRoadbookCatalogIds = (options = {}) => loadCatalogIds(options);
     global.loadRoadbookConfigById = (id, options = {}) => loadRoadbookConfig(id, options);
     global.roadbookContext = context;
     global.roadbookConfigReady = requested.explicit
@@ -32,14 +36,53 @@
         })
         : Promise.resolve(null);
 
+    function loadCatalogIds(options = {}) {
+        const { forceReload = false } = options;
+        if (catalogLoadPromise && !forceReload) return catalogLoadPromise;
+
+        const fetchOptions = forceReload ? { cache: "no-cache" } : undefined;
+        catalogLoadPromise = fetch(CATALOG_PATH, fetchOptions)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(payload => {
+                const ids = resolveCatalogIds(payload?.roadbooks);
+                catalogIds = ids.length ? ids : [DEFAULT_ROADBOOK_ID];
+                global.ROADBOOK_CATALOG_IDS = [...catalogIds];
+                return [...catalogIds];
+            })
+            .catch(error => {
+                const reason = error?.message || "erreur inconnue";
+                console.warn(`[Roadbook] Catalogue indisponible (${CATALOG_PATH}) : ${reason}. Fallback sur "${DEFAULT_ROADBOOK_ID}".`);
+                catalogIds = [DEFAULT_ROADBOOK_ID];
+                global.ROADBOOK_CATALOG_IDS = [...catalogIds];
+                return [...catalogIds];
+            });
+
+        return catalogLoadPromise;
+    }
+
     function resolveCatalogIds(existingCatalog) {
         const source = Array.isArray(existingCatalog) && existingCatalog.length
             ? existingCatalog
             : KNOWN_ROADBOOK_IDS;
         const sanitized = source
             .map(item => sanitizeRoadbookId(item))
-            .filter(Boolean);
-        return sanitized.length ? [...new Set(sanitized)] : [DEFAULT_ROADBOOK_ID];
+            .filter(isCatalogIdVisible);
+        const deduplicated = [...new Set(sanitized)];
+        if (!deduplicated.includes(DEFAULT_ROADBOOK_ID)) {
+            deduplicated.unshift(DEFAULT_ROADBOOK_ID);
+        }
+        return deduplicated.length ? deduplicated : [DEFAULT_ROADBOOK_ID];
+    }
+
+    function isCatalogIdVisible(id) {
+        if (!id) return false;
+        if (id === DEFAULT_ROADBOOK_ID) return true;
+        return !EXCLUDED_CATALOG_IDS.has(id);
     }
 
     function resolveRequestedRoadbook(location) {
@@ -95,12 +138,18 @@
             script.onload = () => {
                 const config = global.ROADBOOK_CONFIGS?.[safeId];
                 if (!config) {
-                    reject(new Error(`Configuration "${safeId}" introuvable.`));
+                    const error = new Error(`Configuration "${safeId}" introuvable après le chargement de ${script.src}.`);
+                    console.warn(`[Roadbook] ${error.message}`);
+                    reject(error);
                     return;
                 }
                 resolve(resolveConfig(safeId, config, { activate }));
             };
-            script.onerror = () => reject(new Error(`Impossible de charger ${script.src}`));
+            script.onerror = () => {
+                const error = new Error(`Impossible de charger ${script.src}`);
+                console.warn(`[Roadbook] ${error.message}`);
+                reject(error);
+            };
             document.head.appendChild(script);
         });
     }
