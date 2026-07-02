@@ -129,6 +129,7 @@ function isNetworkFirstDataRequest(url) {
     if (isGoogleSheetRequest(url)) return true;
 
     if (url.origin !== self.location.origin) return false;
+    if (isCatalogRequest(url)) return false;
 
     return (
         url.pathname.endsWith("/roadbook.json") ||
