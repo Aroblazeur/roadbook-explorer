@@ -94,10 +94,6 @@
             params.set("update-check", "1");
             params.set("t", String(Date.now()));
         }
-        const query = params.toString();
-        if (!global.location?.href) {
-            return query ? `${CATALOG_PATH}?${query}` : CATALOG_PATH;
-        }
         const url = new URL(CATALOG_PATH, global.location.href);
         params.forEach((value, key) => url.searchParams.set(key, value));
         return url.toString();

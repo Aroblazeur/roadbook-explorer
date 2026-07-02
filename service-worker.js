@@ -216,7 +216,7 @@ async function staleWhileRevalidate(request, event) {
 async function networkFirstCatalog(request) {
     const cache = await caches.open(CATALOG_CACHE_NAME);
     try {
-        const response = await fetch(request, { cache: "no-store" });
+        const response = await fetch(request, { cache: "reload" });
         if (isCacheableResponse(response)) {
             await cache.put(CATALOG_CACHE_KEY, response.clone());
             await cache.put(
