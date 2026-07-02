@@ -545,6 +545,7 @@ function summaryRowKind(record) {
         const compact = label.replace(/[^a-z0-9]/g, "");
         if (label === "total" || compact === "totalofficiel") return "official";
         if (
+            compact === "totalparcours" ||
             compact === "totaldesetapes" ||
             (compact.startsWith("totaldes") && compact.endsWith("tapes"))
         ) {
