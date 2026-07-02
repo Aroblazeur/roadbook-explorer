@@ -4,7 +4,7 @@
     const DEFAULT_ROADBOOK_ID = "perinexus";
     const CONFIG_PATH_PREFIX = "roadbooks";
     const CATALOG_PATH = `${CONFIG_PATH_PREFIX}/catalog.json`;
-    const EXCLUDED_CATALOG_IDS = Object.freeze(["template"]);
+    const EXCLUDED_CATALOG_IDS = new Set(["template"]);
     const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
     const CONTRIBUTION_ENDPOINT =
         "https://script.google.com/macros/s/AKfycby9vh9snguG8M8khWWkqi2e4mrsmKsKKVNkMrIogb7BanHnoYN9v7DoP-Z08Yh7EPHK_A/exec";
@@ -71,7 +71,7 @@
             : KNOWN_ROADBOOK_IDS;
         const sanitized = source
             .map(item => sanitizeRoadbookId(item))
-            .filter(id => Boolean(id) && !EXCLUDED_CATALOG_IDS.includes(id));
+            .filter(id => Boolean(id) && !EXCLUDED_CATALOG_IDS.has(id));
         const deduplicated = [...new Set(sanitized)];
         if (!deduplicated.includes(DEFAULT_ROADBOOK_ID)) {
             deduplicated.unshift(DEFAULT_ROADBOOK_ID);
@@ -132,7 +132,7 @@
             script.onload = () => {
                 const config = global.ROADBOOK_CONFIGS?.[safeId];
                 if (!config) {
-                    const error = new Error(`Configuration "${safeId}" introuvable dans ${script.src}.`);
+                    const error = new Error(`Configuration "${safeId}" non définie après le chargement de ${script.src}.`);
                     console.warn(`[Roadbook] ${error.message}`);
                     reject(error);
                     return;
