@@ -4,6 +4,7 @@
     const DEFAULT_ROADBOOK_ID = "perinexus";
     const CONFIG_PATH_PREFIX = "roadbooks";
     const CATALOG_PATH = `${CONFIG_PATH_PREFIX}/catalog.json`;
+    const EXCLUDED_CATALOG_IDS = Object.freeze(["template"]);
     const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
     const CONTRIBUTION_ENDPOINT =
         "https://script.google.com/macros/s/AKfycby9vh9snguG8M8khWWkqi2e4mrsmKsKKVNkMrIogb7BanHnoYN9v7DoP-Z08Yh7EPHK_A/exec";
@@ -39,7 +40,8 @@
         const { forceReload = false } = options;
         if (catalogLoadPromise && !forceReload) return catalogLoadPromise;
 
-        catalogLoadPromise = fetch(CATALOG_PATH, { cache: "no-cache" })
+        const fetchOptions = forceReload ? { cache: "no-cache" } : undefined;
+        catalogLoadPromise = fetch(CATALOG_PATH, fetchOptions)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -69,7 +71,7 @@
             : KNOWN_ROADBOOK_IDS;
         const sanitized = source
             .map(item => sanitizeRoadbookId(item))
-            .filter(id => Boolean(id) && id !== "template");
+            .filter(id => Boolean(id) && !EXCLUDED_CATALOG_IDS.includes(id));
         const deduplicated = [...new Set(sanitized)];
         if (!deduplicated.includes(DEFAULT_ROADBOOK_ID)) {
             deduplicated.unshift(DEFAULT_ROADBOOK_ID);
