@@ -43,6 +43,14 @@ roadbooks/<id>/
 
 4. **Ajouter les fichiers GPX** dans `gpx/` (un fichier par étape).
 
+   Les colonnes `distance (km)`, `d+ (m)` et `d− (m)` du Google Sheet **peuvent rester vides** :
+   RoadBook Explorer calcule automatiquement ces valeurs depuis le fichier GPX de chaque étape.
+
+   **Règle de priorité :**
+   1. Si le Google Sheet contient une valeur explicite, elle est conservée.
+   2. Si la valeur est vide ou absente, la valeur calculée depuis le GPX est utilisée.
+   3. Une valeur saisie manuellement dans le Google Sheet n'est jamais écrasée.
+
 5. **Ajouter les photos d'étapes** dans `data/` si le Google Sheet les référence.
 
    Dans la colonne `photo de l'étape`, vous pouvez utiliser :
