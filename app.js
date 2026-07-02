@@ -613,6 +613,7 @@ function renderHomeStageList(container) {
 
     section.appendChild(list);
     container.appendChild(section);
+    prefetchAllStageGpxMetrics();
 }
 
 function createHomeStageCard(day, index) {
@@ -621,6 +622,7 @@ function createHomeStageCard(day, index) {
     button.className = day?.isSubstep
         ? "home-stage-card home-stage-card--substep"
         : "home-stage-card";
+    button.dataset.stageIndex = String(index);
     button.addEventListener("click", () => openStage(index));
     if (day?.isSubstep) {
         button.setAttribute("aria-label", `Sous-étape de l'étape ${safeText(day.parentStage || day.stage, "")} : ${stageRouteLabel(day, index)}`);
@@ -649,6 +651,7 @@ function createHomeStageCard(day, index) {
     stats.className = "home-stage-card__stats stats stats--compact";
     appendSummaryStatIfPresent(stats, "distance", "Distance", day.distance, formatDistanceMetric);
     appendSummaryStatIfPresent(stats, "elevationGain", "D+", day.elevationGain, formatElevationMetric);
+    appendSummaryStatIfPresent(stats, "elevationLoss", "D−", day.elevationLoss, formatElevationMetric);
     content.appendChild(stats);
 
     const accommodationIcon = document.createElement("span");
@@ -660,6 +663,92 @@ function createHomeStageCard(day, index) {
 
     button.append(number, content, accommodationIcon);
     return button;
+}
+
+/**
+ * Écrit les métriques GPX finales dans l'objet étape, seulement si la valeur
+ * du Google Sheet est absente. Retourne true si au moins une valeur a été mise à jour.
+ */
+function applyGpxMetricsToDay(day, finalMetrics) {
+    if (!day || !finalMetrics) return false;
+    let changed = false;
+    if (!Number.isFinite(day.distance) && Number.isFinite(finalMetrics.distanceKm)) {
+        day.distance = finalMetrics.distanceKm;
+        changed = true;
+    }
+    if (!Number.isFinite(day.elevationGain) && Number.isFinite(finalMetrics.elevationGainM)) {
+        day.elevationGain = finalMetrics.elevationGainM;
+        changed = true;
+    }
+    if (!Number.isFinite(day.elevationLoss) && Number.isFinite(finalMetrics.elevationLossM)) {
+        day.elevationLoss = finalMetrics.elevationLossM;
+        changed = true;
+    }
+    return changed;
+}
+
+/**
+ * Met à jour la zone de statistiques d'une carte d'étape dans la liste d'accueil
+ * après que les métriques GPX ont été calculées.
+ */
+function updateHomeStageCardMetrics(index) {
+    const card = document.querySelector(`.home-stage-list__items [data-stage-index="${index}"]`);
+    if (!card) return;
+    const day = roadbook?.days?.[index];
+    if (!day) return;
+    const stats = card.querySelector(".home-stage-card__stats");
+    if (!stats) return;
+    stats.replaceChildren();
+    appendSummaryStatIfPresent(stats, "distance", "Distance", day.distance, formatDistanceMetric);
+    appendSummaryStatIfPresent(stats, "elevationGain", "D+", day.elevationGain, formatElevationMetric);
+    appendSummaryStatIfPresent(stats, "elevationLoss", "D−", day.elevationLoss, formatElevationMetric);
+}
+
+/**
+ * Rafraîchit la section "Tracé total actuel" de la page d'accueil
+ * après la mise à jour des métriques GPX d'une ou plusieurs étapes.
+ */
+function updateHomeStagesTotalSection() {
+    if (currentView !== "home") return;
+    const info = document.getElementById("roadbook-info");
+    if (!info) return;
+    const existing = info.querySelector(".roadbook-current-summary");
+    const newSummary = computeStagesTotal();
+    const container = document.createElement("div");
+    renderRoadbookCurrentSummary(container, newSummary);
+    const newSection = container.firstChild;
+    if (existing && newSection) {
+        info.replaceChild(newSection, existing);
+    } else if (existing && !newSection) {
+        existing.remove();
+    } else if (!existing && newSection) {
+        info.appendChild(newSection);
+    }
+}
+
+/**
+ * Lance en arrière-plan le calcul des métriques GPX pour toutes les étapes
+ * et met à jour les cartes de la liste dès que les données sont disponibles.
+ */
+function prefetchAllStageGpxMetrics() {
+    const estimator = window.roadbookDurationEstimator;
+    if (!estimator || typeof estimator.estimateStageDuration !== "function") return;
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+
+    roadbook.days.forEach((day, index) => {
+        const gpxUrl = resolveStageGpxUrl(day.gpx || day.route?.gpx) || "";
+        if (!gpxUrl) return;
+        estimator.estimateStageDuration(day, { gpxUrl }).then(result => {
+            if (!result?.metrics) return;
+            const changed = applyGpxMetricsToDay(day, result.metrics);
+            if (changed) {
+                updateHomeStageCardMetrics(index);
+                updateHomeStagesTotalSection();
+            }
+        }).catch(error => {
+            console.warn(`[GPX Metrics] Pré-chargement impossible pour l'étape ${index} : ${error.message}`);
+        });
+    });
 }
 
 function accommodationNameForIcon(accommodation) {
@@ -1569,6 +1658,7 @@ function renderStageMetricsAndDuration(day, index) {
         if (requestId !== durationRequestId || currentDay !== index) return;
         renderStageMetricValues(result?.metrics);
         if (result?.formatted) updateStatValue("duration", result.formatted);
+        applyGpxMetricsToDay(day, result?.metrics ?? null);
         console.info("[GPX Metrics] Valeurs finales affichées", {
             stage: day?.stage,
             title: day?.title || day?.name || "",

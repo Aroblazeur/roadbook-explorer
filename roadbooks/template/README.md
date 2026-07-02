@@ -20,6 +20,22 @@ Exemples :
 
 Les chemins absolus et les chemins contenant `../` sont refusés par le moteur.
 
+## Métriques GPX automatiques (distance, D+, D−)
+
+Les colonnes `distance (km)`, `d+ (m)` et `d− (m)` du Google Sheet **peuvent rester vides**.
+
+Lorsque ces champs sont vides, nuls ou non renseignés, RoadBook Explorer les calcule
+automatiquement en analysant le fichier GPX de l'étape (colonne `gpx`).
+
+**Règle de priorité :**
+
+1. Si le Google Sheet contient une valeur explicite, elle est conservée telle quelle.
+2. Si la valeur est vide ou absente, la valeur calculée depuis le GPX est utilisée.
+3. Une valeur saisie manuellement dans le Google Sheet n'est jamais écrasée.
+
+Cette règle s'applique à toutes les étapes principales, aux sous-étapes, à la page de
+détail et à la liste des étapes de la page d'accueil, ainsi qu'au résumé total du parcours.
+
 À chaque évolution du modèle Google Sheet ou de l'architecture d'un roadbook, mettre à jour ensemble :
 
 - le moteur (`data-loader.js`) ;
