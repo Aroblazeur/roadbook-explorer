@@ -209,12 +209,13 @@ async function initializeApplication() {
     }
 }
 
-async function renderRoadbookLibrary() {
+async function renderRoadbookLibrary(options = {}) {
+    const { forceReloadCatalog = false } = options;
     const catalogLoader = typeof window.loadRoadbookCatalogIds === "function"
         ? window.loadRoadbookCatalogIds
         : null;
     const knownIds = catalogLoader
-        ? await catalogLoader()
+        ? await catalogLoader({ forceReload: forceReloadCatalog })
         : (typeof window.listRoadbookIds === "function"
             ? window.listRoadbookIds()
             : [window.roadbookContext?.defaultId || "perinexus"]);
@@ -249,6 +250,25 @@ async function renderRoadbookLibrary() {
     }
 
     drawRoadbookLibraryCards();
+}
+
+async function refreshRoadbookCatalog() {
+    const button = document.getElementById("refresh-catalog-button");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Vérification…";
+    }
+
+    try {
+        await renderRoadbookLibrary({ forceReloadCatalog: true });
+    } catch (error) {
+        console.error("[Roadbook] Vérification des mises à jour impossible :", error);
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Vérifier les mises à jour";
+        }
+    }
 }
 
 async function ensureRoadbookLoaded(id) {
@@ -2557,6 +2577,13 @@ document
 document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
+
+document
+    .getElementById("refresh-catalog-button")
+    ?.addEventListener("click", event => {
+        event.preventDefault();
+        refreshRoadbookCatalog();
+    });
 
 document
     .getElementById("add-note")

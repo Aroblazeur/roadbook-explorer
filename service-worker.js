@@ -6,6 +6,10 @@ const CACHE_VERSION = new URL(self.location.href).searchParams.get("v") || "dev"
 const ROADBOOK_ID = sanitizeRoadbookId(new URL(self.location.href).searchParams.get("roadbook")) || "perinexus";
 const CACHE_NAME = `${CACHE_PREFIX}-${ROADBOOK_ID}-${CACHE_VERSION}`;
 const DATA_CACHE_NAME = `${CACHE_PREFIX}-${ROADBOOK_ID}-data`;
+const CATALOG_CACHE_NAME = `${CACHE_PREFIX}-catalog`;
+const CATALOG_CACHE_KEY = `${self.location.origin}/roadbooks/catalog.json`;
+const CATALOG_METADATA_KEY = `${CATALOG_CACHE_KEY}#meta`;
+const CATALOG_STALE_TTL_MS = 5 * 60 * 1000;
 const STATIC_DESTINATIONS = new Set(["style", "script", "image", "font", "manifest", "audio", "video"]);
 const CORE_ASSETS = [
     "./",
@@ -61,6 +65,11 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+    if (isCatalogRequest(url)) {
+        event.respondWith(networkFirstCatalog(event.request));
+        return;
+    }
+
     if (isNetworkFirstDataRequest(url)) {
         event.respondWith(networkFirst(event.request, DATA_CACHE_NAME));
         return;
@@ -105,7 +114,7 @@ async function cleanupCaches() {
         keys
             .filter(key =>
                 LEGACY_CACHE_PATTERNS.some(pattern => pattern.test(key)) ||
-                (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && key !== DATA_CACHE_NAME)
+                (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME && key !== DATA_CACHE_NAME && key !== CATALOG_CACHE_NAME)
             )
             .map(key => caches.delete(key))
     );
@@ -120,10 +129,18 @@ function isNetworkFirstDataRequest(url) {
     if (isGoogleSheetRequest(url)) return true;
 
     if (url.origin !== self.location.origin) return false;
+    if (isCatalogRequest(url)) return false;
 
     return (
         url.pathname.endsWith("/roadbook.json") ||
         url.pathname.endsWith(".json")
+    );
+}
+
+function isCatalogRequest(url) {
+    return (
+        url.origin === self.location.origin &&
+        url.pathname.endsWith("/roadbooks/catalog.json")
     );
 }
 
@@ -195,4 +212,44 @@ async function staleWhileRevalidate(request, event) {
 
     const response = await networkPromise;
     return response || Response.error();
+}
+
+async function networkFirstCatalog(request) {
+    const cache = await caches.open(CATALOG_CACHE_NAME);
+    try {
+        const response = await fetch(request, { cache: "reload" });
+        if (isCacheableResponse(response)) {
+            await cache.put(CATALOG_CACHE_KEY, response.clone());
+            await cache.put(
+                CATALOG_METADATA_KEY,
+                new Response(
+                    JSON.stringify({ updatedAt: Date.now() }),
+                    { headers: { "content-type": "application/json" } }
+                )
+            );
+        }
+        return response;
+    } catch (error) {
+        const [cachedResponse, metadataResponse] = await Promise.all([
+            cache.match(CATALOG_CACHE_KEY),
+            cache.match(CATALOG_METADATA_KEY)
+        ]);
+        const isFresh = await isCatalogFallbackFresh(metadataResponse);
+        if (cachedResponse && isFresh) {
+            return cachedResponse;
+        }
+        throw error;
+    }
+}
+
+async function isCatalogFallbackFresh(metadataResponse) {
+    if (!metadataResponse) return false;
+    try {
+        const metadata = await metadataResponse.json();
+        const updatedAt = Number(metadata?.updatedAt);
+        if (!Number.isFinite(updatedAt)) return false;
+        return Date.now() - updatedAt <= CATALOG_STALE_TTL_MS;
+    } catch {
+        return false;
+    }
 }

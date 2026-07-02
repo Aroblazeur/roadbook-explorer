@@ -4,6 +4,7 @@
     const DEFAULT_ROADBOOK_ID = "perinexus";
     const CONFIG_PATH_PREFIX = "roadbooks";
     const CATALOG_PATH = `${CONFIG_PATH_PREFIX}/catalog.json`;
+    const CATALOG_CACHE_BUSTER = resolveCatalogCacheBuster(global);
     const EXCLUDED_CATALOG_IDS = new Set(["template"]);
     const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
     const CONTRIBUTION_ENDPOINT =
@@ -40,8 +41,9 @@
         const { forceReload = false } = options;
         if (catalogLoadPromise && !forceReload) return catalogLoadPromise;
 
-        const fetchOptions = forceReload ? { cache: "no-cache" } : undefined;
-        catalogLoadPromise = fetch(CATALOG_PATH, fetchOptions)
+        const fetchOptions = { cache: forceReload ? "reload" : "no-store" };
+        const catalogRequestUrl = buildCatalogRequestUrl({ forceReload });
+        catalogLoadPromise = fetch(catalogRequestUrl, fetchOptions)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -77,6 +79,24 @@
             deduplicated.unshift(DEFAULT_ROADBOOK_ID);
         }
         return deduplicated.length ? deduplicated : [DEFAULT_ROADBOOK_ID];
+    }
+
+    function resolveCatalogCacheBuster(scope) {
+        const token = String(scope?.__ROADBOOK_APP_VERSION__ || "").trim();
+        return token || "";
+    }
+
+    function buildCatalogRequestUrl(options = {}) {
+        const { forceReload = false } = options;
+        const params = new URLSearchParams();
+        if (CATALOG_CACHE_BUSTER) params.set("v", CATALOG_CACHE_BUSTER);
+        if (forceReload) {
+            params.set("update-check", "1");
+            params.set("t", String(Date.now()));
+        }
+        const url = new URL(CATALOG_PATH, global.location.href);
+        params.forEach((value, key) => url.searchParams.set(key, value));
+        return url.toString();
     }
 
     function isCatalogIdVisible(id) {
