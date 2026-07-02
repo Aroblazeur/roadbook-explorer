@@ -40,13 +40,6 @@ self.addEventListener("message", event => {
     if (event.data && event.data.type === "SKIP_WAITING") {
         self.skipWaiting();
     }
-
-    function isCatalogRequest(url) {
-        return (
-            url.origin === self.location.origin &&
-            url.pathname.endsWith("/roadbooks/catalog.json")
-        );
-    }
 });
 
 self.addEventListener("install", event => {
@@ -140,6 +133,13 @@ function isNetworkFirstDataRequest(url) {
     return (
         url.pathname.endsWith("/roadbook.json") ||
         url.pathname.endsWith(".json")
+    );
+}
+
+function isCatalogRequest(url) {
+    return (
+        url.origin === self.location.origin &&
+        url.pathname.endsWith("/roadbooks/catalog.json")
     );
 }
 

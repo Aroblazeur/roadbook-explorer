@@ -41,7 +41,7 @@
         const { forceReload = false } = options;
         if (catalogLoadPromise && !forceReload) return catalogLoadPromise;
 
-        const fetchOptions = { cache: forceReload ? "reload" : "no-store" };
+        const fetchOptions = { cache: forceReload ? "reload" : "no-cache" };
         const catalogRequestUrl = buildCatalogRequestUrl({ forceReload });
         catalogLoadPromise = fetch(catalogRequestUrl, fetchOptions)
             .then(response => {
