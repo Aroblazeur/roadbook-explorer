@@ -326,6 +326,12 @@ button:disabled{
     gap:14px;
 }
 
+.roadbook-library-actions{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:12px;
+}
+
 .roadbook-library-group{
     display:grid;
     gap:12px;
