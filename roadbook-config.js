@@ -71,12 +71,18 @@
             : KNOWN_ROADBOOK_IDS;
         const sanitized = source
             .map(item => sanitizeRoadbookId(item))
-            .filter(id => Boolean(id) && !EXCLUDED_CATALOG_IDS.has(id));
+            .filter(isCatalogIdVisible);
         const deduplicated = [...new Set(sanitized)];
         if (!deduplicated.includes(DEFAULT_ROADBOOK_ID)) {
             deduplicated.unshift(DEFAULT_ROADBOOK_ID);
         }
         return deduplicated.length ? deduplicated : [DEFAULT_ROADBOOK_ID];
+    }
+
+    function isCatalogIdVisible(id) {
+        if (!id) return false;
+        if (id === DEFAULT_ROADBOOK_ID) return true;
+        return !EXCLUDED_CATALOG_IDS.has(id);
     }
 
     function resolveRequestedRoadbook(location) {
@@ -132,7 +138,7 @@
             script.onload = () => {
                 const config = global.ROADBOOK_CONFIGS?.[safeId];
                 if (!config) {
-                    const error = new Error(`Configuration "${safeId}" non définie après le chargement de ${script.src}.`);
+                    const error = new Error(`Configuration "${safeId}" introuvable après le chargement de ${script.src}.`);
                     console.warn(`[Roadbook] ${error.message}`);
                     reject(error);
                     return;
