@@ -210,9 +210,14 @@ async function initializeApplication() {
 }
 
 async function renderRoadbookLibrary() {
-    const knownIds = typeof window.listRoadbookIds === "function"
-        ? window.listRoadbookIds()
-        : [window.roadbookContext?.defaultId || "perinexus"];
+    const catalogLoader = typeof window.loadRoadbookCatalogIds === "function"
+        ? window.loadRoadbookCatalogIds
+        : null;
+    const knownIds = catalogLoader
+        ? await catalogLoader()
+        : (typeof window.listRoadbookIds === "function"
+            ? window.listRoadbookIds()
+            : [window.roadbookContext?.defaultId || "perinexus"]);
 
     const configLoader = typeof window.loadRoadbookConfigById === "function"
         ? window.loadRoadbookConfigById
