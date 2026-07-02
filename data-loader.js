@@ -937,7 +937,7 @@ function roadbookLibraryFallback(config = {}) {
         activity: config.activity || config.options?.activity || "",
         destination: config.destination || config.options?.destination || "",
         description: config.description || "Roadbook d'itinérance à vélo.",
-        coverImage: sanitizeImageUrl(config.coverImage || config.options?.coverImage || ""),
+        coverImage: resolveRoadbookDataImage(config.coverImage || config.options?.coverImage || "", config),
         project: config.project || config.options?.project || "",
         projectStatus: normalizeProjectStatus(config.project || config.options?.project || "")
     };
@@ -978,7 +978,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
             description: firstValue(directRow, ["description", "resume", "résumé"]) || fallback.description,
             project,
             projectStatus: normalizeProjectStatus(project),
-            coverImage: sanitizeImageUrl(
+            coverImage: resolveRoadbookDataImage(
                 firstValue(directRow, [
                     "image couverture",
                     "image de couverture",
@@ -986,8 +986,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
                     "cover",
                     "couverture",
                     "image"
-                ]) || fallback.coverImage
-            )
+                ]), config) || fallback.coverImage
         };
     }
 
@@ -1013,9 +1012,8 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
         description: metadataValueFromObject(keyValues, ["description", "resume", "résumé"]) || fallback.description,
         project,
         projectStatus: normalizeProjectStatus(project),
-        coverImage: sanitizeImageUrl(
-            metadataValueFromObject(keyValues, ["image couverture", "image de couverture", "cover image", "cover", "couverture", "image"]) || fallback.coverImage
-        )
+        coverImage: resolveRoadbookDataImage(
+            metadataValueFromObject(keyValues, ["image couverture", "image de couverture", "cover image", "cover", "couverture", "image"]), config) || fallback.coverImage
     };
 }
 
