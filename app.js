@@ -651,6 +651,7 @@ function createHomeStageCard(day, index) {
     stats.className = "home-stage-card__stats stats stats--compact";
     appendSummaryStatIfPresent(stats, "distance", "Distance", day.distance, formatDistanceMetric);
     appendSummaryStatIfPresent(stats, "elevationGain", "D+", day.elevationGain, formatElevationMetric);
+    appendSummaryStatIfPresent(stats, "elevationLoss", "D−", day.elevationLoss, formatElevationMetric);
     content.appendChild(stats);
 
     const accommodationIcon = document.createElement("span");
@@ -700,6 +701,7 @@ function updateHomeStageCardMetrics(index) {
     stats.replaceChildren();
     appendSummaryStatIfPresent(stats, "distance", "Distance", day.distance, formatDistanceMetric);
     appendSummaryStatIfPresent(stats, "elevationGain", "D+", day.elevationGain, formatElevationMetric);
+    appendSummaryStatIfPresent(stats, "elevationLoss", "D−", day.elevationLoss, formatElevationMetric);
 }
 
 /**
@@ -743,7 +745,9 @@ function prefetchAllStageGpxMetrics() {
                 updateHomeStageCardMetrics(index);
                 updateHomeStagesTotalSection();
             }
-        }).catch(() => {});
+        }).catch(error => {
+            console.warn(`[GPX Metrics] Pré-chargement impossible pour l'étape ${index} : ${error.message}`);
+        });
     });
 }
 
