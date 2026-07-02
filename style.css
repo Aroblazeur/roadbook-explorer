@@ -791,6 +791,28 @@ li{
     color:#fff;
 }
 
+.terrain-button--discreet{
+    color:var(--text-light);
+    background:transparent;
+    border:1px solid transparent;
+    font-size:0.9rem;
+    font-weight:400;
+    min-height:auto;
+    padding:8px 12px;
+}
+
+.terrain-button--discreet:hover{
+    color:var(--primary);
+    background:rgba(46,125,50,.05);
+    border-color:rgba(46,125,50,.15);
+}
+
+.terrain-button--discreet:focus-visible{
+    color:var(--primary-dark);
+    outline:2px solid var(--primary);
+    outline-offset:2px;
+}
+
 .gpx-actions{
     display:flex;
     flex-wrap:wrap;
