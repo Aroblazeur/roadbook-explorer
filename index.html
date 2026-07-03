@@ -51,9 +51,6 @@
   <main class="container">
     <section id="library-section" class="card" hidden>
       <h2>Mes roadbooks</h2>
-      <div class="roadbook-library-actions">
-        <button id="refresh-catalog-button" type="button" class="terrain-button terrain-button--discreet">Vérifier les mises à jour</button>
-      </div>
       <div id="roadbook-library-list" class="roadbook-library-grid"></div>
       <p id="roadbook-library-empty" class="empty" hidden>Aucun roadbook disponible pour le moment.</p>
     </section>
@@ -114,7 +111,10 @@
 
   <footer>
     <p id="footer-roadbook-title">RoadBook Explorer</p>
-    <p class="footer-version">Version : <span id="app-version">—</span></p>
+    <div class="footer-meta">
+      <p class="footer-version">Version : <span id="app-version">—</span></p>
+      <button id="refresh-catalog-button" type="button" class="terrain-button terrain-button--discreet footer-update-button">Vérifier les mises à jour</button>
+    </div>
   </footer>
   <script>
     (() => {
