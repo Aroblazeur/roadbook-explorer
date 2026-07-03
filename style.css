@@ -1039,8 +1039,23 @@ footer{
 }
 
 .footer-version{
-    margin-top:6px;
+    margin:0;
     font-size:.92rem;
+}
+
+.footer-meta{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:6px;
+}
+
+.footer-meta .footer-update-button{
+    width:auto;
+    min-width:0;
+    padding:4px 8px;
 }
 
 /* =====================================================
