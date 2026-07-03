@@ -1958,13 +1958,7 @@ function renderPrimaryAccommodation(accommodation) {
     section.hidden = !mainName && !mainUrl && !mainPhoto && !mainMetadata?.image;
     if (section.hidden) return;
 
-    if (mainName) {
-        const name = document.createElement("p");
-        name.className = "detail-name";
-        appendAccommodationNameWithIcon(name, mainName);
-        container.appendChild(name);
-    }
-    if (mainUrl || mainPhoto || mainMetadata?.image) {
+    if (mainUrl || mainPhoto || mainMetadata?.image || mainName) {
         appendAccommodationResource(
             container,
             mainUrl,
@@ -2328,10 +2322,6 @@ function appendResourceList(container, title, values, showHeading = true) {
         const photo = typeof value === "object" ? safeText(value.photo, "") : "";
         const metadata = findAccommodationEnrichment(url);
         const label = preferredLabel || metadata?.name || `${title} ${index + 1}`;
-        const detail = document.createElement("p");
-        detail.className = "detail-name detail-name--compact";
-        appendAccommodationNameWithIcon(detail, label);
-        item.appendChild(detail);
         appendAccommodationResource(
             item,
             url,
