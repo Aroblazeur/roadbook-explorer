@@ -13,7 +13,7 @@
             stages: Object.freeze({ name: "etapes principales" }),
             substeps: Object.freeze({ name: "Variante et option", gid: "15169789" }),
             travelerNotes: Object.freeze({ name: "Notes voyageurs" }),
-            addedAccommodation: Object.freeze({ name: "ajout hebergement" }),
+            addedAccommodation: Object.freeze({ name: "Ajout hebergement" }),
             configuration: Object.freeze({ name: "Configuration" })
         }),
         enrichment: Object.freeze({
