@@ -15,7 +15,7 @@
       <div class="header-title-wrapper">
         <h1>RoadBook Studio</h1>
       </div>
-      <p class="studio-header__subtitle">Base d’administration JSON-first — lecture seule pour ce premier sprint.</p>
+      <p class="studio-header__subtitle">Édition locale JSON-first — Sprint 2.</p>
     </div>
   </header>
 
@@ -35,18 +35,104 @@
     <section class="card studio-panel" aria-labelledby="studio-detail-title">
       <div class="studio-panel__header">
         <div>
-          <p class="studio-eyebrow">Aperçu</p>
+          <p class="studio-eyebrow">Éditeur</p>
           <h2 id="studio-detail-title">Sélectionne un roadbook</h2>
         </div>
+        <div class="studio-actions">
+          <button id="studio-add-stage" type="button" class="terrain-button" disabled>Ajouter une étape</button>
+          <button id="studio-download-json" type="button" class="terrain-button terrain-button--secondary" disabled>Télécharger le JSON</button>
+        </div>
       </div>
+
       <div id="studio-detail" class="studio-detail studio-detail--empty">
-        <p>Le Studio affiche ici le contenu brut du fichier <code>roadbook.json</code> pour préparer les prochains sprints d’édition.</p>
+        <p>Le Studio permet maintenant d’éditer localement les étapes et les variantes d’un <code>roadbook.json</code>, sans encore écrire sur GitHub.</p>
       </div>
     </section>
   </main>
 
+  <template id="studio-stage-template">
+    <article class="studio-stage-card">
+      <div class="studio-stage-card__header">
+        <div>
+          <p class="studio-stage-card__eyebrow">Étape</p>
+          <h3 class="studio-stage-card__title"></h3>
+        </div>
+        <div class="studio-stage-card__actions">
+          <button type="button" class="terrain-button terrain-button--secondary" data-action="add-variant">Ajouter une variante</button>
+          <button type="button" class="terrain-button terrain-button--danger" data-action="delete-stage">Supprimer l’étape</button>
+        </div>
+      </div>
+
+      <div class="studio-form-grid">
+        <label>
+          Numéro d’étape
+          <input data-field="stage" type="number" min="1" step="1">
+        </label>
+        <label>
+          Titre
+          <input data-field="title" type="text">
+        </label>
+        <label>
+          Départ
+          <input data-field="departure" type="text">
+        </label>
+        <label>
+          Arrivée
+          <input data-field="arrival" type="text">
+        </label>
+        <label>
+          Distance (km)
+          <input data-field="distance" type="number" step="0.1">
+        </label>
+        <label>
+          D+ (m)
+          <input data-field="elevationGain" type="number" step="1">
+        </label>
+        <label>
+          D− (m)
+          <input data-field="elevationLoss" type="number" step="1">
+        </label>
+        <label class="studio-form-grid__full">
+          Description
+          <textarea data-field="description" rows="3"></textarea>
+        </label>
+      </div>
+
+      <section class="studio-variants" aria-label="Variantes de l’étape">
+        <div class="studio-variants__header">
+          <h4>Variantes</h4>
+          <p class="studio-variants__hint">Chaque variante reste rattachée à son étape principale.</p>
+        </div>
+        <div class="studio-variant-list"></div>
+      </section>
+    </article>
+  </template>
+
+  <template id="studio-variant-template">
+    <article class="studio-variant-card">
+      <div class="studio-variant-card__header">
+        <strong class="studio-variant-card__title"></strong>
+        <button type="button" class="terrain-button terrain-button--danger" data-action="delete-variant">Supprimer</button>
+      </div>
+      <div class="studio-form-grid studio-form-grid--variant">
+        <label>
+          Nom
+          <input data-field="name" type="text">
+        </label>
+        <label>
+          Distance (km)
+          <input data-field="distance" type="number" step="0.1">
+        </label>
+        <label class="studio-form-grid__full">
+          Description
+          <textarea data-field="description" rows="2"></textarea>
+        </label>
+      </div>
+    </article>
+  </template>
+
   <footer>
-    <p>RoadBook Studio · Sprint 1</p>
+    <p>RoadBook Studio · Sprint 2</p>
   </footer>
 
   <script src="studio/studio-app.js"></script>
