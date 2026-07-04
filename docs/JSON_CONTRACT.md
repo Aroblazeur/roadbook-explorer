@@ -157,4 +157,4 @@ Pour cibler un seul roadbook :
 node scripts/sync-roadbook-json.js --roadbook=perinexus
 ```
 
-Tant que la migration n'est pas terminée, le site public charge les Google Sheets en priorité et conserve le JSON comme fallback générique.
+Pendant la transition actuelle, le site public charge d'abord `roadbooks/<id>/roadbook.json` et retombe sur Google Sheets si le JSON est absent, invalide ou inexploitable.
