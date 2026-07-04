@@ -1,15 +1,88 @@
 {
+  "id": "my-roadbook",
   "title": "Mon Roadbook",
   "description": "Description de l'itinéraire.",
-  "days": [
+  "metadata": {
+    "activity": "vélo",
+    "destination": "",
+    "project": "a faire",
+    "projectStatus": "todo",
+    "coverImage": "",
+    "generatedAt": null,
+    "source": "template",
+    "googleSheetId": ""
+  },
+  "summary": {
+    "official": {
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "mapEmbedUrl": null,
+      "gpx": null,
+      "link": null
+    },
+    "stagesTotal": {
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "mapEmbedUrl": null,
+      "gpx": null,
+      "link": null
+    },
+    "stagesTotalMarker": null
+  },
+  "stages": [
     {
-      "title": "Jour 1 - Départ",
-      "distance": 0,
-      "elevation": 0,
+      "id": "stage-1",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 1,
+      "day": "",
+      "stageLabel": "",
+      "name": "Départ → Arrivée",
+      "type": "principale",
+      "departure": "Départ",
+      "arrival": "Arrivée",
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
       "duration": "",
-      "description": "Description de la première étape.",
-      "accommodation": "",
-      "pois": []
+      "description": "",
+      "notes": "",
+      "noteItems": [],
+      "gpx": "",
+      "mapEmbedUrl": "",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": []
     }
-  ]
+  ],
+  "variants": [],
+  "accommodation": [],
+  "pois": [],
+  "notes": [],
+  "days": []
 }

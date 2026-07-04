@@ -1,7 +1,6 @@
 "use strict";
 
-// Only list fallback files that are part of the current project tree.
-const FALLBACK_PATHS = ["roadbooks/perinexus/roadbook.json"];
+// Each roadbook owns its canonical JSON file at roadbooks/<id>/roadbook.json.
 const NETWORK_FIRST_FETCH_OPTIONS = { cache: "no-store" };
 const LIBRARY_CONFIGURATION_SHEET = Object.freeze({ name: "Configuration" });
 
@@ -21,8 +20,37 @@ function currentRoadbookConfig() {
         description: "Roadbook d'itinérance à vélo.",
         sheets: {},
         forms: {},
-        fallbackJsonPaths: FALLBACK_PATHS
+        fallbackJsonPaths: []
     };
+}
+
+function sanitizeRoadbookId(value) {
+    const id = String(value || "").trim().toLowerCase();
+    return /^[a-z0-9-]+$/.test(id) ? id : "";
+}
+
+function canonicalRoadbookJsonPath(config = currentRoadbookConfig()) {
+    const id = sanitizeRoadbookId(config?.id || config?.shortId);
+    return id ? `roadbooks/${id}/roadbook.json` : "";
+}
+
+function roadbookJsonPaths(config = currentRoadbookConfig()) {
+    const candidates = [
+        config?.jsonPath,
+        canonicalRoadbookJsonPath(config),
+        ...(Array.isArray(config?.fallbackJsonPaths) ? config.fallbackJsonPaths : [])
+    ];
+
+    return [...new Set(candidates
+        .map(path => String(path || "").trim())
+        .filter(path =>
+            path &&
+            !path.startsWith("/") &&
+            !path.startsWith("data/") &&
+            !path.includes("\\") &&
+            !path.split("/").includes("..")
+        )
+    )];
 }
 
 async function waitForRoadbookConfig() {
@@ -619,9 +647,9 @@ function buildAccommodation(record) {
     const alternativeEntries = buildAlternativeAccommodationEntries(alternatives, alternativeNames, alternativePhotos);
 
     return {
-        name: firstValue(record, ["hebergement", "hébergement"]),
-        website,
-        url: website,
+        name: firstValue(record, ["hebergement", "hébergement"]) || "",
+        website: website || "",
+        url: website || "",
         photo: sanitizeImageUrl(firstValue(record, ["photo hebergement principal", "photo hébergement principal"])),
         alternatives: alternativeEntries,
         alternativeNames: alternativeEntries.map(entry => entry.name || ""),
@@ -930,6 +958,197 @@ function buildRoadbook(etapesRows, variantesRows, travelerNotesRows = [], addedA
     };
 }
 
+function safeArray(value) {
+    return Array.isArray(value) ? value : [];
+}
+
+function normalizeAccommodationJson(value = {}) {
+    if (typeof value === "string") {
+        return {
+            name: value,
+            website: "",
+            url: "",
+            photo: "",
+            alternatives: [],
+            alternativeNames: [],
+            alternativePhotos: []
+        };
+    }
+
+    const source = value && typeof value === "object" ? value : {};
+    const alternatives = safeArray(source.alternatives)
+        .map(entry => normalizeAlternativeAccommodationEntry(entry))
+        .filter(Boolean);
+
+    return {
+        name: normalizeValue(source.name) || "",
+        website: normalizeValue(source.website || source.url) || "",
+        url: normalizeValue(source.url || source.website) || "",
+        photo: sanitizeImageUrl(source.photo),
+        alternatives,
+        alternativeNames: alternatives.map(entry => entry.name || ""),
+        alternativePhotos: alternatives.map(entry => entry.photo || "")
+    };
+}
+
+function normalizePoiJson(value) {
+    if (typeof value === "string") {
+        return { name: value, image: "", description: "", region: "" };
+    }
+
+    const source = value && typeof value === "object" ? value : {};
+    const name = normalizeValue(source.name || source.title || source.label);
+    if (!name) return null;
+
+    return {
+        name,
+        image: sanitizeImageUrl(source.image),
+        description: normalizeValue(source.description) || "",
+        region: normalizeValue(source.region) || "",
+        coordinates: source.coordinates || null
+    };
+}
+
+function normalizeNoteJson(value) {
+    if (typeof value === "string") {
+        return value.trim() ? { text: value.trim(), photo: "" } : null;
+    }
+
+    const source = value && typeof value === "object" ? value : {};
+    const text = normalizeValue(source.text || source.note || source.content);
+    if (!text) return null;
+
+    return {
+        text,
+        photo: sanitizeNotePhotoUrl(source.photo || source.image)
+    };
+}
+
+function normalizeStageJson(stage, index = 0, options = {}) {
+    const source = stage && typeof stage === "object" ? stage : {};
+    const isSubstep = Boolean(options.isSubstep ?? source.isSubstep);
+    const parentStage = toNumber(source.parentStage ?? source.parentStageReference ?? source.stageReference ?? options.parentStage);
+    const stageNumber = toNumber(source.stage ?? source.number ?? source.numero) ?? (isSubstep ? parentStage : index + 1);
+    const departure = normalizeValue(source.departure ?? source.depart ?? source.start) || "";
+    const arrival = normalizeValue(source.arrival ?? source.arrivee ?? source.end) || "";
+    const routeLabel = [departure, arrival].filter(Boolean).join(" â†’ ");
+    const type = normalizeValue(source.type) || (isSubstep ? "option" : "principale");
+    const name = normalizeValue(source.name || source.title || source.stageLabel) || routeLabel || `${isSubstep ? type : "Ã‰tape"} ${stageNumber ?? index + 1}`;
+    const notes = safeArray(source.noteItems || source.notes)
+        .map(normalizeNoteJson)
+        .filter(Boolean);
+    const pois = safeArray(source.pois || source.pointsOfInterest || source.interest)
+        .map(normalizePoiJson)
+        .filter(Boolean);
+    const accommodation = normalizeAccommodationJson(source.accommodation);
+    const firstAlternative = accommodation.alternatives[0] || null;
+
+    return {
+        ...source,
+        id: normalizeValue(source.id) || `${isSubstep ? "substep" : "stage"}-${stageNumber ?? index + 1}`,
+        itemType: isSubstep ? "substep" : "main",
+        isSubstep,
+        hierarchyLevel: isSubstep ? 1 : 0,
+        parentStage: isSubstep ? parentStage : null,
+        parentStageReference: isSubstep ? parentStage : null,
+        stage: stageNumber,
+        stageReference: isSubstep ? parentStage : source.stageReference,
+        day: normalizeValue(source.day) || null,
+        stageLabel: normalizeValue(source.stageLabel || source.nomEtape) || null,
+        name,
+        type,
+        departure,
+        arrival,
+        distance: toNumber(source.distance),
+        elevationGain: toNumber(source.elevationGain ?? source.elevation),
+        elevationLoss: toNumber(source.elevationLoss),
+        notes: typeof source.notes === "string" ? source.notes : "",
+        gpx: normalizeValue(source.gpx || source.route?.gpx) || "",
+        mapEmbedUrl: sanitizeMapEmbedUrl(source.mapEmbedUrl || source.embeddedMapUrl || source.externalMapEmbed),
+        stagePhoto: sanitizeImageUrl(source.stagePhoto || source.stepPhoto || source.photo),
+        accommodation,
+        alternativeAccommodation: {
+            name: firstAlternative?.name || firstAlternative?.url || "",
+            photo: firstAlternative?.photo || ""
+        },
+        accommodationType: normalizeAccommodationType(source.accommodationType || source.typeHebergement),
+        substeps: [],
+        title: normalizeValue(source.title) || (isSubstep
+            ? buildSubstepTitle(type, departure, arrival, name)
+            : `Ã‰tape ${stageNumber ?? index + 1}${routeLabel ? ` - ${routeLabel}` : ""}`),
+        elevation: toNumber(source.elevationGain ?? source.elevation) ?? 0,
+        duration: normalizeValue(source.duration) || "",
+        description: normalizeValue(source.description) || "",
+        noteItems: notes,
+        pois,
+        pointsOfInterest: pois,
+        interest: pois,
+        restaurants: safeArray(source.restaurants),
+        shops: safeArray(source.shops),
+        water: safeArray(source.water),
+        warning: safeArray(source.warning),
+        legacyAccommodation: accommodation.name || ""
+    };
+}
+
+function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
+    if (!payload || typeof payload !== "object") {
+        throw new Error("JSON roadbook invalide");
+    }
+
+    const sourceStages = safeArray(payload.stages).length
+        ? safeArray(payload.stages)
+        : safeArray(payload.days).filter(day => !day?.isSubstep);
+    const stages = sourceStages.map((stage, index) => normalizeStageJson(stage, index, { isSubstep: false }));
+
+    const hasEmbeddedSubsteps = sourceStages.some(stage =>
+        safeArray(stage?.substeps).length || safeArray(stage?.variants).length
+    );
+    const topLevelVariants = hasEmbeddedSubsteps ? [] : safeArray(payload.variants)
+        .map((variant, index) => normalizeStageJson(variant, index, {
+            isSubstep: true,
+            parentStage: variant?.parentStage ?? variant?.parentStageReference ?? variant?.stageReference ?? variant?.stage
+        }));
+
+    stages.forEach((stage, stageIndex) => {
+        const substeps = [
+            ...safeArray(sourceStages[stageIndex]?.substeps),
+            ...safeArray(sourceStages[stageIndex]?.variants)
+        ].map((variant, variantIndex) => normalizeStageJson(variant, variantIndex, {
+            isSubstep: true,
+            parentStage: stage.stage
+        }));
+
+        stage.substeps = substeps;
+    });
+
+    if (topLevelVariants.length) {
+        attachSubsteps(stages, topLevelVariants);
+    }
+
+    const days = buildNavigableStages(stages);
+    const summary = {
+        official: payload.summary?.official || null,
+        stagesTotal: payload.summary?.stagesTotal || null,
+        stagesTotalMarker: payload.summary?.stagesTotalMarker || null
+    };
+
+    if (!summary.stagesTotal) {
+        summary.stagesTotal = buildComputedStagesTotal(stages, summary.stagesTotalMarker);
+    }
+
+    return {
+        ...payload,
+        id: normalizeValue(payload.id) || config.id || config.shortId || "roadbook",
+        title: normalizeValue(payload.title) || config.title || "RoadBook Explorer",
+        description: normalizeValue(payload.description) || config.description || "Roadbook d'itinÃ©rance Ã  vÃ©lo.",
+        metadata: payload.metadata && typeof payload.metadata === "object" ? payload.metadata : {},
+        summary,
+        stages,
+        days
+    };
+}
+
 function roadbookLibraryFallback(config = {}) {
     return {
         id: config.id || config.shortId || "roadbook",
@@ -1129,12 +1348,7 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
         return JSON.parse(content);
     }
 
-    const fallbackPaths = Array.isArray(config.fallbackJsonPaths)
-        ? config.fallbackJsonPaths
-        : FALLBACK_PATHS;
-    const validPaths = fallbackPaths.filter(path =>
-        typeof path === "string" && path.trim() !== "" && !path.startsWith("data/")
-    );
+    const validPaths = roadbookJsonPaths(config);
 
     if (!validPaths.length) {
         const error = new Error("aucun chemin JSON local valide configuré");
@@ -1146,6 +1360,13 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
 
     for (const path of validPaths) {
         try {
+            const localFallback = await loadNodeFallback(path);
+            if (localFallback) return normalizeRoadbookJson(localFallback, config);
+        } catch (error) {
+            lastError = error;
+        }
+
+        try {
             const response = await fetch(path, NETWORK_FIRST_FETCH_OPTIONS);
             if (!response.ok) {
                 lastError = new Error(`HTTP ${response.status}`);
@@ -1154,7 +1375,7 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
             }
             const content = await response.text();
             try {
-                return JSON.parse(content);
+                return normalizeRoadbookJson(JSON.parse(content), config);
             } catch (error) {
                 lastError = new Error(`JSON invalide dans ${path}`);
                 console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${lastError.message}.`);
@@ -1166,12 +1387,6 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
             console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${reason}.`);
         }
 
-        try {
-            const localFallback = await loadNodeFallback(path);
-            if (localFallback) return localFallback;
-        } catch (error) {
-            lastError = error;
-        }
     }
 
     throw lastError || new Error(ERROR_MESSAGES.NETWORK);
@@ -1217,11 +1432,13 @@ if (typeof module !== "undefined" && module.exports) {
         attachTravelerNotes,
         buildAccommodation,
         buildRoadbook,
+        normalizeRoadbookJson,
         mapAddedAccommodation,
         attachAddedAccommodations,
         sanitizeMapEmbedUrl,
         resolveRoadbookDataImage,
         sanitizeRoadbookAssetName,
+        roadbookJsonPaths,
         loadGoogleSheetRoadbook,
         loadFallbackRoadbook,
         loadRoadbook,

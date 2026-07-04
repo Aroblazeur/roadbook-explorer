@@ -4,6 +4,8 @@
 
 `create-roadbook.js` copie le template canonique `roadbooks/_template/`, puis personnalise automatiquement les placeholders nécessaires pour un nouveau voyage.
 
+`sync-roadbook-json.js` importe les Google Sheets configurés et met à jour les fichiers JSON canoniques `roadbooks/<id>/roadbook.json`.
+
 ### Lancer le script
 
 ```bash
@@ -19,7 +21,7 @@ roadbooks/<id>/roadbook.json
 roadbooks/<id>/data/accommodation-enrichment.json
 roadbooks/<id>/data/poi-enrichment.json
 roadbooks/<id>/gpx/
-roadbooks/<id>/assets/
+roadbooks/<id>/photos/
 ```
 
 Les arguments peuvent également être passés directement en ligne de commande pour éviter les questions interactives :
@@ -38,6 +40,31 @@ npm run create-roadbook -- --id=mon-voyage --title="Mon Voyage" --description="R
 Une fois le roadbook créé, accédez-y via : `index.html?roadbook=<id>`
 
 Si la structure attendue d'un roadbook évolue, mettez d'abord à jour `roadbooks/_template/` ; le script réutilisera automatiquement cette structure.
+
+## Synchroniser les Google Sheets vers les JSON
+
+Pendant la transition vers le mode JSON-first, les Google Sheets existants restent la source de vérité fonctionnelle.
+
+Pour régénérer tous les `roadbook.json` listés dans `roadbooks/catalog.json` :
+
+```bash
+npm run sync:roadbooks
+```
+
+Pour cibler un seul roadbook :
+
+```bash
+node scripts/sync-roadbook-json.js --roadbook=perinexus
+```
+
+Le script :
+
+- charge `roadbooks/<id>/config.js` ;
+- lit les feuilles Google Sheets configurées ;
+- reconstruit le modèle commun étapes / sous-étapes ;
+- écrit `roadbooks/<id>/roadbook.json`.
+
+Le mapping complet est décrit dans `docs/JSON_CONTRACT.md`.
 
 ---
 

@@ -7,13 +7,13 @@ Ce dossier est le modèle à copier pour créer un nouveau roadbook.
 ```
 roadbooks/<id>/
 ├── config.js          # Configuration du roadbook (identifiant, titre, Google Sheet, etc.)
-├── roadbook.json      # Données de secours (fallback si le Google Sheet est indisponible)
+├── roadbook.json      # Source JSON canonique du roadbook
 ├── data/              # Fichiers d'enrichissement et photos d'étapes du roadbook
 │   ├── accommodation-enrichment.json
 │   ├── poi-enrichment.json
 │   └── etape01.jpg
 ├── gpx/               # Fichiers GPX des étapes (ex : etape01.gpx)
-├── assets/            # Images et ressources spécifiques au roadbook
+├── photos/            # Photos propres au roadbook
 └── README.md          # Ce fichier
 ```
 
@@ -36,10 +36,12 @@ roadbooks/<id>/
    - Renseigner `title`, `description`, `googleSheetId`.
    - Les contributions utilisent l’endpoint global Apps Script du moteur ; aucun Google Form n’est à configurer par roadbook.
 
-3. **Ajouter le script** dans `index.html` (avant `app.js`) :
-   ```html
-   <script src="roadbooks/<id>/config.js"></script>
+3. **Synchroniser depuis Google Sheets pendant la transition** :
+   ```bash
+   node scripts/sync-roadbook-json.js --roadbook=<id>
    ```
+
+   Cette commande importe les feuilles configurées et écrit `roadbooks/<id>/roadbook.json`.
 
 4. **Ajouter les fichiers GPX** dans `gpx/` (un fichier par étape).
 
@@ -73,6 +75,25 @@ roadbooks/<id>/
    Les fichiers `data/accommodation-enrichment.json` et `data/poi-enrichment.json` du template démarrent avec `generatedAt: null`. Cette valeur est renseignée lors d'une vraie génération d'enrichissement.
 
 7. **Accéder au roadbook** via `?roadbook=<id>` dans l'URL.
+
+## Contrat JSON
+
+`roadbook.json` n'est pas une simple démo. C'est le contrat officiel utilisé par le Studio et, à terme, par le site public.
+
+Il doit contenir au minimum :
+
+- `id`
+- `title`
+- `description`
+- `metadata`
+- `summary`
+- `stages`
+- `variants`
+- `accommodation`
+- `pois`
+- `notes`
+
+Le mapping complet Google Sheet → JSON est documenté dans `docs/JSON_CONTRACT.md`.
 
 ## Synchronisation obligatoire
 

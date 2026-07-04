@@ -128,7 +128,12 @@
         normalized.elevationGain = toFiniteNumber(normalized.elevationGain);
         normalized.elevationLoss = toFiniteNumber(normalized.elevationLoss);
         normalized.description = safeText(normalized.description, "");
-        normalized.variants = normalizeVariants(normalized.variants);
+        normalized.variants = normalizeVariants(
+            Array.isArray(normalized.variants) && normalized.variants.length
+                ? normalized.variants
+                : normalized.substeps
+        );
+        normalized.substeps = normalized.variants;
         return normalized;
     }
 
@@ -332,6 +337,18 @@
 
     function buildExportRoadbook(roadbook) {
         const clone = structuredClone(roadbook);
+        clone.stages = clone.stages.map(stage => ({
+            ...stage,
+            substeps: normalizeVariants(stage.variants),
+            variants: normalizeVariants(stage.variants)
+        }));
+        clone.variants = clone.stages.flatMap(stage =>
+            normalizeVariants(stage.variants).map(variant => ({
+                ...variant,
+                parentStage: stage.stage,
+                parentStageReference: stage.stage
+            }))
+        );
         clone.summary = {
             ...(clone.summary || {}),
             ...computeSummary(clone.stages)

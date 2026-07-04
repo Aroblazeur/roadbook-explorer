@@ -1,8 +1,10 @@
 # Roadbook Engine
 
-Application web SPA/PWA réutilisable pour afficher plusieurs roadbooks de voyage à vélo à partir de Google Sheets.
+Application web SPA/PWA réutilisable pour afficher plusieurs roadbooks de voyage à vélo.
 
-Le moteur commun reste à la racine du projet. Chaque voyage possède uniquement sa configuration dans `roadbooks/<id>/config.js`.
+La cible d'architecture est **JSON-first** : chaque voyage possède son dossier et son fichier canonique `roadbooks/<id>/roadbook.json`.
+
+Pendant la transition, les Google Sheets existants restent la source de vérité fonctionnelle. Les fichiers JSON sont synchronisés depuis les Sheets afin de préparer la bascule progressive du Studio et du site public.
 
 ## Lancer le projet
 
@@ -69,6 +71,28 @@ Le roadbook demandé est sélectionné avec `?roadbook=<identifiant>`. Sans para
 
 Les contributions utilisateur passent par l’endpoint global Apps Script configuré dans `roadbook-config.js`. Il n’y a pas de Google Form à créer par roadbook.
 
+## Synchroniser les Sheets vers les JSON
+
+Pendant la transition, utilisez :
+
+```bash
+npm run sync:roadbooks
+```
+
+Cette commande lit les roadbooks listés dans `roadbooks/catalog.json`, importe leurs Google Sheets configurés, puis écrit :
+
+```text
+roadbooks/<id>/roadbook.json
+```
+
+Pour synchroniser un seul roadbook :
+
+```bash
+node scripts/sync-roadbook-json.js --roadbook=perinexus
+```
+
+Le contrat JSON officiel et le mapping Google Sheet → JSON sont documentés dans [`docs/JSON_CONTRACT.md`](docs/JSON_CONTRACT.md).
+
 ## Synchronisation moteur ↔ templates
 
 `roadbooks/_template/` est la source canonique pour la structure attendue d'un roadbook.
@@ -91,16 +115,14 @@ app.js
 style.css
 service-worker.js
 roadbooks/
-└── perinexus/
+└── <id>/
     ├── config.js
     ├── roadbook.json
-    ├── assets/
-    ├── data/
-    │   ├── accommodation-enrichment.json
-    │   └── poi-enrichment.json
-    └── gpx/
-        ├── etape01.gpx
-        └── ...
+    ├── gpx/
+    ├── photos/
+    └── data/
+        ├── accommodation-enrichment.json
+        └── poi-enrichment.json
 ```
 
 ## Notes PWA
