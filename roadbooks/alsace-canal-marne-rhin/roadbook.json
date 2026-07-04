@@ -8,7 +8,7 @@
     "project": "Deja fait",
     "projectStatus": "done",
     "coverImage": "",
-    "generatedAt": "2026-07-04T21:12:20.993Z",
+    "generatedAt": "2026-07-04T21:29:01.699Z",
     "source": "google-sheets",
     "googleSheetId": "1uAD98fd3HjDHBGxquWZybm7YXdA9wOFad0eiygy4qrA"
   },
@@ -70,6 +70,7 @@
         {
           "name": "Balade au pays des étangs",
           "image": "",
+          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
           "region": ""
         }
       ],
@@ -77,6 +78,7 @@
         {
           "name": "Balade au pays des étangs",
           "image": "",
+          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
           "region": ""
         }
       ],
@@ -84,6 +86,7 @@
         {
           "name": "Balade au pays des étangs",
           "image": "",
+          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
           "region": ""
         }
       ],
@@ -138,6 +141,7 @@
         {
           "name": "Canal des Houillère",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -145,6 +149,7 @@
         {
           "name": "Canal des Houillère",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -152,6 +157,7 @@
         {
           "name": "Canal des Houillère",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -169,14 +175,18 @@
       "role": "primary",
       "name": "",
       "website": "https://www.mittersheim-loisirs.fr/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 2,
       "role": "primary",
       "name": "Camping Les Mouettes",
       "website": "",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     }
   ],
   "pois": [
@@ -184,16 +194,19 @@
       "stage": 1,
       "name": "Balade au pays des étangs",
       "image": "",
+      "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
       "region": ""
     },
     {
       "stage": 2,
       "name": "Canal des Houillère",
       "image": "",
+      "url": "",
       "region": ""
     }
   ],
   "notes": [],
+  "contributions": [],
   "days": [
     {
       "id": "stage-1",
@@ -240,6 +253,7 @@
         {
           "name": "Balade au pays des étangs",
           "image": "",
+          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
           "region": ""
         }
       ],
@@ -247,6 +261,7 @@
         {
           "name": "Balade au pays des étangs",
           "image": "",
+          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
           "region": ""
         }
       ],
@@ -254,6 +269,7 @@
         {
           "name": "Balade au pays des étangs",
           "image": "",
+          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
           "region": ""
         }
       ],
@@ -308,6 +324,7 @@
         {
           "name": "Canal des Houillère",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -315,6 +332,7 @@
         {
           "name": "Canal des Houillère",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -322,6 +340,7 @@
         {
           "name": "Canal des Houillère",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],

@@ -8,7 +8,7 @@
     "project": "A faire",
     "projectStatus": "todo",
     "coverImage": "",
-    "generatedAt": "2026-07-04T21:12:20.538Z",
+    "generatedAt": "2026-07-04T21:29:01.040Z",
     "source": "google-sheets",
     "googleSheetId": "1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU"
   },
@@ -82,7 +82,9 @@
       "noteItems": [
         {
           "text": "Voir ou garer la voiture",
-          "photo": ""
+          "photo": "",
+          "createdAt": "22/06/2026 11:53:25",
+          "source": "travelerNote"
         }
       ],
       "pois": [],
@@ -154,16 +156,19 @@
             {
               "name": "Cala Rostella",
               "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Boquelles",
               "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "url": "",
               "region": ""
             },
             {
               "name": "platja d’en talladofins",
               "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "url": "",
               "region": ""
             }
           ],
@@ -171,16 +176,19 @@
             {
               "name": "Cala Rostella",
               "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Boquelles",
               "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "url": "",
               "region": ""
             },
             {
               "name": "platja d’en talladofins",
               "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "url": "",
               "region": ""
             }
           ],
@@ -188,16 +196,19 @@
             {
               "name": "Cala Rostella",
               "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Boquelles",
               "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "url": "",
               "region": ""
             },
             {
               "name": "platja d’en talladofins",
               "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "url": "",
               "region": ""
             }
           ],
@@ -476,16 +487,19 @@
             {
               "name": "Cala de L'Illa Roja",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Fonda",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja D'En Gotes",
               "image": "",
+              "url": "",
               "region": ""
             }
           ],
@@ -493,16 +507,19 @@
             {
               "name": "Cala de L'Illa Roja",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Fonda",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja D'En Gotes",
               "image": "",
+              "url": "",
               "region": ""
             }
           ],
@@ -510,16 +527,19 @@
             {
               "name": "Cala de L'Illa Roja",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Fonda",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja D'En Gotes",
               "image": "",
+              "url": "",
               "region": ""
             }
           ],
@@ -684,6 +704,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -691,6 +712,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -698,6 +720,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -762,6 +785,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -769,6 +793,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -776,6 +801,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -882,7 +908,9 @@
           {
             "url": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
             "name": "El Pi Solitari",
-            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o=",
+            "createdAt": "24/06/2026 12:34:49",
+            "source": "addedAccommodation"
           }
         ],
         "alternativeNames": [
@@ -1064,16 +1092,19 @@
         {
           "name": "Cala Rostella",
           "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Boquelles",
           "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "url": "",
           "region": ""
         },
         {
           "name": "platja d’en talladofins",
           "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "url": "",
           "region": ""
         }
       ],
@@ -1081,16 +1112,19 @@
         {
           "name": "Cala Rostella",
           "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Boquelles",
           "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "url": "",
           "region": ""
         },
         {
           "name": "platja d’en talladofins",
           "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "url": "",
           "region": ""
         }
       ],
@@ -1098,16 +1132,19 @@
         {
           "name": "Cala Rostella",
           "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Boquelles",
           "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "url": "",
           "region": ""
         },
         {
           "name": "platja d’en talladofins",
           "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "url": "",
           "region": ""
         }
       ],
@@ -1290,16 +1327,19 @@
         {
           "name": "Cala de L'Illa Roja",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Fonda",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja D'En Gotes",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -1307,16 +1347,19 @@
         {
           "name": "Cala de L'Illa Roja",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Fonda",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja D'En Gotes",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -1324,16 +1367,19 @@
         {
           "name": "Cala de L'Illa Roja",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Fonda",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja D'En Gotes",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -1376,238 +1422,306 @@
       "role": "primary",
       "name": "Camping L'Albera",
       "website": "https://campingalbera.com/cast/index.htm",
-      "photo": "https://campingalbera.com/imgs/fotos/slide/2.jpg"
+      "photo": "https://campingalbera.com/imgs/fotos/slide/2.jpg",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 2,
       "role": "primary",
       "name": "Camping Mas Nou",
       "website": "https://www.campingmasnou.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 2,
       "role": "primary",
       "name": "Camping Ampurdanes",
       "website": "https://campingampurdanes.com/parcela",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "primary",
       "name": "Camping Mas Patoxas",
       "website": "https://www.campingmaspatoxas.com/",
-      "photo": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/03/82/19/4d/camping-resort-bungalow.jpg?w=900&h=500&s=1"
+      "photo": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/03/82/19/4d/camping-resort-bungalow.jpg?w=900&h=500&s=1",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://campingbegur.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campingkims.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campingcalelladepalafrugell.com/",
-      "photo": "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg"
+      "photo": "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.airbnb.fr/rooms/1218401667752864126?check_in=2026-07-27&check_out=2026-07-28&guests=3&adults=2&children=1&s=67&unique_share_id=5eabdad9-7c3a-4100-aad8-59884a9c93bd",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.airbnb.fr/rooms/1486097255149394686?check_in=2026-07-30&check_out=2026-08-01&guests=3&adults=2&children=1&infants=0&currency=EUR&locale=fr&source_impression_id=p3_1781810193_P3cs-zeUXi6eBn6N",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.booking.com/hotel/es/apartamento-begur-costa-brava.html?aid=1311119&checkin=2026-07-29&checkout=2026-07-31&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=Rf8XXnKiFIyNIJjv",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campinglaguna.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://almata.com/fr/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campingriu.com/ca/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://campinglaspalmeras.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://lagaviota.com/fr/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campingamfora.com/fr/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campingaquarius.com/accueil",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.campinglasdunas.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "alternative",
       "name": "",
       "website": "https://www.ballena-alegre.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 4,
       "role": "primary",
       "name": "Camping Ridaura",
       "website": "https://www.campingridaura.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 4,
       "role": "alternative",
       "name": "",
       "website": "https://campingvalldor.es/fr/bienvenue/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 4,
       "role": "alternative",
       "name": "",
       "website": "https://www.airbnb.fr/rooms/1486097255149394686?adults=2&check_in=2026-07-01&check_out=2026-07-03&children=1&search_mode=regular_search&infants=0&pets=0&source_impression_id=p3_1782503462_P3rECOO16oGOeTgl&previous_page_section_name=1000&federated_search_id=b23a8427-82da-41fd-9701-de8e9c4d1b18",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 5,
       "role": "primary",
       "name": "Camping l'alguer",
       "website": "http://www.campingalguer.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 6,
       "role": "primary",
       "name": "camping Les Tries",
       "website": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
-      "photo": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp"
+      "photo": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 6,
       "role": "alternative",
       "name": "",
       "website": "https://www.campinglafageda.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 7,
       "role": "primary",
       "name": "Camping Abadesses",
       "website": "https://www.booking.com/hotel/es/camping-sant-joan-abadesses.fr.html?aid=311089&label=camping-sant-joan-abadesses-ngr2QmCdxZqJWPxUOBYREQS176100269211%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-13284424029%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Yf23yREhrOV9DIzdQnby_R8&sid=f986eca7007dd1da76760f36f7df5c60&dest_id=-400912&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&srepoch=1782329759&srpvid=1a458905b7e30722&type=total&ucfs=1&",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 7,
       "role": "alternative",
       "name": "",
       "website": "https://elsroures.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 7,
       "role": "alternative",
       "name": "",
       "website": "https://www.valldecamprodon.net/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 8,
       "role": "primary",
       "name": "Càmping Els Solans",
       "website": "https://www.google.com/maps/place/Camping+Els+Solans/@42.3247397,2.3901249,3a,75y,90t/data=!3m8!1e2!3m6!1sCIHM0ogKEICAgIC69sytJA!2e10!3e12!6shttps:%2F%2Flh3.googleusercontent.com%2Fgps-cs-s%2FAPNQkAERuLcQB-zmZzUtRZZECxud2ScrOk4XD9P4D-VffO0dawdRPEGOLN_Sfyuzgwp_DnmU_TtpEr8uu9M11Oc2Rt--UMSAVhCUN-qm03mlB9xeyaWoXpYRoRtu9pBMOtgyYacyGE4%3Dw114-h86-k-no!7i2048!8i1536!4m10!3m9!1s0x12a54e99ae36848b:0x758208a2c4bc382f!5m2!4m1!1i2!8m2!3d42.324793!4d2.390213!10e5!16s%2Fg%2F11_tdw93q?hl=fr&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D",
-      "photo": "https://www.pitchup.com/_cfi/cdn-cgi/image/format=jpeg,fit=cover,quality=70,w=1200,h=630/images/5/image/upload/s--F_A4Kxsm--/c_limit,h_2400,w_3200/e_improve,fl_progressive/q_auto/b_rgb:000,g_south_west,l_pitchup.com_wordmark_white_watermark,o_15/v1/camping-els-solans/114843.jpg"
+      "photo": "https://www.pitchup.com/_cfi/cdn-cgi/image/format=jpeg,fit=cover,quality=70,w=1200,h=630/images/5/image/upload/s--F_A4Kxsm--/c_limit,h_2400,w_3200/e_improve,fl_progressive/q_auto/b_rgb:000,g_south_west,l_pitchup.com_wordmark_white_watermark,o_15/v1/camping-els-solans/114843.jpg",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 8,
       "role": "alternative",
       "name": "El Pi Solitari",
       "website": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
-      "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+      "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o=",
+      "createdAt": "24/06/2026 12:34:49",
+      "source": "addedAccommodation"
     },
     {
       "stage": 9,
       "role": "primary",
       "name": "Camping saint Marti",
       "website": "http://campingsantmarti.wifeo.com",
-      "photo": "http://campingsantmarti.wifeo.com/images/2/201/20160711_104549.jpg"
+      "photo": "http://campingsantmarti.wifeo.com/images/2/201/20160711_104549.jpg",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 9,
       "role": "alternative",
       "name": "",
       "website": "https://campingcannadal.wixsite.com/monsite",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 9,
       "role": "alternative",
       "name": "",
       "website": "https://www.campingfrance.org/camping/occitanie/serralongue/camping-a-la-ferme-la-pomarede/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 9,
       "role": "alternative",
       "name": "",
       "website": "https://www.booking.com/hotel/es/ca-la-merce-agradable-casa-en-amer.html?aid=1311119&checkin=2026-07-31&checkout=2026-08-02&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=G1wXzXGx68Hmtfil",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     }
   ],
   "pois": [
@@ -1615,48 +1729,56 @@
       "stage": 2,
       "name": "Cala Rostella",
       "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+      "url": "",
       "region": ""
     },
     {
       "stage": 2,
       "name": "Platja Boquelles",
       "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+      "url": "",
       "region": ""
     },
     {
       "stage": 2,
       "name": "platja d’en talladofins",
       "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+      "url": "",
       "region": ""
     },
     {
       "stage": 3,
       "name": "Cala de L'Illa Roja",
       "image": "",
+      "url": "",
       "region": ""
     },
     {
       "stage": 3,
       "name": "Platja Fonda",
       "image": "",
+      "url": "",
       "region": ""
     },
     {
       "stage": 3,
       "name": "Platja D'En Gotes",
       "image": "",
+      "url": "",
       "region": ""
     },
     {
       "stage": 5,
       "name": "Voie Verte du Carrilet",
       "image": "",
+      "url": "",
       "region": ""
     },
     {
       "stage": 6,
       "name": "Voie Verte du Carrilet",
       "image": "",
+      "url": "",
       "region": ""
     }
   ],
@@ -1664,7 +1786,34 @@
     {
       "stage": 1,
       "text": "Voir ou garer la voiture",
-      "photo": ""
+      "photo": "",
+      "createdAt": "22/06/2026 11:53:25",
+      "source": "travelerNote"
+    }
+  ],
+  "contributions": [
+    {
+      "id": "traveler-note-stage-1-22-06-2026-11-53-25-voir-ou-garer-la-voiture-0",
+      "type": "travelerNote",
+      "stage": 1,
+      "createdAt": "22/06/2026 11:53:25",
+      "payload": {
+        "text": "Voir ou garer la voiture",
+        "photo": ""
+      },
+      "status": "published"
+    },
+    {
+      "id": "added-accommodation-stage-8-24-06-2026-12-34-49-https-www-booking-com-hotel-es-el-pi-solitari-fr",
+      "type": "addedAccommodation",
+      "stage": 8,
+      "createdAt": "24/06/2026 12:34:49",
+      "payload": {
+        "url": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
+        "name": "El Pi Solitari",
+        "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+      },
+      "status": "published"
     }
   ],
   "days": [
@@ -1711,7 +1860,9 @@
       "noteItems": [
         {
           "text": "Voir ou garer la voiture",
-          "photo": ""
+          "photo": "",
+          "createdAt": "22/06/2026 11:53:25",
+          "source": "travelerNote"
         }
       ],
       "pois": [],
@@ -1783,16 +1934,19 @@
             {
               "name": "Cala Rostella",
               "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Boquelles",
               "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "url": "",
               "region": ""
             },
             {
               "name": "platja d’en talladofins",
               "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "url": "",
               "region": ""
             }
           ],
@@ -1800,16 +1954,19 @@
             {
               "name": "Cala Rostella",
               "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Boquelles",
               "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "url": "",
               "region": ""
             },
             {
               "name": "platja d’en talladofins",
               "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "url": "",
               "region": ""
             }
           ],
@@ -1817,16 +1974,19 @@
             {
               "name": "Cala Rostella",
               "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Boquelles",
               "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "url": "",
               "region": ""
             },
             {
               "name": "platja d’en talladofins",
               "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "url": "",
               "region": ""
             }
           ],
@@ -1901,16 +2061,19 @@
         {
           "name": "Cala Rostella",
           "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Boquelles",
           "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "url": "",
           "region": ""
         },
         {
           "name": "platja d’en talladofins",
           "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "url": "",
           "region": ""
         }
       ],
@@ -1918,16 +2081,19 @@
         {
           "name": "Cala Rostella",
           "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Boquelles",
           "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "url": "",
           "region": ""
         },
         {
           "name": "platja d’en talladofins",
           "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "url": "",
           "region": ""
         }
       ],
@@ -1935,16 +2101,19 @@
         {
           "name": "Cala Rostella",
           "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Boquelles",
           "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "url": "",
           "region": ""
         },
         {
           "name": "platja d’en talladofins",
           "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "url": "",
           "region": ""
         }
       ],
@@ -2208,16 +2377,19 @@
             {
               "name": "Cala de L'Illa Roja",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Fonda",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja D'En Gotes",
               "image": "",
+              "url": "",
               "region": ""
             }
           ],
@@ -2225,16 +2397,19 @@
             {
               "name": "Cala de L'Illa Roja",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Fonda",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja D'En Gotes",
               "image": "",
+              "url": "",
               "region": ""
             }
           ],
@@ -2242,16 +2417,19 @@
             {
               "name": "Cala de L'Illa Roja",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja Fonda",
               "image": "",
+              "url": "",
               "region": ""
             },
             {
               "name": "Platja D'En Gotes",
               "image": "",
+              "url": "",
               "region": ""
             }
           ],
@@ -2451,16 +2629,19 @@
         {
           "name": "Cala de L'Illa Roja",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Fonda",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja D'En Gotes",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2468,16 +2649,19 @@
         {
           "name": "Cala de L'Illa Roja",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Fonda",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja D'En Gotes",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2485,16 +2669,19 @@
         {
           "name": "Cala de L'Illa Roja",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja Fonda",
           "image": "",
+          "url": "",
           "region": ""
         },
         {
           "name": "Platja D'En Gotes",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2642,6 +2829,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2649,6 +2837,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2656,6 +2845,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2720,6 +2910,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2727,6 +2918,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2734,6 +2926,7 @@
         {
           "name": "Voie Verte du Carrilet",
           "image": "",
+          "url": "",
           "region": ""
         }
       ],
@@ -2840,7 +3033,9 @@
           {
             "url": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
             "name": "El Pi Solitari",
-            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o=",
+            "createdAt": "24/06/2026 12:34:49",
+            "source": "addedAccommodation"
           }
         ],
         "alternativeNames": [

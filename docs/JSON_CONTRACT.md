@@ -8,7 +8,10 @@ un roadbook = un dossier GitHub + roadbooks/<id>/roadbook.json
 
 Pendant la transition, les Google Sheets existants restent la source de vérité fonctionnelle. Le fichier JSON canonique doit donc être capable de contenir fidèlement toutes les informations utiles déjà présentes dans les feuilles.
 
-Voir aussi le rapport détaillé : [`JSON_FIRST_MIGRATION_AUDIT.md`](JSON_FIRST_MIGRATION_AUDIT.md).
+Voir aussi :
+
+- le rapport détaillé : [`JSON_FIRST_MIGRATION_AUDIT.md`](JSON_FIRST_MIGRATION_AUDIT.md) ;
+- le rapport de synchronisation Sprint 3A : [`SPRINT3A_SYNC_REPORT.md`](SPRINT3A_SYNC_REPORT.md).
 
 ## Emplacement officiel
 
@@ -39,6 +42,7 @@ roadbooks/<id>/
   "accommodation": [],
   "pois": [],
   "notes": [],
+  "contributions": [],
   "days": []
 }
 ```
@@ -83,6 +87,7 @@ roadbooks/<id>/
 | `GPX` | `gpx` |
 | `Point d'intérêt` | `pois[]`, `pointsOfInterest[]`, `interest[]` |
 | `Images POI` | `pois[].image` |
+| `Lien POI` | `pois[].url` |
 | `Région` | `pois[].region` |
 
 Les lignes spéciales `total` et `total des étapes` alimentent `summary.official` et les repères de total, mais ne deviennent jamais des étapes.
@@ -119,6 +124,18 @@ Dans le JSON canonique, les variantes peuvent être stockées :
 | `URL hébergement` | `accommodation.alternatives[].url` |
 | `Nom` | `accommodation.alternatives[].name` |
 | `Photo` | `accommodation.alternatives[].photo` |
+
+### Contributions publiques
+
+Les feuilles de contributions restent lues depuis Google Sheets pendant la transition, mais le JSON canonique peut déjà conserver une collection plate :
+
+| Type | JSON |
+| --- | --- |
+| note voyageur | `contributions[].type = "travelerNote"` |
+| hébergement ajouté | `contributions[].type = "addedAccommodation"` |
+| étape ciblée | `contributions[].stage` |
+| horodatage | `contributions[].createdAt` |
+| données métier | `contributions[].payload` |
 
 ## Synchronisation transitionnelle
 

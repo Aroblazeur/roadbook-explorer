@@ -8,7 +8,7 @@
     "project": "A faire",
     "projectStatus": "todo",
     "coverImage": "roadbooks/voie-bleue/data/Couverture.jpg",
-    "generatedAt": "2026-07-04T21:12:21.598Z",
+    "generatedAt": "2026-07-04T21:29:02.778Z",
     "source": "google-sheets",
     "googleSheetId": "16OzEESCJaPNToT-Iy1QHf8JzNbgYtgWIJgG5f6C3iNg"
   },
@@ -374,74 +374,95 @@
       "role": "primary",
       "name": "Camping CapFun  Mirabelle",
       "website": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 2,
       "role": "primary",
       "name": "camping le paquis",
       "website": "https://www.campingcorny.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 3,
       "role": "primary",
       "name": "Camping les boucles de la moselle",
       "website": "https://www.lesbouclesdelamoselle.com/fr/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 4,
       "role": "primary",
       "name": "Camping du Passe-Temps",
       "website": "https://www.bayon.mairie54.fr/fr/camping-du-passe-temps.html",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 4,
       "role": "alternative",
       "name": "",
       "website": "https://www.lile-aux-mille-charmes.fr/le-camping",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 5,
       "role": "primary",
       "name": "Camping les amis de la nature",
       "website": "https://chaumousey.amis-nature-vosges.org/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 5,
       "role": "alternative",
       "name": "Gite airbnb",
       "website": "https://www.airbnb.fr/rooms/2893566?check_in=2026-07-30&check_out=2026-07-31&guests=3&adults=2&children=1&s=67&unique_share_id=dc8ed550-6dae-486f-8835-25bf0aa40a72",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 5,
       "role": "alternative",
       "name": "Camping les nids du lac",
       "website": "https://lesnidsdulac.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 5,
       "role": "alternative",
       "name": "",
       "website": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     },
     {
       "stage": 6,
       "role": "primary",
       "name": "",
       "website": "https://www.campingfontenoy.com/",
-      "photo": ""
+      "photo": "",
+      "createdAt": "",
+      "source": ""
     }
   ],
   "pois": [],
   "notes": [],
+  "contributions": [],
   "days": [
     {
       "id": "stage-1",
