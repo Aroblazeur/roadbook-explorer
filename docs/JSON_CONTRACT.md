@@ -8,6 +8,8 @@ un roadbook = un dossier GitHub + roadbooks/<id>/roadbook.json
 
 Pendant la transition, les Google Sheets existants restent la source de vérité fonctionnelle. Le fichier JSON canonique doit donc être capable de contenir fidèlement toutes les informations utiles déjà présentes dans les feuilles.
 
+Voir aussi le rapport détaillé : [`JSON_FIRST_MIGRATION_AUDIT.md`](JSON_FIRST_MIGRATION_AUDIT.md).
+
 ## Emplacement officiel
 
 Chaque roadbook du catalogue doit viser cette structure :
