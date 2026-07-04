@@ -1445,9 +1445,7 @@ async function loadJsonRoadbook(config = currentRoadbookConfig()) {
     throw lastError || new Error(ERROR_MESSAGES.NETWORK);
 }
 
-const loadFallbackRoadbook = loadJsonRoadbook;
-
-function logJsonFallbackError(error) {
+function logJsonLoadError(error) {
     if (typeof console !== "undefined" && typeof console.warn === "function") {
         const message = error && error.message ? error.message : "erreur inconnue";
         console.warn(`Chargement JSON échoué, utilisation du fallback Google Sheets : ${message}`);
@@ -1459,7 +1457,7 @@ async function loadRoadbook() {
     try {
         return await loadJsonRoadbook(config);
     } catch (jsonError) {
-        logJsonFallbackError(jsonError);
+        logJsonLoadError(jsonError);
         try {
             return await loadGoogleSheetRoadbook(config);
         } catch (sheetsError) {
@@ -1495,7 +1493,7 @@ if (typeof module !== "undefined" && module.exports) {
         sanitizeRoadbookAssetName,
         roadbookJsonPaths,
         loadGoogleSheetRoadbook,
-        loadFallbackRoadbook,
+        loadFallbackRoadbook: loadJsonRoadbook,
         loadRoadbook,
         loadRoadbookLibraryMetadata
     };
