@@ -252,14 +252,15 @@
 
     function normalizeContributions(contributions) {
         if (!Array.isArray(contributions)) return [];
-        return contributions.map((contribution, index) => normalizeContribution(contribution, index));
+        const usedIds = new Set();
+        return contributions.map((contribution, index) => normalizeContribution(contribution, index, usedIds));
     }
 
-    function normalizeContribution(contribution, index) {
+    function normalizeContribution(contribution, index, usedIds = new Set()) {
         const normalized = contribution && typeof contribution === "object" && !Array.isArray(contribution)
             ? structuredClone(contribution)
             : {};
-        normalized.id = safeText(normalized.id, `contribution-${index + 1}`);
+        normalized.id = reserveUniqueContributionId(usedIds, safeText(normalized.id, ""), `contribution-${index + 1}`);
         normalized.type = safeText(normalized.type, "travelerNote");
         normalized.stage = integerOrNull(normalized.stage);
         normalized.createdAt = safeText(normalized.createdAt, "");
@@ -269,6 +270,22 @@
         normalized.timestamp = safeText(normalized.timestamp, "");
         normalized.payload = normalizeContributionPayload(normalized.payload);
         return normalized;
+    }
+
+    function reserveUniqueContributionId(usedIds, preferredId, fallbackPrefix = "contribution") {
+        const baseId = safeText(preferredId, fallbackPrefix);
+        if (!usedIds.has(baseId)) {
+            usedIds.add(baseId);
+            return baseId;
+        }
+        let suffix = 1;
+        let candidate = `${baseId}-${suffix}`;
+        while (usedIds.has(candidate)) {
+            suffix += 1;
+            candidate = `${baseId}-${suffix}`;
+        }
+        usedIds.add(candidate);
+        return candidate;
     }
 
     function normalizeContributionPayload(payload) {
@@ -1091,8 +1108,10 @@
     function addContribution() {
         const contributions = state.selectedRoadbook?.contributions;
         if (!Array.isArray(contributions)) return;
+        const usedIds = new Set(contributions.map(item => safeText(item?.id, "")).filter(Boolean));
+        const id = reserveUniqueContributionId(usedIds, "", "contribution");
         contributions.push({
-            id: `contribution-${contributions.length + 1}`,
+            id,
             type: "travelerNote",
             stage: null,
             createdAt: "",
