@@ -1358,7 +1358,19 @@ async function loadGoogleSheetRoadbook(config = currentRoadbookConfig()) {
     return buildRoadbook(etapesRows, variantesRows, travelerNotesRows, addedAccommodationRows, config);
 }
 
-async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
+function ensureUsableRoadbook(roadbook, sourceLabel = "roadbook") {
+    if (!roadbook || typeof roadbook !== "object" || Array.isArray(roadbook)) {
+        throw new Error(`${sourceLabel} invalide`);
+    }
+
+    if (!safeArray(roadbook.stages).length && !safeArray(roadbook.days).length) {
+        throw new Error(`${sourceLabel} inexploitable`);
+    }
+
+    return roadbook;
+}
+
+async function loadJsonRoadbook(config = currentRoadbookConfig()) {
     async function loadNodeFallback(path) {
         const isNodeRuntime =
             typeof process !== "undefined" &&
@@ -1386,7 +1398,7 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
 
     if (!validPaths.length) {
         const error = new Error("aucun chemin JSON local valide configuré");
-        console.warn(`[Roadbook] Fallback JSON ignoré : ${error.message}.`);
+        console.warn(`[Roadbook] Chargement JSON ignoré : ${error.message}.`);
         throw error;
     }
 
@@ -1395,7 +1407,9 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
     for (const path of validPaths) {
         try {
             const localFallback = await loadNodeFallback(path);
-            if (localFallback) return normalizeRoadbookJson(localFallback, config);
+            if (localFallback) {
+                return ensureUsableRoadbook(normalizeRoadbookJson(localFallback, config), `JSON ${path}`);
+            }
         } catch (error) {
             lastError = error;
         }
@@ -1404,21 +1418,26 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
             const response = await fetch(path, NETWORK_FIRST_FETCH_OPTIONS);
             if (!response.ok) {
                 lastError = new Error(`HTTP ${response.status}`);
-                console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${lastError.message}.`);
+                console.warn(`[Roadbook] Chargement JSON échoué (${path}) : ${lastError.message}.`);
                 continue;
             }
             const content = await response.text();
             try {
-                return normalizeRoadbookJson(JSON.parse(content), config);
+                const payload = JSON.parse(content);
+                return ensureUsableRoadbook(normalizeRoadbookJson(payload, config), `JSON ${path}`);
             } catch (error) {
-                lastError = new Error(`JSON invalide dans ${path}`);
-                console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${lastError.message}.`);
+                if (error instanceof SyntaxError) {
+                    lastError = new Error(`JSON invalide dans ${path}`);
+                } else {
+                    lastError = error instanceof Error ? error : new Error(`JSON inexploitable dans ${path}`);
+                }
+                console.warn(`[Roadbook] Chargement JSON échoué (${path}) : ${lastError.message}.`);
                 continue;
             }
         } catch (error) {
             lastError = error;
             const reason = error && error.message ? error.message : "erreur inconnue";
-            console.warn(`[Roadbook] Fallback JSON échoué (${path}) : ${reason}.`);
+            console.warn(`[Roadbook] Chargement JSON échoué (${path}) : ${reason}.`);
         }
 
     }
@@ -1426,26 +1445,26 @@ async function loadFallbackRoadbook(config = currentRoadbookConfig()) {
     throw lastError || new Error(ERROR_MESSAGES.NETWORK);
 }
 
-function logFallbackError(error) {
+function logJsonLoadError(error) {
     if (typeof console !== "undefined" && typeof console.warn === "function") {
         const message = error && error.message ? error.message : "erreur inconnue";
-        console.warn(`Chargement Google Sheets échoué, utilisation du fallback JSON: ${message}`);
+        console.warn(`Chargement JSON échoué, utilisation du fallback Google Sheets : ${message}`);
     }
 }
 
 async function loadRoadbook() {
     const config = await waitForRoadbookConfig();
     try {
-        return await loadGoogleSheetRoadbook(config);
-    } catch (error) {
-        logFallbackError(error);
+        return await loadJsonRoadbook(config);
+    } catch (jsonError) {
+        logJsonLoadError(jsonError);
         try {
-            return await loadFallbackRoadbook(config);
-        } catch (fallbackError) {
-            const sheetsReason = error && error.message ? error.message : "erreur inconnue";
-            const fallbackReason = fallbackError && fallbackError.message ? fallbackError.message : "erreur inconnue";
-            console.error(`[Roadbook] Aucune source disponible. Google Sheets : ${sheetsReason}. Fallback JSON : ${fallbackReason}.`);
-            throw new Error("Roadbook indisponible : Google Sheets et le fichier JSON local n'ont pas pu être chargés.");
+            return await loadGoogleSheetRoadbook(config);
+        } catch (sheetsError) {
+            const jsonReason = jsonError && jsonError.message ? jsonError.message : "erreur inconnue";
+            const sheetsReason = sheetsError && sheetsError.message ? sheetsError.message : "erreur inconnue";
+            console.error(`[Roadbook] Aucune source disponible. JSON : ${jsonReason}. Google Sheets : ${sheetsReason}.`);
+            throw new Error("Roadbook indisponible : le fichier JSON canonique et le fallback Google Sheets n'ont pas pu être chargés.");
         }
     }
 }
@@ -1474,7 +1493,7 @@ if (typeof module !== "undefined" && module.exports) {
         sanitizeRoadbookAssetName,
         roadbookJsonPaths,
         loadGoogleSheetRoadbook,
-        loadFallbackRoadbook,
+        loadJsonRoadbook,
         loadRoadbook,
         loadRoadbookLibraryMetadata
     };
