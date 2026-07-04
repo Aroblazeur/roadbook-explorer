@@ -109,6 +109,14 @@
   margin: 1rem 0;
 }
 
+.studio-general-info {
+  margin-bottom: 1rem;
+}
+
+.studio-general-info h3 {
+  margin: 0 0 0.75rem;
+}
+
 .studio-detail__metric {
   padding: 0.75rem;
 }
@@ -149,6 +157,12 @@
   padding: 0.7rem 0.85rem;
   font: inherit;
   background: var(--studio-surface-strong);
+}
+
+.studio-input--readonly {
+  color: var(--studio-muted);
+  font-weight: 600;
+  background: rgba(95, 111, 100, 0.08);
 }
 
 .studio-form-grid__full {
