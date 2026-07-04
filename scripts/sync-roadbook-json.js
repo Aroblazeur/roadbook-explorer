@@ -83,6 +83,7 @@ function buildCanonicalPayload(roadbook, metadata = {}, config = {}) {
         accommodation: collectAccommodations(roadbook.days || roadbook.stages),
         pois: collectPois(roadbook.days || roadbook.stages),
         notes: collectNotes(roadbook.days || roadbook.stages),
+        contributions: collectContributions(roadbook.days || roadbook.stages),
         days: Array.isArray(roadbook.days) ? roadbook.days : []
     };
 }
@@ -110,14 +111,18 @@ function collectAccommodations(entries = []) {
                 role: "primary",
                 name: accommodation.name || "",
                 website: accommodation.website || accommodation.url || "",
-                photo: accommodation.photo || ""
+                photo: accommodation.photo || "",
+                createdAt: accommodation.createdAt || "",
+                source: accommodation.source || ""
             },
             ...safeArray(accommodation.alternatives).map(alternative => ({
                 stage: entry.stage,
                 role: "alternative",
                 name: alternative.name || "",
                 website: alternative.url || alternative.website || "",
-                photo: alternative.photo || ""
+                photo: alternative.photo || "",
+                createdAt: alternative.createdAt || "",
+                source: alternative.source || ""
             }))
         ];
 
@@ -152,9 +157,60 @@ function collectNotes(entries = []) {
             .map(note => ({
                 stage: entry.stage,
                 text: note.text,
-                photo: note.photo || ""
+                photo: note.photo || "",
+                createdAt: note.createdAt || "",
+                source: note.source || ""
             }))
     );
+}
+
+function collectContributions(entries = []) {
+    return safeArray(entries).flatMap(entry => [
+        ...safeArray(entry?.noteItems)
+            .filter(note => note?.source === "travelerNote" && note.text)
+            .map((note, index) => ({
+                id: contributionId("traveler-note", entry, note, index),
+                type: "travelerNote",
+                stage: entry.stage,
+                createdAt: note.createdAt || "",
+                payload: {
+                    text: note.text,
+                    photo: note.photo || ""
+                },
+                status: "published"
+            })),
+        ...safeArray(entry?.accommodation?.alternatives)
+            .filter(alternative => alternative?.source === "addedAccommodation" && alternative.url)
+            .map((alternative, index) => ({
+                id: contributionId("added-accommodation", entry, alternative, index),
+                type: "addedAccommodation",
+                stage: entry.stage,
+                createdAt: alternative.createdAt || "",
+                payload: {
+                    url: alternative.url,
+                    name: alternative.name || "",
+                    photo: alternative.photo || ""
+                },
+                status: "published"
+            }))
+    ]);
+}
+
+function contributionId(prefix, entry, payload, index) {
+    const raw = [
+        prefix,
+        entry?.id || entry?.stage || "stage",
+        payload?.createdAt || "",
+        payload?.url || payload?.text || "",
+        index
+    ].join("-");
+    return raw
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 96) || `${prefix}-${Date.now()}-${index}`;
 }
 
 async function readCatalogIds() {

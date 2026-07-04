@@ -264,6 +264,18 @@ function sanitizeNotePhotoUrl(value) {
     return unsafe ? "" : candidate;
 }
 
+function sanitizeLinkUrl(value) {
+    const candidate = String(value ?? "").trim();
+    if (!candidate) return "";
+
+    try {
+        const url = new URL(candidate);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+    } catch (error) {
+        return "";
+    }
+}
+
 function travelerNoteStage(value) {
     const direct = toNumber(value);
     if (direct !== null) return direct;
@@ -274,8 +286,10 @@ function travelerNoteStage(value) {
 function mapTravelerNote(record) {
     return {
         stageReference: travelerNoteStage(firstValue(record, ["etape", "étape"])),
+        createdAt: firstValue(record, ["horodateur", "timestamp", "date"]),
         text: firstValue(record, ["note"]),
-        photo: sanitizeNotePhotoUrl(firstValue(record, ["photo"]))
+        photo: sanitizeNotePhotoUrl(firstValue(record, ["photo"])),
+        source: "travelerNote"
     };
 }
 
@@ -294,7 +308,12 @@ function attachTravelerNotes(stages, rows) {
             const targets = stagesByNumber.get(note.stageReference) || [];
             targets.forEach(stage => {
                 if (!Array.isArray(stage.noteItems)) stage.noteItems = [];
-                stage.noteItems.push({ text: note.text, photo: note.photo });
+                stage.noteItems.push({
+                    text: note.text,
+                    photo: note.photo,
+                    createdAt: note.createdAt || "",
+                    source: note.source
+                });
             });
         });
 }
@@ -342,9 +361,11 @@ function firstAddedAccommodationUrlValue(record) {
 function mapAddedAccommodation(record) {
     return {
         stageReference: travelerNoteStage(firstAddedAccommodationStageValue(record)),
+        createdAt: firstValue(record, ["horodateur", "timestamp", "date"]),
         url: firstAddedAccommodationUrlValue(record),
         name: firstValue(record, ADDED_ACCOMMODATION_NAME_HEADERS),
-        photo: sanitizeImageUrl(firstValue(record, ADDED_ACCOMMODATION_PHOTO_HEADERS))
+        photo: sanitizeImageUrl(firstValue(record, ADDED_ACCOMMODATION_PHOTO_HEADERS)),
+        source: "addedAccommodation"
     };
 }
 
@@ -355,7 +376,9 @@ function normalizeAlternativeAccommodationEntry(value, { name = "", photo = "" }
         return {
             url,
             name: normalizeValue(value.name) || normalizeValue(name) || "",
-            photo: sanitizeImageUrl(value.photo || photo)
+            photo: sanitizeImageUrl(value.photo || photo),
+            createdAt: normalizeValue(value.createdAt) || "",
+            source: normalizeValue(value.source) || ""
         };
     }
 
@@ -423,6 +446,8 @@ function attachAddedAccommodations(stages, rows) {
             if (mainKey && mainKey === key) {
                 if (entry.name) accommodation.name = entry.name;
                 if (entry.photo) accommodation.photo = entry.photo;
+                accommodation.createdAt = accommodation.createdAt || entry.createdAt || "";
+                accommodation.source = accommodation.source || entry.source;
                 stage.accommodation = accommodation;
                 syncStageAlternativeAccommodation(stage);
                 return;
@@ -432,11 +457,15 @@ function attachAddedAccommodations(stages, rows) {
             if (existingAlternative) {
                 if (entry.name) existingAlternative.name = entry.name;
                 if (entry.photo) existingAlternative.photo = entry.photo;
+                existingAlternative.createdAt = existingAlternative.createdAt || entry.createdAt || "";
+                existingAlternative.source = existingAlternative.source || entry.source;
             } else {
                 accommodation.alternatives.push({
                     url: entry.url,
                     name: entry.name || "",
-                    photo: entry.photo || ""
+                    photo: entry.photo || "",
+                    createdAt: entry.createdAt || "",
+                    source: entry.source
                 });
             }
 
@@ -451,6 +480,7 @@ function attachAddedAccommodations(stages, rows) {
 function buildPoiEntries(record) {
     const names = splitMulti(firstValue(record, ["point d'intérêt", "point d'interet"]));
     const images = splitMulti(firstValue(record, ["images poi", "image poi"]), { preserveEmpty: true });
+    const links = splitMulti(firstValue(record, ["lien poi", "url poi"]), { preserveEmpty: true });
     const regions = splitMulti(
         firstValue(record, ["région", "region"]) ?? firstValueByPrefix(record, "region"),
         { preserveEmpty: true }
@@ -459,6 +489,7 @@ function buildPoiEntries(record) {
     return names.map((name, index) => ({
         name,
         image: images[index] || "",
+        url: sanitizeLinkUrl(links[index] || ""),
         region: regions[index] || ""
     }));
 }
@@ -1003,6 +1034,7 @@ function normalizePoiJson(value) {
     return {
         name,
         image: sanitizeImageUrl(source.image),
+        url: sanitizeLinkUrl(source.url || source.link),
         description: normalizeValue(source.description) || "",
         region: normalizeValue(source.region) || "",
         coordinates: source.coordinates || null
@@ -1020,7 +1052,9 @@ function normalizeNoteJson(value) {
 
     return {
         text,
-        photo: sanitizeNotePhotoUrl(source.photo || source.image)
+        photo: sanitizeNotePhotoUrl(source.photo || source.image),
+        createdAt: normalizeValue(source.createdAt) || "",
+        source: normalizeValue(source.source) || ""
     };
 }
 
