@@ -150,7 +150,7 @@
           {
             "url": "https://www.campingkims.com/",
             "name": "Camping Kim's",
-            "photo": "http://www.campingkims.com/wp-content/uploads/kims-25.webp"
+            "photo": "https://www.campingkims.com/wp-content/uploads/kims-25.webp"
           },
           {
             "url": "https://www.campingcalelladepalafrugell.com/",
@@ -165,7 +165,7 @@
         ],
         "alternativePhotos": [
           "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg",
-          "http://www.campingkims.com/wp-content/uploads/kims-25.webp",
+          "https://www.campingkims.com/wp-content/uploads/kims-25.webp",
           null
         ]
       },
@@ -492,8 +492,8 @@
       "stagePhoto": null,
       "accommodation": {
         "name": "Camping Sant Marti",
-        "website": "http://campingsantmarti.wifeo.com",
-        "url": "http://campingsantmarti.wifeo.com",
+        "website": "https://campingsantmarti.wifeo.com",
+        "url": "https://campingsantmarti.wifeo.com",
         "photo": null,
         "alternatives": [
           {
@@ -716,7 +716,7 @@
           {
             "url": "https://www.campingkims.com/",
             "name": "Camping Kim's",
-            "photo": "http://www.campingkims.com/wp-content/uploads/kims-25.webp"
+            "photo": "https://www.campingkims.com/wp-content/uploads/kims-25.webp"
           },
           {
             "url": "https://www.campingcalelladepalafrugell.com/",
@@ -731,7 +731,7 @@
         ],
         "alternativePhotos": [
           "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg",
-          "http://www.campingkims.com/wp-content/uploads/kims-25.webp",
+          "https://www.campingkims.com/wp-content/uploads/kims-25.webp",
           null
         ]
       },
@@ -1058,8 +1058,8 @@
       "stagePhoto": null,
       "accommodation": {
         "name": "Camping Sant Marti",
-        "website": "http://campingsantmarti.wifeo.com",
-        "url": "http://campingsantmarti.wifeo.com",
+        "website": "https://campingsantmarti.wifeo.com",
+        "url": "https://campingsantmarti.wifeo.com",
         "photo": null,
         "alternatives": [
           {
