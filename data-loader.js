@@ -1359,7 +1359,7 @@ async function loadGoogleSheetRoadbook(config = currentRoadbookConfig()) {
 }
 
 function ensureUsableRoadbook(roadbook, sourceLabel = "roadbook") {
-    if (!roadbook || typeof roadbook !== "object") {
+    if (!roadbook || typeof roadbook !== "object" || Array.isArray(roadbook)) {
         throw new Error(`${sourceLabel} invalide`);
     }
 
@@ -1493,7 +1493,7 @@ if (typeof module !== "undefined" && module.exports) {
         sanitizeRoadbookAssetName,
         roadbookJsonPaths,
         loadGoogleSheetRoadbook,
-        loadFallbackRoadbook: loadJsonRoadbook,
+        loadJsonRoadbook,
         loadRoadbook,
         loadRoadbookLibraryMetadata
     };
