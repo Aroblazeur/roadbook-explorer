@@ -73,7 +73,7 @@ async function main() {
     console.log(`  roadbooks/${id}/data/accommodation-enrichment.json`);
     console.log(`  roadbooks/${id}/data/poi-enrichment.json`);
     console.log(`  roadbooks/${id}/gpx/  (vide)`);
-    console.log(`  roadbooks/${id}/assets/  (vide)`);
+    console.log(`  roadbooks/${id}/photos/  (vide)`);
 
     if (googleSheetId) {
         console.log(`\n📊 Google Sheet : https://docs.google.com/spreadsheets/d/${googleSheetId}`);
@@ -95,7 +95,7 @@ async function ensureTemplateIsComplete() {
         "roadbook.json",
         path.join("data", "accommodation-enrichment.json"),
         path.join("data", "poi-enrichment.json"),
-        path.join("assets", ".gitkeep"),
+        path.join("photos", ".gitkeep"),
         path.join("gpx", ".gitkeep")
     ];
 
@@ -135,14 +135,24 @@ async function personalizeTemplate(roadbookDir, { id, title, description, google
 
     const roadbookContent = replaceRequired(
         replaceRequired(
-            roadbookTemplate,
-            `"title": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.title)}`,
-            `"title": ${JSON.stringify(title)}`,
-            "title du roadbook"
+            replaceRequired(
+                replaceRequired(
+                    roadbookTemplate,
+                    `"id": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.id)}`,
+                    `"id": ${JSON.stringify(id)}`,
+                    "id du roadbook"
+                ),
+                `"title": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.title)}`,
+                `"title": ${JSON.stringify(title)}`,
+                "title du roadbook"
+            ),
+            `"description": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.description)}`,
+            `"description": ${JSON.stringify(description)}`,
+            "description du roadbook"
         ),
-        `"description": ${JSON.stringify(TEMPLATE_PLACEHOLDERS.description)}`,
-        `"description": ${JSON.stringify(description)}`,
-        "description du roadbook"
+        `"googleSheetId": ""`,
+        `"googleSheetId": ${JSON.stringify(googleSheetId)}`,
+        "googleSheetId du roadbook JSON"
     );
 
     await Promise.all([

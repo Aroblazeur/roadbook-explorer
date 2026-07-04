@@ -1,0 +1,335 @@
+{
+  "id": "alsace-canal-marne-rhin",
+  "title": "Alsace via canal de la marne au rhin",
+  "description": "itinerance personalisé en 12 jours",
+  "metadata": {
+    "activity": "Velo",
+    "destination": "Alsace",
+    "project": "Deja fait",
+    "projectStatus": "done",
+    "coverImage": "",
+    "generatedAt": "2026-07-04T21:12:20.993Z",
+    "source": "google-sheets",
+    "googleSheetId": "1uAD98fd3HjDHBGxquWZybm7YXdA9wOFad0eiygy4qrA"
+  },
+  "summary": {
+    "official": null,
+    "stagesTotal": {
+      "distance": 23,
+      "elevationGain": 230,
+      "elevationLoss": null,
+      "mapEmbedUrl": null,
+      "gpx": null,
+      "link": null
+    },
+    "stagesTotalMarker": null
+  },
+  "stages": [
+    {
+      "id": "stage-1",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 1,
+      "day": null,
+      "stageLabel": null,
+      "name": "Sarrebourg → Mittersheim",
+      "type": "principale",
+      "departure": "Sarrebourg",
+      "arrival": "Mittersheim",
+      "distance": 23,
+      "elevationGain": 230,
+      "elevationLoss": null,
+      "notes": null,
+      "gpx": "etape1.gpx",
+      "mapEmbedUrl": null,
+      "stagePhoto": "roadbooks/alsace-canal-marne-rhin/data/etape1.jpg",
+      "accommodation": {
+        "name": "",
+        "website": "https://www.mittersheim-loisirs.fr/",
+        "url": "https://www.mittersheim-loisirs.fr/",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 1 - Sarrebourg → Mittersheim",
+      "elevation": 230,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Balade au pays des étangs",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Balade au pays des étangs",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Balade au pays des étangs",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": ""
+    },
+    {
+      "id": "stage-2",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 2,
+      "day": null,
+      "stageLabel": null,
+      "name": "Mittersheim → gondrexange",
+      "type": "principale",
+      "departure": "Mittersheim",
+      "arrival": "gondrexange",
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "notes": null,
+      "gpx": "etape2.gpx",
+      "mapEmbedUrl": null,
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Camping Les Mouettes",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 2 - Mittersheim → gondrexange",
+      "elevation": 0,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Canal des Houillère",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Canal des Houillère",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Canal des Houillère",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping Les Mouettes"
+    }
+  ],
+  "variants": [],
+  "accommodation": [
+    {
+      "stage": 1,
+      "role": "primary",
+      "name": "",
+      "website": "https://www.mittersheim-loisirs.fr/",
+      "photo": ""
+    },
+    {
+      "stage": 2,
+      "role": "primary",
+      "name": "Camping Les Mouettes",
+      "website": "",
+      "photo": ""
+    }
+  ],
+  "pois": [
+    {
+      "stage": 1,
+      "name": "Balade au pays des étangs",
+      "image": "",
+      "region": ""
+    },
+    {
+      "stage": 2,
+      "name": "Canal des Houillère",
+      "image": "",
+      "region": ""
+    }
+  ],
+  "notes": [],
+  "days": [
+    {
+      "id": "stage-1",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 1,
+      "day": null,
+      "stageLabel": null,
+      "name": "Sarrebourg → Mittersheim",
+      "type": "principale",
+      "departure": "Sarrebourg",
+      "arrival": "Mittersheim",
+      "distance": 23,
+      "elevationGain": 230,
+      "elevationLoss": null,
+      "notes": null,
+      "gpx": "etape1.gpx",
+      "mapEmbedUrl": null,
+      "stagePhoto": "roadbooks/alsace-canal-marne-rhin/data/etape1.jpg",
+      "accommodation": {
+        "name": "",
+        "website": "https://www.mittersheim-loisirs.fr/",
+        "url": "https://www.mittersheim-loisirs.fr/",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 1 - Sarrebourg → Mittersheim",
+      "elevation": 230,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Balade au pays des étangs",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Balade au pays des étangs",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Balade au pays des étangs",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": ""
+    },
+    {
+      "id": "stage-2",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 2,
+      "day": null,
+      "stageLabel": null,
+      "name": "Mittersheim → gondrexange",
+      "type": "principale",
+      "departure": "Mittersheim",
+      "arrival": "gondrexange",
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "notes": null,
+      "gpx": "etape2.gpx",
+      "mapEmbedUrl": null,
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Camping Les Mouettes",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 2 - Mittersheim → gondrexange",
+      "elevation": 0,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Canal des Houillère",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Canal des Houillère",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Canal des Houillère",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping Les Mouettes"
+    }
+  ]
+}

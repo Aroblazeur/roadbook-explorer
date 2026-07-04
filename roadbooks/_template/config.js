@@ -8,6 +8,7 @@
         shortId: "my-roadbook",
         title: "Mon Roadbook",
         description: "Description de l'itinéraire.",
+        jsonPath: "roadbooks/my-roadbook/roadbook.json",
         googleSheetId: "",
         sheets: Object.freeze({
             stages: Object.freeze({ name: "etapes principales" }),

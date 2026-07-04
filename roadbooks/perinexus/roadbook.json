@@ -1,18 +1,42 @@
 {
   "id": "perinexus",
-  "title": "RoadBook Explorer",
-  "description": "Roadbook d’itinérance à vélo.",
+  "title": "pirenexus",
+  "description": "Boucle en une dizaine de jours",
+  "metadata": {
+    "activity": "Velo",
+    "destination": "Espagne",
+    "project": "A faire",
+    "projectStatus": "todo",
+    "coverImage": "",
+    "generatedAt": "2026-07-04T21:12:20.538Z",
+    "source": "google-sheets",
+    "googleSheetId": "1jhlhFPZF-oeAaiJ0pLKKagNMMa-SBxJ9HgnB4SMnyPU"
+  },
   "summary": {
-    "official": null,
-    "stagesTotal": {
-      "distance": 360.6,
-      "elevationGain": 6100,
-      "elevationLoss": 6052,
-      "mapEmbedUrl": null,
+    "official": {
+      "distance": 340,
+      "elevationGain": 3362,
+      "elevationLoss": null,
+      "mapEmbedUrl": "https://mapy.com/s/makopovofe",
       "gpx": null,
       "link": null
     },
-    "stagesTotalMarker": null
+    "stagesTotal": {
+      "distance": 373,
+      "elevationGain": 5292,
+      "elevationLoss": 5399,
+      "mapEmbedUrl": "https://mapy.com/s/budanaduga",
+      "gpx": null,
+      "link": null
+    },
+    "stagesTotalMarker": {
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "mapEmbedUrl": "https://mapy.com/s/budanaduga",
+      "gpx": null,
+      "link": null
+    }
   },
   "stages": [
     {
@@ -23,24 +47,24 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 1,
-      "day": null,
+      "day": "28/07/2026",
       "stageLabel": null,
-      "name": "Le Boulou → Darnius",
+      "name": "Le boulou → capmany",
       "type": "principale",
-      "departure": "Le Boulou",
-      "arrival": "Darnius",
-      "distance": 31.1,
-      "elevationGain": 863,
-      "elevationLoss": 804,
+      "departure": "Le boulou",
+      "arrival": "capmany",
+      "distance": 31,
+      "elevationGain": 730,
+      "elevationLoss": 680,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape01.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape01.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/hefeducoca",
+      "stagePhoto": "",
       "accommodation": {
-        "name": "Camping Albera",
+        "name": "Camping L'Albera",
         "website": "https://campingalbera.com/cast/index.htm",
         "url": "https://campingalbera.com/cast/index.htm",
-        "photo": null,
+        "photo": "https://campingalbera.com/imgs/fotos/slide/2.jpg",
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": []
@@ -51,11 +75,16 @@
       },
       "accommodationType": "camping",
       "substeps": [],
-      "title": "Étape 1 - Le Boulou → Darnius",
-      "elevation": 863,
+      "title": "Étape 1 - Le boulou → capmany",
+      "elevation": 730,
       "duration": "",
       "description": "",
-      "noteItems": [],
+      "noteItems": [
+        {
+          "text": "Voir ou garer la voiture",
+          "photo": ""
+        }
+      ],
       "pois": [],
       "pointsOfInterest": [],
       "interest": [],
@@ -63,7 +92,7 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping Albera"
+      "legacyAccommodation": "Camping L'Albera"
     },
     {
       "id": "stage-2",
@@ -73,24 +102,24 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 2,
-      "day": null,
+      "day": "29/07/2026",
       "stageLabel": null,
-      "name": "Darnius → Empuriabrava",
+      "name": "Capmany → castello d'empuries",
       "type": "principale",
-      "departure": "Darnius",
-      "arrival": "Empuriabrava",
-      "distance": 26.7,
-      "elevationGain": 120,
-      "elevationLoss": 252,
+      "departure": "Capmany",
+      "arrival": "castello d'empuries",
+      "distance": 27,
+      "elevationGain": 100,
+      "elevationLoss": 233,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape02.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape02.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/dumetozuco",
+      "stagePhoto": "",
       "accommodation": {
         "name": "Camping Mas Nou",
         "website": "https://www.campingmasnou.com/",
         "url": "https://www.campingmasnou.com/",
-        "photo": "https://www.campingmasnou.com/wp-content/uploads/Camping_2be_2026.png",
+        "photo": "",
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": []
@@ -100,9 +129,113 @@
         "photo": ""
       },
       "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 2 - Darnius → Empuriabrava",
-      "elevation": 120,
+      "substeps": [
+        {
+          "id": "substep-2-plagescapdecreus",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 2,
+          "parentStageReference": 2,
+          "stage": 2,
+          "stageReference": 2,
+          "day": null,
+          "name": "plages cap de creus",
+          "type": "joournée suplementaire avec hebergement suplementaire",
+          "departure": "castello d'empuries",
+          "arrival": "Roses",
+          "distance": null,
+          "elevationGain": null,
+          "elevationLoss": null,
+          "distanceExtra": null,
+          "elevationGainExtra": null,
+          "elevationLossExtra": null,
+          "pois": [
+            {
+              "name": "Cala Rostella",
+              "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "region": ""
+            },
+            {
+              "name": "Platja Boquelles",
+              "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "region": ""
+            },
+            {
+              "name": "platja d’en talladofins",
+              "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "region": ""
+            }
+          ],
+          "pointsOfInterest": [
+            {
+              "name": "Cala Rostella",
+              "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "region": ""
+            },
+            {
+              "name": "Platja Boquelles",
+              "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "region": ""
+            },
+            {
+              "name": "platja d’en talladofins",
+              "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "region": ""
+            }
+          ],
+          "interest": [
+            {
+              "name": "Cala Rostella",
+              "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "region": ""
+            },
+            {
+              "name": "Platja Boquelles",
+              "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "region": ""
+            },
+            {
+              "name": "platja d’en talladofins",
+              "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "region": ""
+            }
+          ],
+          "restaurants": [],
+          "shops": [],
+          "water": [],
+          "warning": [],
+          "notes": null,
+          "noteItems": [],
+          "description": "",
+          "link": null,
+          "gpx": "Variante 3 cap de creus",
+          "mapEmbedUrl": null,
+          "accommodation": {
+            "name": "Camping Ampurdanes",
+            "website": "https://campingampurdanes.com/parcela",
+            "url": "https://campingampurdanes.com/parcela",
+            "photo": "",
+            "alternatives": [],
+            "alternativeNames": [],
+            "alternativePhotos": []
+          },
+          "alternativeAccommodation": {
+            "name": "",
+            "photo": ""
+          },
+          "accommodationType": "camping",
+          "substeps": [],
+          "title": "joournée suplementaire avec hebergement suplementaire - castello d'empuries → Roses",
+          "elevation": 0,
+          "duration": "",
+          "legacyAccommodation": "Camping Ampurdanes",
+          "enabled": true,
+          "parentTitle": "Étape 2 - Capmany → castello d'empuries"
+        }
+      ],
+      "title": "Étape 2 - Capmany → castello d'empuries",
+      "elevation": 100,
       "duration": "",
       "description": "",
       "noteItems": [],
@@ -123,63 +256,313 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 3,
-      "day": null,
+      "day": "30/07/2026",
       "stageLabel": null,
-      "name": "Empuriabrava → Palafrugell",
+      "name": "castello d'empuries → Begur",
       "type": "principale",
-      "departure": "Empuriabrava",
-      "arrival": "Palafrugell",
-      "distance": 56.7,
-      "elevationGain": 293,
-      "elevationLoss": 251,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape03.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "departure": "castello d'empuries",
+      "arrival": "Begur",
+      "distance": 57,
+      "elevationGain": 275,
+      "elevationLoss": 232,
+      "notes": "voir si étapes suplementaire vers les plages",
+      "gpx": "gpx/etape03.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/mobebagepa",
+      "stagePhoto": "",
       "accommodation": {
         "name": "Camping Mas Patoxas",
         "website": "https://www.campingmaspatoxas.com/",
         "url": "https://www.campingmaspatoxas.com/",
-        "photo": "https://www.campingmaspatoxas.com/uploads/opengraph/default.jpg",
+        "photo": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/03/82/19/4d/camping-resort-bungalow.jpg?w=900&h=500&s=1",
         "alternatives": [
           {
             "url": "https://campingbegur.com/",
-            "name": "Camping Begur",
-            "photo": "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg"
+            "name": "",
+            "photo": ""
           },
           {
             "url": "https://www.campingkims.com/",
-            "name": "Camping Kim's",
-            "photo": "https://www.campingkims.com/wp-content/uploads/kims-25.webp"
+            "name": "",
+            "photo": ""
           },
           {
             "url": "https://www.campingcalelladepalafrugell.com/",
-            "name": "Camping Calella de Palafrugell",
-            "photo": null
+            "name": "",
+            "photo": "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg"
+          },
+          {
+            "url": "https://www.airbnb.fr/rooms/1218401667752864126?check_in=2026-07-27&check_out=2026-07-28&guests=3&adults=2&children=1&s=67&unique_share_id=5eabdad9-7c3a-4100-aad8-59884a9c93bd",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.airbnb.fr/rooms/1486097255149394686?check_in=2026-07-30&check_out=2026-08-01&guests=3&adults=2&children=1&infants=0&currency=EUR&locale=fr&source_impression_id=p3_1781810193_P3cs-zeUXi6eBn6N",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.booking.com/hotel/es/apartamento-begur-costa-brava.html?aid=1311119&checkin=2026-07-29&checkout=2026-07-31&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=Rf8XXnKiFIyNIJjv",
+            "name": "",
+            "photo": ""
           }
         ],
         "alternativeNames": [
-          "Camping Begur",
-          "Camping Kim's",
-          "Camping Calella de Palafrugell"
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
         ],
         "alternativePhotos": [
-          "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg",
-          "https://www.campingkims.com/wp-content/uploads/kims-25.webp",
-          null
+          "",
+          "",
+          "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg",
+          "",
+          "",
+          ""
         ]
       },
       "alternativeAccommodation": {
-        "name": "Camping Begur",
-        "photo": "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg"
+        "name": "https://campingbegur.com/",
+        "photo": ""
       },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 3 - Empuriabrava → Palafrugell",
-      "elevation": 293,
+      "accommodationType": "les deux",
+      "substeps": [
+        {
+          "id": "substep-3-versioncourte",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 3,
+          "parentStageReference": 3,
+          "stage": 3,
+          "stageReference": 3,
+          "day": "30/07/2026",
+          "name": "Version courte",
+          "type": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire",
+          "departure": "castello d'empuries",
+          "arrival": "L'escala",
+          "distance": 30,
+          "elevationGain": 120,
+          "elevationLoss": null,
+          "distanceExtra": null,
+          "elevationGainExtra": null,
+          "elevationLossExtra": null,
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "restaurants": [],
+          "shops": [],
+          "water": [],
+          "warning": [],
+          "notes": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+          "noteItems": [
+            "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant"
+          ],
+          "description": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+          "link": null,
+          "gpx": null,
+          "mapEmbedUrl": null,
+          "accommodation": {
+            "name": "",
+            "website": "",
+            "url": "",
+            "photo": "",
+            "alternatives": [
+              {
+                "url": "https://www.campinglaguna.com/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://almata.com/fr/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campingriu.com/ca/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://campinglaspalmeras.com/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://lagaviota.com/fr/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campingamfora.com/fr/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campingaquarius.com/accueil",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campinglasdunas.com/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.ballena-alegre.com/",
+                "name": "",
+                "photo": ""
+              }
+            ],
+            "alternativeNames": [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            "alternativePhotos": [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          "alternativeAccommodation": {
+            "name": "https://www.campinglaguna.com/",
+            "photo": ""
+          },
+          "accommodationType": "camping",
+          "substeps": [],
+          "title": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire - castello d'empuries → L'escala",
+          "elevation": 120,
+          "duration": "",
+          "legacyAccommodation": "",
+          "enabled": true,
+          "parentTitle": "Étape 3 - castello d'empuries → Begur"
+        },
+        {
+          "id": "substep-3-plagescapdebegur",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 3,
+          "parentStageReference": 3,
+          "stage": 3,
+          "stageReference": 3,
+          "day": null,
+          "name": "plages cap de begur",
+          "type": "Journé suplementaire pour détour vers les plages",
+          "departure": null,
+          "arrival": null,
+          "distance": null,
+          "elevationGain": null,
+          "elevationLoss": null,
+          "distanceExtra": null,
+          "elevationGainExtra": null,
+          "elevationLossExtra": null,
+          "pois": [
+            {
+              "name": "Cala de L'Illa Roja",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja Fonda",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja D'En Gotes",
+              "image": "",
+              "region": ""
+            }
+          ],
+          "pointsOfInterest": [
+            {
+              "name": "Cala de L'Illa Roja",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja Fonda",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja D'En Gotes",
+              "image": "",
+              "region": ""
+            }
+          ],
+          "interest": [
+            {
+              "name": "Cala de L'Illa Roja",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja Fonda",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja D'En Gotes",
+              "image": "",
+              "region": ""
+            }
+          ],
+          "restaurants": [],
+          "shops": [],
+          "water": [],
+          "warning": [],
+          "notes": null,
+          "noteItems": [],
+          "description": "",
+          "link": null,
+          "gpx": null,
+          "mapEmbedUrl": null,
+          "accommodation": {
+            "name": "",
+            "website": "",
+            "url": "",
+            "photo": "",
+            "alternatives": [],
+            "alternativeNames": [],
+            "alternativePhotos": []
+          },
+          "alternativeAccommodation": {
+            "name": "",
+            "photo": ""
+          },
+          "accommodationType": "",
+          "substeps": [],
+          "title": "Journé suplementaire pour détour vers les plages",
+          "elevation": 0,
+          "duration": "",
+          "legacyAccommodation": "",
+          "enabled": true,
+          "parentTitle": "Étape 3 - castello d'empuries → Begur"
+        }
+      ],
+      "title": "Étape 3 - castello d'empuries → Begur",
+      "elevation": 275,
       "duration": "",
       "description": "",
-      "noteItems": [],
+      "noteItems": [
+        "voir si étapes suplementaire vers les plages"
+      ],
       "pois": [],
       "pointsOfInterest": [],
       "interest": [],
@@ -197,46 +580,53 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 4,
-      "day": null,
+      "day": "31/07/2026",
       "stageLabel": null,
-      "name": "Palafrugell → Llagostera",
+      "name": "Begur → Lagostera",
       "type": "principale",
-      "departure": "Palafrugell",
-      "arrival": "Llagostera",
-      "distance": 37.5,
-      "elevationGain": 373,
-      "elevationLoss": 328,
+      "departure": "Begur",
+      "arrival": "Lagostera",
+      "distance": 37,
+      "elevationGain": 340,
+      "elevationLoss": 295,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape04.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape04.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/kepakacuro",
+      "stagePhoto": "",
       "accommodation": {
         "name": "Camping Ridaura",
         "website": "https://www.campingridaura.com/",
         "url": "https://www.campingridaura.com/",
-        "photo": "https://www.campingridaura.com/wp-content/uploads/2024/03/llagostera-min-500x290.jpeg",
+        "photo": "",
         "alternatives": [
           {
             "url": "https://campingvalldor.es/fr/bienvenue/",
-            "name": "Camping Vall d'Or",
-            "photo": null
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.airbnb.fr/rooms/1486097255149394686?adults=2&check_in=2026-07-01&check_out=2026-07-03&children=1&search_mode=regular_search&infants=0&pets=0&source_impression_id=p3_1782503462_P3rECOO16oGOeTgl&previous_page_section_name=1000&federated_search_id=b23a8427-82da-41fd-9701-de8e9c4d1b18",
+            "name": "",
+            "photo": ""
           }
         ],
         "alternativeNames": [
-          "Camping Vall d'Or"
+          "",
+          ""
         ],
         "alternativePhotos": [
-          null
+          "",
+          ""
         ]
       },
       "alternativeAccommodation": {
-        "name": "Camping Vall d'Or",
-        "photo": null
+        "name": "https://campingvalldor.es/fr/bienvenue/",
+        "photo": ""
       },
-      "accommodationType": "camping",
+      "accommodationType": "",
       "substeps": [],
-      "title": "Étape 4 - Palafrugell → Llagostera",
-      "elevation": 373,
+      "title": "Étape 4 - Begur → Lagostera",
+      "elevation": 340,
       "duration": "",
       "description": "",
       "noteItems": [],
@@ -257,304 +647,24 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 5,
-      "day": null,
+      "day": "01/08/2026",
       "stageLabel": null,
-      "name": "Llagostera → Amer",
+      "name": "Lagostera → Les Planes D'Hostoles",
       "type": "principale",
-      "departure": "Llagostera",
-      "arrival": "Amer",
-      "distance": 64.5,
-      "elevationGain": 822,
-      "elevationLoss": 554,
+      "departure": "Lagostera",
+      "arrival": "Les Planes D'Hostoles",
+      "distance": 65,
+      "elevationGain": 730,
+      "elevationLoss": 460,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape05.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape05.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/nocekevaco",
+      "stagePhoto": "",
       "accommodation": {
-        "name": "Camping l'Alguer",
-        "website": null,
-        "url": null,
-        "photo": null,
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 5 - Llagostera → Amer",
-      "elevation": 822,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping l'Alguer"
-    },
-    {
-      "id": "stage-6",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 6,
-      "day": null,
-      "stageLabel": null,
-      "name": "Amer → Olot",
-      "type": "principale",
-      "departure": "Amer",
-      "arrival": "Olot",
-      "distance": 27.8,
-      "elevationGain": 440,
-      "elevationLoss": 384,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape06.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": "Camping Les Tries",
-        "website": null,
-        "url": null,
-        "photo": null,
-        "alternatives": [
-          {
-            "url": "https://www.campinglafageda.com/",
-            "name": "Camping La Fageda",
-            "photo": "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/915ccf6e-330c-4dc7-80f0-2a0808828fec/id-preview-18807966--e5d3863e-46cf-45d7-9675-08eaec771ec2.lovable.app-1777897868496.png"
-          }
-        ],
-        "alternativeNames": [
-          "Camping La Fageda"
-        ],
-        "alternativePhotos": [
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/915ccf6e-330c-4dc7-80f0-2a0808828fec/id-preview-18807966--e5d3863e-46cf-45d7-9675-08eaec771ec2.lovable.app-1777897868496.png"
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Camping La Fageda",
-        "photo": "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/915ccf6e-330c-4dc7-80f0-2a0808828fec/id-preview-18807966--e5d3863e-46cf-45d7-9675-08eaec771ec2.lovable.app-1777897868496.png"
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 6 - Amer → Olot",
-      "elevation": 440,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Les Tries"
-    },
-    {
-      "id": "stage-7",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 7,
-      "day": null,
-      "stageLabel": null,
-      "name": "Olot → Llanars",
-      "type": "principale",
-      "departure": "Olot",
-      "arrival": "Llanars",
-      "distance": 30.1,
-      "elevationGain": 1196,
-      "elevationLoss": 762,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape07.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": "Camping Els Roures",
-        "website": "https://elsroures.com/",
-        "url": "https://elsroures.com/",
-        "photo": null,
-        "alternatives": [
-          {
-            "url": "https://www.valldecamprodon.net/",
-            "name": "Camping Vall de Camprodon",
-            "photo": "https://www.valldecamprodon.net/wp-content/uploads/f0458-20210628-638.jpg"
-          }
-        ],
-        "alternativeNames": [
-          "Camping Vall de Camprodon"
-        ],
-        "alternativePhotos": [
-          "https://www.valldecamprodon.net/wp-content/uploads/f0458-20210628-638.jpg"
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Camping Vall de Camprodon",
-        "photo": "https://www.valldecamprodon.net/wp-content/uploads/f0458-20210628-638.jpg"
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 7 - Olot → Llanars",
-      "elevation": 1196,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Els Roures"
-    },
-    {
-      "id": "stage-8",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 8,
-      "day": null,
-      "stageLabel": null,
-      "name": "Llanars → Setcases",
-      "type": "principale",
-      "departure": "Llanars",
-      "arrival": "Setcases",
-      "distance": 17.0,
-      "elevationGain": 398,
-      "elevationLoss": 209,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape08.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": null,
-        "website": null,
-        "url": null,
-        "photo": null,
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 8 - Llanars → Setcases",
-      "elevation": 398,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": ""
-    },
-    {
-      "id": "stage-9",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 9,
-      "day": null,
-      "stageLabel": null,
-      "name": "Setcases → Prats-de-Mollo",
-      "type": "principale",
-      "departure": "Setcases",
-      "arrival": "Prats-de-Mollo",
-      "distance": 28.8,
-      "elevationGain": 932,
-      "elevationLoss": 1198,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape09.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": "Camping Sant Marti",
-        "website": "https://campingsantmarti.wifeo.com",
-        "url": "https://campingsantmarti.wifeo.com",
-        "photo": null,
-        "alternatives": [
-          {
-            "url": "https://campingcannadal.wixsite.com/monsite",
-            "name": "Camping Can Nadal",
-            "photo": null
-          }
-        ],
-        "alternativeNames": [
-          "Camping Can Nadal"
-        ],
-        "alternativePhotos": [
-          null
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Camping Can Nadal",
-        "photo": null
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 9 - Setcases → Prats-de-Mollo",
-      "elevation": 932,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Sant Marti"
-    },
-    {
-      "id": "stage-10",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 10,
-      "day": null,
-      "stageLabel": null,
-      "name": "Prats-de-Mollo → Le Boulou",
-      "type": "principale",
-      "departure": "Prats-de-Mollo",
-      "arrival": "Le Boulou",
-      "distance": 40.4,
-      "elevationGain": 663,
-      "elevationLoss": 1310,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape10.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": null,
-        "website": null,
-        "url": null,
-        "photo": null,
+        "name": "Camping l'alguer",
+        "website": "http://www.campingalguer.com/",
+        "url": "http://www.campingalguer.com/",
+        "photo": "",
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": []
@@ -565,8 +675,171 @@
       },
       "accommodationType": "",
       "substeps": [],
-      "title": "Étape 10 - Prats-de-Mollo → Le Boulou",
-      "elevation": 663,
+      "title": "Étape 5 - Lagostera → Les Planes D'Hostoles",
+      "elevation": 730,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping l'alguer"
+    },
+    {
+      "id": "stage-6",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 6,
+      "day": "02/08/2026",
+      "stageLabel": null,
+      "name": "Les Planes D'Hostoles → Olot",
+      "type": "principale",
+      "departure": "Les Planes D'Hostoles",
+      "arrival": "Olot",
+      "distance": 28,
+      "elevationGain": 400,
+      "elevationLoss": 340,
+      "notes": null,
+      "gpx": "gpx/etape06.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/jefanakeca",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "camping Les Tries",
+        "website": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+        "url": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+        "photo": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+        "alternatives": [
+          {
+            "url": "https://www.campinglafageda.com/",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          ""
+        ],
+        "alternativePhotos": [
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://www.campinglafageda.com/",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 6 - Les Planes D'Hostoles → Olot",
+      "elevation": 400,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "camping Les Tries"
+    },
+    {
+      "id": "stage-7",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 7,
+      "day": "03/08/2026",
+      "stageLabel": null,
+      "name": "Olot → Sant Joan de Les Abadesses",
+      "type": "principale",
+      "departure": "Olot",
+      "arrival": "Sant Joan de Les Abadesses",
+      "distance": 30,
+      "elevationGain": 1000,
+      "elevationLoss": 589,
+      "notes": null,
+      "gpx": "gpx/etape07.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/fenuvadaso",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Camping Abadesses",
+        "website": "https://www.booking.com/hotel/es/camping-sant-joan-abadesses.fr.html?aid=311089&label=camping-sant-joan-abadesses-ngr2QmCdxZqJWPxUOBYREQS176100269211%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-13284424029%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Yf23yREhrOV9DIzdQnby_R8&sid=f986eca7007dd1da76760f36f7df5c60&dest_id=-400912&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&srepoch=1782329759&srpvid=1a458905b7e30722&type=total&ucfs=1&",
+        "url": "https://www.booking.com/hotel/es/camping-sant-joan-abadesses.fr.html?aid=311089&label=camping-sant-joan-abadesses-ngr2QmCdxZqJWPxUOBYREQS176100269211%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-13284424029%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Yf23yREhrOV9DIzdQnby_R8&sid=f986eca7007dd1da76760f36f7df5c60&dest_id=-400912&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&srepoch=1782329759&srpvid=1a458905b7e30722&type=total&ucfs=1&",
+        "photo": "",
+        "alternatives": [
+          {
+            "url": "https://elsroures.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.valldecamprodon.net/",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          "",
+          ""
+        ],
+        "alternativePhotos": [
+          "",
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://elsroures.com/",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 7 - Olot → Sant Joan de Les Abadesses",
+      "elevation": 1000,
       "duration": "",
       "description": "",
       "noteItems": [],
@@ -577,7 +850,821 @@
       "shops": [],
       "water": [],
       "warning": [],
+      "legacyAccommodation": "Camping Abadesses"
+    },
+    {
+      "id": "stage-8",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 8,
+      "day": "04/08/2026",
+      "stageLabel": null,
+      "name": "Sant Joan de Les Abadesses → Camprodon",
+      "type": "principale",
+      "departure": "Sant Joan de Les Abadesses",
+      "arrival": "Camprodon",
+      "distance": 28,
+      "elevationGain": 400,
+      "elevationLoss": 337,
+      "notes": null,
+      "gpx": "gpx/etape08.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/mejunedama",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Càmping Els Solans",
+        "website": "https://www.google.com/maps/place/Camping+Els+Solans/@42.3247397,2.3901249,3a,75y,90t/data=!3m8!1e2!3m6!1sCIHM0ogKEICAgIC69sytJA!2e10!3e12!6shttps:%2F%2Flh3.googleusercontent.com%2Fgps-cs-s%2FAPNQkAERuLcQB-zmZzUtRZZECxud2ScrOk4XD9P4D-VffO0dawdRPEGOLN_Sfyuzgwp_DnmU_TtpEr8uu9M11Oc2Rt--UMSAVhCUN-qm03mlB9xeyaWoXpYRoRtu9pBMOtgyYacyGE4%3Dw114-h86-k-no!7i2048!8i1536!4m10!3m9!1s0x12a54e99ae36848b:0x758208a2c4bc382f!5m2!4m1!1i2!8m2!3d42.324793!4d2.390213!10e5!16s%2Fg%2F11_tdw93q?hl=fr&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D",
+        "url": "https://www.google.com/maps/place/Camping+Els+Solans/@42.3247397,2.3901249,3a,75y,90t/data=!3m8!1e2!3m6!1sCIHM0ogKEICAgIC69sytJA!2e10!3e12!6shttps:%2F%2Flh3.googleusercontent.com%2Fgps-cs-s%2FAPNQkAERuLcQB-zmZzUtRZZECxud2ScrOk4XD9P4D-VffO0dawdRPEGOLN_Sfyuzgwp_DnmU_TtpEr8uu9M11Oc2Rt--UMSAVhCUN-qm03mlB9xeyaWoXpYRoRtu9pBMOtgyYacyGE4%3Dw114-h86-k-no!7i2048!8i1536!4m10!3m9!1s0x12a54e99ae36848b:0x758208a2c4bc382f!5m2!4m1!1i2!8m2!3d42.324793!4d2.390213!10e5!16s%2Fg%2F11_tdw93q?hl=fr&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D",
+        "photo": "https://www.pitchup.com/_cfi/cdn-cgi/image/format=jpeg,fit=cover,quality=70,w=1200,h=630/images/5/image/upload/s--F_A4Kxsm--/c_limit,h_2400,w_3200/e_improve,fl_progressive/q_auto/b_rgb:000,g_south_west,l_pitchup.com_wordmark_white_watermark,o_15/v1/camping-els-solans/114843.jpg",
+        "alternatives": [
+          {
+            "url": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
+            "name": "El Pi Solitari",
+            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+          }
+        ],
+        "alternativeNames": [
+          "El Pi Solitari"
+        ],
+        "alternativePhotos": [
+          "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "El Pi Solitari",
+        "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 8 - Sant Joan de Les Abadesses → Camprodon",
+      "elevation": 400,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Càmping Els Solans"
+    },
+    {
+      "id": "stage-9",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 9,
+      "day": "05/08/2026",
+      "stageLabel": null,
+      "name": "Camprodon → Prats de mollo la preste",
+      "type": "principale",
+      "departure": "Camprodon",
+      "arrival": "Prats de mollo la preste",
+      "distance": 29,
+      "elevationGain": 800,
+      "elevationLoss": 1073,
+      "notes": null,
+      "gpx": "gpx/etape09.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/pemotetoro",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Camping saint Marti",
+        "website": "http://campingsantmarti.wifeo.com",
+        "url": "http://campingsantmarti.wifeo.com",
+        "photo": "http://campingsantmarti.wifeo.com/images/2/201/20160711_104549.jpg",
+        "alternatives": [
+          {
+            "url": "https://campingcannadal.wixsite.com/monsite",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingfrance.org/camping/occitanie/serralongue/camping-a-la-ferme-la-pomarede/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.booking.com/hotel/es/ca-la-merce-agradable-casa-en-amer.html?aid=1311119&checkin=2026-07-31&checkout=2026-08-02&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=G1wXzXGx68Hmtfil",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          "",
+          "",
+          ""
+        ],
+        "alternativePhotos": [
+          "",
+          "",
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://campingcannadal.wixsite.com/monsite",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 9 - Camprodon → Prats de mollo la preste",
+      "elevation": 800,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping saint Marti"
+    },
+    {
+      "id": "stage-10",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 10,
+      "day": "06/08/2026",
+      "stageLabel": null,
+      "name": "Prats de mollo la preste → Le boulou",
+      "type": "principale",
+      "departure": "Prats de mollo la preste",
+      "arrival": "Le boulou",
+      "distance": 41,
+      "elevationGain": 517,
+      "elevationLoss": 1160,
+      "notes": "Retour point depart",
+      "gpx": "gpx/etape10.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/parafudaze",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 10 - Prats de mollo la preste → Le boulou",
+      "elevation": 517,
+      "duration": "",
+      "description": "",
+      "noteItems": [
+        "Retour point depart"
+      ],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
       "legacyAccommodation": ""
+    }
+  ],
+  "variants": [
+    {
+      "id": "substep-2-plagescapdecreus",
+      "itemType": "substep",
+      "isSubstep": true,
+      "hierarchyLevel": 1,
+      "parentStage": 2,
+      "parentStageReference": 2,
+      "stage": 2,
+      "stageReference": 2,
+      "day": null,
+      "name": "plages cap de creus",
+      "type": "joournée suplementaire avec hebergement suplementaire",
+      "departure": "castello d'empuries",
+      "arrival": "Roses",
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "distanceExtra": null,
+      "elevationGainExtra": null,
+      "elevationLossExtra": null,
+      "pois": [
+        {
+          "name": "Cala Rostella",
+          "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "region": ""
+        },
+        {
+          "name": "Platja Boquelles",
+          "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "region": ""
+        },
+        {
+          "name": "platja d’en talladofins",
+          "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Cala Rostella",
+          "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "region": ""
+        },
+        {
+          "name": "Platja Boquelles",
+          "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "region": ""
+        },
+        {
+          "name": "platja d’en talladofins",
+          "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Cala Rostella",
+          "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "region": ""
+        },
+        {
+          "name": "Platja Boquelles",
+          "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "region": ""
+        },
+        {
+          "name": "platja d’en talladofins",
+          "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "notes": null,
+      "noteItems": [],
+      "description": "",
+      "link": null,
+      "gpx": "Variante 3 cap de creus",
+      "mapEmbedUrl": null,
+      "accommodation": {
+        "name": "Camping Ampurdanes",
+        "website": "https://campingampurdanes.com/parcela",
+        "url": "https://campingampurdanes.com/parcela",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "camping",
+      "substeps": [],
+      "title": "joournée suplementaire avec hebergement suplementaire - castello d'empuries → Roses",
+      "elevation": 0,
+      "duration": "",
+      "legacyAccommodation": "Camping Ampurdanes",
+      "enabled": true,
+      "parentTitle": "Étape 2 - Capmany → castello d'empuries"
+    },
+    {
+      "id": "substep-3-versioncourte",
+      "itemType": "substep",
+      "isSubstep": true,
+      "hierarchyLevel": 1,
+      "parentStage": 3,
+      "parentStageReference": 3,
+      "stage": 3,
+      "stageReference": 3,
+      "day": "30/07/2026",
+      "name": "Version courte",
+      "type": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire",
+      "departure": "castello d'empuries",
+      "arrival": "L'escala",
+      "distance": 30,
+      "elevationGain": 120,
+      "elevationLoss": null,
+      "distanceExtra": null,
+      "elevationGainExtra": null,
+      "elevationLossExtra": null,
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "notes": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+      "noteItems": [
+        "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant"
+      ],
+      "description": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+      "link": null,
+      "gpx": null,
+      "mapEmbedUrl": null,
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [
+          {
+            "url": "https://www.campinglaguna.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://almata.com/fr/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingriu.com/ca/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://campinglaspalmeras.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://lagaviota.com/fr/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingamfora.com/fr/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingaquarius.com/accueil",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campinglasdunas.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.ballena-alegre.com/",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "alternativePhotos": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://www.campinglaguna.com/",
+        "photo": ""
+      },
+      "accommodationType": "camping",
+      "substeps": [],
+      "title": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire - castello d'empuries → L'escala",
+      "elevation": 120,
+      "duration": "",
+      "legacyAccommodation": "",
+      "enabled": true,
+      "parentTitle": "Étape 3 - castello d'empuries → Begur"
+    },
+    {
+      "id": "substep-3-plagescapdebegur",
+      "itemType": "substep",
+      "isSubstep": true,
+      "hierarchyLevel": 1,
+      "parentStage": 3,
+      "parentStageReference": 3,
+      "stage": 3,
+      "stageReference": 3,
+      "day": null,
+      "name": "plages cap de begur",
+      "type": "Journé suplementaire pour détour vers les plages",
+      "departure": null,
+      "arrival": null,
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "distanceExtra": null,
+      "elevationGainExtra": null,
+      "elevationLossExtra": null,
+      "pois": [
+        {
+          "name": "Cala de L'Illa Roja",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja Fonda",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja D'En Gotes",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Cala de L'Illa Roja",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja Fonda",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja D'En Gotes",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Cala de L'Illa Roja",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja Fonda",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja D'En Gotes",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "notes": null,
+      "noteItems": [],
+      "description": "",
+      "link": null,
+      "gpx": null,
+      "mapEmbedUrl": null,
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Journé suplementaire pour détour vers les plages",
+      "elevation": 0,
+      "duration": "",
+      "legacyAccommodation": "",
+      "enabled": true,
+      "parentTitle": "Étape 3 - castello d'empuries → Begur"
+    }
+  ],
+  "accommodation": [
+    {
+      "stage": 1,
+      "role": "primary",
+      "name": "Camping L'Albera",
+      "website": "https://campingalbera.com/cast/index.htm",
+      "photo": "https://campingalbera.com/imgs/fotos/slide/2.jpg"
+    },
+    {
+      "stage": 2,
+      "role": "primary",
+      "name": "Camping Mas Nou",
+      "website": "https://www.campingmasnou.com/",
+      "photo": ""
+    },
+    {
+      "stage": 2,
+      "role": "primary",
+      "name": "Camping Ampurdanes",
+      "website": "https://campingampurdanes.com/parcela",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "primary",
+      "name": "Camping Mas Patoxas",
+      "website": "https://www.campingmaspatoxas.com/",
+      "photo": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/03/82/19/4d/camping-resort-bungalow.jpg?w=900&h=500&s=1"
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://campingbegur.com/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campingkims.com/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campingcalelladepalafrugell.com/",
+      "photo": "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg"
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.airbnb.fr/rooms/1218401667752864126?check_in=2026-07-27&check_out=2026-07-28&guests=3&adults=2&children=1&s=67&unique_share_id=5eabdad9-7c3a-4100-aad8-59884a9c93bd",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.airbnb.fr/rooms/1486097255149394686?check_in=2026-07-30&check_out=2026-08-01&guests=3&adults=2&children=1&infants=0&currency=EUR&locale=fr&source_impression_id=p3_1781810193_P3cs-zeUXi6eBn6N",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.booking.com/hotel/es/apartamento-begur-costa-brava.html?aid=1311119&checkin=2026-07-29&checkout=2026-07-31&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=Rf8XXnKiFIyNIJjv",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campinglaguna.com/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://almata.com/fr/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campingriu.com/ca/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://campinglaspalmeras.com/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://lagaviota.com/fr/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campingamfora.com/fr/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campingaquarius.com/accueil",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campinglasdunas.com/",
+      "photo": ""
+    },
+    {
+      "stage": 3,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.ballena-alegre.com/",
+      "photo": ""
+    },
+    {
+      "stage": 4,
+      "role": "primary",
+      "name": "Camping Ridaura",
+      "website": "https://www.campingridaura.com/",
+      "photo": ""
+    },
+    {
+      "stage": 4,
+      "role": "alternative",
+      "name": "",
+      "website": "https://campingvalldor.es/fr/bienvenue/",
+      "photo": ""
+    },
+    {
+      "stage": 4,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.airbnb.fr/rooms/1486097255149394686?adults=2&check_in=2026-07-01&check_out=2026-07-03&children=1&search_mode=regular_search&infants=0&pets=0&source_impression_id=p3_1782503462_P3rECOO16oGOeTgl&previous_page_section_name=1000&federated_search_id=b23a8427-82da-41fd-9701-de8e9c4d1b18",
+      "photo": ""
+    },
+    {
+      "stage": 5,
+      "role": "primary",
+      "name": "Camping l'alguer",
+      "website": "http://www.campingalguer.com/",
+      "photo": ""
+    },
+    {
+      "stage": 6,
+      "role": "primary",
+      "name": "camping Les Tries",
+      "website": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+      "photo": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp"
+    },
+    {
+      "stage": 6,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campinglafageda.com/",
+      "photo": ""
+    },
+    {
+      "stage": 7,
+      "role": "primary",
+      "name": "Camping Abadesses",
+      "website": "https://www.booking.com/hotel/es/camping-sant-joan-abadesses.fr.html?aid=311089&label=camping-sant-joan-abadesses-ngr2QmCdxZqJWPxUOBYREQS176100269211%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-13284424029%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Yf23yREhrOV9DIzdQnby_R8&sid=f986eca7007dd1da76760f36f7df5c60&dest_id=-400912&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&srepoch=1782329759&srpvid=1a458905b7e30722&type=total&ucfs=1&",
+      "photo": ""
+    },
+    {
+      "stage": 7,
+      "role": "alternative",
+      "name": "",
+      "website": "https://elsroures.com/",
+      "photo": ""
+    },
+    {
+      "stage": 7,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.valldecamprodon.net/",
+      "photo": ""
+    },
+    {
+      "stage": 8,
+      "role": "primary",
+      "name": "Càmping Els Solans",
+      "website": "https://www.google.com/maps/place/Camping+Els+Solans/@42.3247397,2.3901249,3a,75y,90t/data=!3m8!1e2!3m6!1sCIHM0ogKEICAgIC69sytJA!2e10!3e12!6shttps:%2F%2Flh3.googleusercontent.com%2Fgps-cs-s%2FAPNQkAERuLcQB-zmZzUtRZZECxud2ScrOk4XD9P4D-VffO0dawdRPEGOLN_Sfyuzgwp_DnmU_TtpEr8uu9M11Oc2Rt--UMSAVhCUN-qm03mlB9xeyaWoXpYRoRtu9pBMOtgyYacyGE4%3Dw114-h86-k-no!7i2048!8i1536!4m10!3m9!1s0x12a54e99ae36848b:0x758208a2c4bc382f!5m2!4m1!1i2!8m2!3d42.324793!4d2.390213!10e5!16s%2Fg%2F11_tdw93q?hl=fr&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D",
+      "photo": "https://www.pitchup.com/_cfi/cdn-cgi/image/format=jpeg,fit=cover,quality=70,w=1200,h=630/images/5/image/upload/s--F_A4Kxsm--/c_limit,h_2400,w_3200/e_improve,fl_progressive/q_auto/b_rgb:000,g_south_west,l_pitchup.com_wordmark_white_watermark,o_15/v1/camping-els-solans/114843.jpg"
+    },
+    {
+      "stage": 8,
+      "role": "alternative",
+      "name": "El Pi Solitari",
+      "website": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
+      "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+    },
+    {
+      "stage": 9,
+      "role": "primary",
+      "name": "Camping saint Marti",
+      "website": "http://campingsantmarti.wifeo.com",
+      "photo": "http://campingsantmarti.wifeo.com/images/2/201/20160711_104549.jpg"
+    },
+    {
+      "stage": 9,
+      "role": "alternative",
+      "name": "",
+      "website": "https://campingcannadal.wixsite.com/monsite",
+      "photo": ""
+    },
+    {
+      "stage": 9,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.campingfrance.org/camping/occitanie/serralongue/camping-a-la-ferme-la-pomarede/",
+      "photo": ""
+    },
+    {
+      "stage": 9,
+      "role": "alternative",
+      "name": "",
+      "website": "https://www.booking.com/hotel/es/ca-la-merce-agradable-casa-en-amer.html?aid=1311119&checkin=2026-07-31&checkout=2026-08-02&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=G1wXzXGx68Hmtfil",
+      "photo": ""
+    }
+  ],
+  "pois": [
+    {
+      "stage": 2,
+      "name": "Cala Rostella",
+      "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+      "region": ""
+    },
+    {
+      "stage": 2,
+      "name": "Platja Boquelles",
+      "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+      "region": ""
+    },
+    {
+      "stage": 2,
+      "name": "platja d’en talladofins",
+      "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+      "region": ""
+    },
+    {
+      "stage": 3,
+      "name": "Cala de L'Illa Roja",
+      "image": "",
+      "region": ""
+    },
+    {
+      "stage": 3,
+      "name": "Platja Fonda",
+      "image": "",
+      "region": ""
+    },
+    {
+      "stage": 3,
+      "name": "Platja D'En Gotes",
+      "image": "",
+      "region": ""
+    },
+    {
+      "stage": 5,
+      "name": "Voie Verte du Carrilet",
+      "image": "",
+      "region": ""
+    },
+    {
+      "stage": 6,
+      "name": "Voie Verte du Carrilet",
+      "image": "",
+      "region": ""
+    }
+  ],
+  "notes": [
+    {
+      "stage": 1,
+      "text": "Voir ou garer la voiture",
+      "photo": ""
     }
   ],
   "days": [
@@ -589,24 +1676,24 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 1,
-      "day": null,
+      "day": "28/07/2026",
       "stageLabel": null,
-      "name": "Le Boulou → Darnius",
+      "name": "Le boulou → capmany",
       "type": "principale",
-      "departure": "Le Boulou",
-      "arrival": "Darnius",
-      "distance": 31.1,
-      "elevationGain": 863,
-      "elevationLoss": 804,
+      "departure": "Le boulou",
+      "arrival": "capmany",
+      "distance": 31,
+      "elevationGain": 730,
+      "elevationLoss": 680,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape01.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape01.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/hefeducoca",
+      "stagePhoto": "",
       "accommodation": {
-        "name": "Camping Albera",
+        "name": "Camping L'Albera",
         "website": "https://campingalbera.com/cast/index.htm",
         "url": "https://campingalbera.com/cast/index.htm",
-        "photo": null,
+        "photo": "https://campingalbera.com/imgs/fotos/slide/2.jpg",
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": []
@@ -617,11 +1704,16 @@
       },
       "accommodationType": "camping",
       "substeps": [],
-      "title": "Étape 1 - Le Boulou → Darnius",
-      "elevation": 863,
+      "title": "Étape 1 - Le boulou → capmany",
+      "elevation": 730,
       "duration": "",
       "description": "",
-      "noteItems": [],
+      "noteItems": [
+        {
+          "text": "Voir ou garer la voiture",
+          "photo": ""
+        }
+      ],
       "pois": [],
       "pointsOfInterest": [],
       "interest": [],
@@ -629,7 +1721,7 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping Albera"
+      "legacyAccommodation": "Camping L'Albera"
     },
     {
       "id": "stage-2",
@@ -639,24 +1731,24 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 2,
-      "day": null,
+      "day": "29/07/2026",
       "stageLabel": null,
-      "name": "Darnius → Empuriabrava",
+      "name": "Capmany → castello d'empuries",
       "type": "principale",
-      "departure": "Darnius",
-      "arrival": "Empuriabrava",
-      "distance": 26.7,
-      "elevationGain": 120,
-      "elevationLoss": 252,
+      "departure": "Capmany",
+      "arrival": "castello d'empuries",
+      "distance": 27,
+      "elevationGain": 100,
+      "elevationLoss": 233,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape02.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape02.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/dumetozuco",
+      "stagePhoto": "",
       "accommodation": {
         "name": "Camping Mas Nou",
         "website": "https://www.campingmasnou.com/",
         "url": "https://www.campingmasnou.com/",
-        "photo": "https://www.campingmasnou.com/wp-content/uploads/Camping_2be_2026.png",
+        "photo": "",
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": []
@@ -666,9 +1758,113 @@
         "photo": ""
       },
       "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 2 - Darnius → Empuriabrava",
-      "elevation": 120,
+      "substeps": [
+        {
+          "id": "substep-2-plagescapdecreus",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 2,
+          "parentStageReference": 2,
+          "stage": 2,
+          "stageReference": 2,
+          "day": null,
+          "name": "plages cap de creus",
+          "type": "joournée suplementaire avec hebergement suplementaire",
+          "departure": "castello d'empuries",
+          "arrival": "Roses",
+          "distance": null,
+          "elevationGain": null,
+          "elevationLoss": null,
+          "distanceExtra": null,
+          "elevationGainExtra": null,
+          "elevationLossExtra": null,
+          "pois": [
+            {
+              "name": "Cala Rostella",
+              "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "region": ""
+            },
+            {
+              "name": "Platja Boquelles",
+              "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "region": ""
+            },
+            {
+              "name": "platja d’en talladofins",
+              "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "region": ""
+            }
+          ],
+          "pointsOfInterest": [
+            {
+              "name": "Cala Rostella",
+              "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "region": ""
+            },
+            {
+              "name": "Platja Boquelles",
+              "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "region": ""
+            },
+            {
+              "name": "platja d’en talladofins",
+              "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "region": ""
+            }
+          ],
+          "interest": [
+            {
+              "name": "Cala Rostella",
+              "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+              "region": ""
+            },
+            {
+              "name": "Platja Boquelles",
+              "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+              "region": ""
+            },
+            {
+              "name": "platja d’en talladofins",
+              "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+              "region": ""
+            }
+          ],
+          "restaurants": [],
+          "shops": [],
+          "water": [],
+          "warning": [],
+          "notes": null,
+          "noteItems": [],
+          "description": "",
+          "link": null,
+          "gpx": "Variante 3 cap de creus",
+          "mapEmbedUrl": null,
+          "accommodation": {
+            "name": "Camping Ampurdanes",
+            "website": "https://campingampurdanes.com/parcela",
+            "url": "https://campingampurdanes.com/parcela",
+            "photo": "",
+            "alternatives": [],
+            "alternativeNames": [],
+            "alternativePhotos": []
+          },
+          "alternativeAccommodation": {
+            "name": "",
+            "photo": ""
+          },
+          "accommodationType": "camping",
+          "substeps": [],
+          "title": "joournée suplementaire avec hebergement suplementaire - castello d'empuries → Roses",
+          "elevation": 0,
+          "duration": "",
+          "legacyAccommodation": "Camping Ampurdanes",
+          "enabled": true,
+          "parentTitle": "Étape 2 - Capmany → castello d'empuries"
+        }
+      ],
+      "title": "Étape 2 - Capmany → castello d'empuries",
+      "elevation": 100,
       "duration": "",
       "description": "",
       "noteItems": [],
@@ -682,6 +1878,109 @@
       "legacyAccommodation": "Camping Mas Nou"
     },
     {
+      "id": "substep-2-plagescapdecreus",
+      "itemType": "substep",
+      "isSubstep": true,
+      "hierarchyLevel": 1,
+      "parentStage": 2,
+      "parentStageReference": 2,
+      "stage": 2,
+      "stageReference": 2,
+      "day": null,
+      "name": "plages cap de creus",
+      "type": "joournée suplementaire avec hebergement suplementaire",
+      "departure": "castello d'empuries",
+      "arrival": "Roses",
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "distanceExtra": null,
+      "elevationGainExtra": null,
+      "elevationLossExtra": null,
+      "pois": [
+        {
+          "name": "Cala Rostella",
+          "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "region": ""
+        },
+        {
+          "name": "Platja Boquelles",
+          "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "region": ""
+        },
+        {
+          "name": "platja d’en talladofins",
+          "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Cala Rostella",
+          "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "region": ""
+        },
+        {
+          "name": "Platja Boquelles",
+          "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "region": ""
+        },
+        {
+          "name": "platja d’en talladofins",
+          "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Cala Rostella",
+          "image": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/25/18/22/06/caption.jpg?w=1200&h=1200&s=1",
+          "region": ""
+        },
+        {
+          "name": "Platja Boquelles",
+          "image": "https://beachsearcher.fr/images/beaches/724601330/ES601330.jpg",
+          "region": ""
+        },
+        {
+          "name": "platja d’en talladofins",
+          "image": "https://s0.wklcdn.com/image_531/15939423/184516712/115593720.700x525.jpg",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "notes": null,
+      "noteItems": [],
+      "description": "",
+      "link": null,
+      "gpx": "Variante 3 cap de creus",
+      "mapEmbedUrl": null,
+      "accommodation": {
+        "name": "Camping Ampurdanes",
+        "website": "https://campingampurdanes.com/parcela",
+        "url": "https://campingampurdanes.com/parcela",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "camping",
+      "substeps": [],
+      "title": "joournée suplementaire avec hebergement suplementaire - castello d'empuries → Roses",
+      "elevation": 0,
+      "duration": "",
+      "legacyAccommodation": "Camping Ampurdanes",
+      "enabled": true,
+      "parentTitle": "Étape 2 - Capmany → castello d'empuries"
+    },
+    {
       "id": "stage-3",
       "itemType": "main",
       "isSubstep": false,
@@ -689,63 +1988,313 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 3,
-      "day": null,
+      "day": "30/07/2026",
       "stageLabel": null,
-      "name": "Empuriabrava → Palafrugell",
+      "name": "castello d'empuries → Begur",
       "type": "principale",
-      "departure": "Empuriabrava",
-      "arrival": "Palafrugell",
-      "distance": 56.7,
-      "elevationGain": 293,
-      "elevationLoss": 251,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape03.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "departure": "castello d'empuries",
+      "arrival": "Begur",
+      "distance": 57,
+      "elevationGain": 275,
+      "elevationLoss": 232,
+      "notes": "voir si étapes suplementaire vers les plages",
+      "gpx": "gpx/etape03.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/mobebagepa",
+      "stagePhoto": "",
       "accommodation": {
         "name": "Camping Mas Patoxas",
         "website": "https://www.campingmaspatoxas.com/",
         "url": "https://www.campingmaspatoxas.com/",
-        "photo": "https://www.campingmaspatoxas.com/uploads/opengraph/default.jpg",
+        "photo": "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/03/82/19/4d/camping-resort-bungalow.jpg?w=900&h=500&s=1",
         "alternatives": [
           {
             "url": "https://campingbegur.com/",
-            "name": "Camping Begur",
-            "photo": "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg"
+            "name": "",
+            "photo": ""
           },
           {
             "url": "https://www.campingkims.com/",
-            "name": "Camping Kim's",
-            "photo": "https://www.campingkims.com/wp-content/uploads/kims-25.webp"
+            "name": "",
+            "photo": ""
           },
           {
             "url": "https://www.campingcalelladepalafrugell.com/",
-            "name": "Camping Calella de Palafrugell",
-            "photo": null
+            "name": "",
+            "photo": "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg"
+          },
+          {
+            "url": "https://www.airbnb.fr/rooms/1218401667752864126?check_in=2026-07-27&check_out=2026-07-28&guests=3&adults=2&children=1&s=67&unique_share_id=5eabdad9-7c3a-4100-aad8-59884a9c93bd",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.airbnb.fr/rooms/1486097255149394686?check_in=2026-07-30&check_out=2026-08-01&guests=3&adults=2&children=1&infants=0&currency=EUR&locale=fr&source_impression_id=p3_1781810193_P3cs-zeUXi6eBn6N",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.booking.com/hotel/es/apartamento-begur-costa-brava.html?aid=1311119&checkin=2026-07-29&checkout=2026-07-31&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=Rf8XXnKiFIyNIJjv",
+            "name": "",
+            "photo": ""
           }
         ],
         "alternativeNames": [
-          "Camping Begur",
-          "Camping Kim's",
-          "Camping Calella de Palafrugell"
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
         ],
         "alternativePhotos": [
-          "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg",
-          "https://www.campingkims.com/wp-content/uploads/kims-25.webp",
-          null
+          "",
+          "",
+          "https://www.campingcalelladepalafrugell.com/media/cache/bungalow_list/uploads/img/parcel/3995c50869c34588d6c6e43301c4b48d.jpeg",
+          "",
+          "",
+          ""
         ]
       },
       "alternativeAccommodation": {
-        "name": "Camping Begur",
-        "photo": "https://campingbegur.com/wp-content/uploads/2018/08/campingbegur_2018-66-1024x552.jpg"
+        "name": "https://campingbegur.com/",
+        "photo": ""
       },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 3 - Empuriabrava → Palafrugell",
-      "elevation": 293,
+      "accommodationType": "les deux",
+      "substeps": [
+        {
+          "id": "substep-3-versioncourte",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 3,
+          "parentStageReference": 3,
+          "stage": 3,
+          "stageReference": 3,
+          "day": "30/07/2026",
+          "name": "Version courte",
+          "type": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire",
+          "departure": "castello d'empuries",
+          "arrival": "L'escala",
+          "distance": 30,
+          "elevationGain": 120,
+          "elevationLoss": null,
+          "distanceExtra": null,
+          "elevationGainExtra": null,
+          "elevationLossExtra": null,
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "restaurants": [],
+          "shops": [],
+          "water": [],
+          "warning": [],
+          "notes": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+          "noteItems": [
+            "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant"
+          ],
+          "description": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+          "link": null,
+          "gpx": null,
+          "mapEmbedUrl": null,
+          "accommodation": {
+            "name": "",
+            "website": "",
+            "url": "",
+            "photo": "",
+            "alternatives": [
+              {
+                "url": "https://www.campinglaguna.com/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://almata.com/fr/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campingriu.com/ca/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://campinglaspalmeras.com/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://lagaviota.com/fr/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campingamfora.com/fr/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campingaquarius.com/accueil",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.campinglasdunas.com/",
+                "name": "",
+                "photo": ""
+              },
+              {
+                "url": "https://www.ballena-alegre.com/",
+                "name": "",
+                "photo": ""
+              }
+            ],
+            "alternativeNames": [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            "alternativePhotos": [
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          },
+          "alternativeAccommodation": {
+            "name": "https://www.campinglaguna.com/",
+            "photo": ""
+          },
+          "accommodationType": "camping",
+          "substeps": [],
+          "title": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire - castello d'empuries → L'escala",
+          "elevation": 120,
+          "duration": "",
+          "legacyAccommodation": "",
+          "enabled": true,
+          "parentTitle": "Étape 3 - castello d'empuries → Begur"
+        },
+        {
+          "id": "substep-3-plagescapdebegur",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 3,
+          "parentStageReference": 3,
+          "stage": 3,
+          "stageReference": 3,
+          "day": null,
+          "name": "plages cap de begur",
+          "type": "Journé suplementaire pour détour vers les plages",
+          "departure": null,
+          "arrival": null,
+          "distance": null,
+          "elevationGain": null,
+          "elevationLoss": null,
+          "distanceExtra": null,
+          "elevationGainExtra": null,
+          "elevationLossExtra": null,
+          "pois": [
+            {
+              "name": "Cala de L'Illa Roja",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja Fonda",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja D'En Gotes",
+              "image": "",
+              "region": ""
+            }
+          ],
+          "pointsOfInterest": [
+            {
+              "name": "Cala de L'Illa Roja",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja Fonda",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja D'En Gotes",
+              "image": "",
+              "region": ""
+            }
+          ],
+          "interest": [
+            {
+              "name": "Cala de L'Illa Roja",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja Fonda",
+              "image": "",
+              "region": ""
+            },
+            {
+              "name": "Platja D'En Gotes",
+              "image": "",
+              "region": ""
+            }
+          ],
+          "restaurants": [],
+          "shops": [],
+          "water": [],
+          "warning": [],
+          "notes": null,
+          "noteItems": [],
+          "description": "",
+          "link": null,
+          "gpx": null,
+          "mapEmbedUrl": null,
+          "accommodation": {
+            "name": "",
+            "website": "",
+            "url": "",
+            "photo": "",
+            "alternatives": [],
+            "alternativeNames": [],
+            "alternativePhotos": []
+          },
+          "alternativeAccommodation": {
+            "name": "",
+            "photo": ""
+          },
+          "accommodationType": "",
+          "substeps": [],
+          "title": "Journé suplementaire pour détour vers les plages",
+          "elevation": 0,
+          "duration": "",
+          "legacyAccommodation": "",
+          "enabled": true,
+          "parentTitle": "Étape 3 - castello d'empuries → Begur"
+        }
+      ],
+      "title": "Étape 3 - castello d'empuries → Begur",
+      "elevation": 275,
       "duration": "",
       "description": "",
-      "noteItems": [],
+      "noteItems": [
+        "voir si étapes suplementaire vers les plages"
+      ],
       "pois": [],
       "pointsOfInterest": [],
       "interest": [],
@@ -756,6 +2305,232 @@
       "legacyAccommodation": "Camping Mas Patoxas"
     },
     {
+      "id": "substep-3-versioncourte",
+      "itemType": "substep",
+      "isSubstep": true,
+      "hierarchyLevel": 1,
+      "parentStage": 3,
+      "parentStageReference": 3,
+      "stage": 3,
+      "stageReference": 3,
+      "day": "30/07/2026",
+      "name": "Version courte",
+      "type": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire",
+      "departure": "castello d'empuries",
+      "arrival": "L'escala",
+      "distance": 30,
+      "elevationGain": 120,
+      "elevationLoss": null,
+      "distanceExtra": null,
+      "elevationGainExtra": null,
+      "elevationLossExtra": null,
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "notes": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+      "noteItems": [
+        "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant"
+      ],
+      "description": "30 km jusqu'a l'escala mais camping beurk voir hebergement alternatif avant",
+      "link": null,
+      "gpx": null,
+      "mapEmbedUrl": null,
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [
+          {
+            "url": "https://www.campinglaguna.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://almata.com/fr/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingriu.com/ca/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://campinglaspalmeras.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://lagaviota.com/fr/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingamfora.com/fr/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingaquarius.com/accueil",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campinglasdunas.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.ballena-alegre.com/",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "alternativePhotos": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://www.campinglaguna.com/",
+        "photo": ""
+      },
+      "accommodationType": "camping",
+      "substeps": [],
+      "title": "etape suplementaire pour raccourcir l'etape 3 ou rallongé l'etape 2 sans faire d'etape suplementaire - castello d'empuries → L'escala",
+      "elevation": 120,
+      "duration": "",
+      "legacyAccommodation": "",
+      "enabled": true,
+      "parentTitle": "Étape 3 - castello d'empuries → Begur"
+    },
+    {
+      "id": "substep-3-plagescapdebegur",
+      "itemType": "substep",
+      "isSubstep": true,
+      "hierarchyLevel": 1,
+      "parentStage": 3,
+      "parentStageReference": 3,
+      "stage": 3,
+      "stageReference": 3,
+      "day": null,
+      "name": "plages cap de begur",
+      "type": "Journé suplementaire pour détour vers les plages",
+      "departure": null,
+      "arrival": null,
+      "distance": null,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "distanceExtra": null,
+      "elevationGainExtra": null,
+      "elevationLossExtra": null,
+      "pois": [
+        {
+          "name": "Cala de L'Illa Roja",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja Fonda",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja D'En Gotes",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Cala de L'Illa Roja",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja Fonda",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja D'En Gotes",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Cala de L'Illa Roja",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja Fonda",
+          "image": "",
+          "region": ""
+        },
+        {
+          "name": "Platja D'En Gotes",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "notes": null,
+      "noteItems": [],
+      "description": "",
+      "link": null,
+      "gpx": null,
+      "mapEmbedUrl": null,
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Journé suplementaire pour détour vers les plages",
+      "elevation": 0,
+      "duration": "",
+      "legacyAccommodation": "",
+      "enabled": true,
+      "parentTitle": "Étape 3 - castello d'empuries → Begur"
+    },
+    {
       "id": "stage-4",
       "itemType": "main",
       "isSubstep": false,
@@ -763,46 +2538,53 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 4,
-      "day": null,
+      "day": "31/07/2026",
       "stageLabel": null,
-      "name": "Palafrugell → Llagostera",
+      "name": "Begur → Lagostera",
       "type": "principale",
-      "departure": "Palafrugell",
-      "arrival": "Llagostera",
-      "distance": 37.5,
-      "elevationGain": 373,
-      "elevationLoss": 328,
+      "departure": "Begur",
+      "arrival": "Lagostera",
+      "distance": 37,
+      "elevationGain": 340,
+      "elevationLoss": 295,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape04.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape04.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/kepakacuro",
+      "stagePhoto": "",
       "accommodation": {
         "name": "Camping Ridaura",
         "website": "https://www.campingridaura.com/",
         "url": "https://www.campingridaura.com/",
-        "photo": "https://www.campingridaura.com/wp-content/uploads/2024/03/llagostera-min-500x290.jpeg",
+        "photo": "",
         "alternatives": [
           {
             "url": "https://campingvalldor.es/fr/bienvenue/",
-            "name": "Camping Vall d'Or",
-            "photo": null
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.airbnb.fr/rooms/1486097255149394686?adults=2&check_in=2026-07-01&check_out=2026-07-03&children=1&search_mode=regular_search&infants=0&pets=0&source_impression_id=p3_1782503462_P3rECOO16oGOeTgl&previous_page_section_name=1000&federated_search_id=b23a8427-82da-41fd-9701-de8e9c4d1b18",
+            "name": "",
+            "photo": ""
           }
         ],
         "alternativeNames": [
-          "Camping Vall d'Or"
+          "",
+          ""
         ],
         "alternativePhotos": [
-          null
+          "",
+          ""
         ]
       },
       "alternativeAccommodation": {
-        "name": "Camping Vall d'Or",
-        "photo": null
+        "name": "https://campingvalldor.es/fr/bienvenue/",
+        "photo": ""
       },
-      "accommodationType": "camping",
+      "accommodationType": "",
       "substeps": [],
-      "title": "Étape 4 - Palafrugell → Llagostera",
-      "elevation": 373,
+      "title": "Étape 4 - Begur → Lagostera",
+      "elevation": 340,
       "duration": "",
       "description": "",
       "noteItems": [],
@@ -823,304 +2605,24 @@
       "parentStage": null,
       "parentStageReference": null,
       "stage": 5,
-      "day": null,
+      "day": "01/08/2026",
       "stageLabel": null,
-      "name": "Llagostera → Amer",
+      "name": "Lagostera → Les Planes D'Hostoles",
       "type": "principale",
-      "departure": "Llagostera",
-      "arrival": "Amer",
-      "distance": 64.5,
-      "elevationGain": 822,
-      "elevationLoss": 554,
+      "departure": "Lagostera",
+      "arrival": "Les Planes D'Hostoles",
+      "distance": 65,
+      "elevationGain": 730,
+      "elevationLoss": 460,
       "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape05.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
+      "gpx": "gpx/etape05.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/nocekevaco",
+      "stagePhoto": "",
       "accommodation": {
-        "name": "Camping l'Alguer",
-        "website": null,
-        "url": null,
-        "photo": null,
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 5 - Llagostera → Amer",
-      "elevation": 822,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping l'Alguer"
-    },
-    {
-      "id": "stage-6",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 6,
-      "day": null,
-      "stageLabel": null,
-      "name": "Amer → Olot",
-      "type": "principale",
-      "departure": "Amer",
-      "arrival": "Olot",
-      "distance": 27.8,
-      "elevationGain": 440,
-      "elevationLoss": 384,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape06.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": "Camping Les Tries",
-        "website": null,
-        "url": null,
-        "photo": null,
-        "alternatives": [
-          {
-            "url": "https://www.campinglafageda.com/",
-            "name": "Camping La Fageda",
-            "photo": "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/915ccf6e-330c-4dc7-80f0-2a0808828fec/id-preview-18807966--e5d3863e-46cf-45d7-9675-08eaec771ec2.lovable.app-1777897868496.png"
-          }
-        ],
-        "alternativeNames": [
-          "Camping La Fageda"
-        ],
-        "alternativePhotos": [
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/915ccf6e-330c-4dc7-80f0-2a0808828fec/id-preview-18807966--e5d3863e-46cf-45d7-9675-08eaec771ec2.lovable.app-1777897868496.png"
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Camping La Fageda",
-        "photo": "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/915ccf6e-330c-4dc7-80f0-2a0808828fec/id-preview-18807966--e5d3863e-46cf-45d7-9675-08eaec771ec2.lovable.app-1777897868496.png"
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 6 - Amer → Olot",
-      "elevation": 440,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Les Tries"
-    },
-    {
-      "id": "stage-7",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 7,
-      "day": null,
-      "stageLabel": null,
-      "name": "Olot → Llanars",
-      "type": "principale",
-      "departure": "Olot",
-      "arrival": "Llanars",
-      "distance": 30.1,
-      "elevationGain": 1196,
-      "elevationLoss": 762,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape07.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": "Camping Els Roures",
-        "website": "https://elsroures.com/",
-        "url": "https://elsroures.com/",
-        "photo": null,
-        "alternatives": [
-          {
-            "url": "https://www.valldecamprodon.net/",
-            "name": "Camping Vall de Camprodon",
-            "photo": "https://www.valldecamprodon.net/wp-content/uploads/f0458-20210628-638.jpg"
-          }
-        ],
-        "alternativeNames": [
-          "Camping Vall de Camprodon"
-        ],
-        "alternativePhotos": [
-          "https://www.valldecamprodon.net/wp-content/uploads/f0458-20210628-638.jpg"
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Camping Vall de Camprodon",
-        "photo": "https://www.valldecamprodon.net/wp-content/uploads/f0458-20210628-638.jpg"
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 7 - Olot → Llanars",
-      "elevation": 1196,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Els Roures"
-    },
-    {
-      "id": "stage-8",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 8,
-      "day": null,
-      "stageLabel": null,
-      "name": "Llanars → Setcases",
-      "type": "principale",
-      "departure": "Llanars",
-      "arrival": "Setcases",
-      "distance": 17.0,
-      "elevationGain": 398,
-      "elevationLoss": 209,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape08.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": null,
-        "website": null,
-        "url": null,
-        "photo": null,
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 8 - Llanars → Setcases",
-      "elevation": 398,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": ""
-    },
-    {
-      "id": "stage-9",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 9,
-      "day": null,
-      "stageLabel": null,
-      "name": "Setcases → Prats-de-Mollo",
-      "type": "principale",
-      "departure": "Setcases",
-      "arrival": "Prats-de-Mollo",
-      "distance": 28.8,
-      "elevationGain": 932,
-      "elevationLoss": 1198,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape09.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": "Camping Sant Marti",
-        "website": "https://campingsantmarti.wifeo.com",
-        "url": "https://campingsantmarti.wifeo.com",
-        "photo": null,
-        "alternatives": [
-          {
-            "url": "https://campingcannadal.wixsite.com/monsite",
-            "name": "Camping Can Nadal",
-            "photo": null
-          }
-        ],
-        "alternativeNames": [
-          "Camping Can Nadal"
-        ],
-        "alternativePhotos": [
-          null
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Camping Can Nadal",
-        "photo": null
-      },
-      "accommodationType": "camping",
-      "substeps": [],
-      "title": "Étape 9 - Setcases → Prats-de-Mollo",
-      "elevation": 932,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Sant Marti"
-    },
-    {
-      "id": "stage-10",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 10,
-      "day": null,
-      "stageLabel": null,
-      "name": "Prats-de-Mollo → Le Boulou",
-      "type": "principale",
-      "departure": "Prats-de-Mollo",
-      "arrival": "Le Boulou",
-      "distance": 40.4,
-      "elevationGain": 663,
-      "elevationLoss": 1310,
-      "notes": null,
-      "gpx": "roadbooks/perinexus/gpx/etape10.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": null,
-      "accommodation": {
-        "name": null,
-        "website": null,
-        "url": null,
-        "photo": null,
+        "name": "Camping l'alguer",
+        "website": "http://www.campingalguer.com/",
+        "url": "http://www.campingalguer.com/",
+        "photo": "",
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": []
@@ -1131,11 +2633,360 @@
       },
       "accommodationType": "",
       "substeps": [],
-      "title": "Étape 10 - Prats-de-Mollo → Le Boulou",
-      "elevation": 663,
+      "title": "Étape 5 - Lagostera → Les Planes D'Hostoles",
+      "elevation": 730,
       "duration": "",
       "description": "",
       "noteItems": [],
+      "pois": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping l'alguer"
+    },
+    {
+      "id": "stage-6",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 6,
+      "day": "02/08/2026",
+      "stageLabel": null,
+      "name": "Les Planes D'Hostoles → Olot",
+      "type": "principale",
+      "departure": "Les Planes D'Hostoles",
+      "arrival": "Olot",
+      "distance": 28,
+      "elevationGain": 400,
+      "elevationLoss": 340,
+      "notes": null,
+      "gpx": "gpx/etape06.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/jefanakeca",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "camping Les Tries",
+        "website": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+        "url": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+        "photo": "https://cdn.prod.v2.camping.info/media/campsites/camping-les-tries/BwjDkPQgr1lC.jpg.webp",
+        "alternatives": [
+          {
+            "url": "https://www.campinglafageda.com/",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          ""
+        ],
+        "alternativePhotos": [
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://www.campinglafageda.com/",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 6 - Les Planes D'Hostoles → Olot",
+      "elevation": 400,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Voie Verte du Carrilet",
+          "image": "",
+          "region": ""
+        }
+      ],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "camping Les Tries"
+    },
+    {
+      "id": "stage-7",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 7,
+      "day": "03/08/2026",
+      "stageLabel": null,
+      "name": "Olot → Sant Joan de Les Abadesses",
+      "type": "principale",
+      "departure": "Olot",
+      "arrival": "Sant Joan de Les Abadesses",
+      "distance": 30,
+      "elevationGain": 1000,
+      "elevationLoss": 589,
+      "notes": null,
+      "gpx": "gpx/etape07.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/fenuvadaso",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Camping Abadesses",
+        "website": "https://www.booking.com/hotel/es/camping-sant-joan-abadesses.fr.html?aid=311089&label=camping-sant-joan-abadesses-ngr2QmCdxZqJWPxUOBYREQS176100269211%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-13284424029%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Yf23yREhrOV9DIzdQnby_R8&sid=f986eca7007dd1da76760f36f7df5c60&dest_id=-400912&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&srepoch=1782329759&srpvid=1a458905b7e30722&type=total&ucfs=1&",
+        "url": "https://www.booking.com/hotel/es/camping-sant-joan-abadesses.fr.html?aid=311089&label=camping-sant-joan-abadesses-ngr2QmCdxZqJWPxUOBYREQS176100269211%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-13284424029%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Yf23yREhrOV9DIzdQnby_R8&sid=f986eca7007dd1da76760f36f7df5c60&dest_id=-400912&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&hpos=1&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&srepoch=1782329759&srpvid=1a458905b7e30722&type=total&ucfs=1&",
+        "photo": "",
+        "alternatives": [
+          {
+            "url": "https://elsroures.com/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.valldecamprodon.net/",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          "",
+          ""
+        ],
+        "alternativePhotos": [
+          "",
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://elsroures.com/",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 7 - Olot → Sant Joan de Les Abadesses",
+      "elevation": 1000,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping Abadesses"
+    },
+    {
+      "id": "stage-8",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 8,
+      "day": "04/08/2026",
+      "stageLabel": null,
+      "name": "Sant Joan de Les Abadesses → Camprodon",
+      "type": "principale",
+      "departure": "Sant Joan de Les Abadesses",
+      "arrival": "Camprodon",
+      "distance": 28,
+      "elevationGain": 400,
+      "elevationLoss": 337,
+      "notes": null,
+      "gpx": "gpx/etape08.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/mejunedama",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Càmping Els Solans",
+        "website": "https://www.google.com/maps/place/Camping+Els+Solans/@42.3247397,2.3901249,3a,75y,90t/data=!3m8!1e2!3m6!1sCIHM0ogKEICAgIC69sytJA!2e10!3e12!6shttps:%2F%2Flh3.googleusercontent.com%2Fgps-cs-s%2FAPNQkAERuLcQB-zmZzUtRZZECxud2ScrOk4XD9P4D-VffO0dawdRPEGOLN_Sfyuzgwp_DnmU_TtpEr8uu9M11Oc2Rt--UMSAVhCUN-qm03mlB9xeyaWoXpYRoRtu9pBMOtgyYacyGE4%3Dw114-h86-k-no!7i2048!8i1536!4m10!3m9!1s0x12a54e99ae36848b:0x758208a2c4bc382f!5m2!4m1!1i2!8m2!3d42.324793!4d2.390213!10e5!16s%2Fg%2F11_tdw93q?hl=fr&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D",
+        "url": "https://www.google.com/maps/place/Camping+Els+Solans/@42.3247397,2.3901249,3a,75y,90t/data=!3m8!1e2!3m6!1sCIHM0ogKEICAgIC69sytJA!2e10!3e12!6shttps:%2F%2Flh3.googleusercontent.com%2Fgps-cs-s%2FAPNQkAERuLcQB-zmZzUtRZZECxud2ScrOk4XD9P4D-VffO0dawdRPEGOLN_Sfyuzgwp_DnmU_TtpEr8uu9M11Oc2Rt--UMSAVhCUN-qm03mlB9xeyaWoXpYRoRtu9pBMOtgyYacyGE4%3Dw114-h86-k-no!7i2048!8i1536!4m10!3m9!1s0x12a54e99ae36848b:0x758208a2c4bc382f!5m2!4m1!1i2!8m2!3d42.324793!4d2.390213!10e5!16s%2Fg%2F11_tdw93q?hl=fr&entry=ttu&g_ep=EgoyMDI2MDYyMi4wIKXMDSoASAFQAw%3D%3D",
+        "photo": "https://www.pitchup.com/_cfi/cdn-cgi/image/format=jpeg,fit=cover,quality=70,w=1200,h=630/images/5/image/upload/s--F_A4Kxsm--/c_limit,h_2400,w_3200/e_improve,fl_progressive/q_auto/b_rgb:000,g_south_west,l_pitchup.com_wordmark_white_watermark,o_15/v1/camping-els-solans/114843.jpg",
+        "alternatives": [
+          {
+            "url": "https://www.booking.com/hotel/es/el-pi-solitari.fr.html?aid=377350&label=catalonia-lTH9uPyoIjPMk46qXsg_BwS390065218304%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-61747806570%3Alp9109770%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9YYzu_e_JczYpElFXaB1QiIU&sid=f986eca7007dd1da76760f36f7df5c60&all_sr_blocks=951815101_367774525_4_0_0&checkin=2026-07-01&checkout=2026-07-03&dest_id=-375471&dest_type=city&dist=0&group_adults=2&group_children=0&hapos=1&highlighted_blocks=951815101_367774525_4_0_0&hpos=1&matching_block_id=951815101_367774525_4_0_0&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&sb_price_type=total&sr_order=popularity&sr_pri_blocks=951815101_367774525_4_0_0__29797&srepoch=1782329952&srpvid=a6e989618de907b9&type=total&ucfs=1&#map_closed",
+            "name": "El Pi Solitari",
+            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+          }
+        ],
+        "alternativeNames": [
+          "El Pi Solitari"
+        ],
+        "alternativePhotos": [
+          "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "El Pi Solitari",
+        "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/574492234.jpg?k=9397353f31330389afc5fb53acb579d5940c12392fff4c12558222580f622e5f&o="
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 8 - Sant Joan de Les Abadesses → Camprodon",
+      "elevation": 400,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Càmping Els Solans"
+    },
+    {
+      "id": "stage-9",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 9,
+      "day": "05/08/2026",
+      "stageLabel": null,
+      "name": "Camprodon → Prats de mollo la preste",
+      "type": "principale",
+      "departure": "Camprodon",
+      "arrival": "Prats de mollo la preste",
+      "distance": 29,
+      "elevationGain": 800,
+      "elevationLoss": 1073,
+      "notes": null,
+      "gpx": "gpx/etape09.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/pemotetoro",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "Camping saint Marti",
+        "website": "http://campingsantmarti.wifeo.com",
+        "url": "http://campingsantmarti.wifeo.com",
+        "photo": "http://campingsantmarti.wifeo.com/images/2/201/20160711_104549.jpg",
+        "alternatives": [
+          {
+            "url": "https://campingcannadal.wixsite.com/monsite",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.campingfrance.org/camping/occitanie/serralongue/camping-a-la-ferme-la-pomarede/",
+            "name": "",
+            "photo": ""
+          },
+          {
+            "url": "https://www.booking.com/hotel/es/ca-la-merce-agradable-casa-en-amer.html?aid=1311119&checkin=2026-07-31&checkout=2026-08-02&no_rooms=1&group_adults=2&group_children=1&age=4&selected_currency=EUR&label=G1wXzXGx68Hmtfil",
+            "name": "",
+            "photo": ""
+          }
+        ],
+        "alternativeNames": [
+          "",
+          "",
+          ""
+        ],
+        "alternativePhotos": [
+          "",
+          "",
+          ""
+        ]
+      },
+      "alternativeAccommodation": {
+        "name": "https://campingcannadal.wixsite.com/monsite",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 9 - Camprodon → Prats de mollo la preste",
+      "elevation": 800,
+      "duration": "",
+      "description": "",
+      "noteItems": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "restaurants": [],
+      "shops": [],
+      "water": [],
+      "warning": [],
+      "legacyAccommodation": "Camping saint Marti"
+    },
+    {
+      "id": "stage-10",
+      "itemType": "main",
+      "isSubstep": false,
+      "hierarchyLevel": 0,
+      "parentStage": null,
+      "parentStageReference": null,
+      "stage": 10,
+      "day": "06/08/2026",
+      "stageLabel": null,
+      "name": "Prats de mollo la preste → Le boulou",
+      "type": "principale",
+      "departure": "Prats de mollo la preste",
+      "arrival": "Le boulou",
+      "distance": 41,
+      "elevationGain": 517,
+      "elevationLoss": 1160,
+      "notes": "Retour point depart",
+      "gpx": "gpx/etape10.gpx",
+      "mapEmbedUrl": "https://mapy.com/s/parafudaze",
+      "stagePhoto": "",
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "alternatives": [],
+        "alternativeNames": [],
+        "alternativePhotos": []
+      },
+      "alternativeAccommodation": {
+        "name": "",
+        "photo": ""
+      },
+      "accommodationType": "",
+      "substeps": [],
+      "title": "Étape 10 - Prats de mollo la preste → Le boulou",
+      "elevation": 517,
+      "duration": "",
+      "description": "",
+      "noteItems": [
+        "Retour point depart"
+      ],
       "pois": [],
       "pointsOfInterest": [],
       "interest": [],

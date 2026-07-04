@@ -5,11 +5,32 @@ Ce dossier documente la convention commune des fichiers propres à un roadbook.
 Le modèle canonique à copier reste disponible dans `roadbooks/_template/`.
 Le dossier `roadbooks/template/` documente les règles métier associées à ce modèle.
 
+Le contrat JSON complet est documenté dans `docs/JSON_CONTRACT.md`.
+
+## Source JSON canonique
+
+Chaque roadbook doit posséder :
+
+```text
+roadbooks/<id-roadbook>/roadbook.json
+```
+
+Pendant la transition, les Google Sheets existants restent la source de vérité fonctionnelle.
+Le script `npm run sync:roadbooks` importe ces Sheets et met à jour les fichiers JSON.
+
+À terme, le Studio et le site public liront et modifieront ce JSON directement.
+
 Les photos d'étapes référencées par la colonne Google Sheet `photo de l'étape`
 doivent être stockées dans :
 
 ```text
 roadbooks/<id-roadbook>/data/
+```
+
+Les photos ajoutées directement via le Studio ou dans un JSON natif peuvent être stockées dans :
+
+```text
+roadbooks/<id-roadbook>/photos/
 ```
 
 Exemples :
