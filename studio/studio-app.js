@@ -345,6 +345,8 @@
 
     function createVariantEditor(stageIndex, variant, variantIndex) {
         const fragment = elements.variantTemplate.content.cloneNode(true);
+        const variantCard = fragment.querySelector(".studio-variant-card");
+        variantCard.dataset.variantIndex = String(variantIndex);
         fragment.querySelector(".studio-variant-card__title").textContent = variant.name;
         bindVariantField(fragment, "name", variant.name, value => updateVariant(stageIndex, variantIndex, "name", value.trim() || `Variante ${variantIndex + 1}`));
         bindVariantField(fragment, "distance", variant.distance, value => updateVariant(stageIndex, variantIndex, "distance", decimalOrNull(value)));
@@ -374,7 +376,7 @@
         if (field === "stage") {
             stage.title = safeText(stage.title, `Étape ${stage.stage ?? stageIndex + 1}`);
         }
-        if (field === "title") {
+        if (field === "title" && Number.isInteger(stageIndex)) {
             const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__title`);
             if (heading) heading.textContent = safeText(value, `Étape ${stage.stage ?? stageIndex + 1}`);
         }
@@ -405,12 +407,10 @@
         const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
         if (!variant) return;
         variant[field] = value;
-        if (field === "name") {
+        if (field === "name" && Number.isInteger(stageIndex) && Number.isInteger(variantIndex)) {
             const stageCard = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"]`);
-            if (stageCard) {
-                const variantHeading = stageCard.querySelectorAll(".studio-variant-card")[variantIndex]?.querySelector(".studio-variant-card__title");
-                if (variantHeading) variantHeading.textContent = safeText(value, `Variante ${variantIndex + 1}`);
-            }
+            const variantHeading = stageCard?.querySelector(`.studio-variant-card[data-variant-index="${variantIndex}"] .studio-variant-card__title`);
+            if (variantHeading) variantHeading.textContent = safeText(value, `Variante ${variantIndex + 1}`);
         }
         markModified();
     }
