@@ -260,7 +260,11 @@
         const normalized = contribution && typeof contribution === "object" && !Array.isArray(contribution)
             ? structuredClone(contribution)
             : {};
-        normalized.id = reserveUniqueContributionId(usedIds, safeText(normalized.id, ""), `contribution-${index + 1}`);
+        normalized.id = reserveUniqueContributionId(
+            usedIds,
+            safeText(normalized.id, ""),
+            `contribution-${Date.now()}-${index + 1}`
+        );
         normalized.type = safeText(normalized.type, "travelerNote");
         normalized.stage = integerOrNull(normalized.stage);
         normalized.createdAt = safeText(normalized.createdAt, "");
@@ -273,7 +277,7 @@
     }
 
     function reserveUniqueContributionId(usedIds, preferredId, fallbackPrefix = "contribution") {
-        const baseId = safeText(preferredId, fallbackPrefix);
+        const baseId = safeText(preferredId, "") || safeText(fallbackPrefix, "contribution");
         if (!usedIds.has(baseId)) {
             usedIds.add(baseId);
             return baseId;
@@ -1109,7 +1113,7 @@
         const contributions = state.selectedRoadbook?.contributions;
         if (!Array.isArray(contributions)) return;
         const usedIds = new Set(contributions.map(item => safeText(item?.id, "")).filter(Boolean));
-        const id = reserveUniqueContributionId(usedIds, "", "contribution");
+        const id = reserveUniqueContributionId(usedIds, "", `contribution-${Date.now()}`);
         contributions.push({
             id,
             type: "travelerNote",
