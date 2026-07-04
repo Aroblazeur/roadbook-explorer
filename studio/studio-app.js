@@ -1274,11 +1274,13 @@
             if (!linked.length) return;
 
             const primary = linked.find(item => safeText(item.role, "").toLowerCase() === "primary") || linked[0];
+            const primaryWebsite = safeText(primary.website, "");
+            const primaryUrl = safeText(primary.url, "");
             stage.accommodation = normalizeStageAccommodation({
                 ...(stage.accommodation || {}),
                 name: safeText(primary.name, ""),
-                website: safeText(primary.website || primary.url, ""),
-                url: safeText(primary.url || primary.website, ""),
+                website: primaryWebsite || primaryUrl,
+                url: primaryUrl,
                 photo: safeText(primary.photo, ""),
                 alternatives: linked
                     .filter(item => item !== primary)
@@ -1300,8 +1302,8 @@
                 .map(note => ({
                     text: safeText(note.text, ""),
                     photo: safeText(note.photo, ""),
-                    createdAt: safeText(note.createdAt || note.timestamp, ""),
-                    source: safeText(note.source || note.author, "")
+                    createdAt: safeText(note.createdAt, ""),
+                    source: safeText(note.source, "")
                 }));
             if (!linkedNotes.length) return;
             stage.noteItems = linkedNotes;
