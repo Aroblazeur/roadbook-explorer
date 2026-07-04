@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2e7d32">
+  <title>RoadBook Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%232e7d32'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-size='34' fill='white'%3ES%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="studio/studio.css">
+</head>
+<body>
+  <header class="header studio-header">
+    <div class="container">
+      <div class="header-title-wrapper">
+        <h1>RoadBook Studio</h1>
+      </div>
+      <p class="studio-header__subtitle">Base d’administration JSON-first — lecture seule pour ce premier sprint.</p>
+    </div>
+  </header>
+
+  <main class="container studio-layout">
+    <section class="card studio-panel" aria-labelledby="studio-library-title">
+      <div class="studio-panel__header">
+        <div>
+          <p class="studio-eyebrow">Catalogue</p>
+          <h2 id="studio-library-title">Roadbooks disponibles</h2>
+        </div>
+        <button id="studio-refresh" type="button" class="terrain-button">Rafraîchir</button>
+      </div>
+      <p id="studio-status" class="studio-status" role="status" aria-live="polite">Chargement du catalogue…</p>
+      <div id="studio-roadbook-list" class="studio-roadbook-list"></div>
+    </section>
+
+    <section class="card studio-panel" aria-labelledby="studio-detail-title">
+      <div class="studio-panel__header">
+        <div>
+          <p class="studio-eyebrow">Aperçu</p>
+          <h2 id="studio-detail-title">Sélectionne un roadbook</h2>
+        </div>
+      </div>
+      <div id="studio-detail" class="studio-detail studio-detail--empty">
+        <p>Le Studio affiche ici le contenu brut du fichier <code>roadbook.json</code> pour préparer les prochains sprints d’édition.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>RoadBook Studio · Sprint 1</p>
+  </footer>
+
+  <script src="studio/studio-app.js"></script>
+</body>
+</html>
