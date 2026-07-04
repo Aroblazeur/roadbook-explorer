@@ -371,8 +371,14 @@
         const stage = state.selectedRoadbook?.stages?.[stageIndex];
         if (!stage) return;
         stage[field] = value;
-        if (field === "stage") stage.title = safeText(stage.title, `Étape ${stage.stage ?? stageIndex + 1}`);
-        rerenderEditorPreservingScroll();
+        if (field === "stage") {
+            stage.title = safeText(stage.title, `Étape ${stage.stage ?? stageIndex + 1}`);
+        }
+        if (field === "title") {
+            const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__title`);
+            if (heading) heading.textContent = safeText(value, `Étape ${stage.stage ?? stageIndex + 1}`);
+        }
+        markModified();
     }
 
     function updateRoadbookField(field, value) {
@@ -382,6 +388,7 @@
         if (field === "title") {
             elements.detailTitle.textContent = safeText(roadbook.title, state.selectedRoadbookId);
         }
+        markModified();
     }
 
     function updateMetadataField(key, value) {
@@ -391,13 +398,21 @@
             roadbook.metadata = {};
         }
         roadbook.metadata[key] = value;
+        markModified();
     }
 
     function updateVariant(stageIndex, variantIndex, field, value) {
         const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
         if (!variant) return;
         variant[field] = value;
-        rerenderEditorPreservingScroll();
+        if (field === "name") {
+            const stageCard = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"]`);
+            if (stageCard) {
+                const variantHeading = stageCard.querySelectorAll(".studio-variant-card")[variantIndex]?.querySelector(".studio-variant-card__title");
+                if (variantHeading) variantHeading.textContent = safeText(value, `Variante ${variantIndex + 1}`);
+            }
+        }
+        markModified();
     }
 
     function handleAddStage() {
@@ -448,6 +463,11 @@
         const scrollTop = window.scrollY;
         renderRoadbookEditor();
         window.scrollTo({ top: scrollTop });
+        markModified();
+    }
+
+    function markModified() {
+        setStatus("Modifications locales non publiées · JSON prêt à exporter.");
     }
 
     function downloadCurrentRoadbookJson() {
