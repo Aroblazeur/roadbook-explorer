@@ -3,6 +3,17 @@
 (function initializeRoadbookStudio() {
     const CATALOG_PATH = "roadbooks/catalog.json";
     const ROADBOOK_PATH = id => `roadbooks/${encodeURIComponent(id)}/roadbook.json`;
+    const PRIMARY_METADATA_KEYS = ["activity", "destination", "projectStatus", "coverImage", "project"];
+    const METADATA_LABELS = {
+        activity: "Activité",
+        destination: "Destination",
+        projectStatus: "Statut du projet",
+        coverImage: "Image de couverture",
+        project: "Projet",
+        generatedAt: "Généré le",
+        source: "Source",
+        googleSheetId: "Google Sheet ID"
+    };
 
     const state = {
         catalogIds: [],
@@ -103,9 +114,22 @@
         clone.id = safeText(clone.id, id);
         clone.title = safeText(clone.title, id);
         clone.description = safeText(clone.description, "");
+        clone.metadata = normalizeMetadataForEditing(clone.metadata);
         clone.stages = extractEditableStages(clone);
         delete clone.days;
         return clone;
+    }
+
+    function normalizeMetadataForEditing(metadata) {
+        const normalized = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+            ? structuredClone(metadata)
+            : {};
+
+        PRIMARY_METADATA_KEYS.forEach(key => {
+            normalized[key] = safeText(normalized[key], "");
+        });
+
+        return normalized;
     }
 
     function extractEditableStages(roadbook) {
@@ -154,9 +178,7 @@
         elements.detail.className = "studio-detail";
         elements.detail.replaceChildren();
 
-        const description = document.createElement("p");
-        description.textContent = safeText(roadbook.description, "Aucune description renseignée.");
-        elements.detail.appendChild(description);
+        elements.detail.appendChild(createGeneralInfoEditor(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
 
@@ -174,6 +196,95 @@
         grid.appendChild(createMetric("D−", formatMetric(summary.elevationLoss, "m")));
 
         return grid;
+    }
+
+    function createGeneralInfoEditor(roadbook) {
+        const section = document.createElement("section");
+        section.className = "studio-general-info";
+
+        const title = document.createElement("h3");
+        title.textContent = "Informations générales";
+        section.appendChild(title);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--general";
+
+        grid.appendChild(createGeneralField({
+            label: "ID",
+            value: roadbook.id,
+            readOnly: true
+        }));
+        grid.appendChild(createGeneralField({
+            label: "Titre",
+            value: roadbook.title,
+            onChange: value => updateRoadbookField("title", value.trim())
+        }));
+        grid.appendChild(createGeneralField({
+            label: "Description",
+            value: roadbook.description,
+            isTextarea: true,
+            fullWidth: true,
+            onChange: value => updateRoadbookField("description", value.trim())
+        }));
+
+        getEditableMetadataKeys(roadbook.metadata).forEach(key => {
+            grid.appendChild(createGeneralField({
+                label: METADATA_LABELS[key] || `metadata.${key}`,
+                value: roadbook.metadata?.[key] ?? "",
+                fullWidth: key === "coverImage",
+                onChange: value => updateMetadataField(key, value.trim())
+            }));
+        });
+
+        section.appendChild(grid);
+        return section;
+    }
+
+    function getEditableMetadataKeys(metadata) {
+        const keys = [];
+        const seen = new Set();
+
+        PRIMARY_METADATA_KEYS.forEach(key => {
+            keys.push(key);
+            seen.add(key);
+        });
+
+        Object.keys(metadata || {}).forEach(key => {
+            if (seen.has(key)) return;
+            if (!isEditableMetadataValue(metadata[key])) return;
+            keys.push(key);
+            seen.add(key);
+        });
+
+        return keys;
+    }
+
+    function isEditableMetadataValue(value) {
+        return value == null || ["string", "number", "boolean"].includes(typeof value);
+    }
+
+    function createGeneralField(options) {
+        const { label, value, readOnly = false, isTextarea = false, fullWidth = false, onChange } = options;
+        const wrapper = document.createElement("label");
+        if (fullWidth) wrapper.className = "studio-form-grid__full";
+        wrapper.appendChild(document.createTextNode(label));
+
+        const input = isTextarea ? document.createElement("textarea") : document.createElement("input");
+        if (isTextarea) {
+            input.rows = 3;
+        } else {
+            input.type = "text";
+        }
+
+        input.value = value ?? "";
+        input.readOnly = readOnly;
+        if (readOnly) input.classList.add("studio-input--readonly");
+        if (typeof onChange === "function") {
+            input.addEventListener("input", event => onChange(event.target.value));
+        }
+
+        wrapper.appendChild(input);
+        return wrapper;
     }
 
     function computeSummary(stages) {
@@ -262,6 +373,24 @@
         stage[field] = value;
         if (field === "stage") stage.title = safeText(stage.title, `Étape ${stage.stage ?? stageIndex + 1}`);
         rerenderEditorPreservingScroll();
+    }
+
+    function updateRoadbookField(field, value) {
+        const roadbook = state.selectedRoadbook;
+        if (!roadbook) return;
+        roadbook[field] = value;
+        if (field === "title") {
+            elements.detailTitle.textContent = safeText(roadbook.title, state.selectedRoadbookId);
+        }
+    }
+
+    function updateMetadataField(key, value) {
+        const roadbook = state.selectedRoadbook;
+        if (!roadbook) return;
+        if (!roadbook.metadata || typeof roadbook.metadata !== "object") {
+            roadbook.metadata = {};
+        }
+        roadbook.metadata[key] = value;
     }
 
     function updateVariant(stageIndex, variantIndex, field, value) {
