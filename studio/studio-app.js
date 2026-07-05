@@ -375,8 +375,6 @@
         elements.detail.appendChild(createGeneralInfoEditor(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
-        elements.detail.appendChild(createRoadbookNotesEditor(roadbook.notes));
-        elements.detail.appendChild(createContributionsEditor(roadbook.contributions));
 
         elements.addStage.disabled = false;
         elements.downloadJson.disabled = false;
@@ -472,13 +470,18 @@
         const officialGrid = document.createElement("div");
         officialGrid.className = "studio-form-grid studio-form-grid--compact";
         [
+            { field: "distance", label: "Distance", inputType: "number" },
+            { field: "elevationGain", label: "D+" , inputType: "number" },
+            { field: "elevationLoss", label: "D−", inputType: "number" },
             { field: "gpx", label: "GPS" },
             { field: "mapEmbedUrl", label: "Carte intégrée" }
-        ].forEach(({ field, label }) => {
+        ].forEach(({ field, label, inputType = "text" }) => {
             officialGrid.appendChild(createBoundField({
                 label,
+                inputType,
                 value: roadbook.summary?.official?.[field] ?? "",
-                onChange: value => updateSummaryReference("official", field, value.trim())
+                onChange: value => updateSummaryReference("official", field,
+                    (inputType === "number") ? decimalOrNull(value) : value.trim())
             }));
         });
         officialSection.appendChild(officialGrid);
