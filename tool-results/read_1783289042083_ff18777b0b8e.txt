@@ -1,0 +1,2002 @@
+     1→"use strict";
+     2→
+     3→(function initializeRoadbookStudio() {
+     4→    const CATALOG_PATH = "roadbooks/catalog.json";
+     5→    const ROADBOOK_PATH = id => `roadbooks/${encodeURIComponent(id)}/roadbook.json`;
+     6→    const GITHUB_REPOSITORY = "Aroblazeur/roadbook-explorer";
+     7→    const PUBLISH_WORKFLOW_FILE = "publish-roadbook.yml";
+     8→    const GITHUB_TOKEN_STORAGE_KEY = "roadbook-studio.github-token";
+     9→    const PRIMARY_METADATA_KEYS = ["project"];
+    10→    const METADATA_LABELS = {
+    11→        project: "Projet"
+    12→    };
+    13→    const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo", "price"];
+    14→    const STAGE_NOTE_FIELDS = ["text", "photo", "createdAt", "source"];
+    15→    const STAGE_REFERENCE_FIELDS = ["gpx", "mapEmbedUrl", "stagePhoto"];
+    16→    const POI_FIELDS = ["name", "region", "url", "image"];
+    17→    const ROADBOOK_ACCOMMODATION_FIELDS = ["role", "name", "website", "url", "photo", "type", "comment", "createdAt", "source"];
+    18→    const ROADBOOK_NOTE_FIELDS = ["stage", "text", "photo", "createdAt", "source", "author", "timestamp"];
+    19→    const CONTRIBUTION_FIELDS = ["id", "type", "stage", "createdAt", "status", "source", "author", "timestamp"];
+    20→    const CONTRIBUTION_PAYLOAD_FIELDS = ["text", "name", "url", "photo", "comment"];
+    21→
+    22→    const state = {
+    23→        catalogIds: [],
+    24→        selectedRoadbookId: "",
+    25→        selectedRoadbook: null,
+    26→        expandedStages: new Set(),
+    27→        expandedVariants: new Set(),
+    28→        generalInfoExpanded: true
+    29→    };
+    30→
+    31→    const elements = {
+    32→        status: document.getElementById("studio-status"),
+    33→        list: document.getElementById("studio-roadbook-list"),
+    34→        detailTitle: document.getElementById("studio-detail-title"),
+    35→        detail: document.getElementById("studio-detail"),
+    36→        refresh: document.getElementById("studio-refresh"),
+    37→        createRoadbook: document.getElementById("studio-create-roadbook"),
+    38→        createForm: document.getElementById("studio-create-form"),
+    39→        addStage: document.getElementById("studio-add-stage"),
+    40→        downloadJson: document.getElementById("studio-download-json"),
+    41→        exportGithub: document.getElementById("studio-export-github"),
+    42→        publishGithub: document.getElementById("studio-publish-github"),
+    43→        stageTemplate: document.getElementById("studio-stage-template"),
+    44→        variantTemplate: document.getElementById("studio-variant-template")
+    45→    };
+    46→
+    47→    elements.refresh?.addEventListener("click", () => loadCatalog({ forceReload: true }));
+    48→    elements.createRoadbook?.addEventListener("click", toggleCreateRoadbookForm);
+    49→    elements.createForm?.addEventListener("submit", handleCreateRoadbook);
+    50→    elements.createForm?.querySelector('[data-action="cancel-create-roadbook"]')?.addEventListener("click", hideCreateRoadbookForm);
+    51→    elements.addStage?.addEventListener("click", handleAddStage);
+    52→    elements.downloadJson?.addEventListener("click", downloadCurrentRoadbookJson);
+    53→    elements.exportGithub?.addEventListener("click", downloadGithubIntegrationExport);
+    54→    elements.publishGithub?.addEventListener("click", prepareGithubActionsPublish);
+    55→
+    56→    loadCatalog();
+    57→
+    58→    async function loadCatalog(options = {}) {
+    59→        const { forceReload = false } = options;
+    60→        setStatus("Chargement du catalogue…");
+    61→        elements.list.replaceChildren();
+    62→
+    63→        try {
+    64→            const catalog = await fetchJson(CATALOG_PATH, { forceReload });
+    65→            state.catalogIds = sanitizeCatalogIds(catalog?.roadbooks);
+    66→            renderCatalog();
+    67→            setStatus(state.catalogIds.length
+    68→                ? `${state.catalogIds.length} roadbook(s) disponible(s).`
+    69→                : "Aucun roadbook trouvé dans le catalogue.");
+    70→        } catch (error) {
+    71→            console.error("[Studio] Catalogue indisponible", error);
+    72→            setStatus("Impossible de charger le catalogue roadbooks/catalog.json.");
+    73→        }
+    74→    }
+    75→
+    76→    function sanitizeCatalogIds(values) {
+    77→        if (!Array.isArray(values)) return [];
+    78→        return [...new Set(values
+    79→            .map(value => String(value || "").trim().toLowerCase())
+    80→            .filter(value => /^[a-z0-9-]+$/.test(value))
+    81→        )];
+    82→    }
+    83→
+    84→    function renderCatalog() {
+    85→        elements.list.replaceChildren();
+    86→        state.catalogIds.forEach(id => {
+    87→            const button = document.createElement("button");
+    88→            button.type = "button";
+    89→            button.className = "studio-roadbook-card";
+    90→            button.addEventListener("click", () => openRoadbook(id));
+    91→
+    92→            const title = document.createElement("p");
+    93→            title.className = "studio-roadbook-card__title";
+    94→            title.textContent = id;
+    95→
+    96→            const meta = document.createElement("p");
+    97→            meta.className = "studio-roadbook-card__meta";
+    98→            meta.textContent = `roadbooks/${id}/roadbook.json`;
+    99→
+   100→            button.append(title, meta);
+   101→            elements.list.appendChild(button);
+   102→        });
+   103→    }
+   104→
+   105→    function toggleCreateRoadbookForm() {
+   106→        if (!elements.createForm) return;
+   107→        elements.createForm.hidden = !elements.createForm.hidden;
+   108→        if (!elements.createForm.hidden) {
+   109→            elements.createForm.querySelector('input[name="id"]')?.focus();
+   110→        }
+   111→    }
+   112→
+   113→    function hideCreateRoadbookForm() {
+   114→        if (elements.createForm) elements.createForm.hidden = true;
+   115→    }
+   116→
+   117→    function handleCreateRoadbook(event) {
+   118→        event.preventDefault();
+   119→        if (!elements.createForm) return;
+   120→
+   121→        const formData = new FormData(elements.createForm);
+   122→        const id = normalizeRoadbookId(formData.get("id"));
+   123→        const title = safeText(formData.get("title"), "");
+   124→
+   125→        if (!id) {
+   126→            setStatus("ID invalide : utilise uniquement lettres minuscules, chiffres et tirets.");
+   127→            return;
+   128→        }
+   129→
+   130→        if (state.catalogIds.includes(id)) {
+   131→            setStatus(`Le roadbook "${id}" existe déjà dans le catalogue. Choisis un autre ID.`);
+   132→            return;
+   133→        }
+   134→
+   135→        if (!title) {
+   136→            setStatus("Titre obligatoire pour créer un roadbook.");
+   137→            return;
+   138→        }
+   139→
+   140→        const roadbook = createCanonicalRoadbook({
+   141→            id,
+   142→            title,
+   143→            project: safeText(formData.get("project"), "a faire"),
+   144→            description: safeText(formData.get("description"), ""),
+   145→            officialDistance: decimalOrNull(formData.get("officialDistance")),
+   146→            officialElevationGain: decimalOrNull(formData.get("officialElevationGain")),
+   147→            officialElevationLoss: decimalOrNull(formData.get("officialElevationLoss")),
+   148→            officialGpx: safeText(formData.get("officialGpx"), ""),
+   149→            officialMapEmbedUrl: safeText(formData.get("officialMapEmbedUrl"), ""),
+   150→            currentGpx: safeText(formData.get("currentGpx"), ""),
+   151→            currentMapEmbedUrl: safeText(formData.get("currentMapEmbedUrl"), "")
+   152→        });
+   153→
+   154→        state.selectedRoadbookId = id;
+   155→        state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
+   156→        state.expandedStages = new Set();
+   157→        state.expandedVariants = new Set();
+   158→        elements.createForm.reset();
+   159→        hideCreateRoadbookForm();
+   160→        renderRoadbookEditor();
+   161→        setStatus(`Nouveau roadbook "${title}" créé localement · export attendu : roadbooks/${id}/roadbook.json.`);
+   162→    }
+   163→
+   164→    function normalizeRoadbookId(value) {
+   165→        return String(value || "")
+   166→            .trim()
+   167→            .toLowerCase()
+   168→            .normalize("NFD")
+   169→            .replace(/[\u0300-\u036f]/g, "")
+   170→            .replace(/[^a-z0-9]+/g, "-")
+   171→            .replace(/^-+|-+$/g, "");
+   172→    }
+   173→
+   174→    function createCanonicalRoadbook(values) {
+   175→        const now = new Date().toISOString();
+   176→        return {
+   177→            id: values.id,
+   178→            title: values.title,
+   179→            description: values.description,
+   180→            metadata: {
+   181→                activity: "",
+   182→                destination: "",
+   183→                project: values.project,
+   184→                projectStatus: values.project,
+   185→                coverImage: "",
+   186→                generatedAt: now,
+   187→                source: "studio",
+   188→                googleSheetId: ""
+   189→            },
+   190→            summary: {
+   191→                official: {
+   192→                    distance: values.officialDistance,
+   193→                    elevationGain: values.officialElevationGain,
+   194→                    elevationLoss: values.officialElevationLoss,
+   195→                    mapEmbedUrl: values.officialMapEmbedUrl,
+   196→                    gpx: values.officialGpx,
+   197→                    link: ""
+   198→                },
+   199→                stagesTotal: {
+   200→                    distance: null,
+   201→                    elevationGain: null,
+   202→                    elevationLoss: null,
+   203→                    mapEmbedUrl: values.currentMapEmbedUrl,
+   204→                    gpx: values.currentGpx,
+   205→                    link: ""
+   206→                },
+   207→                stagesTotalMarker: null
+   208→            },
+   209→            stages: [],
+   210→            variants: [],
+   211→            accommodation: [],
+   212→            pois: [],
+   213→            notes: [],
+   214→            contributions: [],
+   215→            days: []
+   216→        };
+   217→    }
+   218→
+   219→    async function openRoadbook(id) {
+   220→        setStatus(`Chargement de ${id}…`);
+   221→        try {
+   222→            const roadbook = await fetchJson(ROADBOOK_PATH(id), { forceReload: true });
+   223→            state.selectedRoadbookId = id;
+   224→            state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
+   225→            state.expandedStages = new Set();
+   226→            state.expandedVariants = new Set();
+   227→            state.generalInfoExpanded = true;
+   228→            renderRoadbookEditor();
+   229→            setStatus(`${safeText(state.selectedRoadbook.title, id)} chargé.`);
+   230→        } catch (error) {
+   231→            console.error(`[Studio] Roadbook indisponible : ${id}`, error);
+   232→            renderErrorDetail(id);
+   233→            setStatus(`Impossible de charger ${ROADBOOK_PATH(id)}.`);
+   234→        }
+   235→    }
+   236→
+   237→    async function fetchJson(path, options = {}) {
+   238→        const url = new URL(path, window.location.href);
+   239→        if (options.forceReload) url.searchParams.set("t", String(Date.now()));
+   240→        const response = await fetch(url.href, { cache: options.forceReload ? "reload" : "no-store" });
+   241→        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+   242→        return response.json();
+   243→    }
+   244→
+   245→    function normalizeRoadbookForEditing(roadbook, id) {
+   246→        const clone = structuredClone(roadbook || {});
+   247→        clone.id = safeText(clone.id, id);
+   248→        clone.title = safeText(clone.title, id);
+   249→        clone.description = safeText(clone.description, "");
+   250→        clone.metadata = normalizeMetadataForEditing(clone.metadata);
+   251→        clone.stages = extractEditableStages(clone);
+   252→        clone.accommodation = normalizeRoadbookAccommodations(clone.accommodation);
+   253→        clone.pois = normalizeRoadbookPois(clone.pois);
+   254→        clone.notes = normalizeRoadbookNotes(clone.notes);
+   255→        clone.contributions = normalizeContributions(clone.contributions);
+   256→        delete clone.days;
+   257→        return clone;
+   258→    }
+   259→
+   260→    function normalizeMetadataForEditing(metadata) {
+   261→        const normalized = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+   262→            ? structuredClone(metadata)
+   263→            : {};
+   264→
+   265→        PRIMARY_METADATA_KEYS.forEach(key => {
+   266→            normalized[key] = safeText(normalized[key], "");
+   267→        });
+   268→
+   269→        return normalized;
+   270→    }
+   271→
+   272→    function extractEditableStages(roadbook) {
+   273→        const source = Array.isArray(roadbook.stages)
+   274→            ? roadbook.stages
+   275→            : Array.isArray(roadbook.days)
+   276→                ? roadbook.days.filter(day => !day.isSubstep)
+   277→                : [];
+   278→
+   279→        return source.map((stage, index) => normalizeStage(stage, index));
+   280→    }
+   281→
+   282→    function normalizeStage(stage, index) {
+   283→        const normalized = structuredClone(stage || {});
+   284→        normalized.stage = toFiniteNumber(normalized.stage) ?? index + 1;
+   285→        normalized.title = safeText(normalized.title, `Étape ${normalized.stage}`);
+   286→        normalized.departure = safeText(normalized.departure, "");
+   287→        normalized.arrival = safeText(normalized.arrival, "");
+   288→        normalized.distance = toFiniteNumber(normalized.distance);
+   289→        normalized.elevationGain = toFiniteNumber(normalized.elevationGain);
+   290→        normalized.elevationLoss = toFiniteNumber(normalized.elevationLoss);
+   291→        normalized.description = safeText(normalized.description, "");
+   292→        STAGE_REFERENCE_FIELDS.forEach(field => {
+   293→            normalized[field] = safeText(normalized[field], "");
+   294→        });
+   295→        normalized.warning = normalizeStringList(normalized.warning);
+   296→        normalized.pois = normalizePois(normalized.pois || normalized.pointsOfInterest || normalized.interest);
+   297→        normalized.pointsOfInterest = normalized.pois;
+   298→        normalized.interest = normalized.pois;
+   299→        normalized.accommodation = normalizeStageAccommodation(normalized.accommodation);
+   300→        normalized.accommodationType = safeText(normalized.accommodationType, "");
+   301→        normalized.noteItems = normalizeStageNoteItems(normalized.noteItems);
+   302→        normalized.variants = normalizeVariants(
+   303→            Array.isArray(normalized.variants) && normalized.variants.length
+   304→                ? normalized.variants
+   305→                : normalized.substeps
+   306→        );
+   307→        normalized.substeps = normalized.variants;
+   308→        return normalized;
+   309→    }
+   310→
+   311→    function normalizeVariants(variants) {
+   312→        if (!Array.isArray(variants)) return [];
+   313→        return variants.map((variant, index) => normalizeVariant(variant, index));
+   314→    }
+   315→
+   316→    function normalizeVariant(variant, index) {
+   317→        const normalized = variant && typeof variant === "object" && !Array.isArray(variant)
+   318→            ? structuredClone(variant)
+   319→            : {};
+   320→        normalized.type = safeText(normalized.type, "");
+   321→        normalized.name = safeText(normalized.name || normalized.title, `Variante ${index + 1}`);
+   322→        normalized.title = safeText(normalized.title, normalized.name);
+   323→        normalized.departure = safeText(normalized.departure, "");
+   324→        normalized.arrival = safeText(normalized.arrival, "");
+   325→        normalized.distance = toFiniteNumber(normalized.distance);
+   326→        normalized.elevationGain = toFiniteNumber(normalized.elevationGain);
+   327→        normalized.elevationLoss = toFiniteNumber(normalized.elevationLoss);
+   328→        normalized.description = safeText(normalized.description, "");
+   329→        STAGE_REFERENCE_FIELDS.forEach(field => {
+   330→            normalized[field] = safeText(normalized[field], "");
+   331→        });
+   332→        normalized.warning = normalizeStringList(normalized.warning);
+   333→        normalized.pois = normalizePois(normalized.pois || normalized.pointsOfInterest || normalized.interest);
+   334→        normalized.pointsOfInterest = normalized.pois;
+   335→        normalized.interest = normalized.pois;
+   336→        normalized.accommodation = normalizeStageAccommodation(normalized.accommodation);
+   337→        normalized.accommodationType = safeText(normalized.accommodationType, "");
+   338→        normalized.noteItems = normalizeStageNoteItems(normalized.noteItems);
+   339→        return normalized;
+   340→    }
+   341→
+   342→    function normalizePois(pois) {
+   343→        if (!Array.isArray(pois)) return [];
+   344→        return pois.map(poi => normalizePoi(poi));
+   345→    }
+   346→
+   347→    function normalizePoi(poi) {
+   348→        const normalized = poi && typeof poi === "object" && !Array.isArray(poi)
+   349→            ? structuredClone(poi)
+   350→            : { name: safeText(poi, "") };
+   351→        POI_FIELDS.forEach(field => {
+   352→            normalized[field] = safeText(normalized[field], "");
+   353→        });
+   354→        return normalized;
+   355→    }
+   356→
+   357→    function normalizeStringList(values) {
+   358→        if (Array.isArray(values)) return values.map(value => safeText(value, "")).filter(Boolean);
+   359→        const value = safeText(values, "");
+   360→        return value ? [value] : [];
+   361→    }
+   362→
+   363→    function normalizeStageAccommodation(accommodation) {
+   364→        const normalized = accommodation && typeof accommodation === "object" && !Array.isArray(accommodation)
+   365→            ? structuredClone(accommodation)
+   366→            : {};
+   367→        STAGE_ACCOMMODATION_FIELDS.forEach(field => {
+   368→            normalized[field] = safeText(normalized[field], "");
+   369→        });
+   370→        normalized.alternatives = normalizeStageAccommodationAlternatives(normalized.alternatives);
+   371→        return normalized;
+   372→    }
+   373→
+   374→    function normalizeStageAccommodationAlternatives(alternatives) {
+   375→        if (!Array.isArray(alternatives)) return [];
+   376→        return alternatives.map(alternative => ({
+   377→            url: safeText(alternative?.url, ""),
+   378→            name: safeText(alternative?.name, ""),
+   379→            photo: safeText(alternative?.photo, ""),
+   380→            price: safeText(alternative?.price, "")
+   381→        }));
+   382→    }
+   383→
+   384→    function normalizeRoadbookAccommodations(accommodations) {
+   385→        if (!Array.isArray(accommodations)) return [];
+   386→        return accommodations.map(accommodation => normalizeRoadbookAccommodationEntry(accommodation));
+   387→    }
+   388→
+   389→    function normalizeRoadbookPois(pois) {
+   390→        if (!Array.isArray(pois)) return [];
+   391→        return pois.map(poi => {
+   392→            const normalized = normalizePoi(poi);
+   393→            normalized.stage = integerOrNull(poi?.stage);
+   394→            return normalized;
+   395→        });
+   396→    }
+   397→
+   398→    function normalizeRoadbookAccommodationEntry(accommodation) {
+   399→        const normalized = accommodation && typeof accommodation === "object" && !Array.isArray(accommodation)
+   400→            ? structuredClone(accommodation)
+   401→            : {};
+   402→        normalized.stage = integerOrNull(normalized.stage);
+   403→        ROADBOOK_ACCOMMODATION_FIELDS.forEach(field => {
+   404→            normalized[field] = safeText(normalized[field], "");
+   405→        });
+   406→        return normalized;
+   407→    }
+   408→
+   409→    function normalizeRoadbookNotes(notes) {
+   410→        if (!Array.isArray(notes)) return [];
+   411→        return notes.map(note => normalizeRoadbookNoteItem(note));
+   412→    }
+   413→
+   414→    function normalizeRoadbookNoteItem(note) {
+   415→        const normalized = note && typeof note === "object" && !Array.isArray(note)
+   416→            ? structuredClone(note)
+   417→            : {};
+   418→        normalized.stage = integerOrNull(normalized.stage);
+   419→        ROADBOOK_NOTE_FIELDS.forEach(field => {
+   420→            if (field === "stage") return;
+   421→            normalized[field] = safeText(normalized[field], "");
+   422→        });
+   423→        return normalized;
+   424→    }
+   425→
+   426→    function normalizeStageNoteItems(noteItems) {
+   427→        if (!Array.isArray(noteItems)) return [];
+   428→        return noteItems.map(item => normalizeStageNoteItem(item));
+   429→    }
+   430→
+   431→    function normalizeStageNoteItem(note) {
+   432→        const normalized = note && typeof note === "object" && !Array.isArray(note)
+   433→            ? structuredClone(note)
+   434→            : {};
+   435→        STAGE_NOTE_FIELDS.forEach(field => {
+   436→            normalized[field] = safeText(normalized[field], "");
+   437→        });
+   438→        return normalized;
+   439→    }
+   440→
+   441→    function normalizeContributions(contributions) {
+   442→        if (!Array.isArray(contributions)) return [];
+   443→        const usedIds = new Set();
+   444→        return contributions.map((contribution, index) => normalizeContribution(contribution, index, usedIds));
+   445→    }
+   446→
+   447→    function normalizeContribution(contribution, index, usedIds = new Set()) {
+   448→        const normalized = contribution && typeof contribution === "object" && !Array.isArray(contribution)
+   449→            ? structuredClone(contribution)
+   450→            : {};
+   451→        normalized.id = reserveUniqueContributionId(
+   452→            usedIds,
+   453→            safeText(normalized.id, ""),
+   454→            `contribution-${Date.now()}-${index + 1}`
+   455→        );
+   456→        normalized.type = safeText(normalized.type, "travelerNote");
+   457→        normalized.stage = integerOrNull(normalized.stage);
+   458→        normalized.createdAt = safeText(normalized.createdAt, "");
+   459→        normalized.status = safeText(normalized.status, "");
+   460→        normalized.source = safeText(normalized.source, "");
+   461→        normalized.author = safeText(normalized.author, "");
+   462→        normalized.timestamp = safeText(normalized.timestamp, "");
+   463→        normalized.payload = normalizeContributionPayload(normalized.payload);
+   464→        return normalized;
+   465→    }
+   466→
+   467→    function reserveUniqueContributionId(usedIds, preferredId, fallbackPrefix = "contribution") {
+   468→        const baseId = safeText(preferredId, "") || safeText(fallbackPrefix, "contribution");
+   469→        if (!usedIds.has(baseId)) {
+   470→            usedIds.add(baseId);
+   471→            return baseId;
+   472→        }
+   473→        let suffix = 1;
+   474→        let candidate = `${baseId}-${suffix}`;
+   475→        while (usedIds.has(candidate)) {
+   476→            suffix += 1;
+   477→            candidate = `${baseId}-${suffix}`;
+   478→        }
+   479→        usedIds.add(candidate);
+   480→        return candidate;
+   481→    }
+   482→
+   483→    function normalizeContributionPayload(payload) {
+   484→        const normalized = payload && typeof payload === "object" && !Array.isArray(payload)
+   485→            ? structuredClone(payload)
+   486→            : {};
+   487→        CONTRIBUTION_PAYLOAD_FIELDS.forEach(field => {
+   488→            normalized[field] = safeText(normalized[field], "");
+   489→        });
+   490→        return normalized;
+   491→    }
+   492→
+   493→    function renderRoadbookEditor() {
+   494→        const roadbook = state.selectedRoadbook;
+   495→        if (!roadbook) return;
+   496→
+   497→        elements.detailTitle.textContent = safeText(roadbook.title, state.selectedRoadbookId);
+   498→        elements.detail.className = "studio-detail";
+   499→        elements.detail.replaceChildren();
+   500→
+   501→        elements.detail.appendChild(createGeneralInfoEditor(roadbook));
+   502→        elements.detail.appendChild(createExportPathHint(roadbook));
+   503→        elements.detail.appendChild(createSummaryGrid(roadbook));
+   504→        elements.detail.appendChild(createStageEditorList(roadbook.stages));
+   505→
+   506→        syncEditorActionButtons();
+   507→    }
+   508→
+   509→    function createExportPathHint(roadbook) {
+   510→        const section = document.createElement("section");
+   511→        section.className = "studio-export-hint";
+   512→        const id = safeText(roadbook.id, state.selectedRoadbookId || "nouveau-roadbook");
+   513→        const title = document.createElement("h3");
+   514→        title.textContent = "Export et intégration";
+   515→        const text = document.createElement("p");
+   516→        text.innerHTML = `Chemin cible attendu : <code>roadbooks/${escapeHtml(id)}/roadbook.json</code>.`;
+   517→        const configPath = document.createElement("p");
+   518→        configPath.innerHTML = `Config cible attendue : <code>roadbooks/${escapeHtml(id)}/config.js</code>.`;
+   519→        const catalogInstruction = document.createElement("p");
+   520→        catalogInstruction.innerHTML = `Catalogue : ajouter <code>${escapeHtml(id)}</code> au tableau <code>roadbooks</code> de <code>roadbooks/catalog.json</code>.`;
+   521→        const publishInstruction = document.createElement("p");
+   522→        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier sur GitHub</strong> déclenche le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code> via l’API GitHub, puis le workflow commit directement ces fichiers sur <code>main</code>.`;
+   523→        const workflowLink = document.createElement("p");
+   524→        workflowLink.innerHTML = `Workflow : <a href="https://github.com/${escapeHtml(GITHUB_REPOSITORY)}/actions/workflows/${escapeHtml(PUBLISH_WORKFLOW_FILE)}" target="_blank" rel="noopener noreferrer">ouvrir GitHub Actions</a>.`;
+   525→        const meta = document.createElement("p");
+   526→        meta.className = "studio-roadbook-card__meta";
+   527→        meta.textContent = state.catalogIds.includes(id)
+   528→            ? "Roadbook chargé depuis le catalogue existant."
+   529→            : "Roadbook créé localement, pas encore présent dans le catalogue. Utilise « Exporter pour GitHub » pour récupérer les fichiers d’intégration.";
+   530→        section.append(title, text, configPath, catalogInstruction, publishInstruction, workflowLink, meta);
+   531→        return section;
+   532→    }
+   533→
+   534→    function createSummaryGrid(roadbook) {
+   535→        const summary = computeSummary(roadbook.stages);
+   536→        const grid = document.createElement("div");
+   537→        grid.className = "studio-detail__summary";
+   538→
+   539→        grid.appendChild(createMetric("Distance", formatMetric(summary.distance, "km")));
+   540→        grid.appendChild(createMetric("D+", formatMetric(summary.elevationGain, "m")));
+   541→        grid.appendChild(createMetric("D−", formatMetric(summary.elevationLoss, "m")));
+   542→
+   543→        return grid;
+   544→    }
+   545→
+   546→    function createSummaryReferencesEditor(roadbook) {
+   547→        const section = document.createElement("section");
+   548→        section.className = "studio-general-info";
+   549→        const title = document.createElement("h3");
+   550→        title.textContent = "Synthèses et tracés globaux";
+   551→        section.appendChild(title);
+   552→
+   553→        const grid = document.createElement("div");
+   554→        grid.className = "studio-form-grid studio-form-grid--compact";
+   555→        [
+   556→            { sectionKey: "official", field: "gpx", label: "Itinéraire officiel · GPX" },
+   557→            { sectionKey: "official", field: "mapEmbedUrl", label: "Itinéraire officiel · carte intégrée" },
+   558→            { sectionKey: "stagesTotal", field: "gpx", label: "Roadbook actuel · GPX" },
+   559→            { sectionKey: "stagesTotal", field: "mapEmbedUrl", label: "Roadbook actuel · carte intégrée" }
+   560→        ].forEach(({ sectionKey, field, label }) => {
+   561→            grid.appendChild(createBoundField({
+   562→                label,
+   563→                value: roadbook.summary?.[sectionKey]?.[field] ?? "",
+   564→                fullWidth: true,
+   565→                onChange: value => updateSummaryReference(sectionKey, field, value.trim())
+   566→            }));
+   567→        });
+   568→        section.appendChild(grid);
+   569→        return section;
+   570→    }
+   571→
+   572→    function createGeneralInfoEditor(roadbook) {
+   573→        const section = document.createElement("section");
+   574→        section.className = "studio-general-info";
+   575→
+   576→        const header = document.createElement("div");
+   577→        header.className = "studio-general-info__header";
+   578→        header.setAttribute("role", "button");
+   579→        header.setAttribute("tabindex", "0");
+   580→
+   581→        const title = document.createElement("h3");
+   582→        title.textContent = "Informations générales";
+   583→        header.appendChild(title);
+   584→        section.appendChild(header);
+   585→
+   586→        const body = document.createElement("div");
+   587→        body.className = "studio-general-info__body";
+   588→
+   589→        const grid = document.createElement("div");
+   590→        grid.className = "studio-form-grid studio-form-grid--general";
+   591→
+   592→        grid.appendChild(createGeneralField({
+   593→            label: "Titre",
+   594→            value: roadbook.title,
+   595→            onChange: value => updateRoadbookField("title", value.trim())
+   596→        }));
+   597→        grid.appendChild(createGeneralField({
+   598→            label: "Projet",
+   599→            value: roadbook.metadata?.project ?? "",
+   600→            onChange: value => updateMetadataField("project", value.trim())
+   601→        }));
+   602→        grid.appendChild(createGeneralField({
+   603→            label: "Description",
+   604→            value: roadbook.description,
+   605→            isTextarea: true,
+   606→            fullWidth: true,
+   607→            onChange: value => updateRoadbookField("description", value.trim())
+   608→        }));
+   609→
+   610→        body.appendChild(grid);
+   611→
+   612→        const officialSection = document.createElement("section");
+   613→        officialSection.className = "studio-stage-extra";
+   614→        const officialHeader = document.createElement("div");
+   615→        officialHeader.className = "studio-stage-extra__header";
+   616→        const officialTitle = document.createElement("h4");
+   617→        officialTitle.textContent = "Itinéraire officiel";
+   618→        officialHeader.appendChild(officialTitle);
+   619→        officialSection.appendChild(officialHeader);
+   620→
+   621→        const officialGrid = document.createElement("div");
+   622→        officialGrid.className = "studio-form-grid studio-form-grid--compact";
+   623→        [
+   624→            { field: "distance", label: "Distance", inputType: "number" },
+   625→            { field: "elevationGain", label: "D+", inputType: "number" },
+   626→            { field: "elevationLoss", label: "D−", inputType: "number" },
+   627→            { field: "gpx", label: "GPX" },
+   628→            { field: "mapEmbedUrl", label: "Carte intégrée" }
+   629→        ].forEach(({ field, label, inputType = "text" }) => {
+   630→            officialGrid.appendChild(createBoundField({
+   631→                label,
+   632→                inputType,
+   633→                value: roadbook.summary?.official?.[field] ?? "",
+   634→                onChange: value => updateSummaryReference("official", field,
+   635→                    (inputType === "number") ? decimalOrNull(value) : value.trim())
+   636→            }));
+   637→        });
+   638→        officialSection.appendChild(officialGrid);
+   639→        body.appendChild(officialSection);
+   640→
+   641→        const tracedSection = document.createElement("section");
+   642→        tracedSection.className = "studio-stage-extra";
+   643→        const tracedHeader = document.createElement("div");
+   644→        tracedHeader.className = "studio-stage-extra__header";
+   645→        const tracedTitle = document.createElement("h4");
+   646→        tracedTitle.textContent = "Tracé actuel";
+   647→        tracedHeader.appendChild(tracedTitle);
+   648→        tracedSection.appendChild(tracedHeader);
+   649→
+   650→        const tracedGrid = document.createElement("div");
+   651→        tracedGrid.className = "studio-form-grid studio-form-grid--compact";
+   652→        [
+   653→            { field: "gpx", label: "GPX" },
+   654→            { field: "mapEmbedUrl", label: "Carte intégrée" }
+   655→        ].forEach(({ field, label }) => {
+   656→            tracedGrid.appendChild(createBoundField({
+   657→                label,
+   658→                value: roadbook.summary?.stagesTotal?.[field] ?? "",
+   659→                onChange: value => updateSummaryReference("stagesTotal", field, value.trim())
+   660→            }));
+   661→        });
+   662→        tracedSection.appendChild(tracedGrid);
+   663→        body.appendChild(tracedSection);
+   664→
+   665→        section.appendChild(body);
+   666→
+   667→        const applyToggleState = () => {
+   668→            const expanded = state.generalInfoExpanded;
+   669→            section.dataset.expanded = expanded ? "true" : "false";
+   670→            body.hidden = !expanded;
+   671→            header.setAttribute("aria-expanded", String(expanded));
+   672→        };
+   673→
+   674→        const toggleGeneralInfo = () => {
+   675→            state.generalInfoExpanded = !state.generalInfoExpanded;
+   676→            applyToggleState();
+   677→        };
+   678→
+   679→        header.addEventListener("click", toggleGeneralInfo);
+   680→        header.addEventListener("keydown", event => {
+   681→            if (event.key === "Enter" || event.key === " ") {
+   682→                event.preventDefault();
+   683→                toggleGeneralInfo();
+   684→            }
+   685→        });
+   686→
+   687→        applyToggleState();
+   688→
+   689→        return section;
+   690→    }
+   691→
+   692→    function getEditableMetadataKeys(metadata) {
+   693→        const keys = [];
+   694→        const seen = new Set();
+   695→
+   696→        PRIMARY_METADATA_KEYS.forEach(key => {
+   697→            keys.push(key);
+   698→            seen.add(key);
+   699→        });
+   700→
+   701→        Object.keys(metadata || {}).forEach(key => {
+   702→            if (seen.has(key)) return;
+   703→            if (!isEditableMetadataValue(metadata[key])) return;
+   704→            keys.push(key);
+   705→            seen.add(key);
+   706→        });
+   707→
+   708→        return keys;
+   709→    }
+   710→
+   711→    function isEditableMetadataValue(value) {
+   712→        return value == null || ["string", "number", "boolean"].includes(typeof value);
+   713→    }
+   714→
+   715→    function createGeneralField(options) {
+   716→        const { label, value, readOnly = false, isTextarea = false, fullWidth = false, onChange } = options;
+   717→        const wrapper = document.createElement("label");
+   718→        if (fullWidth) wrapper.className = "studio-form-grid__full";
+   719→        wrapper.appendChild(document.createTextNode(label));
+   720→
+   721→        const input = isTextarea ? document.createElement("textarea") : document.createElement("input");
+   722→        if (isTextarea) {
+   723→            input.rows = 3;
+   724→        } else {
+   725→            input.type = "text";
+   726→        }
+   727→
+   728→        input.value = value ?? "";
+   729→        input.readOnly = readOnly;
+   730→        if (readOnly) input.classList.add("studio-input--readonly");
+   731→        if (typeof onChange === "function") {
+   732→            input.addEventListener("input", event => onChange(event.target.value));
+   733→        }
+   734→
+   735→        wrapper.appendChild(input);
+   736→        return wrapper;
+   737→    }
+   738→
+   739→    function computeSummary(stages) {
+   740→        return stages.reduce((accumulator, stage) => {
+   741→            accumulator.distance += toFiniteNumber(stage.distance) || 0;
+   742→            accumulator.elevationGain += toFiniteNumber(stage.elevationGain) || 0;
+   743→            accumulator.elevationLoss += toFiniteNumber(stage.elevationLoss) || 0;
+   744→            return accumulator;
+   745→        }, { distance: 0, elevationGain: 0, elevationLoss: 0 });
+   746→    }
+   747→
+   748→    function createMetric(label, value) {
+   749→        const item = document.createElement("div");
+   750→        item.className = "studio-detail__metric";
+   751→        const labelNode = document.createElement("span");
+   752→        labelNode.textContent = label;
+   753→        const valueNode = document.createElement("strong");
+   754→        valueNode.textContent = value;
+   755→        item.append(labelNode, valueNode);
+   756→        return item;
+   757→    }
+   758→
+   759→    function createStageEditorList(stages) {
+   760→        const section = document.createElement("section");
+   761→        const title = document.createElement("h3");
+   762→        title.textContent = `Étapes (${stages.length})`;
+   763→        const list = document.createElement("div");
+   764→        list.className = "studio-stage-list";
+   765→        stages.forEach((stage, stageIndex) => {
+   766→            list.appendChild(createStageEditor(stage, stageIndex));
+   767→            stage.variants.forEach((variant, variantIndex) => {
+   768→                list.appendChild(createVariantEditor(stageIndex, variant, variantIndex));
+   769→            });
+   770→        });
+   771→        section.append(title, list);
+   772→        return section;
+   773→    }
+   774→
+   775→    function createStageEditor(stage, stageIndex) {
+   776→        const fragment = elements.stageTemplate.content.cloneNode(true);
+   777→        const card = fragment.querySelector(".studio-stage-card");
+   778→        const title = fragment.querySelector(".studio-stage-card__title");
+   779→        title.textContent = stage.title;
+   780→
+   781→        const summaryEl = fragment.querySelector(".studio-stage-card__summary");
+   782→        if (summaryEl) summaryEl.textContent = buildStageSummaryText(stage);
+   783→
+   784→        const body = fragment.querySelector(".studio-stage-card__body");
+   785→        const isExpanded = state.expandedStages.has(stageIndex);
+   786→        card.dataset.expanded = isExpanded ? "true" : "false";
+   787→        if (body) body.hidden = !isExpanded;
+   788→
+   789→        const header = fragment.querySelector(".studio-stage-card__header");
+   790→        const toggleZone = fragment.querySelector(".studio-stage-card__header-info");
+   791→        if (header && toggleZone) {
+   792→            toggleZone.setAttribute("role", "button");
+   793→            toggleZone.setAttribute("tabindex", "0");
+   794→            const toggleStage = () => {
+   795→                const expanded = card.dataset.expanded === "true";
+   796→                card.dataset.expanded = expanded ? "false" : "true";
+   797→                if (body) body.hidden = expanded;
+   798→                if (expanded) {
+   799→                    state.expandedStages.delete(stageIndex);
+   800→                } else {
+   801→                    state.expandedStages.add(stageIndex);
+   802→                }
+   803→                toggleZone.setAttribute("aria-expanded", String(!expanded));
+   804→            };
+   805→            toggleZone.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+   806→            toggleZone.addEventListener("click", toggleStage);
+   807→            toggleZone.addEventListener("keydown", event => {
+   808→                if (event.key === "Enter" || event.key === " ") {
+   809→                    event.preventDefault();
+   810→                    toggleStage();
+   811→                }
+   812→            });
+   813→        }
+   814→
+   815→        bindStageField(fragment, "stage", stage.stage, value => updateStage(stageIndex, "stage", integerOrNull(value)));
+   816→        bindStageField(fragment, "title", stage.title, value => updateStage(stageIndex, "title", value.trim()));
+   817→        bindStageField(fragment, "departure", stage.departure, value => updateStage(stageIndex, "departure", value.trim()));
+   818→        bindStageField(fragment, "arrival", stage.arrival, value => updateStage(stageIndex, "arrival", value.trim()));
+   819→        bindStageField(fragment, "distance", stage.distance, value => updateStage(stageIndex, "distance", decimalOrNull(value)));
+   820→        bindStageField(fragment, "elevationGain", stage.elevationGain, value => updateStage(stageIndex, "elevationGain", decimalOrNull(value)));
+   821→        bindStageField(fragment, "elevationLoss", stage.elevationLoss, value => updateStage(stageIndex, "elevationLoss", decimalOrNull(value)));
+   822→        bindStageField(fragment, "stagePhoto", stage.stagePhoto, value => updateStage(stageIndex, "stagePhoto", value.trim()));
+   823→        bindStageField(fragment, "description", stage.description, value => updateStage(stageIndex, "description", value.trim()));
+   824→        bindStageField(fragment, "accommodationType", stage.accommodationType, value => updateStage(stageIndex, "accommodationType", value.trim()));
+   825→
+   826→        fragment.querySelector('[data-action="delete-stage"]').addEventListener("click", () => deleteStage(stageIndex));
+   827→        fragment.querySelector('[data-action="add-variant"]').addEventListener("click", () => addVariant(stageIndex));
+   828→
+   829→        const appendTarget = body || card;
+   830→        appendTarget.appendChild(createEditorZone("trace", "Tracé · Carte · Points d'intérêt", [
+   831→            createStageReferencesEditor(stageIndex, stage),
+   832→            createStagePoisEditor(stageIndex, stage.pois || [])
+   833→        ]));
+   834→        appendTarget.appendChild(createStageMainAccommodationEditor(stageIndex, stage));
+   835→        appendTarget.appendChild(createStageAlternativeAccommodationsEditor(stageIndex, stage));
+   836→        appendTarget.appendChild(createEditorZone("notes", "Notes", [
+   837→            createStageNotesEditor(stageIndex, stage.noteItems || [])
+   838→        ]));
+   839→
+   840→        card.dataset.stageIndex = String(stageIndex);
+   841→        card.dataset.stageNumber = String(stage.stage ?? "");
+   842→        return fragment;
+   843→    }
+   844→
+   845→    function buildStageSummaryText(stage) {
+   846→        const parts = [];
+   847→        if (stage.departure || stage.arrival) {
+   848→            parts.push(`${stage.departure || "?"} → ${stage.arrival || "?"}`);
+   849→        }
+   850→        if (stage.distance != null) {
+   851→            parts.push(`${stage.distance} km`);
+   852→        }
+   853→        return parts.join(" · ");
+   854→    }
+   855→
+   856→    function createVariantEditor(stageIndex, variant, variantIndex) {
+   857→        const fragment = elements.variantTemplate.content.cloneNode(true);
+   858→        const variantCard = fragment.querySelector(".studio-variant-card");
+   859→        const variantKey = variantPanelKey(stageIndex, variantIndex);
+   860→        const isExpanded = state.expandedVariants.has(variantKey);
+   861→        variantCard.dataset.variantIndex = String(variantIndex);
+   862→        variantCard.dataset.parentStageIndex = String(stageIndex);
+   863→        variantCard.dataset.expanded = isExpanded ? "true" : "false";
+   864→
+   865→        fragment.querySelector(".studio-variant-card__title").textContent = buildVariantTitle(stageIndex, variant, variantIndex);
+   866→        const summaryEl = fragment.querySelector(".studio-stage-card__summary");
+   867→        if (summaryEl) summaryEl.textContent = buildVariantSummaryText(variant);
+   868→
+   869→        const body = fragment.querySelector(".studio-variant-card__body");
+   870→        if (body) body.hidden = !isExpanded;
+   871→
+   872→        const toggleZone = fragment.querySelector(".studio-variant-card__header-info");
+   873→        if (toggleZone) {
+   874→            toggleZone.setAttribute("role", "button");
+   875→            toggleZone.setAttribute("tabindex", "0");
+   876→            toggleZone.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+   877→            const toggleVariant = () => {
+   878→                const expanded = variantCard.dataset.expanded === "true";
+   879→                variantCard.dataset.expanded = expanded ? "false" : "true";
+   880→                if (body) body.hidden = expanded;
+   881→                if (expanded) {
+   882→                    state.expandedVariants.delete(variantKey);
+   883→                } else {
+   884→                    state.expandedVariants.add(variantKey);
+   885→                }
+   886→                toggleZone.setAttribute("aria-expanded", String(!expanded));
+   887→            };
+   888→            toggleZone.addEventListener("click", toggleVariant);
+   889→            toggleZone.addEventListener("keydown", event => {
+   890→                if (event.key === "Enter" || event.key === " ") {
+   891→                    event.preventDefault();
+   892→                    toggleVariant();
+   893→                }
+   894→            });
+   895→        }
+   896→
+   897→        bindVariantField(fragment, "name", variant.name, value => updateVariant(stageIndex, variantIndex, "name", value.trim() || `Variante ${variantIndex + 1}`));
+   898→        bindVariantField(fragment, "type", variant.type, value => updateVariant(stageIndex, variantIndex, "type", value.trim()));
+   899→        bindVariantField(fragment, "departure", variant.departure, value => updateVariant(stageIndex, variantIndex, "departure", value.trim()));
+   900→        bindVariantField(fragment, "arrival", variant.arrival, value => updateVariant(stageIndex, variantIndex, "arrival", value.trim()));
+   901→        bindVariantField(fragment, "distance", variant.distance, value => updateVariant(stageIndex, variantIndex, "distance", decimalOrNull(value)));
+   902→        bindVariantField(fragment, "elevationGain", variant.elevationGain, value => updateVariant(stageIndex, variantIndex, "elevationGain", decimalOrNull(value)));
+   903→        bindVariantField(fragment, "elevationLoss", variant.elevationLoss, value => updateVariant(stageIndex, variantIndex, "elevationLoss", decimalOrNull(value)));
+   904→        bindVariantField(fragment, "stagePhoto", variant.stagePhoto, value => updateVariant(stageIndex, variantIndex, "stagePhoto", value.trim()));
+   905→        bindVariantField(fragment, "accommodationType", variant.accommodationType, value => updateVariant(stageIndex, variantIndex, "accommodationType", value.trim()));
+   906→        bindVariantField(fragment, "description", variant.description, value => updateVariant(stageIndex, variantIndex, "description", value.trim()));
+   907→        const appendTarget = body || variantCard;
+   908→        appendTarget.appendChild(createEditorZone("trace", "Tracé · Carte · Points d'intérêt", [
+   909→            createVariantReferencesEditor(stageIndex, variantIndex, variant),
+   910→            createVariantPoisEditor(stageIndex, variantIndex, variant.pois || [])
+   911→        ]));
+   912→        appendTarget.appendChild(createVariantMainAccommodationEditor(stageIndex, variantIndex, variant));
+   913→        appendTarget.appendChild(createVariantAlternativeAccommodationsEditor(stageIndex, variantIndex, variant));
+   914→        appendTarget.appendChild(createEditorZone("notes", "Notes", [
+   915→            createVariantNotesEditor(stageIndex, variantIndex, variant.noteItems || [])
+   916→        ]));
+   917→        fragment.querySelector('[data-action="delete-variant"]').addEventListener("click", () => deleteVariant(stageIndex, variantIndex));
+   918→        return fragment;
+   919→    }
+   920→
+   921→    function variantPanelKey(stageIndex, variantIndex) {
+   922→        return `${stageIndex}:${variantIndex}`;
+   923→    }
+   924→
+   925→    function buildVariantTitle(stageIndex, variant, variantIndex) {
+   926→        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+   927→        const stageNumber = stage?.stage ?? stageIndex + 1;
+   928→        const name = safeText(variant?.name || variant?.title, `Variante ${variantIndex + 1}`);
+   929→        return `Variante de l’étape ${stageNumber} — ${name}`;
+   930→    }
+   931→
+   932→    function buildVariantSummaryText(variant) {
+   933→        const parts = [];
+   934→        if (variant.type) parts.push(variant.type);
+   935→        if (variant.departure || variant.arrival) {
+   936→            parts.push(`${variant.departure || "?"} → ${variant.arrival || "?"}`);
+   937→        }
+   938→        if (variant.distance != null) {
+   939→            parts.push(`${variant.distance} km`);
+   940→        }
+   941→        return parts.join(" · ");
+   942→    }
+   943→
+   944→    function createEditorZone(colorKey, title, children) {
+   945→        const zone = document.createElement("div");
+   946→        zone.className = `studio-zone studio-zone--${colorKey}`;
+   947→        const heading = document.createElement("h4");
+   948→        heading.className = "studio-zone__title";
+   949→        heading.textContent = title;
+   950→        zone.appendChild(heading);
+   951→        (Array.isArray(children) ? children : [children]).forEach(child => zone.appendChild(child));
+   952→        return zone;
+   953→    }
+   954→
+   955→    function createStageReferencesEditor(stageIndex, stage) {
+   956→        return createReferencesEditor({
+   957→            title: "GPX et carte",
+   958→            values: stage,
+   959→            skipFields: ["stagePhoto"],
+   960→            onChange: (field, value) => updateStage(stageIndex, field, value.trim()),
+   961→            computeGpx: gpxVal => setStageStatsFromGpx(stageIndex, gpxVal)
+   962→        });
+   963→    }
+   964→
+   965→    function createVariantReferencesEditor(stageIndex, variantIndex, variant) {
+   966→        return createReferencesEditor({
+   967→            title: "GPX et carte",
+   968→            values: variant,
+   969→            skipFields: ["stagePhoto"],
+   970→            onChange: (field, value) => updateVariant(stageIndex, variantIndex, field, value.trim()),
+   971→            computeGpx: gpxVal => setVariantStatsFromGpx(stageIndex, variantIndex, gpxVal)
+   972→        });
+   973→    }
+   974→
+   975→    function createReferencesEditor({ title, values, onChange, extraFields = [], skipFields = [], computeGpx = null }) {
+   976→        const section = document.createElement("section");
+   977→        section.className = "studio-stage-extra";
+   978→        const header = document.createElement("div");
+   979→        header.className = "studio-stage-extra__header";
+   980→        const heading = document.createElement("h4");
+   981→        heading.textContent = title;
+   982→        header.appendChild(heading);
+   983→        section.appendChild(header);
+   984→
+   985→        const grid = document.createElement("div");
+   986→        grid.className = "studio-form-grid studio-form-grid--compact";
+   987→        [
+   988→            ...extraFields,
+   989→            { field: "gpx", label: "GPX" },
+   990→            { field: "mapEmbedUrl", label: "Carte intégrée" },
+   991→            { field: "stagePhoto", label: "Photo de l’étape" }
+   992→        ].filter(({ field }) => !skipFields.includes(field))
+   993→            .forEach(({ field, label, inputType = "text", parser = null }) => {
+   994→            grid.appendChild(createBoundField({
+   995→                label,
+   996→                value: values?.[field] ?? "",
+   997→                inputType,
+   998→                fullWidth: field === "stagePhoto",
+   999→                onChange: value => onChange(field, value, parser)
+  1000→            }));
+  1001→        });
+  1002→        section.appendChild(grid);
+  1003→
+  1004→        if (typeof computeGpx === "function") {
+  1005→            const actions = document.createElement("div");
+  1006→            actions.className = "studio-gpx-actions";
+  1007→            const button = document.createElement("button");
+  1008→            button.type = "button";
+  1009→            button.className = "terrain-button terrain-button--secondary";
+  1010→            button.textContent = "Calculer depuis le GPX";
+  1011→            const status = document.createElement("p");
+  1012→            status.className = "studio-gpx-status";
+  1013→            status.setAttribute("role", "status");
+  1014→            status.setAttribute("aria-live", "polite");
+  1015→            button.addEventListener("click", () => {
+  1016→                const gpxInput = grid.querySelector("input");
+  1017→                const gpxVal = gpxInput ? gpxInput.value : (values?.gpx || "");
+  1018→                computeGpx(gpxVal, status);
+  1019→            });
+  1020→            actions.append(button, status);
+  1021→            section.appendChild(actions);
+  1022→        }
+  1023→
+  1024→        return section;
+  1025→    }
+  1026→
+  1027→    function createLienField(currentWebsite, currentUrl, onLienChange) {
+  1028→        return createBoundField({
+  1029→            label: "Lien",
+  1030→            value: currentWebsite || currentUrl || "",
+  1031→            fullWidth: true,
+  1032→            onChange: value => onLienChange(value.trim())
+  1033→        });
+  1034→    }
+  1035→
+  1036→    function createStageMainAccommodationEditor(stageIndex, stage) {
+  1037→        const zone = document.createElement("div");
+  1038→        zone.className = "studio-zone studio-zone--accommodation";
+  1039→        zone.setAttribute("aria-label", "Hébergement principal de l'étape");
+  1040→
+  1041→        const heading = document.createElement("h4");
+  1042→        heading.className = "studio-zone__title";
+  1043→        heading.textContent = "Hébergement principal";
+  1044→        zone.appendChild(heading);
+  1045→
+  1046→        const grid = document.createElement("div");
+  1047→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1048→        // website and url are merged into a single "Lien" field below via createLienField
+  1049→        ["name", "photo", "price"].forEach(field => {
+  1050→            grid.appendChild(createBoundField({
+  1051→                label: getAccommodationFieldLabel(field),
+  1052→                value: stage.accommodation?.[field] ?? "",
+  1053→                onChange: value => updateStageAccommodationField(stageIndex, field, value.trim())
+  1054→            }));
+  1055→        });
+  1056→        grid.appendChild(createLienField(
+  1057→            stage.accommodation?.website,
+  1058→            stage.accommodation?.url,
+  1059→            v => {
+  1060→                const accommodation = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation;
+  1061→                if (accommodation) {
+  1062→                    accommodation.website = v;
+  1063→                    accommodation.url = v;
+  1064→                    markModified();
+  1065→                }
+  1066→            }
+  1067→        ));
+  1068→        zone.appendChild(grid);
+  1069→        return zone;
+  1070→    }
+  1071→
+  1072→    function createStageAlternativeAccommodationsEditor(stageIndex, stage) {
+  1073→        const zone = document.createElement("div");
+  1074→        zone.className = "studio-zone studio-zone--alternatives";
+  1075→        zone.setAttribute("aria-label", "Hébergements alternatifs de l'étape");
+  1076→
+  1077→        const header = document.createElement("div");
+  1078→        header.className = "studio-stage-extra__header";
+  1079→        const heading = document.createElement("h4");
+  1080→        heading.className = "studio-zone__title";
+  1081→        heading.textContent = "Hébergements alternatifs";
+  1082→        const addButton = document.createElement("button");
+  1083→        addButton.type = "button";
+  1084→        addButton.className = "terrain-button terrain-button--secondary";
+  1085→        addButton.textContent = "Ajouter un hébergement";
+  1086→        addButton.addEventListener("click", () => addStageAccommodationAlternative(stageIndex));
+  1087→        header.append(heading, addButton);
+  1088→        zone.appendChild(header);
+  1089→
+  1090→        const alternativesList = document.createElement("div");
+  1091→        alternativesList.className = "studio-sublist__list";
+  1092→        (stage.accommodation?.alternatives || []).forEach((alternative, alternativeIndex) => {
+  1093→            alternativesList.appendChild(createStageAccommodationAlternativeEditor(stageIndex, alternative, alternativeIndex));
+  1094→        });
+  1095→        zone.appendChild(alternativesList);
+  1096→        return zone;
+  1097→    }
+  1098→
+  1099→    function createVariantMainAccommodationEditor(stageIndex, variantIndex, variant) {
+  1100→        const zone = document.createElement("div");
+  1101→        zone.className = "studio-zone studio-zone--accommodation";
+  1102→        zone.setAttribute("aria-label", "Hébergement principal de la variante");
+  1103→
+  1104→        const heading = document.createElement("h4");
+  1105→        heading.className = "studio-zone__title";
+  1106→        heading.textContent = "Hébergement principal";
+  1107→        zone.appendChild(heading);
+  1108→
+  1109→        const grid = document.createElement("div");
+  1110→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1111→        ["name", "photo", "price"].forEach(field => {
+  1112→            grid.appendChild(createBoundField({
+  1113→                label: getAccommodationFieldLabel(field),
+  1114→                value: variant.accommodation?.[field] ?? "",
+  1115→                onChange: value => updateVariantAccommodationField(stageIndex, variantIndex, field, value.trim())
+  1116→            }));
+  1117→        });
+  1118→        grid.appendChild(createLienField(
+  1119→            variant.accommodation?.website,
+  1120→            variant.accommodation?.url,
+  1121→            value => {
+  1122→                updateVariantAccommodationField(stageIndex, variantIndex, "website", value);
+  1123→                updateVariantAccommodationField(stageIndex, variantIndex, "url", value);
+  1124→            }
+  1125→        ));
+  1126→        zone.appendChild(grid);
+  1127→        return zone;
+  1128→    }
+  1129→
+  1130→    function createVariantAlternativeAccommodationsEditor(stageIndex, variantIndex, variant) {
+  1131→        const zone = document.createElement("div");
+  1132→        zone.className = "studio-zone studio-zone--alternatives";
+  1133→        zone.setAttribute("aria-label", "Hébergements alternatifs de la variante");
+  1134→
+  1135→        const header = document.createElement("div");
+  1136→        header.className = "studio-stage-extra__header";
+  1137→        const heading = document.createElement("h4");
+  1138→        heading.className = "studio-zone__title";
+  1139→        heading.textContent = "Hébergements alternatifs";
+  1140→        const addButton = document.createElement("button");
+  1141→        addButton.type = "button";
+  1142→        addButton.className = "terrain-button terrain-button--secondary";
+  1143→        addButton.textContent = "Ajouter un hébergement";
+  1144→        addButton.addEventListener("click", () => addVariantAccommodationAlternative(stageIndex, variantIndex));
+  1145→        header.append(heading, addButton);
+  1146→        zone.appendChild(header);
+  1147→
+  1148→        const alternativesList = document.createElement("div");
+  1149→        alternativesList.className = "studio-sublist__list";
+  1150→        (variant.accommodation?.alternatives || []).forEach((alternative, alternativeIndex) => {
+  1151→            alternativesList.appendChild(createVariantAccommodationAlternativeEditor(stageIndex, variantIndex, alternative, alternativeIndex));
+  1152→        });
+  1153→        zone.appendChild(alternativesList);
+  1154→        return zone;
+  1155→    }
+  1156→
+  1157→    function createStagePoisEditor(stageIndex, pois) {
+  1158→        return createPoiListEditor({
+  1159→            title: "Points d’intérêt",
+  1160→            pois,
+  1161→            onAdd: () => addStagePoi(stageIndex),
+  1162→            onDelete: poiIndex => deleteStagePoi(stageIndex, poiIndex),
+  1163→            onUpdate: (poiIndex, field, value) => updateStagePoi(stageIndex, poiIndex, field, value)
+  1164→        });
+  1165→    }
+  1166→
+  1167→    function createVariantPoisEditor(stageIndex, variantIndex, pois) {
+  1168→        return createPoiListEditor({
+  1169→            title: "Points d’intérêt de la sous-étape",
+  1170→            pois,
+  1171→            onAdd: () => addVariantPoi(stageIndex, variantIndex),
+  1172→            onDelete: poiIndex => deleteVariantPoi(stageIndex, variantIndex, poiIndex),
+  1173→            onUpdate: (poiIndex, field, value) => updateVariantPoi(stageIndex, variantIndex, poiIndex, field, value)
+  1174→        });
+  1175→    }
+  1176→
+  1177→    function createRoadbookPoisEditor(pois) {
+  1178→        const section = document.createElement("section");
+  1179→        section.className = "studio-global-section";
+  1180→        const header = document.createElement("div");
+  1181→        header.className = "studio-stage-extra__header";
+  1182→        const title = document.createElement("h3");
+  1183→        title.textContent = `POI globaux (${pois.length})`;
+  1184→        const addButton = document.createElement("button");
+  1185→        addButton.type = "button";
+  1186→        addButton.className = "terrain-button terrain-button--secondary";
+  1187→        addButton.textContent = "Ajouter un POI";
+  1188→        addButton.addEventListener("click", addRoadbookPoi);
+  1189→        header.append(title, addButton);
+  1190→        section.appendChild(header);
+  1191→
+  1192→        const list = document.createElement("div");
+  1193→        list.className = "studio-sublist__list";
+  1194→        pois.forEach((poi, poiIndex) => {
+  1195→            list.appendChild(createPoiEditor({
+  1196→                poi,
+  1197→                poiIndex,
+  1198→                datasetName: "roadbookPoiIndex",
+  1199→                includeStage: true,
+  1200→                onDelete: () => deleteRoadbookPoi(poiIndex),
+  1201→                onUpdate: (field, value) => updateRoadbookPoi(poiIndex, field, value)
+  1202→            }));
+  1203→        });
+  1204→        section.appendChild(list);
+  1205→        return section;
+  1206→    }
+  1207→
+  1208→    function createPoiListEditor({ title, pois, onAdd, onDelete, onUpdate }) {
+  1209→        const section = document.createElement("section");
+  1210→        section.className = "studio-stage-extra";
+  1211→        const header = document.createElement("div");
+  1212→        header.className = "studio-stage-extra__header";
+  1213→        const heading = document.createElement("h4");
+  1214→        heading.textContent = `${title} (${pois.length})`;
+  1215→        const addButton = document.createElement("button");
+  1216→        addButton.type = "button";
+  1217→        addButton.className = "terrain-button terrain-button--secondary";
+  1218→        addButton.textContent = "Ajouter un POI";
+  1219→        addButton.addEventListener("click", onAdd);
+  1220→        header.append(heading, addButton);
+  1221→        section.appendChild(header);
+  1222→
+  1223→        const list = document.createElement("div");
+  1224→        list.className = "studio-sublist__list";
+  1225→        pois.forEach((poi, poiIndex) => {
+  1226→            list.appendChild(createPoiEditor({
+  1227→                poi,
+  1228→                poiIndex,
+  1229→                onDelete: () => onDelete(poiIndex),
+  1230→                onUpdate: (field, value) => onUpdate(poiIndex, field, value)
+  1231→            }));
+  1232→        });
+  1233→        section.appendChild(list);
+  1234→        return section;
+  1235→    }
+  1236→
+  1237→    function createPoiEditor({ poi, poiIndex, onDelete, onUpdate, includeStage = false, datasetName = "poiIndex" }) {
+  1238→        const card = document.createElement("article");
+  1239→        card.className = "studio-subitem-card";
+  1240→        card.dataset[datasetName] = String(poiIndex);
+  1241→        const header = document.createElement("div");
+  1242→        header.className = "studio-subitem-card__header";
+  1243→        const title = document.createElement("strong");
+  1244→        title.textContent = safeText(poi.name, `POI ${poiIndex + 1}`);
+  1245→        const remove = document.createElement("button");
+  1246→        remove.type = "button";
+  1247→        remove.className = "terrain-button terrain-button--danger";
+  1248→        remove.textContent = "Supprimer";
+  1249→        remove.addEventListener("click", onDelete);
+  1250→        header.append(title, remove);
+  1251→        card.appendChild(header);
+  1252→
+  1253→        const grid = document.createElement("div");
+  1254→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1255→        if (includeStage) {
+  1256→            grid.appendChild(createBoundField({
+  1257→                label: "Étape",
+  1258→                value: poi.stage ?? "",
+  1259→                inputType: "number",
+  1260→                onChange: value => onUpdate("stage", integerOrNull(value))
+  1261→            }));
+  1262→        }
+  1263→        POI_FIELDS.forEach(field => {
+  1264→            grid.appendChild(createBoundField({
+  1265→                label: getPoiFieldLabel(field),
+  1266→                value: poi[field] ?? "",
+  1267→                onChange: value => onUpdate(field, value.trim())
+  1268→            }));
+  1269→        });
+  1270→        card.appendChild(grid);
+  1271→        return card;
+  1272→    }
+  1273→
+  1274→    function createStageWarningsEditor(stageIndex, warnings) {
+  1275→        return createWarningsEditor({
+  1276→            title: "Avertissements",
+  1277→            warnings,
+  1278→            onAdd: () => addStageWarning(stageIndex),
+  1279→            onDelete: warningIndex => deleteStageWarning(stageIndex, warningIndex),
+  1280→            onUpdate: (warningIndex, value) => updateStageWarning(stageIndex, warningIndex, value)
+  1281→        });
+  1282→    }
+  1283→
+  1284→    function createVariantWarningsEditor(stageIndex, variantIndex, warnings) {
+  1285→        return createWarningsEditor({
+  1286→            title: "Avertissements de la sous-étape",
+  1287→            warnings,
+  1288→            onAdd: () => addVariantWarning(stageIndex, variantIndex),
+  1289→            onDelete: warningIndex => deleteVariantWarning(stageIndex, variantIndex, warningIndex),
+  1290→            onUpdate: (warningIndex, value) => updateVariantWarning(stageIndex, variantIndex, warningIndex, value)
+  1291→        });
+  1292→    }
+  1293→
+  1294→    function createWarningsEditor({ title, warnings, onAdd, onDelete, onUpdate }) {
+  1295→        const section = document.createElement("section");
+  1296→        section.className = "studio-stage-extra";
+  1297→        const header = document.createElement("div");
+  1298→        header.className = "studio-stage-extra__header";
+  1299→        const heading = document.createElement("h4");
+  1300→        heading.textContent = `${title} (${warnings.length})`;
+  1301→        const addButton = document.createElement("button");
+  1302→        addButton.type = "button";
+  1303→        addButton.className = "terrain-button terrain-button--secondary";
+  1304→        addButton.textContent = "Ajouter";
+  1305→        addButton.addEventListener("click", onAdd);
+  1306→        header.append(heading, addButton);
+  1307→        section.appendChild(header);
+  1308→
+  1309→        const list = document.createElement("div");
+  1310→        list.className = "studio-sublist__list";
+  1311→        warnings.forEach((warning, warningIndex) => {
+  1312→            const card = document.createElement("article");
+  1313→            card.className = "studio-subitem-card";
+  1314→            const cardHeader = document.createElement("div");
+  1315→            cardHeader.className = "studio-subitem-card__header";
+  1316→            const label = document.createElement("strong");
+  1317→            label.textContent = `Avertissement ${warningIndex + 1}`;
+  1318→            const remove = document.createElement("button");
+  1319→            remove.type = "button";
+  1320→            remove.className = "terrain-button terrain-button--danger";
+  1321→            remove.textContent = "Supprimer";
+  1322→            remove.addEventListener("click", () => onDelete(warningIndex));
+  1323→            cardHeader.append(label, remove);
+  1324→            card.appendChild(cardHeader);
+  1325→            card.appendChild(createBoundField({
+  1326→                label: "Texte",
+  1327→                value: warning,
+  1328→                isTextarea: true,
+  1329→                fullWidth: true,
+  1330→                onChange: value => onUpdate(warningIndex, value.trim())
+  1331→            }));
+  1332→            list.appendChild(card);
+  1333→        });
+  1334→        section.appendChild(list);
+  1335→        return section;
+  1336→    }
+  1337→
+  1338→    function createStageAccommodationAlternativeEditor(stageIndex, alternative, alternativeIndex) {
+  1339→        const card = document.createElement("article");
+  1340→        card.className = "studio-subitem-card";
+  1341→        card.dataset.alternativeIndex = String(alternativeIndex);
+  1342→
+  1343→        const header = document.createElement("div");
+  1344→        header.className = "studio-subitem-card__header";
+  1345→        const title = document.createElement("strong");
+  1346→        title.textContent = safeText(alternative.name, `Hébergement alternatif ${alternativeIndex + 1}`);
+  1347→        const remove = document.createElement("button");
+  1348→        remove.type = "button";
+  1349→        remove.className = "terrain-button terrain-button--danger";
+  1350→        remove.textContent = "Supprimer";
+  1351→        remove.addEventListener("click", () => deleteStageAccommodationAlternative(stageIndex, alternativeIndex));
+  1352→        header.append(title, remove);
+  1353→        card.appendChild(header);
+  1354→
+  1355→        const grid = document.createElement("div");
+  1356→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1357→        [
+  1358→            { field: "name", label: "Nom" },
+  1359→            { field: "url", label: "URL" },
+  1360→            { field: "photo", label: "Photo" },
+  1361→            { field: "price", label: "Prix" }
+  1362→        ].forEach(({ field, label }) => {
+  1363→            grid.appendChild(createBoundField({
+  1364→                label,
+  1365→                value: alternative[field] ?? "",
+  1366→                onChange: value => updateStageAccommodationAlternative(stageIndex, alternativeIndex, field, value.trim())
+  1367→            }));
+  1368→        });
+  1369→        card.appendChild(grid);
+  1370→        return card;
+  1371→    }
+  1372→
+  1373→    function createVariantAccommodationAlternativeEditor(stageIndex, variantIndex, alternative, alternativeIndex) {
+  1374→        const card = document.createElement("article");
+  1375→        card.className = "studio-subitem-card";
+  1376→        card.dataset.alternativeIndex = String(alternativeIndex);
+  1377→
+  1378→        const header = document.createElement("div");
+  1379→        header.className = "studio-subitem-card__header";
+  1380→        const title = document.createElement("strong");
+  1381→        title.textContent = safeText(alternative.name, `Hébergement alternatif ${alternativeIndex + 1}`);
+  1382→        const remove = document.createElement("button");
+  1383→        remove.type = "button";
+  1384→        remove.className = "terrain-button terrain-button--danger";
+  1385→        remove.textContent = "Supprimer";
+  1386→        remove.addEventListener("click", () => deleteVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex));
+  1387→        header.append(title, remove);
+  1388→        card.appendChild(header);
+  1389→
+  1390→        const grid = document.createElement("div");
+  1391→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1392→        [
+  1393→            { field: "name", label: "Nom" },
+  1394→            { field: "url", label: "URL" },
+  1395→            { field: "photo", label: "Photo" },
+  1396→            { field: "price", label: "Prix" }
+  1397→        ].forEach(({ field, label }) => {
+  1398→            grid.appendChild(createBoundField({
+  1399→                label,
+  1400→                value: alternative[field] ?? "",
+  1401→                onChange: value => updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value.trim())
+  1402→            }));
+  1403→        });
+  1404→        card.appendChild(grid);
+  1405→        return card;
+  1406→    }
+  1407→
+  1408→    function createStageNotesEditor(stageIndex, notes) {
+  1409→        const section = document.createElement("section");
+  1410→        section.className = "studio-stage-extra";
+  1411→        section.setAttribute("aria-label", "Notes de l’étape");
+  1412→
+  1413→        const header = document.createElement("div");
+  1414→        header.className = "studio-stage-extra__header";
+  1415→        const title = document.createElement("h4");
+  1416→        title.textContent = "Notes";
+  1417→        const addButton = document.createElement("button");
+  1418→        addButton.type = "button";
+  1419→        addButton.className = "terrain-button terrain-button--secondary";
+  1420→        addButton.textContent = "Ajouter une note";
+  1421→        addButton.addEventListener("click", () => addStageNote(stageIndex));
+  1422→        header.append(title, addButton);
+  1423→        section.appendChild(header);
+  1424→
+  1425→        const list = document.createElement("div");
+  1426→        list.className = "studio-sublist__list";
+  1427→        notes.forEach((note, noteIndex) => {
+  1428→            list.appendChild(createStageNoteEditor(stageIndex, note, noteIndex));
+  1429→        });
+  1430→        section.appendChild(list);
+  1431→        return section;
+  1432→    }
+  1433→
+  1434→    function createVariantNotesEditor(stageIndex, variantIndex, notes) {
+  1435→        const section = document.createElement("section");
+  1436→        section.className = "studio-stage-extra";
+  1437→        section.setAttribute("aria-label", "Notes de la variante");
+  1438→
+  1439→        const header = document.createElement("div");
+  1440→        header.className = "studio-stage-extra__header";
+  1441→        const title = document.createElement("h4");
+  1442→        title.textContent = "Notes";
+  1443→        const addButton = document.createElement("button");
+  1444→        addButton.type = "button";
+  1445→        addButton.className = "terrain-button terrain-button--secondary";
+  1446→        addButton.textContent = "Ajouter une note";
+  1447→        addButton.addEventListener("click", () => addVariantNote(stageIndex, variantIndex));
+  1448→        header.append(title, addButton);
+  1449→        section.appendChild(header);
+  1450→
+  1451→        const list = document.createElement("div");
+  1452→        list.className = "studio-sublist__list";
+  1453→        notes.forEach((note, noteIndex) => {
+  1454→            list.appendChild(createVariantNoteEditor(stageIndex, variantIndex, note, noteIndex));
+  1455→        });
+  1456→        section.appendChild(list);
+  1457→        return section;
+  1458→    }
+  1459→
+  1460→    function createStageNoteEditor(stageIndex, note, noteIndex) {
+  1461→        const card = document.createElement("article");
+  1462→        card.className = "studio-subitem-card";
+  1463→        card.dataset.noteIndex = String(noteIndex);
+  1464→        const header = document.createElement("div");
+  1465→        header.className = "studio-subitem-card__header";
+  1466→        const title = document.createElement("strong");
+  1467→        title.textContent = safeText(note.text, `Note ${noteIndex + 1}`);
+  1468→        const remove = document.createElement("button");
+  1469→        remove.type = "button";
+  1470→        remove.className = "terrain-button terrain-button--danger";
+  1471→        remove.textContent = "Supprimer";
+  1472→        remove.addEventListener("click", () => deleteStageNote(stageIndex, noteIndex));
+  1473→        header.append(title, remove);
+  1474→        card.appendChild(header);
+  1475→
+  1476→        const grid = document.createElement("div");
+  1477→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1478→        grid.appendChild(createBoundField({
+  1479→            label: "Texte",
+  1480→            value: note.text ?? "",
+  1481→            isTextarea: true,
+  1482→            fullWidth: true,
+  1483→            onChange: value => updateStageNote(stageIndex, noteIndex, "text", value.trim())
+  1484→        }));
+  1485→        ["photo"].forEach(field => {
+  1486→            grid.appendChild(createBoundField({
+  1487→                label: getNoteFieldLabel(field),
+  1488→                value: note[field] ?? "",
+  1489→                onChange: value => updateStageNote(stageIndex, noteIndex, field, value.trim())
+  1490→            }));
+  1491→        });
+  1492→        card.appendChild(grid);
+  1493→        return card;
+  1494→    }
+  1495→
+  1496→    function createVariantNoteEditor(stageIndex, variantIndex, note, noteIndex) {
+  1497→        const card = document.createElement("article");
+  1498→        card.className = "studio-subitem-card";
+  1499→        card.dataset.noteIndex = String(noteIndex);
+  1500→        const header = document.createElement("div");
+  1501→        header.className = "studio-subitem-card__header";
+  1502→        const title = document.createElement("strong");
+  1503→        title.textContent = safeText(note.text, `Note ${noteIndex + 1}`);
+  1504→        const remove = document.createElement("button");
+  1505→        remove.type = "button";
+  1506→        remove.className = "terrain-button terrain-button--danger";
+  1507→        remove.textContent = "Supprimer";
+  1508→        remove.addEventListener("click", () => deleteVariantNote(stageIndex, variantIndex, noteIndex));
+  1509→        header.append(title, remove);
+  1510→        card.appendChild(header);
+  1511→
+  1512→        const grid = document.createElement("div");
+  1513→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1514→        grid.appendChild(createBoundField({
+  1515→            label: "Texte",
+  1516→            value: note.text ?? "",
+  1517→            isTextarea: true,
+  1518→            fullWidth: true,
+  1519→            onChange: value => updateVariantNote(stageIndex, variantIndex, noteIndex, "text", value.trim())
+  1520→        }));
+  1521→        ["photo"].forEach(field => {
+  1522→            grid.appendChild(createBoundField({
+  1523→                label: getNoteFieldLabel(field),
+  1524→                value: note[field] ?? "",
+  1525→                onChange: value => updateVariantNote(stageIndex, variantIndex, noteIndex, field, value.trim())
+  1526→            }));
+  1527→        });
+  1528→        card.appendChild(grid);
+  1529→        return card;
+  1530→    }
+  1531→
+  1532→    function createRoadbookAccommodationEditor(stageIndex, stageNumber) {
+  1533→        const section = document.createElement("section");
+  1534→        section.className = "studio-stage-extra";
+  1535→        section.setAttribute("aria-label", "Hébergements synchronisés");
+  1536→
+  1537→        const header = document.createElement("div");
+  1538→        header.className = "studio-stage-extra__header";
+  1539→        const title = document.createElement("h4");
+  1540→        title.textContent = "Hébergements (roadbook.accommodation)";
+  1541→        const addButton = document.createElement("button");
+  1542→        addButton.type = "button";
+  1543→        addButton.className = "terrain-button terrain-button--secondary";
+  1544→        addButton.textContent = "Ajouter un hébergement";
+  1545→        addButton.addEventListener("click", () => addRoadbookAccommodation(stageNumber));
+  1546→        header.append(title, addButton);
+  1547→        section.appendChild(header);
+  1548→
+  1549→        const list = document.createElement("div");
+  1550→        list.className = "studio-sublist__list";
+  1551→        getRoadbookAccommodationsByStage(stageNumber).forEach(({ item, index }) => {
+  1552→            list.appendChild(createRoadbookAccommodationItemEditor(stageIndex, stageNumber, item, index));
+  1553→        });
+  1554→        section.appendChild(list);
+  1555→        return section;
+  1556→    }
+  1557→
+  1558→    function createRoadbookAccommodationItemEditor(stageIndex, stageNumber, item, accommodationIndex) {
+  1559→        const card = document.createElement("article");
+  1560→        card.className = "studio-subitem-card";
+  1561→        card.dataset.roadbookAccommodationIndex = String(accommodationIndex);
+  1562→        const header = document.createElement("div");
+  1563→        header.className = "studio-subitem-card__header";
+  1564→        const title = document.createElement("strong");
+  1565→        title.textContent = safeText(item.name, `Hébergement ${accommodationIndex + 1}`);
+  1566→        const remove = document.createElement("button");
+  1567→        remove.type = "button";
+  1568→        remove.className = "terrain-button terrain-button--danger";
+  1569→        remove.textContent = "Supprimer";
+  1570→        remove.addEventListener("click", () => deleteRoadbookAccommodation(accommodationIndex));
+  1571→        header.append(title, remove);
+  1572→        card.appendChild(header);
+  1573→
+  1574→        const grid = document.createElement("div");
+  1575→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1576→        grid.appendChild(createBoundField({
+  1577→            label: "Étape",
+  1578→            value: stageNumber ?? "",
+  1579→            inputType: "number",
+  1580→            onChange: value => updateRoadbookAccommodation(accommodationIndex, "stage", integerOrNull(value))
+  1581→        }));
+  1582→        // website and url are merged into a single "Lien" field below via createLienField
+  1583→        ["role", "name", "photo", "type", "comment", "createdAt", "source"].forEach(field => {
+  1584→            grid.appendChild(createBoundField({
+  1585→                label: getAccommodationFieldLabel(field),
+  1586→                value: item[field] ?? "",
+  1587→                onChange: value => updateRoadbookAccommodation(accommodationIndex, field, value.trim())
+  1588→            }));
+  1589→        });
+  1590→        grid.appendChild(createLienField(
+  1591→            item.website,
+  1592→            item.url,
+  1593→            v => {
+  1594→                const accommodation = state.selectedRoadbook?.accommodation?.[accommodationIndex];
+  1595→                if (accommodation) {
+  1596→                    accommodation.website = v;
+  1597→                    accommodation.url = v;
+  1598→                    markModified();
+  1599→                }
+  1600→            }
+  1601→        ));
+  1602→        card.appendChild(grid);
+  1603→        return card;
+  1604→    }
+  1605→
+  1606→    function createRoadbookNotesEditor(notes) {
+  1607→        const section = document.createElement("section");
+  1608→        section.className = "studio-global-section";
+  1609→        const header = document.createElement("div");
+  1610→        header.className = "studio-stage-extra__header";
+  1611→        const title = document.createElement("h3");
+  1612→        title.textContent = `Notes (${notes.length})`;
+  1613→        const addButton = document.createElement("button");
+  1614→        addButton.type = "button";
+  1615→        addButton.className = "terrain-button terrain-button--secondary";
+  1616→        addButton.textContent = "Ajouter une note";
+  1617→        addButton.addEventListener("click", addRoadbookNote);
+  1618→        header.append(title, addButton);
+  1619→        section.appendChild(header);
+  1620→
+  1621→        const list = document.createElement("div");
+  1622→        list.className = "studio-sublist__list";
+  1623→        notes.forEach((note, noteIndex) => {
+  1624→            list.appendChild(createRoadbookNoteEditor(note, noteIndex));
+  1625→        });
+  1626→        section.appendChild(list);
+  1627→        return section;
+  1628→    }
+  1629→
+  1630→    function createRoadbookNoteEditor(note, noteIndex) {
+  1631→        const card = document.createElement("article");
+  1632→        card.className = "studio-subitem-card";
+  1633→        card.dataset.roadbookNoteIndex = String(noteIndex);
+  1634→
+  1635→        const header = document.createElement("div");
+  1636→        header.className = "studio-subitem-card__header";
+  1637→        const title = document.createElement("strong");
+  1638→        title.textContent = safeText(note.text, `Note ${noteIndex + 1}`);
+  1639→        const remove = document.createElement("button");
+  1640→        remove.type = "button";
+  1641→        remove.className = "terrain-button terrain-button--danger";
+  1642→        remove.textContent = "Supprimer";
+  1643→        remove.addEventListener("click", () => deleteRoadbookNote(noteIndex));
+  1644→        header.append(title, remove);
+  1645→        card.appendChild(header);
+  1646→
+  1647→        const grid = document.createElement("div");
+  1648→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1649→        grid.appendChild(createBoundField({
+  1650→            label: "Étape",
+  1651→            value: note.stage ?? "",
+  1652→            inputType: "number",
+  1653→            onChange: value => updateRoadbookNote(noteIndex, "stage", integerOrNull(value))
+  1654→        }));
+  1655→        grid.appendChild(createBoundField({
+  1656→            label: "Texte",
+  1657→            value: note.text ?? "",
+  1658→            isTextarea: true,
+  1659→            fullWidth: true,
+  1660→            onChange: value => updateRoadbookNote(noteIndex, "text", value.trim())
+  1661→        }));
+  1662→        ROADBOOK_NOTE_FIELDS.filter(field => !["stage", "text"].includes(field)).forEach(field => {
+  1663→            grid.appendChild(createBoundField({
+  1664→                label: getNoteFieldLabel(field),
+  1665→                value: note[field] ?? "",
+  1666→                onChange: value => updateRoadbookNote(noteIndex, field, value.trim())
+  1667→            }));
+  1668→        });
+  1669→        card.appendChild(grid);
+  1670→        return card;
+  1671→    }
+  1672→
+  1673→    function createContributionsEditor(contributions) {
+  1674→        const section = document.createElement("section");
+  1675→        section.className = "studio-global-section";
+  1676→        const header = document.createElement("div");
+  1677→        header.className = "studio-stage-extra__header";
+  1678→        const title = document.createElement("h3");
+  1679→        title.textContent = `Contributions (${contributions.length})`;
+  1680→        const addButton = document.createElement("button");
+  1681→        addButton.type = "button";
+  1682→        addButton.className = "terrain-button terrain-button--secondary";
+  1683→        addButton.textContent = "Ajouter une contribution";
+  1684→        addButton.addEventListener("click", addContribution);
+  1685→        header.append(title, addButton);
+  1686→        section.appendChild(header);
+  1687→
+  1688→        const list = document.createElement("div");
+  1689→        list.className = "studio-sublist__list";
+  1690→        contributions.forEach((contribution, contributionIndex) => {
+  1691→            list.appendChild(createContributionEditor(contribution, contributionIndex));
+  1692→        });
+  1693→        section.appendChild(list);
+  1694→        return section;
+  1695→    }
+  1696→
+  1697→    function createContributionEditor(contribution, contributionIndex) {
+  1698→        const card = document.createElement("article");
+  1699→        card.className = "studio-subitem-card";
+  1700→        card.dataset.contributionIndex = String(contributionIndex);
+  1701→        const header = document.createElement("div");
+  1702→        header.className = "studio-subitem-card__header";
+  1703→        const title = document.createElement("strong");
+  1704→        title.textContent = safeText(contribution.id, `Contribution ${contributionIndex + 1}`);
+  1705→        const remove = document.createElement("button");
+  1706→        remove.type = "button";
+  1707→        remove.className = "terrain-button terrain-button--danger";
+  1708→        remove.textContent = "Supprimer";
+  1709→        remove.addEventListener("click", () => deleteContribution(contributionIndex));
+  1710→        header.append(title, remove);
+  1711→        card.appendChild(header);
+  1712→
+  1713→        const grid = document.createElement("div");
+  1714→        grid.className = "studio-form-grid studio-form-grid--compact";
+  1715→        CONTRIBUTION_FIELDS.forEach(field => {
+  1716→            const isStageField = field === "stage";
+  1717→            const isIdField = field === "id";
+  1718→            grid.appendChild(createBoundField({
+  1719→                label: getContributionFieldLabel(field),
+  1720→                value: contribution[field] ?? "",
+  1721→                inputType: isStageField ? "number" : "text",
+  1722→                onChange: value => updateContributionField(
+  1723→                    contributionIndex,
+  1724→                    field,
+  1725→                    isStageField ? integerOrNull(value) : value.trim()
+  1726→                )
+  1727→            }));
+  1728→            if (isIdField) {
+  1729→                grid.lastChild.classList.add("studio-form-grid__full");
+  1730→            }
+  1731→        });
+  1732→        grid.appendChild(createBoundField({
+  1733→            label: "Payload JSON",
+  1734→            value: JSON.stringify(contribution.payload || {}, null, 2),
+  1735→            isTextarea: true,
+  1736→            fullWidth: true,
+  1737→            onChange: value => updateContributionPayloadJson(contributionIndex, value)
+  1738→        }));
+  1739→        card.appendChild(grid);
+  1740→        return card;
+  1741→    }
+  1742→
+  1743→    function createBoundField(options) {
+  1744→        const {
+  1745→            label,
+  1746→            value,
+  1747→            inputType = "text",
+  1748→            isTextarea = false,
+  1749→            fullWidth = false,
+  1750→            onChange
+  1751→        } = options;
+  1752→        const wrapper = document.createElement("label");
+  1753→        if (fullWidth) wrapper.className = "studio-form-grid__full";
+  1754→        wrapper.appendChild(document.createTextNode(label));
+  1755→
+  1756→        const input = isTextarea ? document.createElement("textarea") : document.createElement("input");
+  1757→        if (isTextarea) {
+  1758→            input.rows = 3;
+  1759→        } else {
+  1760→            input.type = inputType;
+  1761→        }
+  1762→        input.value = value ?? "";
+  1763→        input.addEventListener("input", event => onChange(event.target.value));
+  1764→        wrapper.appendChild(input);
+  1765→        return wrapper;
+  1766→    }
+  1767→
+  1768→    function getRoadbookAccommodationsByStage(stageNumber) {
+  1769→        const accommodations = state.selectedRoadbook?.accommodation;
+  1770→        if (!Array.isArray(accommodations)) return [];
+  1771→        return accommodations
+  1772→            .map((item, index) => ({ item, index }))
+  1773→            .filter(({ item }) => integerOrNull(item.stage) === integerOrNull(stageNumber));
+  1774→    }
+  1775→
+  1776→    function getAccommodationFieldLabel(field) {
+  1777→        const labels = {
+  1778→            role: "Rôle",
+  1779→            name: "Nom",
+  1780→            website: "Site web",
+  1781→            url: "URL",
+  1782→            photo: "Photo",
+  1783→            price: "Prix",
+  1784→            type: "Type",
+  1785→            comment: "Commentaire",
+  1786→            createdAt: "Créé le",
+  1787→            source: "Source"
+  1788→        };
+  1789→        return labels[field] || field;
+  1790→    }
+  1791→
+  1792→    function getNoteFieldLabel(field) {
+  1793→        const labels = {
+  1794→            text: "Texte",
+  1795→            photo: "Photo",
+  1796→            createdAt: "Créé le",
+  1797→            source: "Source",
+  1798→            author: "Auteur",
+  1799→            timestamp: "Horodatage"
+  1800→        };
+  1801→        return labels[field] || field;
+  1802→    }
+  1803→
+  1804→    function getPoiFieldLabel(field) {
+  1805→        const labels = {
+  1806→            name: "Nom",
+  1807→            region: "Région",
+  1808→            url: "Lien",
+  1809→            image: "Image"
+  1810→        };
+  1811→        return labels[field] || field;
+  1812→    }
+  1813→
+  1814→    function getContributionFieldLabel(field) {
+  1815→        const labels = {
+  1816→            id: "ID",
+  1817→            type: "Type",
+  1818→            stage: "Étape",
+  1819→            createdAt: "Créé le",
+  1820→            status: "Statut",
+  1821→            source: "Source",
+  1822→            author: "Auteur",
+  1823→            timestamp: "Horodatage"
+  1824→        };
+  1825→        return labels[field] || field;
+  1826→    }
+  1827→
+  1828→    function bindStageField(root, field, value, onChange) {
+  1829→        const input = root.querySelector(`[data-field="${field}"]`);
+  1830→        if (!input) return;
+  1831→        input.value = value ?? "";
+  1832→        input.addEventListener("input", event => onChange(event.target.value));
+  1833→    }
+  1834→
+  1835→    function bindVariantField(root, field, value, onChange) {
+  1836→        const input = root.querySelector(`[data-field="${field}"]`);
+  1837→        if (!input) return;
+  1838→        input.value = value ?? "";
+  1839→        input.addEventListener("input", event => onChange(event.target.value));
+  1840→    }
+  1841→
+  1842→    function updateStage(stageIndex, field, value) {
+  1843→        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+  1844→        if (!stage) return;
+  1845→        stage[field] = value;
+  1846→        if (field === "stage") {
+  1847→            stage.title = safeText(stage.title, `Étape ${stage.stage ?? stageIndex + 1}`);
+  1848→        }
+  1849→        if (field === "title" && Number.isInteger(stageIndex)) {
+  1850→            const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__title`);
+  1851→            if (heading) heading.textContent = safeText(value, `Étape ${stage.stage ?? stageIndex + 1}`);
+  1852→        }
+  1853→        if (["departure", "arrival", "distance"].includes(field)) {
+  1854→            const summaryEl = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__summary`);
+  1855→            if (summaryEl) summaryEl.textContent = buildStageSummaryText(stage);
+  1856→        }
+  1857→        markModified();
+  1858→    }
+  1859→
+  1860→    function updateRoadbookField(field, value) {
+  1861→        const roadbook = state.selectedRoadbook;
+  1862→        if (!roadbook) return;
+  1863→        roadbook[field] = value;
+  1864→        if (field === "title") {
+  1865→            elements.detailTitle.textContent = safeText(roadbook.title, state.selectedRoadbookId);
+  1866→        }
+  1867→        markModified();
+  1868→    }
+  1869→
+  1870→    function updateMetadataField(key, value) {
+  1871→        const roadbook = state.selectedRoadbook;
+  1872→        if (!roadbook) return;
+  1873→        if (!roadbook.metadata || typeof roadbook.metadata !== "object") {
+  1874→            roadbook.metadata = {};
+  1875→        }
+  1876→        roadbook.metadata[key] = value;
+  1877→        markModified();
+  1878→    }
+  1879→
+  1880→    function updateSummaryReference(sectionKey, field, value) {
+  1881→        const roadbook = state.selectedRoadbook;
+  1882→        if (!roadbook) return;
+  1883→        if (!roadbook.summary || typeof roadbook.summary !== "object" || Array.isArray(roadbook.summary)) {
+  1884→            roadbook.summary = {};
+  1885→        }
+  1886→        if (!roadbook.summary[sectionKey] || typeof roadbook.summary[sectionKey] !== "object" || Array.isArray(roadbook.summary[sectionKey])) {
+  1887→            roadbook.summary[sectionKey] = {};
+  1888→        }
+  1889→        roadbook.summary[sectionKey][field] = value;
+  1890→        markModified();
+  1891→    }
+  1892→
+  1893→    function updateVariant(stageIndex, variantIndex, field, value) {
+  1894→        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+  1895→        if (!variant) return;
+  1896→        variant[field] = value;
+  1897→        if (field === "name" && Number.isInteger(stageIndex) && Number.isInteger(variantIndex)) {
+  1898→            const variantHeading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-variant-card__title`);
+  1899→            if (variantHeading) variantHeading.textContent = buildVariantTitle(stageIndex, variant, variantIndex);
+  1900→        }
+  1901→        if (["type", "departure", "arrival", "distance"].includes(field)) {
+  1902→            const summaryEl = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-stage-card__summary`);
+  1903→            if (summaryEl) summaryEl.textContent = buildVariantSummaryText(variant);
+  1904→        }
+  1905→        markModified();
+  1906→    }
+  1907→
+  1908→    function updateStageAccommodationField(stageIndex, field, value) {
+  1909→        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+  1910→        if (!stage) return;
+  1911→        stage.accommodation = normalizeStageAccommodation(stage.accommodation);
+  1912→        stage.accommodation[field] = value;
+  1913→        markModified();
+  1914→    }
+  1915→
+  1916→    function addStageAccommodationAlternative(stageIndex) {
+  1917→        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+  1918→        if (!stage) return;
+  1919→        stage.accommodation = normalizeStageAccommodation(stage.accommodation);
+  1920→        stage.accommodation.alternatives.push({
+  1921→            url: "",
+  1922→            name: "",
+  1923→            photo: "",
+  1924→            price: ""
+  1925→        });
+  1926→        rerenderEditorPreservingScroll();
+  1927→    }
+  1928→
+  1929→    function updateStageAccommodationAlternative(stageIndex, alternativeIndex, field, value) {
+  1930→        const alternative = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation?.alternatives?.[alternativeIndex];
+  1931→        if (!alternative) return;
+  1932→        alternative[field] = value;
+  1933→        if (field === "name") {
+  1934→            const card = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-subitem-card[data-alternative-index="${alternativeIndex}"] strong`);
+  1935→            if (card) card.textContent = safeText(value, `Hébergement alternatif ${alternativeIndex + 1}`);
+  1936→        }
+  1937→        markModified();
+  1938→    }
+  1939→
+  1940→    function deleteStageAccommodationAlternative(stageIndex, alternativeIndex) {
+  1941→        const alternatives = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation?.alternatives;
+  1942→        if (!Array.isArray(alternatives)) return;
+  1943→        alternatives.splice(alternativeIndex, 1);
+  1944→        rerenderEditorPreservingScroll();
+  1945→    }
+  1946→
+  1947→    function updateVariantAccommodationField(stageIndex, variantIndex, field, value) {
+  1948→        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+  1949→        if (!variant) return;
+  1950→        variant.accommodation = normalizeStageAccommodation(variant.accommodation);
+  1951→        variant.accommodation[field] = value;
+  1952→        markModified();
+  1953→    }
+  1954→
+  1955→    function addVariantAccommodationAlternative(stageIndex, variantIndex) {
+  1956→        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+  1957→        if (!variant) return;
+  1958→        variant.accommodation = normalizeStageAccommodation(variant.accommodation);
+  1959→        variant.accommodation.alternatives.push({
+  1960→            url: "",
+  1961→            name: "",
+  1962→            photo: "",
+  1963→            price: ""
+  1964→        });
+  1965→        rerenderEditorPreservingScroll();
+  1966→    }
+  1967→
+  1968→    function updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value) {
+  1969→        const alternative = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.accommodation?.alternatives?.[alternativeIndex];
+  1970→        if (!alternative) return;
+  1971→        alternative[field] = value;
+  1972→        if (field === "name") {
+  1973→            const heading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-subitem-card[data-alternative-index="${alternativeIndex}"] strong`);
+  1974→            if (heading) heading.textContent = safeText(value, `Hébergement alternatif ${alternativeIndex + 1}`);
+  1975→        }
+  1976→        markModified();
+  1977→    }
+  1978→
+  1979→    function deleteVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex) {
+  1980→        const alternatives = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.accommodation?.alternatives;
+  1981→        if (!Array.isArray(alternatives)) return;
+  1982→        alternatives.splice(alternativeIndex, 1);
+  1983→        rerenderEditorPreservingScroll();
+  1984→    }
+  1985→
+  1986→    function addStagePoi(stageIndex) {
+  1987→        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+  1988→        if (!stage) return;
+  1989→        if (!Array.isArray(stage.pois)) stage.pois = [];
+  1990→        stage.pois.push(normalizePoi({}));
+  1991→        syncStagePoiAliases(stage);
+  1992→        rerenderEditorPreservingScroll();
+  1993→    }
+  1994→
+  1995→    function updateStagePoi(stageIndex, poiIndex, field, value) {
+  1996→        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+  1997→        const poi = stage?.pois?.[poiIndex];
+  1998→        if (!poi) return;
+  1999→        poi[field] = value;
+  2000→        syncStagePoiAliases(stage);
+
+[showing lines 1-2000 of 2964; use offset=2001 with limit to continue reading]
