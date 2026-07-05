@@ -3,16 +3,10 @@
 (function initializeRoadbookStudio() {
     const CATALOG_PATH = "roadbooks/catalog.json";
     const ROADBOOK_PATH = id => `roadbooks/${encodeURIComponent(id)}/roadbook.json`;
-    const PRIMARY_METADATA_KEYS = ["activity", "destination", "projectStatus", "coverImage", "project"];
+    const PRIMARY_METADATA_KEYS = ["project", "accommodationTypes"];
     const METADATA_LABELS = {
-        activity: "Activité",
-        destination: "Destination",
-        projectStatus: "Statut du projet",
-        coverImage: "Image de couverture",
         project: "Projet",
-        generatedAt: "Généré le",
-        source: "Source",
-        googleSheetId: "Google Sheet ID"
+        accommodationTypes: "Type(s) d'hébergement"
     };
     const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo"];
     const STAGE_NOTE_FIELDS = ["text", "photo", "createdAt", "source"];
@@ -374,7 +368,6 @@
 
         elements.detail.appendChild(createGeneralInfoEditor(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
-        elements.detail.appendChild(createSummaryReferencesEditor(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
         elements.detail.appendChild(createRoadbookPoisEditor(roadbook.pois));
         elements.detail.appendChild(createRoadbookNotesEditor(roadbook.notes));
@@ -434,14 +427,20 @@
         grid.className = "studio-form-grid studio-form-grid--general";
 
         grid.appendChild(createGeneralField({
-            label: "ID",
-            value: roadbook.id,
-            readOnly: true
-        }));
-        grid.appendChild(createGeneralField({
             label: "Titre",
             value: roadbook.title,
             onChange: value => updateRoadbookField("title", value.trim())
+        }));
+        grid.appendChild(createGeneralField({
+            label: "Projet",
+            value: roadbook.metadata?.project ?? "",
+            onChange: value => updateMetadataField("project", value.trim())
+        }));
+        grid.appendChild(createGeneralField({
+            label: "Type(s) d'hébergement",
+            value: roadbook.metadata?.accommodationTypes ?? "",
+            fullWidth: true,
+            onChange: value => updateMetadataField("accommodationTypes", value.trim())
         }));
         grid.appendChild(createGeneralField({
             label: "Description",
@@ -451,16 +450,33 @@
             onChange: value => updateRoadbookField("description", value.trim())
         }));
 
-        getEditableMetadataKeys(roadbook.metadata).forEach(key => {
-            grid.appendChild(createGeneralField({
-                label: METADATA_LABELS[key] || `metadata.${key}`,
-                value: roadbook.metadata?.[key] ?? "",
-                fullWidth: key === "coverImage",
-                onChange: value => updateMetadataField(key, value.trim())
+        section.appendChild(grid);
+
+        const tracedSection = document.createElement("section");
+        tracedSection.className = "studio-stage-extra";
+        const tracedHeader = document.createElement("div");
+        tracedHeader.className = "studio-stage-extra__header";
+        const tracedTitle = document.createElement("h4");
+        tracedTitle.textContent = "Tracé actuel";
+        tracedHeader.appendChild(tracedTitle);
+        tracedSection.appendChild(tracedHeader);
+
+        const tracedGrid = document.createElement("div");
+        tracedGrid.className = "studio-form-grid studio-form-grid--compact";
+        [
+            { field: "gpx", label: "GPS" },
+            { field: "mapEmbedUrl", label: "Carte intégrée" }
+        ].forEach(({ field, label }) => {
+            tracedGrid.appendChild(createBoundField({
+                label,
+                value: roadbook.summary?.stagesTotal?.[field] ?? "",
+                fullWidth: true,
+                onChange: value => updateSummaryReference("stagesTotal", field, value.trim())
             }));
         });
+        tracedSection.appendChild(tracedGrid);
+        section.appendChild(tracedSection);
 
-        section.appendChild(grid);
         return section;
     }
 
@@ -555,6 +571,7 @@
         bindStageField(fragment, "distance", stage.distance, value => updateStage(stageIndex, "distance", decimalOrNull(value)));
         bindStageField(fragment, "elevationGain", stage.elevationGain, value => updateStage(stageIndex, "elevationGain", decimalOrNull(value)));
         bindStageField(fragment, "elevationLoss", stage.elevationLoss, value => updateStage(stageIndex, "elevationLoss", decimalOrNull(value)));
+        bindStageField(fragment, "stagePhoto", stage.stagePhoto, value => updateStage(stageIndex, "stagePhoto", value.trim()));
         bindStageField(fragment, "description", stage.description, value => updateStage(stageIndex, "description", value.trim()));
 
         fragment.querySelector('[data-action="delete-stage"]').addEventListener("click", () => deleteStage(stageIndex));
@@ -563,12 +580,13 @@
         const variantList = fragment.querySelector(".studio-variant-list");
         stage.variants.forEach((variant, variantIndex) => variantList.appendChild(createVariantEditor(stageIndex, variant, variantIndex)));
 
+        const variantsSection = fragment.querySelector(".studio-variants");
+        if (variantsSection) variantsSection.hidden = stage.variants.length === 0;
+
         card.appendChild(createStageReferencesEditor(stageIndex, stage));
         card.appendChild(createStagePoisEditor(stageIndex, stage.pois || []));
-        card.appendChild(createStageWarningsEditor(stageIndex, stage.warning || []));
         card.appendChild(createStageAccommodationEditor(stageIndex, stage));
         card.appendChild(createStageNotesEditor(stageIndex, stage.noteItems || []));
-        card.appendChild(createRoadbookAccommodationEditor(stageIndex, stage.stage));
 
         card.dataset.stageIndex = String(stageIndex);
         card.dataset.stageNumber = String(stage.stage ?? "");
@@ -585,15 +603,15 @@
         bindVariantField(fragment, "description", variant.description, value => updateVariant(stageIndex, variantIndex, "description", value.trim()));
         variantCard.appendChild(createVariantDetailsEditor(stageIndex, variantIndex, variant));
         variantCard.appendChild(createVariantPoisEditor(stageIndex, variantIndex, variant.pois || []));
-        variantCard.appendChild(createVariantWarningsEditor(stageIndex, variantIndex, variant.warning || []));
         fragment.querySelector('[data-action="delete-variant"]').addEventListener("click", () => deleteVariant(stageIndex, variantIndex));
         return fragment;
     }
 
     function createStageReferencesEditor(stageIndex, stage) {
         return createReferencesEditor({
-            title: "GPX, carte et photo",
+            title: "GPX et carte",
             values: stage,
+            skipFields: ["stagePhoto"],
             onChange: (field, value) => updateStage(stageIndex, field, value.trim())
         });
     }
@@ -614,7 +632,7 @@
         return section;
     }
 
-    function createReferencesEditor({ title, values, onChange, extraFields = [] }) {
+    function createReferencesEditor({ title, values, onChange, extraFields = [], skipFields = [] }) {
         const section = document.createElement("section");
         section.className = "studio-stage-extra";
         const header = document.createElement("div");
@@ -628,10 +646,11 @@
         grid.className = "studio-form-grid studio-form-grid--compact";
         [
             ...extraFields,
-            { field: "gpx", label: "GPX" },
-            { field: "mapEmbedUrl", label: "Lien d’intégration de carte" },
+            { field: "gpx", label: "GPS" },
+            { field: "mapEmbedUrl", label: "Carte intégrée" },
             { field: "stagePhoto", label: "Photo de l’étape" }
-        ].forEach(({ field, label, inputType = "text", parser = null }) => {
+        ].filter(({ field }) => !skipFields.includes(field))
+            .forEach(({ field, label, inputType = "text", parser = null }) => {
             grid.appendChild(createBoundField({
                 label,
                 value: values?.[field] ?? "",
@@ -665,11 +684,6 @@
                 onChange: value => updateStageAccommodationField(stageIndex, field, value.trim())
             }));
         });
-        grid.appendChild(createBoundField({
-            label: "Type hébergement",
-            value: stage.accommodationType ?? "",
-            onChange: value => updateStage(stageIndex, "accommodationType", value.trim())
-        }));
         section.appendChild(grid);
 
         const alternativesSection = document.createElement("div");
