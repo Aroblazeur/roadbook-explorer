@@ -64,6 +64,36 @@
   gap: 0.75rem;
 }
 
+.studio-create-form,
+.studio-export-hint {
+  margin: 0 0 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--studio-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.studio-create-form h3,
+.studio-export-hint h3 {
+  margin: 0 0 0.75rem;
+}
+
+.studio-create-form__actions {
+  margin-top: 0.85rem;
+}
+
+.studio-create-form__hint,
+.studio-export-hint p {
+  margin: 0.65rem 0 0;
+  color: var(--studio-muted);
+}
+
+.studio-create-form code,
+.studio-export-hint code {
+  color: #1d4f21;
+  font-weight: 700;
+}
+
 .studio-stage-list,
 .studio-global-section {
   margin-bottom: 1rem;

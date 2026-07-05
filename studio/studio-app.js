@@ -31,6 +31,8 @@
         detailTitle: document.getElementById("studio-detail-title"),
         detail: document.getElementById("studio-detail"),
         refresh: document.getElementById("studio-refresh"),
+        createRoadbook: document.getElementById("studio-create-roadbook"),
+        createForm: document.getElementById("studio-create-form"),
         addStage: document.getElementById("studio-add-stage"),
         downloadJson: document.getElementById("studio-download-json"),
         stageTemplate: document.getElementById("studio-stage-template"),
@@ -38,6 +40,9 @@
     };
 
     elements.refresh?.addEventListener("click", () => loadCatalog({ forceReload: true }));
+    elements.createRoadbook?.addEventListener("click", toggleCreateRoadbookForm);
+    elements.createForm?.addEventListener("submit", handleCreateRoadbook);
+    elements.createForm?.querySelector('[data-action="cancel-create-roadbook"]')?.addEventListener("click", hideCreateRoadbookForm);
     elements.addStage?.addEventListener("click", handleAddStage);
     elements.downloadJson?.addEventListener("click", downloadCurrentRoadbookJson);
 
@@ -88,6 +93,120 @@
             button.append(title, meta);
             elements.list.appendChild(button);
         });
+    }
+
+    function toggleCreateRoadbookForm() {
+        if (!elements.createForm) return;
+        elements.createForm.hidden = !elements.createForm.hidden;
+        if (!elements.createForm.hidden) {
+            elements.createForm.querySelector('input[name="id"]')?.focus();
+        }
+    }
+
+    function hideCreateRoadbookForm() {
+        if (elements.createForm) elements.createForm.hidden = true;
+    }
+
+    function handleCreateRoadbook(event) {
+        event.preventDefault();
+        if (!elements.createForm) return;
+
+        const formData = new FormData(elements.createForm);
+        const id = normalizeRoadbookId(formData.get("id"));
+        const title = safeText(formData.get("title"), "");
+
+        if (!id) {
+            setStatus("ID invalide : utilise uniquement lettres minuscules, chiffres et tirets.");
+            return;
+        }
+
+        if (state.catalogIds.includes(id)) {
+            setStatus(`Le roadbook "${id}" existe déjà dans le catalogue. Choisis un autre ID.`);
+            return;
+        }
+
+        if (!title) {
+            setStatus("Titre obligatoire pour créer un roadbook.");
+            return;
+        }
+
+        const roadbook = createCanonicalRoadbook({
+            id,
+            title,
+            project: safeText(formData.get("project"), "a faire"),
+            description: safeText(formData.get("description"), ""),
+            officialDistance: decimalOrNull(formData.get("officialDistance")),
+            officialElevationGain: decimalOrNull(formData.get("officialElevationGain")),
+            officialElevationLoss: decimalOrNull(formData.get("officialElevationLoss")),
+            officialGpx: safeText(formData.get("officialGpx"), ""),
+            officialMapEmbedUrl: safeText(formData.get("officialMapEmbedUrl"), ""),
+            currentGpx: safeText(formData.get("currentGpx"), ""),
+            currentMapEmbedUrl: safeText(formData.get("currentMapEmbedUrl"), "")
+        });
+
+        state.selectedRoadbookId = id;
+        state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
+        state.expandedStages = new Set();
+        state.expandedVariants = new Set();
+        elements.createForm.reset();
+        hideCreateRoadbookForm();
+        renderRoadbookEditor();
+        setStatus(`Nouveau roadbook "${title}" créé localement · export attendu : roadbooks/${id}/roadbook.json.`);
+    }
+
+    function normalizeRoadbookId(value) {
+        return String(value || "")
+            .trim()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+    }
+
+    function createCanonicalRoadbook(values) {
+        const now = new Date().toISOString();
+        return {
+            id: values.id,
+            title: values.title,
+            description: values.description,
+            metadata: {
+                activity: "",
+                destination: "",
+                project: values.project,
+                projectStatus: values.project,
+                coverImage: "",
+                generatedAt: now,
+                source: "studio",
+                googleSheetId: ""
+            },
+            summary: {
+                official: {
+                    distance: values.officialDistance,
+                    elevationGain: values.officialElevationGain,
+                    elevationLoss: values.officialElevationLoss,
+                    mapEmbedUrl: values.officialMapEmbedUrl,
+                    gpx: values.officialGpx,
+                    link: ""
+                },
+                stagesTotal: {
+                    distance: null,
+                    elevationGain: null,
+                    elevationLoss: null,
+                    mapEmbedUrl: values.currentMapEmbedUrl,
+                    gpx: values.currentGpx,
+                    link: ""
+                },
+                stagesTotalMarker: null
+            },
+            stages: [],
+            variants: [],
+            accommodation: [],
+            pois: [],
+            notes: [],
+            contributions: [],
+            days: []
+        };
     }
 
     async function openRoadbook(id) {
@@ -373,11 +492,29 @@
         elements.detail.replaceChildren();
 
         elements.detail.appendChild(createGeneralInfoEditor(roadbook));
+        elements.detail.appendChild(createExportPathHint(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
 
         elements.addStage.disabled = false;
         elements.downloadJson.disabled = false;
+    }
+
+    function createExportPathHint(roadbook) {
+        const section = document.createElement("section");
+        section.className = "studio-export-hint";
+        const id = safeText(roadbook.id, state.selectedRoadbookId || "nouveau-roadbook");
+        const title = document.createElement("h3");
+        title.textContent = "Export et intégration";
+        const text = document.createElement("p");
+        text.innerHTML = `Chemin cible attendu : <code>roadbooks/${escapeHtml(id)}/roadbook.json</code>.`;
+        const meta = document.createElement("p");
+        meta.className = "studio-roadbook-card__meta";
+        meta.textContent = state.catalogIds.includes(id)
+            ? "Roadbook chargé depuis le catalogue existant."
+            : "Roadbook créé localement, pas encore présent dans le catalogue.";
+        section.append(title, text, meta);
+        return section;
     }
 
     function createSummaryGrid(roadbook) {
@@ -2238,7 +2375,8 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `${state.selectedRoadbookId || exportPayload.id || "roadbook"}.json`;
+        const id = safeText(exportPayload.id || state.selectedRoadbookId, "roadbook");
+        link.download = `${id}-roadbook.json`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -2342,6 +2480,15 @@
     function safeText(value, fallback = "") {
         const text = String(value ?? "").trim();
         return text || fallback;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     function formatMetric(value, unit) {
