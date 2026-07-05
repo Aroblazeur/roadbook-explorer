@@ -457,3 +457,12 @@
 .studio-gpx-status--error {
   color: #c62828;
 }
+
+.studio-gpx-actions input[type="file"][hidden] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

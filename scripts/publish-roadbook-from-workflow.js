@@ -46,10 +46,30 @@ function main() {
     fs.writeFileSync(configPath, ensureTrailingNewline(configJs), "utf8");
     fs.writeFileSync(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`, "utf8");
 
+    const gpxFiles = Array.isArray(payload.gpxFiles) ? payload.gpxFiles : [];
+    const gpxDir = resolveInsideWorkspace("roadbooks", roadbookId, "gpx");
+    if (gpxFiles.length > 0) {
+        fs.mkdirSync(gpxDir, { recursive: true });
+    }
+    gpxFiles.forEach(gpxFile => {
+        if (!gpxFile || typeof gpxFile !== "object" || !gpxFile.path || !gpxFile.base64) return;
+        const relativePath = gpxFile.path.replace(/^\.?\/+/, "");
+        if (!relativePath.endsWith(".gpx")) return;
+        const safeName = relativePath.split("/").pop().replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
+        if (!safeName.endsWith(".gpx")) return;
+        const gpxFilePath = path.join(gpxDir, safeName);
+        const content = Buffer.from(gpxFile.base64, "base64");
+        fs.writeFileSync(gpxFilePath, content);
+        console.log(`[publish-roadbook] GPX written: ${toPosixPath(path.relative(WORKSPACE, gpxFilePath))} (${content.length} bytes)`);
+    });
+
     console.log(`[publish-roadbook] Roadbook written: ${toPosixPath(path.relative(WORKSPACE, roadbookPath))}`);
     console.log(`[publish-roadbook] Config written: ${toPosixPath(path.relative(WORKSPACE, configPath))}`);
     console.log(`[publish-roadbook] Catalog updated: ${toPosixPath(path.relative(WORKSPACE, catalogPath))}`);
     console.log(`[publish-roadbook] Catalog contains "${roadbookId}": ${catalog.roadbooks.includes(roadbookId)}`);
+    if (gpxFiles.length > 0) {
+        console.log(`[publish-roadbook] GPX files processed: ${gpxFiles.length}`);
+    }
 }
 
 function decodePayload(payloadBase64, payloadEncoding) {
