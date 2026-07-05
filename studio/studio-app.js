@@ -21,7 +21,8 @@
         selectedRoadbookId: "",
         selectedRoadbook: null,
         expandedStages: new Set(),
-        expandedVariants: new Set()
+        expandedVariants: new Set(),
+        generalInfoExpanded: true
     };
 
     const elements = {
@@ -97,6 +98,7 @@
             state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
             state.expandedStages = new Set();
             state.expandedVariants = new Set();
+            state.generalInfoExpanded = true;
             renderRoadbookEditor();
             setStatus(`${safeText(state.selectedRoadbook.title, id)} chargé.`);
         } catch (error) {
@@ -422,9 +424,18 @@
         const section = document.createElement("section");
         section.className = "studio-general-info";
 
+        const header = document.createElement("div");
+        header.className = "studio-general-info__header";
+        header.setAttribute("role", "button");
+        header.setAttribute("tabindex", "0");
+
         const title = document.createElement("h3");
         title.textContent = "Informations générales";
-        section.appendChild(title);
+        header.appendChild(title);
+        section.appendChild(header);
+
+        const body = document.createElement("div");
+        body.className = "studio-general-info__body";
 
         const grid = document.createElement("div");
         grid.className = "studio-form-grid studio-form-grid--general";
@@ -447,7 +458,7 @@
             onChange: value => updateRoadbookField("description", value.trim())
         }));
 
-        section.appendChild(grid);
+        body.appendChild(grid);
 
         const officialSection = document.createElement("section");
         officialSection.className = "studio-stage-extra";
@@ -471,7 +482,7 @@
             }));
         });
         officialSection.appendChild(officialGrid);
-        section.appendChild(officialSection);
+        body.appendChild(officialSection);
 
         const tracedSection = document.createElement("section");
         tracedSection.className = "studio-stage-extra";
@@ -495,7 +506,31 @@
             }));
         });
         tracedSection.appendChild(tracedGrid);
-        section.appendChild(tracedSection);
+        body.appendChild(tracedSection);
+
+        section.appendChild(body);
+
+        const applyToggleState = () => {
+            const expanded = state.generalInfoExpanded;
+            section.dataset.expanded = expanded ? "true" : "false";
+            body.hidden = !expanded;
+            header.setAttribute("aria-expanded", String(expanded));
+        };
+
+        const toggleGeneralInfo = () => {
+            state.generalInfoExpanded = !state.generalInfoExpanded;
+            applyToggleState();
+        };
+
+        header.addEventListener("click", toggleGeneralInfo);
+        header.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleGeneralInfo();
+            }
+        });
+
+        applyToggleState();
 
         return section;
     }
