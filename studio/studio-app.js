@@ -3,10 +3,9 @@
 (function initializeRoadbookStudio() {
     const CATALOG_PATH = "roadbooks/catalog.json";
     const ROADBOOK_PATH = id => `roadbooks/${encodeURIComponent(id)}/roadbook.json`;
-    const PRIMARY_METADATA_KEYS = ["project", "accommodationTypes"];
+    const PRIMARY_METADATA_KEYS = ["project"];
     const METADATA_LABELS = {
-        project: "Projet",
-        accommodationTypes: "Type(s) d'hébergement"
+        project: "Projet"
     };
     const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo"];
     const STAGE_NOTE_FIELDS = ["text", "photo", "createdAt", "source"];
@@ -437,12 +436,6 @@
             onChange: value => updateMetadataField("project", value.trim())
         }));
         grid.appendChild(createGeneralField({
-            label: "Type(s) d'hébergement",
-            value: roadbook.metadata?.accommodationTypes ?? "",
-            fullWidth: true,
-            onChange: value => updateMetadataField("accommodationTypes", value.trim())
-        }));
-        grid.appendChild(createGeneralField({
             label: "Description",
             value: roadbook.description,
             isTextarea: true,
@@ -451,6 +444,31 @@
         }));
 
         section.appendChild(grid);
+
+        const officialSection = document.createElement("section");
+        officialSection.className = "studio-stage-extra";
+        const officialHeader = document.createElement("div");
+        officialHeader.className = "studio-stage-extra__header";
+        const officialTitle = document.createElement("h4");
+        officialTitle.textContent = "Itinéraire officiel";
+        officialHeader.appendChild(officialTitle);
+        officialSection.appendChild(officialHeader);
+
+        const officialGrid = document.createElement("div");
+        officialGrid.className = "studio-form-grid studio-form-grid--compact";
+        [
+            { field: "gpx", label: "GPS" },
+            { field: "mapEmbedUrl", label: "Carte intégrée" }
+        ].forEach(({ field, label }) => {
+            officialGrid.appendChild(createBoundField({
+                label,
+                value: roadbook.summary?.official?.[field] ?? "",
+                fullWidth: true,
+                onChange: value => updateSummaryReference("official", field, value.trim())
+            }));
+        });
+        officialSection.appendChild(officialGrid);
+        section.appendChild(officialSection);
 
         const tracedSection = document.createElement("section");
         tracedSection.className = "studio-stage-extra";
@@ -573,6 +591,7 @@
         bindStageField(fragment, "elevationLoss", stage.elevationLoss, value => updateStage(stageIndex, "elevationLoss", decimalOrNull(value)));
         bindStageField(fragment, "stagePhoto", stage.stagePhoto, value => updateStage(stageIndex, "stagePhoto", value.trim()));
         bindStageField(fragment, "description", stage.description, value => updateStage(stageIndex, "description", value.trim()));
+        bindStageField(fragment, "accommodationType", stage.accommodationType, value => updateStage(stageIndex, "accommodationType", value.trim()));
 
         fragment.querySelector('[data-action="delete-stage"]').addEventListener("click", () => deleteStage(stageIndex));
         fragment.querySelector('[data-action="add-variant"]').addEventListener("click", () => addVariant(stageIndex));
