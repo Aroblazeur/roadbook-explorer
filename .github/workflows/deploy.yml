@@ -18,10 +18,10 @@ permissions:
   pages: write
   id-token: write
 
-# Prevent concurrent deployments; let a running deploy finish before starting a new one.
+# Prevent stale deploys from racing with newer commits; GitHub Pages rejects overlapping deployments.
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
