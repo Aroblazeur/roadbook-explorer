@@ -227,7 +227,48 @@
   margin-top: 0.1rem;
 }
 
-.terrain-button--secondary {
+.studio-stage-card__header {
+  cursor: default;
+}
+
+.studio-stage-card__header-info {
+  min-width: 0;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.5rem;
+}
+
+.studio-stage-card__header-info:hover,
+.studio-stage-card__header-info:focus-visible {
+  background: rgba(46, 125, 50, 0.06);
+  outline: 2px solid rgba(46, 125, 50, 0.28);
+  outline-offset: 2px;
+}
+
+.studio-stage-card__summary {
+  margin: 0.1rem 0 0;
+  color: var(--studio-muted);
+  font-size: 0.88rem;
+  font-weight: 400;
+}
+
+.studio-stage-card[data-expanded="true"] .studio-stage-card__header-info::after {
+  content: " ▴";
+  color: var(--studio-muted);
+  font-size: 0.75rem;
+}
+
+.studio-stage-card[data-expanded="false"] .studio-stage-card__header-info::after {
+  content: " ▾";
+  color: var(--studio-muted);
+  font-size: 0.75rem;
+}
+
+.studio-stage-card__body {
+  margin-top: 1rem;
+}
+
+
   background: rgba(46, 125, 50, 0.12);
   color: #1d4f21;
 }

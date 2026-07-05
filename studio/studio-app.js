@@ -19,7 +19,8 @@
     const state = {
         catalogIds: [],
         selectedRoadbookId: "",
-        selectedRoadbook: null
+        selectedRoadbook: null,
+        expandedStages: new Set()
     };
 
     const elements = {
@@ -93,6 +94,7 @@
             const roadbook = await fetchJson(ROADBOOK_PATH(id), { forceReload: true });
             state.selectedRoadbookId = id;
             state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
+            state.expandedStages = new Set();
             renderRoadbookEditor();
             setStatus(`${safeText(state.selectedRoadbook.title, id)} chargé.`);
         } catch (error) {
@@ -464,7 +466,6 @@
             officialGrid.appendChild(createBoundField({
                 label,
                 value: roadbook.summary?.official?.[field] ?? "",
-                fullWidth: true,
                 onChange: value => updateSummaryReference("official", field, value.trim())
             }));
         });
@@ -489,7 +490,6 @@
             tracedGrid.appendChild(createBoundField({
                 label,
                 value: roadbook.summary?.stagesTotal?.[field] ?? "",
-                fullWidth: true,
                 onChange: value => updateSummaryReference("stagesTotal", field, value.trim())
             }));
         });
@@ -583,6 +583,40 @@
         const title = fragment.querySelector(".studio-stage-card__title");
         title.textContent = stage.title;
 
+        const summaryEl = fragment.querySelector(".studio-stage-card__summary");
+        if (summaryEl) summaryEl.textContent = buildStageSummaryText(stage);
+
+        const body = fragment.querySelector(".studio-stage-card__body");
+        const isExpanded = state.expandedStages.has(stageIndex);
+        card.dataset.expanded = isExpanded ? "true" : "false";
+        if (body) body.hidden = !isExpanded;
+
+        const header = fragment.querySelector(".studio-stage-card__header");
+        const toggleZone = fragment.querySelector(".studio-stage-card__header-info");
+        if (header && toggleZone) {
+            toggleZone.setAttribute("role", "button");
+            toggleZone.setAttribute("tabindex", "0");
+            const toggleStage = () => {
+                const expanded = card.dataset.expanded === "true";
+                card.dataset.expanded = expanded ? "false" : "true";
+                if (body) body.hidden = expanded;
+                if (expanded) {
+                    state.expandedStages.delete(stageIndex);
+                } else {
+                    state.expandedStages.add(stageIndex);
+                }
+                toggleZone.setAttribute("aria-expanded", String(!expanded));
+            };
+            toggleZone.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+            toggleZone.addEventListener("click", toggleStage);
+            toggleZone.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    toggleStage();
+                }
+            });
+        }
+
         bindStageField(fragment, "stage", stage.stage, value => updateStage(stageIndex, "stage", integerOrNull(value)));
         bindStageField(fragment, "title", stage.title, value => updateStage(stageIndex, "title", value.trim()));
         bindStageField(fragment, "departure", stage.departure, value => updateStage(stageIndex, "departure", value.trim()));
@@ -603,14 +637,26 @@
         const variantsSection = fragment.querySelector(".studio-variants");
         if (variantsSection) variantsSection.hidden = stage.variants.length === 0;
 
-        card.appendChild(createStageReferencesEditor(stageIndex, stage));
-        card.appendChild(createStagePoisEditor(stageIndex, stage.pois || []));
-        card.appendChild(createStageAccommodationEditor(stageIndex, stage));
-        card.appendChild(createStageNotesEditor(stageIndex, stage.noteItems || []));
+        const appendTarget = body || card;
+        appendTarget.appendChild(createStageReferencesEditor(stageIndex, stage));
+        appendTarget.appendChild(createStagePoisEditor(stageIndex, stage.pois || []));
+        appendTarget.appendChild(createStageAccommodationEditor(stageIndex, stage));
+        appendTarget.appendChild(createStageNotesEditor(stageIndex, stage.noteItems || []));
 
         card.dataset.stageIndex = String(stageIndex);
         card.dataset.stageNumber = String(stage.stage ?? "");
         return fragment;
+    }
+
+    function buildStageSummaryText(stage) {
+        const parts = [];
+        if (stage.departure || stage.arrival) {
+            parts.push(`${stage.departure || "?"} → ${stage.arrival || "?"}`);
+        }
+        if (stage.distance != null) {
+            parts.push(`${stage.distance} km`);
+        }
+        return parts.join(" · ");
     }
 
     function createVariantEditor(stageIndex, variant, variantIndex) {
@@ -675,12 +721,21 @@
                 label,
                 value: values?.[field] ?? "",
                 inputType,
-                fullWidth: ["gpx", "mapEmbedUrl", "stagePhoto"].includes(field),
+                fullWidth: field === "stagePhoto",
                 onChange: value => onChange(field, value, parser)
             }));
         });
         section.appendChild(grid);
         return section;
+    }
+
+    function createLienField(currentWebsite, currentUrl, onLienChange) {
+        return createBoundField({
+            label: "Lien",
+            value: currentWebsite || currentUrl || "",
+            fullWidth: true,
+            onChange: value => onLienChange(value.trim())
+        });
     }
 
     function createStageAccommodationEditor(stageIndex, stage) {
@@ -697,13 +752,26 @@
 
         const grid = document.createElement("div");
         grid.className = "studio-form-grid studio-form-grid--compact";
-        STAGE_ACCOMMODATION_FIELDS.forEach(field => {
+        // website and url are merged into a single "Lien" field below via createLienField
+        ["name", "photo", "price"].forEach(field => {
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
                 value: stage.accommodation?.[field] ?? "",
                 onChange: value => updateStageAccommodationField(stageIndex, field, value.trim())
             }));
         });
+        grid.appendChild(createLienField(
+            stage.accommodation?.website,
+            stage.accommodation?.url,
+            v => {
+                const accommodation = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation;
+                if (accommodation) {
+                    accommodation.website = v;
+                    accommodation.url = v;
+                    markModified();
+                }
+            }
+        ));
         section.appendChild(grid);
 
         const alternativesSection = document.createElement("div");
@@ -1058,13 +1126,26 @@
             inputType: "number",
             onChange: value => updateRoadbookAccommodation(accommodationIndex, "stage", integerOrNull(value))
         }));
-        ROADBOOK_ACCOMMODATION_FIELDS.forEach(field => {
+        // website and url are merged into a single "Lien" field below via createLienField
+        ["role", "name", "photo", "type", "comment", "createdAt", "source"].forEach(field => {
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
                 value: item[field] ?? "",
                 onChange: value => updateRoadbookAccommodation(accommodationIndex, field, value.trim())
             }));
         });
+        grid.appendChild(createLienField(
+            item.website,
+            item.url,
+            v => {
+                const accommodation = state.selectedRoadbook?.accommodation?.[accommodationIndex];
+                if (accommodation) {
+                    accommodation.website = v;
+                    accommodation.url = v;
+                    markModified();
+                }
+            }
+        ));
         card.appendChild(grid);
         return card;
     }
@@ -1315,6 +1396,10 @@
         if (field === "title" && Number.isInteger(stageIndex)) {
             const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__title`);
             if (heading) heading.textContent = safeText(value, `Étape ${stage.stage ?? stageIndex + 1}`);
+        }
+        if (["departure", "arrival", "distance"].includes(field)) {
+            const summaryEl = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__summary`);
+            if (summaryEl) summaryEl.textContent = buildStageSummaryText(stage);
         }
         markModified();
     }
@@ -1677,6 +1762,12 @@
         state.selectedRoadbook.stages.forEach((stage, index) => {
             if (!Number.isFinite(stage.stage)) stage.stage = index + 1;
         });
+        const newExpanded = new Set();
+        state.expandedStages.forEach(idx => {
+            if (idx < stageIndex) newExpanded.add(idx);
+            else if (idx > stageIndex) newExpanded.add(idx - 1);
+        });
+        state.expandedStages = newExpanded;
         rerenderEditorPreservingScroll();
     }
 
