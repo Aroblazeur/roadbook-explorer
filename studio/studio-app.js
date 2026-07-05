@@ -502,10 +502,7 @@
         elements.detail.appendChild(createSummaryGrid(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
 
-        elements.addStage.disabled = false;
-        elements.downloadJson.disabled = false;
-        if (elements.exportGithub) elements.exportGithub.disabled = false;
-        if (elements.publishGithub) elements.publishGithub.disabled = false;
+        syncEditorActionButtons();
     }
 
     function createExportPathHint(roadbook) {
@@ -521,7 +518,7 @@
         const catalogInstruction = document.createElement("p");
         catalogInstruction.innerHTML = `Catalogue : ajouter <code>${escapeHtml(id)}</code> au tableau <code>roadbooks</code> de <code>roadbooks/catalog.json</code>.`;
         const publishInstruction = document.createElement("p");
-        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier via GitHub Actions</strong> prépare un paquet pour le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code>, qui commit directement ces fichiers sur <code>main</code>.`;
+        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier sur GitHub</strong> prépare un paquet pour le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code>, qui commit directement ces fichiers sur <code>main</code>.`;
         const workflowLink = document.createElement("p");
         workflowLink.innerHTML = `Workflow : <a href="https://github.com/${escapeHtml(GITHUB_REPOSITORY)}/actions/workflows/${escapeHtml(PUBLISH_WORKFLOW_FILE)}" target="_blank" rel="noopener noreferrer">ouvrir GitHub Actions</a>.`;
         const meta = document.createElement("p");
@@ -2381,7 +2378,16 @@
     }
 
     function markModified() {
+        syncEditorActionButtons();
         setStatus("Modifications locales non publiées · JSON prêt à exporter.");
+    }
+
+    function syncEditorActionButtons() {
+        const hasExportableRoadbook = Boolean(state.selectedRoadbook);
+        if (elements.addStage) elements.addStage.disabled = !hasExportableRoadbook;
+        if (elements.downloadJson) elements.downloadJson.disabled = !hasExportableRoadbook;
+        if (elements.exportGithub) elements.exportGithub.disabled = !hasExportableRoadbook;
+        if (elements.publishGithub) elements.publishGithub.disabled = !hasExportableRoadbook;
     }
 
     function downloadCurrentRoadbookJson() {
