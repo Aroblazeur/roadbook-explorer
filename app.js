@@ -1252,6 +1252,7 @@ function displayDay(index, options = {}) {
     renderStagePhoto(day);
 
     renderStageMetricsAndDuration(day, index);
+    renderStageDescription(day);
 
     const stageGpxUrl = day.gpx || day.route?.gpx;
     const mapVisible = renderStageMapEmbed(day.mapEmbedUrl, stageGpxUrl);
@@ -1347,6 +1348,28 @@ function renderStagePhoto(day) {
 
     figure.appendChild(image);
     heading.insertAdjacentElement("afterend", figure);
+}
+
+function renderStageDescription(day) {
+    const card = document.getElementById("day-card");
+    if (!card) return;
+
+    const existing = card.querySelector(".stage-description");
+    if (existing) existing.remove();
+
+    const description = safeText(day?.description, "");
+    if (!description) return;
+
+    const block = document.createElement("p");
+    block.className = "stage-description";
+    block.textContent = description;
+
+    const stats = card.querySelector(".stats");
+    if (stats) {
+        stats.insertAdjacentElement("afterend", block);
+    } else {
+        card.appendChild(block);
+    }
 }
 
 function createStageCityLink(city) {
@@ -1955,8 +1978,26 @@ function renderPrimaryAccommodation(accommodation) {
     const mainName = safeText(accommodation?.displayName || accommodation?.name, "");
     const mainDisplayLabel = mainName || mainMetadata?.name || genericAccommodationLabel(mainUrl);
     const mainIconSource = mainName || mainMetadata?.name || mainUrl;
+    const hasVisualContent = Boolean(mainUrl || mainPhoto || mainMetadata?.image);
     section.hidden = !mainName && !mainUrl && !mainPhoto && !mainMetadata?.image;
     if (section.hidden) return;
+
+    if (mainName && !hasVisualContent) {
+        const detail = document.createElement("p");
+        detail.className = "detail-name";
+        if (mainUrl) {
+            const link = document.createElement("a");
+            link.href = mainUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            appendAccommodationNameWithIcon(link, mainDisplayLabel);
+            detail.appendChild(link);
+        } else {
+            appendAccommodationNameWithIcon(detail, mainDisplayLabel);
+        }
+        container.appendChild(detail);
+        return;
+    }
 
     if (mainUrl || mainPhoto || mainMetadata?.image || mainName) {
         appendAccommodationResource(
