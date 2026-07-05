@@ -71,6 +71,28 @@ Le roadbook demandé est sélectionné avec `?roadbook=<identifiant>`. Sans para
 
 Les contributions utilisateur passent par l’endpoint global Apps Script configuré dans `roadbook-config.js`. Il n’y a pas de Google Form à créer par roadbook.
 
+## Publier depuis le Studio
+
+Le Studio garde l'export manuel, mais peut aussi preparer une publication automatisee via GitHub Actions.
+
+Workflow :
+
+1. ouvrir `studio.html` ;
+2. creer ou modifier un roadbook ;
+3. cliquer sur `Publier via GitHub Actions` ;
+4. le Studio telecharge un payload et copie une commande `gh workflow run` ;
+5. lancer cette commande avec un compte GitHub autorise sur le depot.
+
+Le workflow `.github/workflows/publish-roadbook.yml` decode le payload, ecrit :
+
+```text
+roadbooks/<id>/roadbook.json
+roadbooks/<id>/config.js
+roadbooks/catalog.json
+```
+
+puis commit directement sur `main` avec `GITHUB_TOKEN`. Aucun token GitHub n'est stocke dans le JavaScript public du Studio.
+
 ## Synchroniser les Sheets vers les JSON
 
 Pendant la transition, utilisez :
