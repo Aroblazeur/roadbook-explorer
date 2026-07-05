@@ -752,6 +752,7 @@
 
         const grid = document.createElement("div");
         grid.className = "studio-form-grid studio-form-grid--compact";
+        // website and url are merged into a single "Lien" field below via createLienField
         ["name", "photo", "price"].forEach(field => {
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
@@ -1125,6 +1126,7 @@
             inputType: "number",
             onChange: value => updateRoadbookAccommodation(accommodationIndex, "stage", integerOrNull(value))
         }));
+        // website and url are merged into a single "Lien" field below via createLienField
         ["role", "name", "photo", "type", "comment", "createdAt", "source"].forEach(field => {
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
