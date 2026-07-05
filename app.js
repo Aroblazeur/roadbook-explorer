@@ -1947,16 +1947,27 @@ function renderPoiList(list, pois) {
 }
 
 function renderFieldNavigation(day) {
-    renderAccommodation(day.accommodation);
+    renderAccommodation(day.accommodation, day);
 }
 
-function renderAccommodation(accommodation) {
-    const day = roadbook?.days?.[currentDay] || null;
-    renderPrimaryAccommodation(accommodation);
-    renderAlternativeAccommodation(accommodation, day?.stage || (currentDay + 1));
+function renderAccommodation(accommodation, day) {
+    const stageNumber = day?.stage || (currentDay + 1);
+    renderPrimaryAccommodation(accommodation, day);
+    renderAlternativeAccommodation(accommodation, stageNumber);
 }
 
-function renderPrimaryAccommodation(accommodation) {
+function resolveAccommodationContextCity(day) {
+    return safeText(day?.arrival || day?.departure || "", "");
+}
+
+function buildNameOnlyMapUrl(name, day) {
+    const city = resolveAccommodationContextCity(day);
+    const query = [name, city].filter(Boolean).join(" ");
+    if (!query) return "";
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function renderPrimaryAccommodation(accommodation, day) {
     const section = document.getElementById("primary-accommodation-card");
     const container = document.getElementById("primary-accommodation");
     container.replaceChildren();
@@ -1965,10 +1976,8 @@ function renderPrimaryAccommodation(accommodation) {
         const name = safeText(accommodation, "");
         section.hidden = !name;
         if (!name) return;
-        const detail = document.createElement("p");
-        detail.className = "detail-name";
-        appendAccommodationNameWithIcon(detail, name);
-        container.appendChild(detail);
+        const mapUrl = buildNameOnlyMapUrl(name, day);
+        appendAccommodationResource(container, mapUrl, name, null, name, "", [name]);
         return;
     }
 
@@ -1978,38 +1987,20 @@ function renderPrimaryAccommodation(accommodation) {
     const mainName = safeText(accommodation?.displayName || accommodation?.name, "");
     const mainDisplayLabel = mainName || mainMetadata?.name || genericAccommodationLabel(mainUrl);
     const mainIconSource = mainName || mainMetadata?.name || mainUrl;
-    const hasVisualContent = Boolean(mainUrl || mainPhoto || mainMetadata?.image);
+
+    const effectiveUrl = mainUrl || (mainName ? buildNameOnlyMapUrl(mainName, day) : "");
     section.hidden = !mainName && !mainUrl && !mainPhoto && !mainMetadata?.image;
     if (section.hidden) return;
 
-    if (mainName && !hasVisualContent) {
-        const detail = document.createElement("p");
-        detail.className = "detail-name";
-        if (mainUrl) {
-            const link = document.createElement("a");
-            link.href = mainUrl;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            appendAccommodationNameWithIcon(link, mainDisplayLabel);
-            detail.appendChild(link);
-        } else {
-            appendAccommodationNameWithIcon(detail, mainDisplayLabel);
-        }
-        container.appendChild(detail);
-        return;
-    }
-
-    if (mainUrl || mainPhoto || mainMetadata?.image || mainName) {
-        appendAccommodationResource(
-            container,
-            mainUrl,
-            mainDisplayLabel,
-            mainMetadata,
-            mainIconSource,
-            mainPhoto,
-            [accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl]
-        );
-    }
+    appendAccommodationResource(
+        container,
+        effectiveUrl,
+        mainDisplayLabel,
+        mainMetadata,
+        mainIconSource,
+        mainPhoto,
+        [accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl, mainName]
+    );
 }
 
 function renderAlternativeAccommodation(accommodation, stageNumber) {
@@ -2461,31 +2452,36 @@ function appendAccommodationResource(container, url, preferredLabel, metadata, i
     const label = safeText(preferredLabel, "") || metadata?.name || "Hébergement";
     const icon = getAccommodationIcon(iconSource || label);
     const labelWithIcon = icon ? `${icon} ${label}` : label;
+    const isMapOnlyUrl = isGoogleMapsSearchUrl(url);
 
     const resource = document.createElement("div");
     resource.className = "accommodation-resource";
     appendAccommodationVisual(resource, {
         manualPhoto,
         automaticPhoto: metadata?.image,
-        websiteUrl: url,
+        websiteUrl: isMapOnlyUrl ? "" : url,
         label
     });
     if (url) {
-        const mapLink = createAccommodationMapLink(mapQueryCandidates);
-        if (mapLink) {
-            mapLink.classList.add("accommodation-map-link--in-button");
-            const wrapper = document.createElement("div");
-            wrapper.className = "terrain-button terrain-button--secondary accommodation-resource__button-wrapper";
-            const websiteLink = document.createElement("a");
-            websiteLink.href = url;
-            websiteLink.target = "_blank";
-            websiteLink.rel = "noopener noreferrer";
-            websiteLink.className = "accommodation-resource__website-link";
-            websiteLink.textContent = labelWithIcon;
-            wrapper.append(websiteLink, mapLink);
-            resource.appendChild(wrapper);
-        } else {
+        if (isMapOnlyUrl) {
             appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
+        } else {
+            const mapLink = createAccommodationMapLink(mapQueryCandidates);
+            if (mapLink) {
+                mapLink.classList.add("accommodation-map-link--in-button");
+                const wrapper = document.createElement("div");
+                wrapper.className = "terrain-button terrain-button--secondary accommodation-resource__button-wrapper";
+                const websiteLink = document.createElement("a");
+                websiteLink.href = url;
+                websiteLink.target = "_blank";
+                websiteLink.rel = "noopener noreferrer";
+                websiteLink.className = "accommodation-resource__website-link";
+                websiteLink.textContent = labelWithIcon;
+                wrapper.append(websiteLink, mapLink);
+                resource.appendChild(wrapper);
+            } else {
+                appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
+            }
         }
     } else {
         const text = document.createElement("span");
@@ -2495,6 +2491,10 @@ function appendAccommodationResource(container, url, preferredLabel, metadata, i
     }
     container.appendChild(resource);
     return resource;
+}
+
+function isGoogleMapsSearchUrl(url) {
+    return /^https?:\/\/(www\.)?google\.(com|fr|[\w-]+)\/maps\/search\//i.test(url || "");
 }
 
 function appendAccommodationVisual(container, { manualPhoto = "", automaticPhoto = "", websiteUrl = "", label = "" } = {}) {
