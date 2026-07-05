@@ -16,6 +16,8 @@
     };
     const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo"];
     const STAGE_NOTE_FIELDS = ["text", "photo", "createdAt", "source"];
+    const STAGE_REFERENCE_FIELDS = ["gpx", "mapEmbedUrl", "stagePhoto"];
+    const POI_FIELDS = ["name", "region", "url", "image"];
     const ROADBOOK_ACCOMMODATION_FIELDS = ["role", "name", "website", "url", "photo", "type", "comment", "createdAt", "source"];
     const ROADBOOK_NOTE_FIELDS = ["stage", "text", "photo", "createdAt", "source", "author", "timestamp"];
     const CONTRIBUTION_FIELDS = ["id", "type", "stage", "createdAt", "status", "source", "author", "timestamp"];
@@ -123,6 +125,7 @@
         clone.metadata = normalizeMetadataForEditing(clone.metadata);
         clone.stages = extractEditableStages(clone);
         clone.accommodation = normalizeRoadbookAccommodations(clone.accommodation);
+        clone.pois = normalizeRoadbookPois(clone.pois);
         clone.notes = normalizeRoadbookNotes(clone.notes);
         clone.contributions = normalizeContributions(clone.contributions);
         delete clone.days;
@@ -161,6 +164,13 @@
         normalized.elevationGain = toFiniteNumber(normalized.elevationGain);
         normalized.elevationLoss = toFiniteNumber(normalized.elevationLoss);
         normalized.description = safeText(normalized.description, "");
+        STAGE_REFERENCE_FIELDS.forEach(field => {
+            normalized[field] = safeText(normalized[field], "");
+        });
+        normalized.warning = normalizeStringList(normalized.warning);
+        normalized.pois = normalizePois(normalized.pois || normalized.pointsOfInterest || normalized.interest);
+        normalized.pointsOfInterest = normalized.pois;
+        normalized.interest = normalized.pois;
         normalized.accommodation = normalizeStageAccommodation(normalized.accommodation);
         normalized.accommodationType = safeText(normalized.accommodationType, "");
         normalized.noteItems = normalizeStageNoteItems(normalized.noteItems);
@@ -175,11 +185,54 @@
 
     function normalizeVariants(variants) {
         if (!Array.isArray(variants)) return [];
-        return variants.map((variant, index) => ({
-            name: safeText(variant?.name || variant?.title, `Variante ${index + 1}`),
-            distance: toFiniteNumber(variant?.distance),
-            description: safeText(variant?.description, "")
-        }));
+        return variants.map((variant, index) => normalizeVariant(variant, index));
+    }
+
+    function normalizeVariant(variant, index) {
+        const normalized = variant && typeof variant === "object" && !Array.isArray(variant)
+            ? structuredClone(variant)
+            : {};
+        normalized.type = safeText(normalized.type, "");
+        normalized.name = safeText(normalized.name || normalized.title, `Variante ${index + 1}`);
+        normalized.title = safeText(normalized.title, normalized.name);
+        normalized.departure = safeText(normalized.departure, "");
+        normalized.arrival = safeText(normalized.arrival, "");
+        normalized.distance = toFiniteNumber(normalized.distance);
+        normalized.elevationGain = toFiniteNumber(normalized.elevationGain);
+        normalized.elevationLoss = toFiniteNumber(normalized.elevationLoss);
+        normalized.description = safeText(normalized.description, "");
+        STAGE_REFERENCE_FIELDS.forEach(field => {
+            normalized[field] = safeText(normalized[field], "");
+        });
+        normalized.warning = normalizeStringList(normalized.warning);
+        normalized.pois = normalizePois(normalized.pois || normalized.pointsOfInterest || normalized.interest);
+        normalized.pointsOfInterest = normalized.pois;
+        normalized.interest = normalized.pois;
+        normalized.accommodation = normalizeStageAccommodation(normalized.accommodation);
+        normalized.accommodationType = safeText(normalized.accommodationType, "");
+        normalized.noteItems = normalizeStageNoteItems(normalized.noteItems);
+        return normalized;
+    }
+
+    function normalizePois(pois) {
+        if (!Array.isArray(pois)) return [];
+        return pois.map(poi => normalizePoi(poi));
+    }
+
+    function normalizePoi(poi) {
+        const normalized = poi && typeof poi === "object" && !Array.isArray(poi)
+            ? structuredClone(poi)
+            : { name: safeText(poi, "") };
+        POI_FIELDS.forEach(field => {
+            normalized[field] = safeText(normalized[field], "");
+        });
+        return normalized;
+    }
+
+    function normalizeStringList(values) {
+        if (Array.isArray(values)) return values.map(value => safeText(value, "")).filter(Boolean);
+        const value = safeText(values, "");
+        return value ? [value] : [];
     }
 
     function normalizeStageAccommodation(accommodation) {
@@ -205,6 +258,15 @@
     function normalizeRoadbookAccommodations(accommodations) {
         if (!Array.isArray(accommodations)) return [];
         return accommodations.map(accommodation => normalizeRoadbookAccommodationEntry(accommodation));
+    }
+
+    function normalizeRoadbookPois(pois) {
+        if (!Array.isArray(pois)) return [];
+        return pois.map(poi => {
+            const normalized = normalizePoi(poi);
+            normalized.stage = integerOrNull(poi?.stage);
+            return normalized;
+        });
     }
 
     function normalizeRoadbookAccommodationEntry(accommodation) {
@@ -312,7 +374,9 @@
 
         elements.detail.appendChild(createGeneralInfoEditor(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
+        elements.detail.appendChild(createSummaryReferencesEditor(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
+        elements.detail.appendChild(createRoadbookPoisEditor(roadbook.pois));
         elements.detail.appendChild(createRoadbookNotesEditor(roadbook.notes));
         elements.detail.appendChild(createContributionsEditor(roadbook.contributions));
 
@@ -330,6 +394,32 @@
         grid.appendChild(createMetric("D−", formatMetric(summary.elevationLoss, "m")));
 
         return grid;
+    }
+
+    function createSummaryReferencesEditor(roadbook) {
+        const section = document.createElement("section");
+        section.className = "studio-general-info";
+        const title = document.createElement("h3");
+        title.textContent = "Synthèses et tracés globaux";
+        section.appendChild(title);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--compact";
+        [
+            { sectionKey: "official", field: "gpx", label: "Itinéraire officiel · GPX" },
+            { sectionKey: "official", field: "mapEmbedUrl", label: "Itinéraire officiel · carte intégrée" },
+            { sectionKey: "stagesTotal", field: "gpx", label: "Roadbook actuel · GPX" },
+            { sectionKey: "stagesTotal", field: "mapEmbedUrl", label: "Roadbook actuel · carte intégrée" }
+        ].forEach(({ sectionKey, field, label }) => {
+            grid.appendChild(createBoundField({
+                label,
+                value: roadbook.summary?.[sectionKey]?.[field] ?? "",
+                fullWidth: true,
+                onChange: value => updateSummaryReference(sectionKey, field, value.trim())
+            }));
+        });
+        section.appendChild(grid);
+        return section;
     }
 
     function createGeneralInfoEditor(roadbook) {
@@ -473,6 +563,9 @@
         const variantList = fragment.querySelector(".studio-variant-list");
         stage.variants.forEach((variant, variantIndex) => variantList.appendChild(createVariantEditor(stageIndex, variant, variantIndex)));
 
+        card.appendChild(createStageReferencesEditor(stageIndex, stage));
+        card.appendChild(createStagePoisEditor(stageIndex, stage.pois || []));
+        card.appendChild(createStageWarningsEditor(stageIndex, stage.warning || []));
         card.appendChild(createStageAccommodationEditor(stageIndex, stage));
         card.appendChild(createStageNotesEditor(stageIndex, stage.noteItems || []));
         card.appendChild(createRoadbookAccommodationEditor(stageIndex, stage.stage));
@@ -490,8 +583,65 @@
         bindVariantField(fragment, "name", variant.name, value => updateVariant(stageIndex, variantIndex, "name", value.trim() || `Variante ${variantIndex + 1}`));
         bindVariantField(fragment, "distance", variant.distance, value => updateVariant(stageIndex, variantIndex, "distance", decimalOrNull(value)));
         bindVariantField(fragment, "description", variant.description, value => updateVariant(stageIndex, variantIndex, "description", value.trim()));
+        variantCard.appendChild(createVariantDetailsEditor(stageIndex, variantIndex, variant));
+        variantCard.appendChild(createVariantPoisEditor(stageIndex, variantIndex, variant.pois || []));
+        variantCard.appendChild(createVariantWarningsEditor(stageIndex, variantIndex, variant.warning || []));
         fragment.querySelector('[data-action="delete-variant"]').addEventListener("click", () => deleteVariant(stageIndex, variantIndex));
         return fragment;
+    }
+
+    function createStageReferencesEditor(stageIndex, stage) {
+        return createReferencesEditor({
+            title: "GPX, carte et photo",
+            values: stage,
+            onChange: (field, value) => updateStage(stageIndex, field, value.trim())
+        });
+    }
+
+    function createVariantDetailsEditor(stageIndex, variantIndex, variant) {
+        const section = createReferencesEditor({
+            title: "Détails de la sous-étape",
+            values: variant,
+            extraFields: [
+                { field: "type", label: "Type" },
+                { field: "departure", label: "Départ" },
+                { field: "arrival", label: "Arrivée" },
+                { field: "elevationGain", label: "D+ (m)", inputType: "number", parser: decimalOrNull },
+                { field: "elevationLoss", label: "D− (m)", inputType: "number", parser: decimalOrNull }
+            ],
+            onChange: (field, value, parser) => updateVariant(stageIndex, variantIndex, field, parser ? parser(value) : value.trim())
+        });
+        return section;
+    }
+
+    function createReferencesEditor({ title, values, onChange, extraFields = [] }) {
+        const section = document.createElement("section");
+        section.className = "studio-stage-extra";
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const heading = document.createElement("h4");
+        heading.textContent = title;
+        header.appendChild(heading);
+        section.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--compact";
+        [
+            ...extraFields,
+            { field: "gpx", label: "GPX" },
+            { field: "mapEmbedUrl", label: "Lien d’intégration de carte" },
+            { field: "stagePhoto", label: "Photo de l’étape" }
+        ].forEach(({ field, label, inputType = "text", parser = null }) => {
+            grid.appendChild(createBoundField({
+                label,
+                value: values?.[field] ?? "",
+                inputType,
+                fullWidth: ["gpx", "mapEmbedUrl", "stagePhoto"].includes(field),
+                onChange: value => onChange(field, value, parser)
+            }));
+        });
+        section.appendChild(grid);
+        return section;
     }
 
     function createStageAccommodationEditor(stageIndex, stage) {
@@ -543,6 +693,187 @@
         });
         alternativesSection.appendChild(alternativesList);
         section.appendChild(alternativesSection);
+        return section;
+    }
+
+    function createStagePoisEditor(stageIndex, pois) {
+        return createPoiListEditor({
+            title: "Points d’intérêt",
+            pois,
+            onAdd: () => addStagePoi(stageIndex),
+            onDelete: poiIndex => deleteStagePoi(stageIndex, poiIndex),
+            onUpdate: (poiIndex, field, value) => updateStagePoi(stageIndex, poiIndex, field, value)
+        });
+    }
+
+    function createVariantPoisEditor(stageIndex, variantIndex, pois) {
+        return createPoiListEditor({
+            title: "Points d’intérêt de la sous-étape",
+            pois,
+            onAdd: () => addVariantPoi(stageIndex, variantIndex),
+            onDelete: poiIndex => deleteVariantPoi(stageIndex, variantIndex, poiIndex),
+            onUpdate: (poiIndex, field, value) => updateVariantPoi(stageIndex, variantIndex, poiIndex, field, value)
+        });
+    }
+
+    function createRoadbookPoisEditor(pois) {
+        const section = document.createElement("section");
+        section.className = "studio-global-section";
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const title = document.createElement("h3");
+        title.textContent = `POI globaux (${pois.length})`;
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.className = "terrain-button terrain-button--secondary";
+        addButton.textContent = "Ajouter un POI";
+        addButton.addEventListener("click", addRoadbookPoi);
+        header.append(title, addButton);
+        section.appendChild(header);
+
+        const list = document.createElement("div");
+        list.className = "studio-sublist__list";
+        pois.forEach((poi, poiIndex) => {
+            list.appendChild(createPoiEditor({
+                poi,
+                poiIndex,
+                datasetName: "roadbookPoiIndex",
+                includeStage: true,
+                onDelete: () => deleteRoadbookPoi(poiIndex),
+                onUpdate: (field, value) => updateRoadbookPoi(poiIndex, field, value)
+            }));
+        });
+        section.appendChild(list);
+        return section;
+    }
+
+    function createPoiListEditor({ title, pois, onAdd, onDelete, onUpdate }) {
+        const section = document.createElement("section");
+        section.className = "studio-stage-extra";
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const heading = document.createElement("h4");
+        heading.textContent = `${title} (${pois.length})`;
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.className = "terrain-button terrain-button--secondary";
+        addButton.textContent = "Ajouter un POI";
+        addButton.addEventListener("click", onAdd);
+        header.append(heading, addButton);
+        section.appendChild(header);
+
+        const list = document.createElement("div");
+        list.className = "studio-sublist__list";
+        pois.forEach((poi, poiIndex) => {
+            list.appendChild(createPoiEditor({
+                poi,
+                poiIndex,
+                onDelete: () => onDelete(poiIndex),
+                onUpdate: (field, value) => onUpdate(poiIndex, field, value)
+            }));
+        });
+        section.appendChild(list);
+        return section;
+    }
+
+    function createPoiEditor({ poi, poiIndex, onDelete, onUpdate, includeStage = false, datasetName = "poiIndex" }) {
+        const card = document.createElement("article");
+        card.className = "studio-subitem-card";
+        card.dataset[datasetName] = String(poiIndex);
+        const header = document.createElement("div");
+        header.className = "studio-subitem-card__header";
+        const title = document.createElement("strong");
+        title.textContent = safeText(poi.name, `POI ${poiIndex + 1}`);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "terrain-button terrain-button--danger";
+        remove.textContent = "Supprimer";
+        remove.addEventListener("click", onDelete);
+        header.append(title, remove);
+        card.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--compact";
+        if (includeStage) {
+            grid.appendChild(createBoundField({
+                label: "Étape",
+                value: poi.stage ?? "",
+                inputType: "number",
+                onChange: value => onUpdate("stage", integerOrNull(value))
+            }));
+        }
+        POI_FIELDS.forEach(field => {
+            grid.appendChild(createBoundField({
+                label: getPoiFieldLabel(field),
+                value: poi[field] ?? "",
+                onChange: value => onUpdate(field, value.trim())
+            }));
+        });
+        card.appendChild(grid);
+        return card;
+    }
+
+    function createStageWarningsEditor(stageIndex, warnings) {
+        return createWarningsEditor({
+            title: "Avertissements",
+            warnings,
+            onAdd: () => addStageWarning(stageIndex),
+            onDelete: warningIndex => deleteStageWarning(stageIndex, warningIndex),
+            onUpdate: (warningIndex, value) => updateStageWarning(stageIndex, warningIndex, value)
+        });
+    }
+
+    function createVariantWarningsEditor(stageIndex, variantIndex, warnings) {
+        return createWarningsEditor({
+            title: "Avertissements de la sous-étape",
+            warnings,
+            onAdd: () => addVariantWarning(stageIndex, variantIndex),
+            onDelete: warningIndex => deleteVariantWarning(stageIndex, variantIndex, warningIndex),
+            onUpdate: (warningIndex, value) => updateVariantWarning(stageIndex, variantIndex, warningIndex, value)
+        });
+    }
+
+    function createWarningsEditor({ title, warnings, onAdd, onDelete, onUpdate }) {
+        const section = document.createElement("section");
+        section.className = "studio-stage-extra";
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const heading = document.createElement("h4");
+        heading.textContent = `${title} (${warnings.length})`;
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.className = "terrain-button terrain-button--secondary";
+        addButton.textContent = "Ajouter";
+        addButton.addEventListener("click", onAdd);
+        header.append(heading, addButton);
+        section.appendChild(header);
+
+        const list = document.createElement("div");
+        list.className = "studio-sublist__list";
+        warnings.forEach((warning, warningIndex) => {
+            const card = document.createElement("article");
+            card.className = "studio-subitem-card";
+            const cardHeader = document.createElement("div");
+            cardHeader.className = "studio-subitem-card__header";
+            const label = document.createElement("strong");
+            label.textContent = `Avertissement ${warningIndex + 1}`;
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "terrain-button terrain-button--danger";
+            remove.textContent = "Supprimer";
+            remove.addEventListener("click", () => onDelete(warningIndex));
+            cardHeader.append(label, remove);
+            card.appendChild(cardHeader);
+            card.appendChild(createBoundField({
+                label: "Texte",
+                value: warning,
+                isTextarea: true,
+                fullWidth: true,
+                onChange: value => onUpdate(warningIndex, value.trim())
+            }));
+            list.appendChild(card);
+        });
+        section.appendChild(list);
         return section;
     }
 
@@ -900,6 +1231,16 @@
         return labels[field] || field;
     }
 
+    function getPoiFieldLabel(field) {
+        const labels = {
+            name: "Nom",
+            region: "Région",
+            url: "Lien",
+            image: "Image"
+        };
+        return labels[field] || field;
+    }
+
     function getContributionFieldLabel(field) {
         const labels = {
             id: "ID",
@@ -962,6 +1303,19 @@
         markModified();
     }
 
+    function updateSummaryReference(sectionKey, field, value) {
+        const roadbook = state.selectedRoadbook;
+        if (!roadbook) return;
+        if (!roadbook.summary || typeof roadbook.summary !== "object" || Array.isArray(roadbook.summary)) {
+            roadbook.summary = {};
+        }
+        if (!roadbook.summary[sectionKey] || typeof roadbook.summary[sectionKey] !== "object" || Array.isArray(roadbook.summary[sectionKey])) {
+            roadbook.summary[sectionKey] = {};
+        }
+        roadbook.summary[sectionKey][field] = value;
+        markModified();
+    }
+
     function updateVariant(stageIndex, variantIndex, field, value) {
         const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
         if (!variant) return;
@@ -1009,6 +1363,65 @@
         const alternatives = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation?.alternatives;
         if (!Array.isArray(alternatives)) return;
         alternatives.splice(alternativeIndex, 1);
+        rerenderEditorPreservingScroll();
+    }
+
+    function addStagePoi(stageIndex) {
+        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+        if (!stage) return;
+        if (!Array.isArray(stage.pois)) stage.pois = [];
+        stage.pois.push(normalizePoi({}));
+        syncStagePoiAliases(stage);
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateStagePoi(stageIndex, poiIndex, field, value) {
+        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+        const poi = stage?.pois?.[poiIndex];
+        if (!poi) return;
+        poi[field] = value;
+        syncStagePoiAliases(stage);
+        if (field === "name") {
+            const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-subitem-card[data-poi-index="${poiIndex}"] strong`);
+            if (heading) heading.textContent = safeText(value, `POI ${poiIndex + 1}`);
+        }
+        markModified();
+    }
+
+    function deleteStagePoi(stageIndex, poiIndex) {
+        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+        if (!Array.isArray(stage?.pois)) return;
+        stage.pois.splice(poiIndex, 1);
+        syncStagePoiAliases(stage);
+        rerenderEditorPreservingScroll();
+    }
+
+    function syncStagePoiAliases(stage) {
+        if (!stage) return;
+        stage.pois = normalizePois(stage.pois);
+        stage.pointsOfInterest = stage.pois;
+        stage.interest = stage.pois;
+    }
+
+    function addStageWarning(stageIndex) {
+        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+        if (!stage) return;
+        if (!Array.isArray(stage.warning)) stage.warning = [];
+        stage.warning.push("");
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateStageWarning(stageIndex, warningIndex, value) {
+        const warnings = state.selectedRoadbook?.stages?.[stageIndex]?.warning;
+        if (!Array.isArray(warnings)) return;
+        warnings[warningIndex] = value;
+        markModified();
+    }
+
+    function deleteStageWarning(stageIndex, warningIndex) {
+        const warnings = state.selectedRoadbook?.stages?.[stageIndex]?.warning;
+        if (!Array.isArray(warnings)) return;
+        warnings.splice(warningIndex, 1);
         rerenderEditorPreservingScroll();
     }
 
@@ -1109,6 +1522,34 @@
         rerenderEditorPreservingScroll();
     }
 
+    function addRoadbookPoi() {
+        const pois = state.selectedRoadbook?.pois;
+        if (!Array.isArray(pois)) return;
+        pois.push({
+            stage: null,
+            ...normalizePoi({})
+        });
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateRoadbookPoi(poiIndex, field, value) {
+        const poi = state.selectedRoadbook?.pois?.[poiIndex];
+        if (!poi) return;
+        poi[field] = field === "stage" ? integerOrNull(value) : value;
+        if (field === "name") {
+            const heading = elements.detail.querySelector(`.studio-subitem-card[data-roadbook-poi-index="${poiIndex}"] strong`);
+            if (heading) heading.textContent = safeText(value, `POI ${poiIndex + 1}`);
+        }
+        markModified();
+    }
+
+    function deleteRoadbookPoi(poiIndex) {
+        const pois = state.selectedRoadbook?.pois;
+        if (!Array.isArray(pois)) return;
+        pois.splice(poiIndex, 1);
+        rerenderEditorPreservingScroll();
+    }
+
     function addContribution() {
         const contributions = state.selectedRoadbook?.contributions;
         if (!Array.isArray(contributions)) return;
@@ -1178,6 +1619,13 @@
             elevationGain: null,
             elevationLoss: null,
             description: "",
+            gpx: "",
+            mapEmbedUrl: "",
+            stagePhoto: "",
+            pois: [],
+            pointsOfInterest: [],
+            interest: [],
+            warning: [],
             accommodation: normalizeStageAccommodation({}),
             accommodationType: "",
             noteItems: [],
@@ -1198,11 +1646,11 @@
     function addVariant(stageIndex) {
         const stage = state.selectedRoadbook?.stages?.[stageIndex];
         if (!stage) return;
-        stage.variants.push({
+        stage.variants.push(normalizeVariant({
             name: `Variante ${stage.variants.length + 1}`,
             distance: null,
             description: ""
-        });
+        }, stage.variants.length));
         rerenderEditorPreservingScroll();
     }
 
@@ -1210,6 +1658,58 @@
         const variants = state.selectedRoadbook?.stages?.[stageIndex]?.variants;
         if (!Array.isArray(variants)) return;
         variants.splice(variantIndex, 1);
+        rerenderEditorPreservingScroll();
+    }
+
+    function addVariantPoi(stageIndex, variantIndex) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        if (!variant) return;
+        if (!Array.isArray(variant.pois)) variant.pois = [];
+        variant.pois.push(normalizePoi({}));
+        syncStagePoiAliases(variant);
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateVariantPoi(stageIndex, variantIndex, poiIndex, field, value) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        const poi = variant?.pois?.[poiIndex];
+        if (!poi) return;
+        poi[field] = value;
+        syncStagePoiAliases(variant);
+        if (field === "name") {
+            const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-variant-card[data-variant-index="${variantIndex}"] .studio-subitem-card[data-poi-index="${poiIndex}"] strong`);
+            if (heading) heading.textContent = safeText(value, `POI ${poiIndex + 1}`);
+        }
+        markModified();
+    }
+
+    function deleteVariantPoi(stageIndex, variantIndex, poiIndex) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        if (!Array.isArray(variant?.pois)) return;
+        variant.pois.splice(poiIndex, 1);
+        syncStagePoiAliases(variant);
+        rerenderEditorPreservingScroll();
+    }
+
+    function addVariantWarning(stageIndex, variantIndex) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        if (!variant) return;
+        if (!Array.isArray(variant.warning)) variant.warning = [];
+        variant.warning.push("");
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateVariantWarning(stageIndex, variantIndex, warningIndex, value) {
+        const warnings = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.warning;
+        if (!Array.isArray(warnings)) return;
+        warnings[warningIndex] = value;
+        markModified();
+    }
+
+    function deleteVariantWarning(stageIndex, variantIndex, warningIndex) {
+        const warnings = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.warning;
+        if (!Array.isArray(warnings)) return;
+        warnings.splice(warningIndex, 1);
         rerenderEditorPreservingScroll();
     }
 
@@ -1242,12 +1742,17 @@
         const clone = structuredClone(roadbook);
         clone.stages = clone.stages.map(stage => ({
             ...stage,
+            pois: normalizePois(stage.pois),
+            pointsOfInterest: normalizePois(stage.pois),
+            interest: normalizePois(stage.pois),
+            warning: normalizeStringList(stage.warning),
             accommodation: normalizeStageAccommodation(stage.accommodation),
             noteItems: normalizeStageNoteItems(stage.noteItems),
             substeps: normalizeVariants(stage.variants),
             variants: normalizeVariants(stage.variants)
         }));
         clone.accommodation = normalizeRoadbookAccommodations(clone.accommodation);
+        clone.pois = normalizeRoadbookPois(clone.pois);
         clone.notes = normalizeRoadbookNotes(clone.notes);
         clone.contributions = normalizeContributions(clone.contributions);
         clone.variants = clone.stages.flatMap(stage =>
