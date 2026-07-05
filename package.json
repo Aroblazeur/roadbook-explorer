@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "create-roadbook": "node scripts/create-roadbook.js",
+    "publish:roadbook": "node scripts/publish-roadbook-from-workflow.js",
     "sync:roadbooks": "node scripts/sync-roadbook-json.js",
     "enrich:accommodations": "node scripts/enrich-accommodations.js",
     "enrich:pois": "node scripts/enrich-pois.js"

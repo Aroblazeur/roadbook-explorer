@@ -3,6 +3,8 @@
 (function initializeRoadbookStudio() {
     const CATALOG_PATH = "roadbooks/catalog.json";
     const ROADBOOK_PATH = id => `roadbooks/${encodeURIComponent(id)}/roadbook.json`;
+    const GITHUB_REPOSITORY = "Aroblazeur/roadbook-explorer";
+    const PUBLISH_WORKFLOW_FILE = "publish-roadbook.yml";
     const PRIMARY_METADATA_KEYS = ["project"];
     const METADATA_LABELS = {
         project: "Projet"
@@ -36,6 +38,7 @@
         addStage: document.getElementById("studio-add-stage"),
         downloadJson: document.getElementById("studio-download-json"),
         exportGithub: document.getElementById("studio-export-github"),
+        publishGithub: document.getElementById("studio-publish-github"),
         stageTemplate: document.getElementById("studio-stage-template"),
         variantTemplate: document.getElementById("studio-variant-template")
     };
@@ -47,6 +50,7 @@
     elements.addStage?.addEventListener("click", handleAddStage);
     elements.downloadJson?.addEventListener("click", downloadCurrentRoadbookJson);
     elements.exportGithub?.addEventListener("click", downloadGithubIntegrationExport);
+    elements.publishGithub?.addEventListener("click", prepareGithubActionsPublish);
 
     loadCatalog();
 
@@ -501,6 +505,7 @@
         elements.addStage.disabled = false;
         elements.downloadJson.disabled = false;
         if (elements.exportGithub) elements.exportGithub.disabled = false;
+        if (elements.publishGithub) elements.publishGithub.disabled = false;
     }
 
     function createExportPathHint(roadbook) {
@@ -515,12 +520,16 @@
         configPath.innerHTML = `Config cible attendue : <code>roadbooks/${escapeHtml(id)}/config.js</code>.`;
         const catalogInstruction = document.createElement("p");
         catalogInstruction.innerHTML = `Catalogue : ajouter <code>${escapeHtml(id)}</code> au tableau <code>roadbooks</code> de <code>roadbooks/catalog.json</code>.`;
+        const publishInstruction = document.createElement("p");
+        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier via GitHub Actions</strong> prépare un paquet pour le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code>, qui commit directement ces fichiers sur <code>main</code>.`;
+        const workflowLink = document.createElement("p");
+        workflowLink.innerHTML = `Workflow : <a href="https://github.com/${escapeHtml(GITHUB_REPOSITORY)}/actions/workflows/${escapeHtml(PUBLISH_WORKFLOW_FILE)}" target="_blank" rel="noopener noreferrer">ouvrir GitHub Actions</a>.`;
         const meta = document.createElement("p");
         meta.className = "studio-roadbook-card__meta";
         meta.textContent = state.catalogIds.includes(id)
             ? "Roadbook chargé depuis le catalogue existant."
             : "Roadbook créé localement, pas encore présent dans le catalogue. Utilise « Exporter pour GitHub » pour récupérer les fichiers d’intégration.";
-        section.append(title, text, configPath, catalogInstruction, meta);
+        section.append(title, text, configPath, catalogInstruction, publishInstruction, workflowLink, meta);
         return section;
     }
 
@@ -2404,6 +2413,106 @@
         setStatus(`Export GitHub généré pour "${safeText(exportPayload.title, id)}" · fichiers à placer dans roadbooks/${id}/.`);
     }
 
+    async function prepareGithubActionsPublish() {
+        if (!state.selectedRoadbook) return;
+
+        const exportPayload = buildExportRoadbook(state.selectedRoadbook);
+        const id = normalizeRoadbookId(exportPayload.id || state.selectedRoadbookId);
+        if (!id) {
+            setStatus("Publication GitHub impossible : ID du roadbook invalide.");
+            return;
+        }
+
+        const roadbook = { ...exportPayload, id };
+        const publicationPayload = {
+            roadbookId: id,
+            generatedAt: new Date().toISOString(),
+            roadbookJson: JSON.stringify(roadbook, null, 2),
+            configJs: buildRoadbookConfigJs(roadbook)
+        };
+
+        try {
+            setStatus("Preparation du paquet de publication GitHub Actions...");
+            const encodedPayload = await encodeWorkflowPayload(publicationPayload);
+            const workflowCommand = buildWorkflowDispatchCommand({
+                id,
+                encoding: encodedPayload.encoding,
+                payloadBase64: encodedPayload.payloadBase64
+            });
+
+            downloadTextFile(`${id}-publish-payload.json`, JSON.stringify({
+                workflow: PUBLISH_WORKFLOW_FILE,
+                repository: GITHUB_REPOSITORY,
+                roadbookId: id,
+                payloadEncoding: encodedPayload.encoding,
+                payloadBase64: encodedPayload.payloadBase64
+            }, null, 2), "application/json");
+            downloadTextFile(`${id}-publish-github.ps1`, workflowCommand, "text/plain");
+            const copied = await copyTextToClipboard(workflowCommand);
+
+            setStatus(`Publication prete pour "${safeText(roadbook.title, id)}" : commande GitHub CLI ${copied ? "copiee" : "telechargee"}. Lance-la pour declencher le commit direct sur main.`);
+            window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
+        } catch (error) {
+            console.error("[Studio] Preparation publication GitHub impossible", error);
+            setStatus("Impossible de preparer la publication GitHub Actions. Consulte la console pour le detail.");
+        }
+    }
+
+    async function encodeWorkflowPayload(payload) {
+        const json = JSON.stringify(payload);
+        if (typeof CompressionStream !== "undefined") {
+            const stream = new Blob([json], { type: "application/json" })
+                .stream()
+                .pipeThrough(new CompressionStream("gzip"));
+            const compressed = await new Response(stream).arrayBuffer();
+            return {
+                encoding: "gzip-base64",
+                payloadBase64: arrayBufferToBase64(compressed)
+            };
+        }
+
+        return {
+            encoding: "json-base64",
+            payloadBase64: arrayBufferToBase64(new TextEncoder().encode(json).buffer)
+        };
+    }
+
+    function arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        const chunkSize = 0x8000;
+        let binary = "";
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+            binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+        }
+        return btoa(binary);
+    }
+
+    function buildWorkflowDispatchCommand({ id, encoding, payloadBase64 }) {
+        return [
+            `gh workflow run ${PUBLISH_WORKFLOW_FILE}`,
+            `--repo ${GITHUB_REPOSITORY}`,
+            "--ref main",
+            `--field roadbook_id=${quotePowerShellArgument(id)}`,
+            `--field payload_encoding=${quotePowerShellArgument(encoding)}`,
+            `--field payload_base64=${quotePowerShellArgument(payloadBase64)}`
+        ].join(" ") + "\n";
+    }
+
+    function quotePowerShellArgument(value) {
+        return `"${String(value || "").replace(/"/g, '`"')}"`;
+    }
+
+    async function copyTextToClipboard(text) {
+        if (!navigator.clipboard?.writeText) return false;
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (error) {
+            console.warn("[Studio] Clipboard indisponible", error);
+            return false;
+        }
+    }
+
     function downloadTextFile(filename, content, type = "text/plain") {
         const blob = new Blob([content], { type });
         const url = URL.createObjectURL(blob);
@@ -2598,6 +2707,7 @@
         elements.addStage.disabled = true;
         elements.downloadJson.disabled = true;
         if (elements.exportGithub) elements.exportGithub.disabled = true;
+        if (elements.publishGithub) elements.publishGithub.disabled = true;
     }
 
     function setStatus(message) {
