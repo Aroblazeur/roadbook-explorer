@@ -227,7 +227,44 @@
   margin-top: 0.1rem;
 }
 
-.terrain-button--secondary {
+.studio-stage-card__toggle {
+  cursor: pointer;
+  user-select: none;
+}
+
+.studio-stage-card__toggle:hover {
+  background: rgba(46, 125, 50, 0.04);
+  border-radius: 0.7rem;
+}
+
+.studio-stage-card__header-info {
+  min-width: 0;
+}
+
+.studio-stage-card__summary {
+  margin: 0.1rem 0 0;
+  color: var(--studio-muted);
+  font-size: 0.88rem;
+  font-weight: 400;
+}
+
+.studio-stage-card[data-expanded="true"] .studio-stage-card__toggle::after {
+  content: " ▴";
+  color: var(--studio-muted);
+  font-size: 0.75rem;
+}
+
+.studio-stage-card[data-expanded="false"] .studio-stage-card__toggle::after {
+  content: " ▾";
+  color: var(--studio-muted);
+  font-size: 0.75rem;
+}
+
+.studio-stage-card__body {
+  margin-top: 1rem;
+}
+
+
   background: rgba(46, 125, 50, 0.12);
   color: #1d4f21;
 }

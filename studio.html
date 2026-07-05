@@ -51,67 +51,70 @@
   </main>
 
   <template id="studio-stage-template">
-    <article class="studio-stage-card">
-      <div class="studio-stage-card__header">
-        <div>
+    <article class="studio-stage-card" data-expanded="false">
+      <div class="studio-stage-card__header studio-stage-card__toggle">
+        <div class="studio-stage-card__header-info">
           <p class="studio-stage-card__eyebrow">Étape</p>
           <h3 class="studio-stage-card__title"></h3>
+          <p class="studio-stage-card__summary"></p>
         </div>
         <div class="studio-stage-card__actions">
           <button type="button" class="terrain-button terrain-button--secondary" data-action="add-variant">Ajouter une variante</button>
-          <button type="button" class="terrain-button terrain-button--danger" data-action="delete-stage">Supprimer l’étape</button>
+          <button type="button" class="terrain-button terrain-button--danger" data-action="delete-stage">Supprimer l'étape</button>
         </div>
       </div>
 
-      <div class="studio-form-grid">
-        <label>
-          Numéro d’étape
-          <input data-field="stage" type="number" min="1" step="1">
-        </label>
-        <label>
-          Titre
-          <input data-field="title" type="text">
-        </label>
-        <label>
-          Départ
-          <input data-field="departure" type="text">
-        </label>
-        <label>
-          Arrivée
-          <input data-field="arrival" type="text">
-        </label>
-        <label>
-          Distance (km)
-          <input data-field="distance" type="number" step="0.1">
-        </label>
-        <label>
-          D+ (m)
-          <input data-field="elevationGain" type="number" step="1">
-        </label>
-        <label>
-          D− (m)
-          <input data-field="elevationLoss" type="number" step="1">
-        </label>
-        <label class="studio-form-grid__full">
-          Photo de l'étape
-          <input data-field="stagePhoto" type="text">
-        </label>
-        <label class="studio-form-grid__full">
-          Description
-          <textarea data-field="description" rows="3"></textarea>
-        </label>
-        <label class="studio-form-grid__full">
-          Type d'hébergement
-          <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
-        </label>
-      </div>
-
-      <section class="studio-variants" aria-label="Variantes de l'étape">
-        <div class="studio-variants__header">
-          <h4>Variantes</h4>
+      <div class="studio-stage-card__body" hidden>
+        <div class="studio-form-grid">
+          <label>
+            Numéro d'étape
+            <input data-field="stage" type="number" min="1" step="1">
+          </label>
+          <label>
+            Titre
+            <input data-field="title" type="text">
+          </label>
+          <label>
+            Départ
+            <input data-field="departure" type="text">
+          </label>
+          <label>
+            Arrivée
+            <input data-field="arrival" type="text">
+          </label>
+          <label>
+            Distance (km)
+            <input data-field="distance" type="number" step="0.1">
+          </label>
+          <label>
+            D+ (m)
+            <input data-field="elevationGain" type="number" step="1">
+          </label>
+          <label>
+            D− (m)
+            <input data-field="elevationLoss" type="number" step="1">
+          </label>
+          <label>
+            Photo de l'étape
+            <input data-field="stagePhoto" type="text">
+          </label>
+          <label>
+            Type d'hébergement
+            <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
+          </label>
+          <label class="studio-form-grid__full">
+            Description
+            <textarea data-field="description" rows="3"></textarea>
+          </label>
         </div>
-        <div class="studio-variant-list"></div>
-      </section>
+
+        <section class="studio-variants" aria-label="Variantes de l'étape">
+          <div class="studio-variants__header">
+            <h4>Variantes</h4>
+          </div>
+          <div class="studio-variant-list"></div>
+        </section>
+      </div>
     </article>
   </template>
 
