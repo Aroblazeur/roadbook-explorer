@@ -592,9 +592,11 @@
         if (body) body.hidden = !isExpanded;
 
         const header = fragment.querySelector(".studio-stage-card__header");
-        if (header) {
-            header.addEventListener("click", event => {
-                if (event.target.closest("[data-action]")) return;
+        const toggleZone = fragment.querySelector(".studio-stage-card__header-info");
+        if (header && toggleZone) {
+            toggleZone.setAttribute("role", "button");
+            toggleZone.setAttribute("tabindex", "0");
+            const toggleStage = () => {
                 const expanded = card.dataset.expanded === "true";
                 card.dataset.expanded = expanded ? "false" : "true";
                 if (body) body.hidden = expanded;
@@ -602,6 +604,15 @@
                     state.expandedStages.delete(stageIndex);
                 } else {
                     state.expandedStages.add(stageIndex);
+                }
+                toggleZone.setAttribute("aria-expanded", String(!expanded));
+            };
+            toggleZone.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+            toggleZone.addEventListener("click", toggleStage);
+            toggleZone.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    toggleStage();
                 }
             });
         }
@@ -718,6 +729,15 @@
         return section;
     }
 
+    function createLienField(currentWebsite, currentUrl, onLienChange) {
+        return createBoundField({
+            label: "Lien",
+            value: currentWebsite || currentUrl || "",
+            fullWidth: true,
+            onChange: value => onLienChange(value.trim())
+        });
+    }
+
     function createStageAccommodationEditor(stageIndex, stage) {
         const section = document.createElement("section");
         section.className = "studio-stage-extra";
@@ -739,12 +759,10 @@
                 onChange: value => updateStageAccommodationField(stageIndex, field, value.trim())
             }));
         });
-        grid.appendChild(createBoundField({
-            label: "Lien",
-            value: stage.accommodation?.website || stage.accommodation?.url || "",
-            fullWidth: true,
-            onChange: value => {
-                const v = value.trim();
+        grid.appendChild(createLienField(
+            stage.accommodation?.website,
+            stage.accommodation?.url,
+            v => {
                 const accommodation = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation;
                 if (accommodation) {
                     accommodation.website = v;
@@ -752,7 +770,7 @@
                     markModified();
                 }
             }
-        }));
+        ));
         section.appendChild(grid);
 
         const alternativesSection = document.createElement("div");
@@ -1114,12 +1132,10 @@
                 onChange: value => updateRoadbookAccommodation(accommodationIndex, field, value.trim())
             }));
         });
-        grid.appendChild(createBoundField({
-            label: "Lien",
-            value: item.website || item.url || "",
-            fullWidth: true,
-            onChange: value => {
-                const v = value.trim();
+        grid.appendChild(createLienField(
+            item.website,
+            item.url,
+            v => {
                 const accommodation = state.selectedRoadbook?.accommodation?.[accommodationIndex];
                 if (accommodation) {
                     accommodation.website = v;
@@ -1127,7 +1143,7 @@
                     markModified();
                 }
             }
-        }));
+        ));
         card.appendChild(grid);
         return card;
     }
