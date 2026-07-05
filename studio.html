@@ -15,7 +15,7 @@
       <div class="header-title-wrapper">
         <h1>RoadBook Studio</h1>
       </div>
-      <p class="studio-header__subtitle">Édition locale JSON-first — Sprint 4B.</p>
+      <p class="studio-header__subtitle">Édition locale JSON-first — Sprint 4E.</p>
     </div>
   </header>
 
@@ -65,47 +65,50 @@
       </div>
 
       <div class="studio-stage-card__body" hidden>
-        <div class="studio-form-grid">
-          <label>
-            Numéro d'étape
-            <input data-field="stage" type="number" min="1" step="1">
-          </label>
-          <label>
-            Titre
-            <input data-field="title" type="text">
-          </label>
-          <label>
-            Départ
-            <input data-field="departure" type="text">
-          </label>
-          <label>
-            Arrivée
-            <input data-field="arrival" type="text">
-          </label>
-          <label>
-            Distance (km)
-            <input data-field="distance" type="number" step="0.1">
-          </label>
-          <label>
-            D+ (m)
-            <input data-field="elevationGain" type="number" step="1">
-          </label>
-          <label>
-            D− (m)
-            <input data-field="elevationLoss" type="number" step="1">
-          </label>
-          <label>
-            Photo de l'étape
-            <input data-field="stagePhoto" type="text">
-          </label>
-          <label>
-            Type d'hébergement
-            <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
-          </label>
-          <label class="studio-form-grid__full">
-            Description
-            <textarea data-field="description" rows="3"></textarea>
-          </label>
+        <div class="studio-zone studio-zone--info">
+          <h4 class="studio-zone__title">Informations d'étape</h4>
+          <div class="studio-form-grid">
+            <label>
+              Numéro d'étape
+              <input data-field="stage" type="number" min="1" step="1">
+            </label>
+            <label>
+              Titre
+              <input data-field="title" type="text">
+            </label>
+            <label>
+              Départ
+              <input data-field="departure" type="text">
+            </label>
+            <label>
+              Arrivée
+              <input data-field="arrival" type="text">
+            </label>
+            <label>
+              Distance (km)
+              <input data-field="distance" type="number" step="0.1">
+            </label>
+            <label>
+              D+ (m)
+              <input data-field="elevationGain" type="number" step="1">
+            </label>
+            <label>
+              D− (m)
+              <input data-field="elevationLoss" type="number" step="1">
+            </label>
+            <label>
+              Photo de l'étape
+              <input data-field="stagePhoto" type="text">
+            </label>
+            <label>
+              Type d'hébergement
+              <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
+            </label>
+            <label class="studio-form-grid__full">
+              Description
+              <textarea data-field="description" rows="3"></textarea>
+            </label>
+          </div>
         </div>
 
       </div>
@@ -126,54 +129,57 @@
       </div>
 
       <div class="studio-variant-card__body" hidden>
-        <div class="studio-form-grid studio-form-grid--variant">
-          <label>
-            Nom
-            <input data-field="name" type="text">
-          </label>
-          <label>
-            Type
-            <input data-field="type" type="text" placeholder="Variante, option, raccourci…">
-          </label>
-          <label>
-            Départ
-            <input data-field="departure" type="text">
-          </label>
-          <label>
-            Arrivée
-            <input data-field="arrival" type="text">
-          </label>
-          <label>
-            Distance (km)
-            <input data-field="distance" type="number" step="0.1">
-          </label>
-          <label>
-            D+ (m)
-            <input data-field="elevationGain" type="number" step="1">
-          </label>
-          <label>
-            D− (m)
-            <input data-field="elevationLoss" type="number" step="1">
-          </label>
-          <label>
-            Photo
-            <input data-field="stagePhoto" type="text">
-          </label>
-          <label>
-            Type d'hébergement
-            <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
-          </label>
-          <label class="studio-form-grid__full">
-            Description
-            <textarea data-field="description" rows="3"></textarea>
-          </label>
+        <div class="studio-zone studio-zone--info">
+          <h4 class="studio-zone__title">Informations générales</h4>
+          <div class="studio-form-grid studio-form-grid--variant">
+            <label>
+              Nom
+              <input data-field="name" type="text">
+            </label>
+            <label>
+              Type
+              <input data-field="type" type="text" placeholder="Variante, option, raccourci…">
+            </label>
+            <label>
+              Départ
+              <input data-field="departure" type="text">
+            </label>
+            <label>
+              Arrivée
+              <input data-field="arrival" type="text">
+            </label>
+            <label>
+              Distance (km)
+              <input data-field="distance" type="number" step="0.1">
+            </label>
+            <label>
+              D+ (m)
+              <input data-field="elevationGain" type="number" step="1">
+            </label>
+            <label>
+              D− (m)
+              <input data-field="elevationLoss" type="number" step="1">
+            </label>
+            <label>
+              Photo
+              <input data-field="stagePhoto" type="text">
+            </label>
+            <label>
+              Type d'hébergement
+              <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
+            </label>
+            <label class="studio-form-grid__full">
+              Description
+              <textarea data-field="description" rows="3"></textarea>
+            </label>
+          </div>
         </div>
       </div>
     </article>
   </template>
 
   <footer>
-    <p>RoadBook Studio · Sprint 4B</p>
+    <p>RoadBook Studio · Sprint 4E</p>
   </footer>
 
   <script src="studio/studio-app.js"></script>
