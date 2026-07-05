@@ -295,6 +295,64 @@
   color: #8b1e1e;
 }
 
+/* ── Visual editor zones ───────────────────────────────── */
+
+.studio-zone {
+  margin-top: 1rem;
+  padding: 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.studio-zone__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.studio-zone .studio-form-grid,
+.studio-zone .studio-form-grid--compact {
+  margin-top: 0.5rem;
+}
+
+.studio-zone .studio-stage-extra:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.studio-zone--info {
+  background: rgba(46, 125, 50, 0.05);
+  border-color: rgba(46, 125, 50, 0.18);
+}
+.studio-zone--info .studio-zone__title { color: #2e7d32; }
+
+.studio-zone--trace {
+  background: rgba(25, 118, 210, 0.05);
+  border-color: rgba(25, 118, 210, 0.18);
+}
+.studio-zone--trace .studio-zone__title { color: #1565c0; }
+
+.studio-zone--accommodation {
+  background: rgba(103, 58, 183, 0.05);
+  border-color: rgba(103, 58, 183, 0.18);
+}
+.studio-zone--accommodation .studio-zone__title { color: #4527a0; }
+
+.studio-zone--alternatives {
+  background: rgba(230, 81, 0, 0.05);
+  border-color: rgba(230, 81, 0, 0.18);
+}
+.studio-zone--alternatives .studio-zone__title { color: #bf360c; }
+
+.studio-zone--notes {
+  background: rgba(78, 52, 46, 0.05);
+  border-color: rgba(78, 52, 46, 0.18);
+}
+.studio-zone--notes .studio-zone__title { color: #4e342e; }
+
 @media (max-width: 960px) {
   .studio-layout {
     grid-template-columns: 1fr;

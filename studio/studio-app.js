@@ -638,10 +638,15 @@
         fragment.querySelector('[data-action="add-variant"]').addEventListener("click", () => addVariant(stageIndex));
 
         const appendTarget = body || card;
-        appendTarget.appendChild(createStageReferencesEditor(stageIndex, stage));
-        appendTarget.appendChild(createStagePoisEditor(stageIndex, stage.pois || []));
-        appendTarget.appendChild(createStageAccommodationEditor(stageIndex, stage));
-        appendTarget.appendChild(createStageNotesEditor(stageIndex, stage.noteItems || []));
+        appendTarget.appendChild(createEditorZone("trace", "Tracé · Carte · Points d'intérêt", [
+            createStageReferencesEditor(stageIndex, stage),
+            createStagePoisEditor(stageIndex, stage.pois || [])
+        ]));
+        appendTarget.appendChild(createStageMainAccommodationEditor(stageIndex, stage));
+        appendTarget.appendChild(createStageAlternativeAccommodationsEditor(stageIndex, stage));
+        appendTarget.appendChild(createEditorZone("notes", "Notes", [
+            createStageNotesEditor(stageIndex, stage.noteItems || [])
+        ]));
 
         card.dataset.stageIndex = String(stageIndex);
         card.dataset.stageNumber = String(stage.stage ?? "");
@@ -711,10 +716,15 @@
         bindVariantField(fragment, "accommodationType", variant.accommodationType, value => updateVariant(stageIndex, variantIndex, "accommodationType", value.trim()));
         bindVariantField(fragment, "description", variant.description, value => updateVariant(stageIndex, variantIndex, "description", value.trim()));
         const appendTarget = body || variantCard;
-        appendTarget.appendChild(createVariantReferencesEditor(stageIndex, variantIndex, variant));
-        appendTarget.appendChild(createVariantPoisEditor(stageIndex, variantIndex, variant.pois || []));
-        appendTarget.appendChild(createVariantAccommodationEditor(stageIndex, variantIndex, variant));
-        appendTarget.appendChild(createVariantNotesEditor(stageIndex, variantIndex, variant.noteItems || []));
+        appendTarget.appendChild(createEditorZone("trace", "Tracé · Carte · Points d'intérêt", [
+            createVariantReferencesEditor(stageIndex, variantIndex, variant),
+            createVariantPoisEditor(stageIndex, variantIndex, variant.pois || [])
+        ]));
+        appendTarget.appendChild(createVariantMainAccommodationEditor(stageIndex, variantIndex, variant));
+        appendTarget.appendChild(createVariantAlternativeAccommodationsEditor(stageIndex, variantIndex, variant));
+        appendTarget.appendChild(createEditorZone("notes", "Notes", [
+            createVariantNotesEditor(stageIndex, variantIndex, variant.noteItems || [])
+        ]));
         fragment.querySelector('[data-action="delete-variant"]').addEventListener("click", () => deleteVariant(stageIndex, variantIndex));
         return fragment;
     }
@@ -740,6 +750,17 @@
             parts.push(`${variant.distance} km`);
         }
         return parts.join(" · ");
+    }
+
+    function createEditorZone(colorKey, title, children) {
+        const zone = document.createElement("div");
+        zone.className = `studio-zone studio-zone--${colorKey}`;
+        const heading = document.createElement("h4");
+        heading.className = "studio-zone__title";
+        heading.textContent = title;
+        zone.appendChild(heading);
+        (Array.isArray(children) ? children : [children]).forEach(child => zone.appendChild(child));
+        return zone;
     }
 
     function createStageReferencesEditor(stageIndex, stage) {
@@ -800,17 +821,15 @@
         });
     }
 
-    function createStageAccommodationEditor(stageIndex, stage) {
-        const section = document.createElement("section");
-        section.className = "studio-stage-extra";
-        section.setAttribute("aria-label", "Hébergement principal de l’étape");
+    function createStageMainAccommodationEditor(stageIndex, stage) {
+        const zone = document.createElement("div");
+        zone.className = "studio-zone studio-zone--accommodation";
+        zone.setAttribute("aria-label", "Hébergement principal de l'étape");
 
-        const header = document.createElement("div");
-        header.className = "studio-stage-extra__header";
-        const title = document.createElement("h4");
-        title.textContent = "Hébergement";
-        header.appendChild(title);
-        section.appendChild(header);
+        const heading = document.createElement("h4");
+        heading.className = "studio-zone__title";
+        heading.textContent = "Hébergement principal";
+        zone.appendChild(heading);
 
         const grid = document.createElement("div");
         grid.className = "studio-form-grid studio-form-grid--compact";
@@ -834,43 +853,46 @@
                 }
             }
         ));
-        section.appendChild(grid);
+        zone.appendChild(grid);
+        return zone;
+    }
 
-        const alternativesSection = document.createElement("div");
-        alternativesSection.className = "studio-sublist";
-        const alternativesHeader = document.createElement("div");
-        alternativesHeader.className = "studio-stage-extra__header";
-        const alternativesTitle = document.createElement("h5");
-        alternativesTitle.textContent = "Hébergements alternatifs";
+    function createStageAlternativeAccommodationsEditor(stageIndex, stage) {
+        const zone = document.createElement("div");
+        zone.className = "studio-zone studio-zone--alternatives";
+        zone.setAttribute("aria-label", "Hébergements alternatifs de l'étape");
+
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const heading = document.createElement("h4");
+        heading.className = "studio-zone__title";
+        heading.textContent = "Hébergements alternatifs";
         const addButton = document.createElement("button");
         addButton.type = "button";
         addButton.className = "terrain-button terrain-button--secondary";
         addButton.textContent = "Ajouter un hébergement";
         addButton.addEventListener("click", () => addStageAccommodationAlternative(stageIndex));
-        alternativesHeader.append(alternativesTitle, addButton);
-        alternativesSection.appendChild(alternativesHeader);
+        header.append(heading, addButton);
+        zone.appendChild(header);
 
         const alternativesList = document.createElement("div");
         alternativesList.className = "studio-sublist__list";
         (stage.accommodation?.alternatives || []).forEach((alternative, alternativeIndex) => {
             alternativesList.appendChild(createStageAccommodationAlternativeEditor(stageIndex, alternative, alternativeIndex));
         });
-        alternativesSection.appendChild(alternativesList);
-        section.appendChild(alternativesSection);
-        return section;
+        zone.appendChild(alternativesList);
+        return zone;
     }
 
-    function createVariantAccommodationEditor(stageIndex, variantIndex, variant) {
-        const section = document.createElement("section");
-        section.className = "studio-stage-extra";
-        section.setAttribute("aria-label", "Hébergement de la variante");
+    function createVariantMainAccommodationEditor(stageIndex, variantIndex, variant) {
+        const zone = document.createElement("div");
+        zone.className = "studio-zone studio-zone--accommodation";
+        zone.setAttribute("aria-label", "Hébergement principal de la variante");
 
-        const header = document.createElement("div");
-        header.className = "studio-stage-extra__header";
-        const title = document.createElement("h4");
-        title.textContent = "Hébergement";
-        header.appendChild(title);
-        section.appendChild(header);
+        const heading = document.createElement("h4");
+        heading.className = "studio-zone__title";
+        heading.textContent = "Hébergement principal";
+        zone.appendChild(heading);
 
         const grid = document.createElement("div");
         grid.className = "studio-form-grid studio-form-grid--compact";
@@ -889,30 +911,35 @@
                 updateVariantAccommodationField(stageIndex, variantIndex, "url", value);
             }
         ));
-        section.appendChild(grid);
+        zone.appendChild(grid);
+        return zone;
+    }
 
-        const alternativesSection = document.createElement("div");
-        alternativesSection.className = "studio-sublist";
-        const alternativesHeader = document.createElement("div");
-        alternativesHeader.className = "studio-stage-extra__header";
-        const alternativesTitle = document.createElement("h5");
-        alternativesTitle.textContent = "Hébergements alternatifs";
+    function createVariantAlternativeAccommodationsEditor(stageIndex, variantIndex, variant) {
+        const zone = document.createElement("div");
+        zone.className = "studio-zone studio-zone--alternatives";
+        zone.setAttribute("aria-label", "Hébergements alternatifs de la variante");
+
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const heading = document.createElement("h4");
+        heading.className = "studio-zone__title";
+        heading.textContent = "Hébergements alternatifs";
         const addButton = document.createElement("button");
         addButton.type = "button";
         addButton.className = "terrain-button terrain-button--secondary";
         addButton.textContent = "Ajouter un hébergement";
         addButton.addEventListener("click", () => addVariantAccommodationAlternative(stageIndex, variantIndex));
-        alternativesHeader.append(alternativesTitle, addButton);
-        alternativesSection.appendChild(alternativesHeader);
+        header.append(heading, addButton);
+        zone.appendChild(header);
 
         const alternativesList = document.createElement("div");
         alternativesList.className = "studio-sublist__list";
         (variant.accommodation?.alternatives || []).forEach((alternative, alternativeIndex) => {
             alternativesList.appendChild(createVariantAccommodationAlternativeEditor(stageIndex, variantIndex, alternative, alternativeIndex));
         });
-        alternativesSection.appendChild(alternativesList);
-        section.appendChild(alternativesSection);
-        return section;
+        zone.appendChild(alternativesList);
+        return zone;
     }
 
     function createStagePoisEditor(stageIndex, pois) {
@@ -1243,7 +1270,7 @@
             fullWidth: true,
             onChange: value => updateStageNote(stageIndex, noteIndex, "text", value.trim())
         }));
-        ["photo", "createdAt", "source"].forEach(field => {
+        ["photo"].forEach(field => {
             grid.appendChild(createBoundField({
                 label: getNoteFieldLabel(field),
                 value: note[field] ?? "",
@@ -1279,7 +1306,7 @@
             fullWidth: true,
             onChange: value => updateVariantNote(stageIndex, variantIndex, noteIndex, "text", value.trim())
         }));
-        ["photo", "createdAt", "source"].forEach(field => {
+        ["photo"].forEach(field => {
             grid.appendChild(createBoundField({
                 label: getNoteFieldLabel(field),
                 value: note[field] ?? "",
