@@ -436,3 +436,24 @@
     margin-left: 0.75rem;
   }
 }
+
+.studio-gpx-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.studio-gpx-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--studio-muted);
+}
+
+.studio-gpx-status--success {
+  color: #2e7d32;
+}
+
+.studio-gpx-status--error {
+  color: #c62828;
+}

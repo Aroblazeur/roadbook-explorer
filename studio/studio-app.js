@@ -624,7 +624,7 @@
             { field: "distance", label: "Distance", inputType: "number" },
             { field: "elevationGain", label: "D+", inputType: "number" },
             { field: "elevationLoss", label: "D−", inputType: "number" },
-            { field: "gpx", label: "GPS" },
+            { field: "gpx", label: "GPX" },
             { field: "mapEmbedUrl", label: "Carte intégrée" }
         ].forEach(({ field, label, inputType = "text" }) => {
             officialGrid.appendChild(createBoundField({
@@ -650,7 +650,7 @@
         const tracedGrid = document.createElement("div");
         tracedGrid.className = "studio-form-grid studio-form-grid--compact";
         [
-            { field: "gpx", label: "GPS" },
+            { field: "gpx", label: "GPX" },
             { field: "mapEmbedUrl", label: "Carte intégrée" }
         ].forEach(({ field, label }) => {
             tracedGrid.appendChild(createBoundField({
@@ -957,7 +957,8 @@
             title: "GPX et carte",
             values: stage,
             skipFields: ["stagePhoto"],
-            onChange: (field, value) => updateStage(stageIndex, field, value.trim())
+            onChange: (field, value) => updateStage(stageIndex, field, value.trim()),
+            computeGpx: gpxVal => setStageStatsFromGpx(stageIndex, gpxVal)
         });
     }
 
@@ -966,11 +967,12 @@
             title: "GPX et carte",
             values: variant,
             skipFields: ["stagePhoto"],
-            onChange: (field, value) => updateVariant(stageIndex, variantIndex, field, value.trim())
+            onChange: (field, value) => updateVariant(stageIndex, variantIndex, field, value.trim()),
+            computeGpx: gpxVal => setVariantStatsFromGpx(stageIndex, variantIndex, gpxVal)
         });
     }
 
-    function createReferencesEditor({ title, values, onChange, extraFields = [], skipFields = [] }) {
+    function createReferencesEditor({ title, values, onChange, extraFields = [], skipFields = [], computeGpx = null }) {
         const section = document.createElement("section");
         section.className = "studio-stage-extra";
         const header = document.createElement("div");
@@ -984,7 +986,7 @@
         grid.className = "studio-form-grid studio-form-grid--compact";
         [
             ...extraFields,
-            { field: "gpx", label: "GPS" },
+            { field: "gpx", label: "GPX" },
             { field: "mapEmbedUrl", label: "Carte intégrée" },
             { field: "stagePhoto", label: "Photo de l’étape" }
         ].filter(({ field }) => !skipFields.includes(field))
@@ -998,6 +1000,27 @@
             }));
         });
         section.appendChild(grid);
+
+        if (typeof computeGpx === "function") {
+            const actions = document.createElement("div");
+            actions.className = "studio-gpx-actions";
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "terrain-button terrain-button--secondary";
+            button.textContent = "Calculer depuis le GPX";
+            const status = document.createElement("p");
+            status.className = "studio-gpx-status";
+            status.setAttribute("role", "status");
+            status.setAttribute("aria-live", "polite");
+            button.addEventListener("click", () => {
+                const gpxInput = grid.querySelector("input");
+                const gpxVal = gpxInput ? gpxInput.value : (values?.gpx || "");
+                computeGpx(gpxVal, status);
+            });
+            actions.append(button, status);
+            section.appendChild(actions);
+        }
+
         return section;
     }
 
@@ -2786,5 +2809,155 @@
     function integerOrNull(value) {
         const parsed = Number.parseInt(String(value), 10);
         return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    /* ── GPX parser & stats calculator ── */
+
+    function parseGpxPoints(xmlText) {
+        try {
+            const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+            const errorNode = doc.querySelector("parsererror");
+            if (errorNode) return null;
+            const tracks = doc.querySelectorAll("trkpt");
+            const routes = doc.querySelectorAll("rtept");
+            if (!tracks.length && !routes.length) return null;
+            const points = [];
+            tracks.forEach(pt => {
+                const lat = parseFloat(pt.getAttribute("lat"));
+                const lon = parseFloat(pt.getAttribute("lon"));
+                if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                    points.push({ lat, lon, ele: parseFloat(pt.querySelector("ele")?.textContent) || null });
+                }
+            });
+            routes.forEach(pt => {
+                const lat = parseFloat(pt.getAttribute("lat"));
+                const lon = parseFloat(pt.getAttribute("lon"));
+                if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                    points.push({ lat, lon, ele: parseFloat(pt.querySelector("ele")?.textContent) || null });
+                }
+            });
+            return points.length ? points : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const toRad = d => d * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function computeGpxStats(points) {
+        if (!points || points.length < 2) return null;
+        let distanceKm = 0;
+        let gain = 0;
+        let loss = 0;
+        let prevEle = null;
+        for (let i = 0; i < points.length; i++) {
+            if (i > 0) {
+                distanceKm += haversineKm(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon);
+            }
+            const ele = points[i].ele;
+            if (ele !== null && prevEle !== null) {
+                const diff = ele - prevEle;
+                if (diff > 0) gain += diff;
+                else loss += Math.abs(diff);
+            }
+            if (ele !== null) prevEle = ele;
+        }
+        return {
+            distance: Math.round(distanceKm * 10) / 10,
+            elevationGain: Math.round(gain),
+            elevationLoss: Math.round(loss)
+        };
+    }
+
+    function resolveGpxUrl(gpxFilename) {
+        if (!gpxFilename || !state.selectedRoadbookId) return null;
+        const name = gpxFilename.trim().replace(/^\.?\/+/, "");
+        if (/^https?:\/\//i.test(name)) return name;
+        return `roadbooks/${state.selectedRoadbookId}/gpx/${name}`;
+    }
+
+    async function fetchAndComputeGpx(gpxFilename) {
+        const url = resolveGpxUrl(gpxFilename);
+        if (!url) return { error: "Aucun fichier GPX renseigné." };
+        let response;
+        try {
+            response = await fetch(url, { cache: "no-store" });
+        } catch (_) {
+            return { error: `Impossible de charger le fichier GPX : ${gpxFilename}` };
+        }
+        if (!response.ok) return { error: `Fichier GPX introuvable ou inaccessible (${response.status}) : ${gpxFilename}` };
+        const text = await response.text();
+        const points = parseGpxPoints(text);
+        if (!points) return { error: `Le fichier GPX ne contient aucun point de trace valide : ${gpxFilename}` };
+        const stats = computeGpxStats(points);
+        if (!stats) return { error: `Le fichier GPX contient trop peu de points pour calculer des statistiques.` };
+        return { stats };
+    }
+
+    function setStageStatsFromGpx(stageIndex, gpxFilename, statusEl) {
+        statusEl.textContent = "Calcul en cours…";
+        fetchAndComputeGpx(gpxFilename).then(result => {
+            if (result.error) {
+                statusEl.textContent = result.error;
+                statusEl.classList.add("studio-gpx-status--error");
+                statusEl.classList.remove("studio-gpx-status--success");
+                return;
+            }
+            const { distance, elevationGain, elevationLoss } = result.stats;
+            updateStage(stageIndex, "distance", distance);
+            updateStage(stageIndex, "elevationGain", elevationGain);
+            updateStage(stageIndex, "elevationLoss", elevationLoss);
+            const stageCard = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"]`);
+            if (stageCard) {
+                const distInput = stageCard.querySelector('[data-field="distance"]');
+                if (distInput) distInput.value = distance;
+                const gainInput = stageCard.querySelector('[data-field="elevationGain"]');
+                if (gainInput) gainInput.value = elevationGain;
+                const lossInput = stageCard.querySelector('[data-field="elevationLoss"]');
+                if (lossInput) lossInput.value = elevationLoss;
+                const summaryEl = stageCard.querySelector(".studio-stage-card__summary");
+                if (summaryEl) summaryEl.textContent = buildStageSummaryText(state.selectedRoadbook?.stages?.[stageIndex]);
+            }
+            statusEl.textContent = `GPX calculé : ${distance} km, D+ ${elevationGain} m, D− ${elevationLoss} m`;
+            statusEl.classList.add("studio-gpx-status--success");
+            statusEl.classList.remove("studio-gpx-status--error");
+        });
+    }
+
+    function setVariantStatsFromGpx(stageIndex, variantIndex, gpxFilename, statusEl) {
+        statusEl.textContent = "Calcul en cours…";
+        fetchAndComputeGpx(gpxFilename).then(result => {
+            if (result.error) {
+                statusEl.textContent = result.error;
+                statusEl.classList.add("studio-gpx-status--error");
+                statusEl.classList.remove("studio-gpx-status--success");
+                return;
+            }
+            const { distance, elevationGain, elevationLoss } = result.stats;
+            updateVariant(stageIndex, variantIndex, "distance", distance);
+            updateVariant(stageIndex, variantIndex, "elevationGain", elevationGain);
+            updateVariant(stageIndex, variantIndex, "elevationLoss", elevationLoss);
+            const variantCard = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"]`);
+            if (variantCard) {
+                const distInput = variantCard.querySelector('[data-field="distance"]');
+                if (distInput) distInput.value = distance;
+                const gainInput = variantCard.querySelector('[data-field="elevationGain"]');
+                if (gainInput) gainInput.value = elevationGain;
+                const lossInput = variantCard.querySelector('[data-field="elevationLoss"]');
+                if (lossInput) lossInput.value = elevationLoss;
+                const summaryEl = variantCard.querySelector(".studio-stage-card__summary");
+                if (summaryEl) summaryEl.textContent = buildVariantSummaryText(state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]);
+            }
+            statusEl.textContent = `GPX calculé : ${distance} km, D+ ${elevationGain} m, D− ${elevationLoss} m`;
+            statusEl.classList.add("studio-gpx-status--success");
+            statusEl.classList.remove("studio-gpx-status--error");
+        });
     }
 })();
