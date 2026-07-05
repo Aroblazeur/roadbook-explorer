@@ -35,6 +35,7 @@
         createForm: document.getElementById("studio-create-form"),
         addStage: document.getElementById("studio-add-stage"),
         downloadJson: document.getElementById("studio-download-json"),
+        exportGithub: document.getElementById("studio-export-github"),
         stageTemplate: document.getElementById("studio-stage-template"),
         variantTemplate: document.getElementById("studio-variant-template")
     };
@@ -45,6 +46,7 @@
     elements.createForm?.querySelector('[data-action="cancel-create-roadbook"]')?.addEventListener("click", hideCreateRoadbookForm);
     elements.addStage?.addEventListener("click", handleAddStage);
     elements.downloadJson?.addEventListener("click", downloadCurrentRoadbookJson);
+    elements.exportGithub?.addEventListener("click", downloadGithubIntegrationExport);
 
     loadCatalog();
 
@@ -498,6 +500,7 @@
 
         elements.addStage.disabled = false;
         elements.downloadJson.disabled = false;
+        if (elements.exportGithub) elements.exportGithub.disabled = false;
     }
 
     function createExportPathHint(roadbook) {
@@ -508,12 +511,16 @@
         title.textContent = "Export et intégration";
         const text = document.createElement("p");
         text.innerHTML = `Chemin cible attendu : <code>roadbooks/${escapeHtml(id)}/roadbook.json</code>.`;
+        const configPath = document.createElement("p");
+        configPath.innerHTML = `Config cible attendue : <code>roadbooks/${escapeHtml(id)}/config.js</code>.`;
+        const catalogInstruction = document.createElement("p");
+        catalogInstruction.innerHTML = `Catalogue : ajouter <code>${escapeHtml(id)}</code> au tableau <code>roadbooks</code> de <code>roadbooks/catalog.json</code>.`;
         const meta = document.createElement("p");
         meta.className = "studio-roadbook-card__meta";
         meta.textContent = state.catalogIds.includes(id)
             ? "Roadbook chargé depuis le catalogue existant."
-            : "Roadbook créé localement, pas encore présent dans le catalogue.";
-        section.append(title, text, meta);
+            : "Roadbook créé localement, pas encore présent dans le catalogue. Utilise « Exporter pour GitHub » pour récupérer les fichiers d’intégration.";
+        section.append(title, text, configPath, catalogInstruction, meta);
         return section;
     }
 
@@ -2371,16 +2378,135 @@
     function downloadCurrentRoadbookJson() {
         if (!state.selectedRoadbook) return;
         const exportPayload = buildExportRoadbook(state.selectedRoadbook);
-        const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
+        const id = safeText(exportPayload.id || state.selectedRoadbookId, "roadbook");
+        downloadTextFile(`${id}-roadbook.json`, JSON.stringify(exportPayload, null, 2), "application/json");
+    }
+
+    function downloadGithubIntegrationExport() {
+        if (!state.selectedRoadbook) return;
+
+        const exportPayload = buildExportRoadbook(state.selectedRoadbook);
+        const id = normalizeRoadbookId(exportPayload.id || state.selectedRoadbookId);
+        if (!id) {
+            setStatus("Export GitHub impossible : ID du roadbook invalide.");
+            return;
+        }
+
+        const roadbookJson = JSON.stringify({ ...exportPayload, id }, null, 2);
+        const configJs = buildRoadbookConfigJs({ ...exportPayload, id });
+        const manifest = buildIntegrationManifest({ ...exportPayload, id });
+        const catalogPatch = buildCatalogPatch(id);
+
+        downloadTextFile(`${id}-roadbook.json`, roadbookJson, "application/json");
+        downloadTextFile(`${id}-config.js`, configJs, "text/javascript");
+        downloadTextFile(`${id}-integration-manifest.json`, JSON.stringify(manifest, null, 2), "application/json");
+        downloadTextFile(`${id}-catalog.patch.json`, JSON.stringify(catalogPatch, null, 2), "application/json");
+        setStatus(`Export GitHub généré pour "${safeText(exportPayload.title, id)}" · fichiers à placer dans roadbooks/${id}/.`);
+    }
+
+    function downloadTextFile(filename, content, type = "text/plain") {
+        const blob = new Blob([content], { type });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        const id = safeText(exportPayload.id || state.selectedRoadbookId, "roadbook");
-        link.download = `${id}-roadbook.json`;
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         link.remove();
         URL.revokeObjectURL(url);
+    }
+
+    function buildRoadbookConfigJs(roadbook) {
+        const id = normalizeRoadbookId(roadbook.id || state.selectedRoadbookId);
+        const title = safeText(roadbook.title, id);
+        const description = safeText(roadbook.description, "");
+        const escapedId = JSON.stringify(id);
+        const escapedTitle = JSON.stringify(title);
+        const escapedDescription = JSON.stringify(description);
+        const jsonPath = `roadbooks/${id}/roadbook.json`;
+        const accommodationPath = `roadbooks/${id}/data/accommodation-enrichment.json`;
+        const poiPath = `roadbooks/${id}/data/poi-enrichment.json`;
+        const functionName = `register${toPascalCase(id)}RoadbookConfig`;
+
+        return `"use strict";
+
+(function ${functionName}(global) {
+    global.ROADBOOK_CONFIGS = global.ROADBOOK_CONFIGS || {};
+
+    global.ROADBOOK_CONFIGS[${escapedId}] = Object.freeze({
+        id: ${escapedId},
+        shortId: ${escapedId},
+        title: ${escapedTitle},
+        description: ${escapedDescription},
+        jsonPath: ${JSON.stringify(jsonPath)},
+        googleSheetId: "",
+        sheets: Object.freeze({}),
+        enrichment: Object.freeze({
+            accommodationPath: ${JSON.stringify(accommodationPath)},
+            poiPath: ${JSON.stringify(poiPath)}
+        }),
+        fallbackJsonPaths: Object.freeze([${JSON.stringify(jsonPath)}]),
+        options: Object.freeze({})
+    });
+})(typeof window !== "undefined" ? window : globalThis);
+`;
+    }
+
+    function buildIntegrationManifest(roadbook) {
+        const id = normalizeRoadbookId(roadbook.id || state.selectedRoadbookId);
+        return {
+            roadbookId: id,
+            title: safeText(roadbook.title, id),
+            generatedAt: new Date().toISOString(),
+            files: [
+                {
+                    sourceDownload: `${id}-roadbook.json`,
+                    targetPath: `roadbooks/${id}/roadbook.json`
+                },
+                {
+                    sourceDownload: `${id}-config.js`,
+                    targetPath: `roadbooks/${id}/config.js`
+                }
+            ],
+            catalog: {
+                path: "roadbooks/catalog.json",
+                action: "add-roadbook-id",
+                id,
+                example: {
+                    roadbooks: [...new Set([...state.catalogIds, id])]
+                }
+            },
+            directories: [
+                `roadbooks/${id}/`,
+                `roadbooks/${id}/gpx/`,
+                `roadbooks/${id}/photos/`,
+                `roadbooks/${id}/data/`
+            ],
+            notes: [
+                "Le Studio ne modifie pas GitHub automatiquement.",
+                "Place roadbook.json et config.js dans les chemins cible indiqués.",
+                "Ajoute l’ID du roadbook au tableau roadbooks de roadbooks/catalog.json."
+            ]
+        };
+    }
+
+    function buildCatalogPatch(id) {
+        return {
+            path: "roadbooks/catalog.json",
+            action: "add-roadbook-id",
+            id,
+            roadbooks: [...new Set([...state.catalogIds, id])]
+        };
+    }
+
+    function toPascalCase(value) {
+        const text = normalizeRoadbookId(value);
+        const pascal = text
+            .split("-")
+            .filter(Boolean)
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join("");
+        return pascal || "New";
     }
 
     function buildExportRoadbook(roadbook) {
@@ -2471,6 +2597,7 @@
         elements.detail.appendChild(message);
         elements.addStage.disabled = true;
         elements.downloadJson.disabled = true;
+        if (elements.exportGithub) elements.exportGithub.disabled = true;
     }
 
     function setStatus(message) {
