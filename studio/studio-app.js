@@ -5,6 +5,7 @@
     const ROADBOOK_PATH = id => `roadbooks/${encodeURIComponent(id)}/roadbook.json`;
     const GITHUB_REPOSITORY = "Aroblazeur/roadbook-explorer";
     const PUBLISH_WORKFLOW_FILE = "publish-roadbook.yml";
+    const GITHUB_TOKEN_STORAGE_KEY = "roadbook-studio.github-token";
     const PRIMARY_METADATA_KEYS = ["project"];
     const METADATA_LABELS = {
         project: "Projet"
@@ -518,7 +519,7 @@
         const catalogInstruction = document.createElement("p");
         catalogInstruction.innerHTML = `Catalogue : ajouter <code>${escapeHtml(id)}</code> au tableau <code>roadbooks</code> de <code>roadbooks/catalog.json</code>.`;
         const publishInstruction = document.createElement("p");
-        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier sur GitHub</strong> prépare un paquet pour le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code>, qui commit directement ces fichiers sur <code>main</code>.`;
+        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier sur GitHub</strong> déclenche le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code> via l’API GitHub, puis le workflow commit directement ces fichiers sur <code>main</code>.`;
         const workflowLink = document.createElement("p");
         workflowLink.innerHTML = `Workflow : <a href="https://github.com/${escapeHtml(GITHUB_REPOSITORY)}/actions/workflows/${escapeHtml(PUBLISH_WORKFLOW_FILE)}" target="_blank" rel="noopener noreferrer">ouvrir GitHub Actions</a>.`;
         const meta = document.createElement("p");
@@ -2438,29 +2439,90 @@
         };
 
         try {
-            setStatus("Preparation du paquet de publication GitHub Actions...");
+            setStatus("Preparation et envoi du workflow GitHub Actions...");
             const encodedPayload = await encodeWorkflowPayload(publicationPayload);
-            const workflowCommand = buildWorkflowDispatchCommand({
+            const token = await getGitHubTokenForPublish();
+            if (!token) {
+                setStatus("Publication annulee : aucun token GitHub fourni.");
+                return;
+            }
+
+            if (elements.publishGithub) elements.publishGithub.disabled = true;
+            await dispatchGithubPublishWorkflow({
                 id,
                 encoding: encodedPayload.encoding,
-                payloadBase64: encodedPayload.payloadBase64
+                payloadBase64: encodedPayload.payloadBase64,
+                token
             });
 
-            downloadTextFile(`${id}-publish-payload.json`, JSON.stringify({
-                workflow: PUBLISH_WORKFLOW_FILE,
-                repository: GITHUB_REPOSITORY,
-                roadbookId: id,
-                payloadEncoding: encodedPayload.encoding,
-                payloadBase64: encodedPayload.payloadBase64
-            }, null, 2), "application/json");
-            downloadTextFile(`${id}-publish-github.ps1`, workflowCommand, "text/plain");
-            const copied = await copyTextToClipboard(workflowCommand);
-
-            setStatus(`Publication prete pour "${safeText(roadbook.title, id)}" : commande GitHub CLI ${copied ? "copiee" : "telechargee"}. Lance-la pour declencher le commit direct sur main.`);
+            setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}" : le workflow GitHub Actions va commit directement sur main.`);
             window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
         } catch (error) {
-            console.error("[Studio] Preparation publication GitHub impossible", error);
-            setStatus("Impossible de preparer la publication GitHub Actions. Consulte la console pour le detail.");
+            console.error("[Studio] Publication GitHub impossible", error);
+            if (error?.status === 401 || error?.status === 403) {
+                sessionStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY);
+            }
+            setStatus(`Publication GitHub impossible : ${safeText(error?.message, "consulte la console pour le detail")}.`);
+        } finally {
+            syncEditorActionButtons();
+        }
+    }
+
+    async function getGitHubTokenForPublish() {
+        const storedToken = sessionStorage.getItem(GITHUB_TOKEN_STORAGE_KEY);
+        if (storedToken) return storedToken;
+
+        const token = window.prompt([
+            "Token GitHub requis pour publier.",
+            "",
+            "Il doit permettre de declencher le workflow GitHub Actions sur le depot.",
+            "Le token sera conserve uniquement dans cette session de navigateur."
+        ].join("\n"));
+
+        const normalizedToken = safeText(token, "");
+        if (!normalizedToken) return "";
+        sessionStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, normalizedToken);
+        return normalizedToken;
+    }
+
+    async function dispatchGithubPublishWorkflow({ id, encoding, payloadBase64, token }) {
+        const response = await fetch(`https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}/dispatches`, {
+            method: "POST",
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            },
+            body: JSON.stringify({
+                ref: "main",
+                inputs: {
+                    roadbook_id: id,
+                    payload_encoding: encoding,
+                    payload_base64: payloadBase64,
+                    commit_message: `chore: publish ${id} roadbook`
+                }
+            })
+        });
+
+        if (response.status === 204) return;
+
+        const errorBody = await readGithubError(response);
+        const error = new Error(`GitHub API ${response.status}${errorBody ? ` - ${errorBody}` : ""}`);
+        error.status = response.status;
+        throw error;
+    }
+
+    async function readGithubError(response) {
+        try {
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType.includes("application/json")) {
+                const body = await response.json();
+                return safeText(body?.message, JSON.stringify(body));
+            }
+            return safeText(await response.text(), "");
+        } catch (error) {
+            return "";
         }
     }
 
@@ -2491,32 +2553,6 @@
             binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
         }
         return btoa(binary);
-    }
-
-    function buildWorkflowDispatchCommand({ id, encoding, payloadBase64 }) {
-        return [
-            `gh workflow run ${PUBLISH_WORKFLOW_FILE}`,
-            `--repo ${GITHUB_REPOSITORY}`,
-            "--ref main",
-            `--field roadbook_id=${quotePowerShellArgument(id)}`,
-            `--field payload_encoding=${quotePowerShellArgument(encoding)}`,
-            `--field payload_base64=${quotePowerShellArgument(payloadBase64)}`
-        ].join(" ") + "\n";
-    }
-
-    function quotePowerShellArgument(value) {
-        return `"${String(value || "").replace(/"/g, '`"')}"`;
-    }
-
-    async function copyTextToClipboard(text) {
-        if (!navigator.clipboard?.writeText) return false;
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch (error) {
-            console.warn("[Studio] Clipboard indisponible", error);
-            return false;
-        }
     }
 
     function downloadTextFile(filename, content, type = "text/plain") {

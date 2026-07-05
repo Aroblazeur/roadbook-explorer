@@ -73,15 +73,15 @@ Les contributions utilisateur passent par l’endpoint global Apps Script config
 
 ## Publier depuis le Studio
 
-Le Studio garde l'export manuel, mais peut aussi preparer une publication automatisee via GitHub Actions.
+Le Studio garde l'export manuel, mais peut aussi declencher une publication automatisee via GitHub Actions.
 
 Workflow :
 
 1. ouvrir `studio.html` ;
 2. creer ou modifier un roadbook ;
-3. cliquer sur `Publier via GitHub Actions` ;
-4. le Studio telecharge un payload et copie une commande `gh workflow run` ;
-5. lancer cette commande avec un compte GitHub autorise sur le depot.
+3. cliquer sur `Publier sur GitHub` ;
+4. fournir un token GitHub personnel si la session n'en possede pas encore ;
+5. le Studio appelle l'API GitHub `workflow_dispatch` pour lancer `.github/workflows/publish-roadbook.yml`.
 
 Le workflow `.github/workflows/publish-roadbook.yml` decode le payload, ecrit :
 
@@ -91,7 +91,7 @@ roadbooks/<id>/config.js
 roadbooks/catalog.json
 ```
 
-puis commit directement sur `main` avec `GITHUB_TOKEN`. Aucun token GitHub n'est stocke dans le JavaScript public du Studio.
+puis commit directement sur `main` avec `GITHUB_TOKEN`. Aucun token GitHub n'est stocke dans le JavaScript public du Studio ; le token personnel fourni par l'utilisateur reste uniquement dans la session du navigateur.
 
 ## Synchroniser les Sheets vers les JSON
 
