@@ -20,7 +20,8 @@
         catalogIds: [],
         selectedRoadbookId: "",
         selectedRoadbook: null,
-        expandedStages: new Set()
+        expandedStages: new Set(),
+        expandedVariants: new Set()
     };
 
     const elements = {
@@ -95,6 +96,7 @@
             state.selectedRoadbookId = id;
             state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
             state.expandedStages = new Set();
+            state.expandedVariants = new Set();
             renderRoadbookEditor();
             setStatus(`${safeText(state.selectedRoadbook.title, id)} chargé.`);
         } catch (error) {
@@ -371,7 +373,6 @@
         elements.detail.appendChild(createGeneralInfoEditor(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
-        elements.detail.appendChild(createRoadbookPoisEditor(roadbook.pois));
         elements.detail.appendChild(createRoadbookNotesEditor(roadbook.notes));
         elements.detail.appendChild(createContributionsEditor(roadbook.contributions));
 
@@ -572,7 +573,12 @@
         title.textContent = `Étapes (${stages.length})`;
         const list = document.createElement("div");
         list.className = "studio-stage-list";
-        stages.forEach((stage, stageIndex) => list.appendChild(createStageEditor(stage, stageIndex)));
+        stages.forEach((stage, stageIndex) => {
+            list.appendChild(createStageEditor(stage, stageIndex));
+            stage.variants.forEach((variant, variantIndex) => {
+                list.appendChild(createVariantEditor(stageIndex, variant, variantIndex));
+            });
+        });
         section.append(title, list);
         return section;
     }
@@ -631,12 +637,6 @@
         fragment.querySelector('[data-action="delete-stage"]').addEventListener("click", () => deleteStage(stageIndex));
         fragment.querySelector('[data-action="add-variant"]').addEventListener("click", () => addVariant(stageIndex));
 
-        const variantList = fragment.querySelector(".studio-variant-list");
-        stage.variants.forEach((variant, variantIndex) => variantList.appendChild(createVariantEditor(stageIndex, variant, variantIndex)));
-
-        const variantsSection = fragment.querySelector(".studio-variants");
-        if (variantsSection) variantsSection.hidden = stage.variants.length === 0;
-
         const appendTarget = body || card;
         appendTarget.appendChild(createStageReferencesEditor(stageIndex, stage));
         appendTarget.appendChild(createStagePoisEditor(stageIndex, stage.pois || []));
@@ -662,15 +662,84 @@
     function createVariantEditor(stageIndex, variant, variantIndex) {
         const fragment = elements.variantTemplate.content.cloneNode(true);
         const variantCard = fragment.querySelector(".studio-variant-card");
+        const variantKey = variantPanelKey(stageIndex, variantIndex);
+        const isExpanded = state.expandedVariants.has(variantKey);
         variantCard.dataset.variantIndex = String(variantIndex);
-        fragment.querySelector(".studio-variant-card__title").textContent = variant.name;
+        variantCard.dataset.parentStageIndex = String(stageIndex);
+        variantCard.dataset.expanded = isExpanded ? "true" : "false";
+
+        fragment.querySelector(".studio-variant-card__title").textContent = buildVariantTitle(stageIndex, variant, variantIndex);
+        const summaryEl = fragment.querySelector(".studio-stage-card__summary");
+        if (summaryEl) summaryEl.textContent = buildVariantSummaryText(variant);
+
+        const body = fragment.querySelector(".studio-variant-card__body");
+        if (body) body.hidden = !isExpanded;
+
+        const toggleZone = fragment.querySelector(".studio-variant-card__header-info");
+        if (toggleZone) {
+            toggleZone.setAttribute("role", "button");
+            toggleZone.setAttribute("tabindex", "0");
+            toggleZone.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+            const toggleVariant = () => {
+                const expanded = variantCard.dataset.expanded === "true";
+                variantCard.dataset.expanded = expanded ? "false" : "true";
+                if (body) body.hidden = expanded;
+                if (expanded) {
+                    state.expandedVariants.delete(variantKey);
+                } else {
+                    state.expandedVariants.add(variantKey);
+                }
+                toggleZone.setAttribute("aria-expanded", String(!expanded));
+            };
+            toggleZone.addEventListener("click", toggleVariant);
+            toggleZone.addEventListener("keydown", event => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    toggleVariant();
+                }
+            });
+        }
+
         bindVariantField(fragment, "name", variant.name, value => updateVariant(stageIndex, variantIndex, "name", value.trim() || `Variante ${variantIndex + 1}`));
+        bindVariantField(fragment, "type", variant.type, value => updateVariant(stageIndex, variantIndex, "type", value.trim()));
+        bindVariantField(fragment, "departure", variant.departure, value => updateVariant(stageIndex, variantIndex, "departure", value.trim()));
+        bindVariantField(fragment, "arrival", variant.arrival, value => updateVariant(stageIndex, variantIndex, "arrival", value.trim()));
         bindVariantField(fragment, "distance", variant.distance, value => updateVariant(stageIndex, variantIndex, "distance", decimalOrNull(value)));
+        bindVariantField(fragment, "elevationGain", variant.elevationGain, value => updateVariant(stageIndex, variantIndex, "elevationGain", decimalOrNull(value)));
+        bindVariantField(fragment, "elevationLoss", variant.elevationLoss, value => updateVariant(stageIndex, variantIndex, "elevationLoss", decimalOrNull(value)));
+        bindVariantField(fragment, "stagePhoto", variant.stagePhoto, value => updateVariant(stageIndex, variantIndex, "stagePhoto", value.trim()));
+        bindVariantField(fragment, "accommodationType", variant.accommodationType, value => updateVariant(stageIndex, variantIndex, "accommodationType", value.trim()));
         bindVariantField(fragment, "description", variant.description, value => updateVariant(stageIndex, variantIndex, "description", value.trim()));
-        variantCard.appendChild(createVariantDetailsEditor(stageIndex, variantIndex, variant));
-        variantCard.appendChild(createVariantPoisEditor(stageIndex, variantIndex, variant.pois || []));
+        const appendTarget = body || variantCard;
+        appendTarget.appendChild(createVariantReferencesEditor(stageIndex, variantIndex, variant));
+        appendTarget.appendChild(createVariantPoisEditor(stageIndex, variantIndex, variant.pois || []));
+        appendTarget.appendChild(createVariantAccommodationEditor(stageIndex, variantIndex, variant));
+        appendTarget.appendChild(createVariantNotesEditor(stageIndex, variantIndex, variant.noteItems || []));
         fragment.querySelector('[data-action="delete-variant"]').addEventListener("click", () => deleteVariant(stageIndex, variantIndex));
         return fragment;
+    }
+
+    function variantPanelKey(stageIndex, variantIndex) {
+        return `${stageIndex}:${variantIndex}`;
+    }
+
+    function buildVariantTitle(stageIndex, variant, variantIndex) {
+        const stage = state.selectedRoadbook?.stages?.[stageIndex];
+        const stageNumber = stage?.stage ?? stageIndex + 1;
+        const name = safeText(variant?.name || variant?.title, `Variante ${variantIndex + 1}`);
+        return `Variante de l’étape ${stageNumber} — ${name}`;
+    }
+
+    function buildVariantSummaryText(variant) {
+        const parts = [];
+        if (variant.type) parts.push(variant.type);
+        if (variant.departure || variant.arrival) {
+            parts.push(`${variant.departure || "?"} → ${variant.arrival || "?"}`);
+        }
+        if (variant.distance != null) {
+            parts.push(`${variant.distance} km`);
+        }
+        return parts.join(" · ");
     }
 
     function createStageReferencesEditor(stageIndex, stage) {
@@ -682,20 +751,13 @@
         });
     }
 
-    function createVariantDetailsEditor(stageIndex, variantIndex, variant) {
-        const section = createReferencesEditor({
-            title: "Détails de la sous-étape",
+    function createVariantReferencesEditor(stageIndex, variantIndex, variant) {
+        return createReferencesEditor({
+            title: "GPX et carte",
             values: variant,
-            extraFields: [
-                { field: "type", label: "Type" },
-                { field: "departure", label: "Départ" },
-                { field: "arrival", label: "Arrivée" },
-                { field: "elevationGain", label: "D+ (m)", inputType: "number", parser: decimalOrNull },
-                { field: "elevationLoss", label: "D− (m)", inputType: "number", parser: decimalOrNull }
-            ],
-            onChange: (field, value, parser) => updateVariant(stageIndex, variantIndex, field, parser ? parser(value) : value.trim())
+            skipFields: ["stagePhoto"],
+            onChange: (field, value) => updateVariant(stageIndex, variantIndex, field, value.trim())
         });
-        return section;
     }
 
     function createReferencesEditor({ title, values, onChange, extraFields = [], skipFields = [] }) {
@@ -792,6 +854,61 @@
         alternativesList.className = "studio-sublist__list";
         (stage.accommodation?.alternatives || []).forEach((alternative, alternativeIndex) => {
             alternativesList.appendChild(createStageAccommodationAlternativeEditor(stageIndex, alternative, alternativeIndex));
+        });
+        alternativesSection.appendChild(alternativesList);
+        section.appendChild(alternativesSection);
+        return section;
+    }
+
+    function createVariantAccommodationEditor(stageIndex, variantIndex, variant) {
+        const section = document.createElement("section");
+        section.className = "studio-stage-extra";
+        section.setAttribute("aria-label", "Hébergement de la variante");
+
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const title = document.createElement("h4");
+        title.textContent = "Hébergement";
+        header.appendChild(title);
+        section.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--compact";
+        ["name", "photo", "price"].forEach(field => {
+            grid.appendChild(createBoundField({
+                label: getAccommodationFieldLabel(field),
+                value: variant.accommodation?.[field] ?? "",
+                onChange: value => updateVariantAccommodationField(stageIndex, variantIndex, field, value.trim())
+            }));
+        });
+        grid.appendChild(createLienField(
+            variant.accommodation?.website,
+            variant.accommodation?.url,
+            value => {
+                updateVariantAccommodationField(stageIndex, variantIndex, "website", value);
+                updateVariantAccommodationField(stageIndex, variantIndex, "url", value);
+            }
+        ));
+        section.appendChild(grid);
+
+        const alternativesSection = document.createElement("div");
+        alternativesSection.className = "studio-sublist";
+        const alternativesHeader = document.createElement("div");
+        alternativesHeader.className = "studio-stage-extra__header";
+        const alternativesTitle = document.createElement("h5");
+        alternativesTitle.textContent = "Hébergements alternatifs";
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.className = "terrain-button terrain-button--secondary";
+        addButton.textContent = "Ajouter un hébergement";
+        addButton.addEventListener("click", () => addVariantAccommodationAlternative(stageIndex, variantIndex));
+        alternativesHeader.append(alternativesTitle, addButton);
+        alternativesSection.appendChild(alternativesHeader);
+
+        const alternativesList = document.createElement("div");
+        alternativesList.className = "studio-sublist__list";
+        (variant.accommodation?.alternatives || []).forEach((alternative, alternativeIndex) => {
+            alternativesList.appendChild(createVariantAccommodationAlternativeEditor(stageIndex, variantIndex, alternative, alternativeIndex));
         });
         alternativesSection.appendChild(alternativesList);
         section.appendChild(alternativesSection);
@@ -1014,6 +1131,41 @@
         return card;
     }
 
+    function createVariantAccommodationAlternativeEditor(stageIndex, variantIndex, alternative, alternativeIndex) {
+        const card = document.createElement("article");
+        card.className = "studio-subitem-card";
+        card.dataset.alternativeIndex = String(alternativeIndex);
+
+        const header = document.createElement("div");
+        header.className = "studio-subitem-card__header";
+        const title = document.createElement("strong");
+        title.textContent = safeText(alternative.name, `Hébergement alternatif ${alternativeIndex + 1}`);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "terrain-button terrain-button--danger";
+        remove.textContent = "Supprimer";
+        remove.addEventListener("click", () => deleteVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex));
+        header.append(title, remove);
+        card.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--compact";
+        [
+            { field: "name", label: "Nom" },
+            { field: "url", label: "URL" },
+            { field: "photo", label: "Photo" },
+            { field: "price", label: "Prix" }
+        ].forEach(({ field, label }) => {
+            grid.appendChild(createBoundField({
+                label,
+                value: alternative[field] ?? "",
+                onChange: value => updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value.trim())
+            }));
+        });
+        card.appendChild(grid);
+        return card;
+    }
+
     function createStageNotesEditor(stageIndex, notes) {
         const section = document.createElement("section");
         section.className = "studio-stage-extra";
@@ -1035,6 +1187,32 @@
         list.className = "studio-sublist__list";
         notes.forEach((note, noteIndex) => {
             list.appendChild(createStageNoteEditor(stageIndex, note, noteIndex));
+        });
+        section.appendChild(list);
+        return section;
+    }
+
+    function createVariantNotesEditor(stageIndex, variantIndex, notes) {
+        const section = document.createElement("section");
+        section.className = "studio-stage-extra";
+        section.setAttribute("aria-label", "Notes de la variante");
+
+        const header = document.createElement("div");
+        header.className = "studio-stage-extra__header";
+        const title = document.createElement("h4");
+        title.textContent = "Notes";
+        const addButton = document.createElement("button");
+        addButton.type = "button";
+        addButton.className = "terrain-button terrain-button--secondary";
+        addButton.textContent = "Ajouter une note";
+        addButton.addEventListener("click", () => addVariantNote(stageIndex, variantIndex));
+        header.append(title, addButton);
+        section.appendChild(header);
+
+        const list = document.createElement("div");
+        list.className = "studio-sublist__list";
+        notes.forEach((note, noteIndex) => {
+            list.appendChild(createVariantNoteEditor(stageIndex, variantIndex, note, noteIndex));
         });
         section.appendChild(list);
         return section;
@@ -1070,6 +1248,42 @@
                 label: getNoteFieldLabel(field),
                 value: note[field] ?? "",
                 onChange: value => updateStageNote(stageIndex, noteIndex, field, value.trim())
+            }));
+        });
+        card.appendChild(grid);
+        return card;
+    }
+
+    function createVariantNoteEditor(stageIndex, variantIndex, note, noteIndex) {
+        const card = document.createElement("article");
+        card.className = "studio-subitem-card";
+        card.dataset.noteIndex = String(noteIndex);
+        const header = document.createElement("div");
+        header.className = "studio-subitem-card__header";
+        const title = document.createElement("strong");
+        title.textContent = safeText(note.text, `Note ${noteIndex + 1}`);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "terrain-button terrain-button--danger";
+        remove.textContent = "Supprimer";
+        remove.addEventListener("click", () => deleteVariantNote(stageIndex, variantIndex, noteIndex));
+        header.append(title, remove);
+        card.appendChild(header);
+
+        const grid = document.createElement("div");
+        grid.className = "studio-form-grid studio-form-grid--compact";
+        grid.appendChild(createBoundField({
+            label: "Texte",
+            value: note.text ?? "",
+            isTextarea: true,
+            fullWidth: true,
+            onChange: value => updateVariantNote(stageIndex, variantIndex, noteIndex, "text", value.trim())
+        }));
+        ["photo", "createdAt", "source"].forEach(field => {
+            grid.appendChild(createBoundField({
+                label: getNoteFieldLabel(field),
+                value: note[field] ?? "",
+                onChange: value => updateVariantNote(stageIndex, variantIndex, noteIndex, field, value.trim())
             }));
         });
         card.appendChild(grid);
@@ -1442,9 +1656,12 @@
         if (!variant) return;
         variant[field] = value;
         if (field === "name" && Number.isInteger(stageIndex) && Number.isInteger(variantIndex)) {
-            const stageCard = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"]`);
-            const variantHeading = stageCard?.querySelector(`.studio-variant-card[data-variant-index="${variantIndex}"] .studio-variant-card__title`);
-            if (variantHeading) variantHeading.textContent = safeText(value, `Variante ${variantIndex + 1}`);
+            const variantHeading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-variant-card__title`);
+            if (variantHeading) variantHeading.textContent = buildVariantTitle(stageIndex, variant, variantIndex);
+        }
+        if (["type", "departure", "arrival", "distance"].includes(field)) {
+            const summaryEl = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-stage-card__summary`);
+            if (summaryEl) summaryEl.textContent = buildVariantSummaryText(variant);
         }
         markModified();
     }
@@ -1483,6 +1700,45 @@
 
     function deleteStageAccommodationAlternative(stageIndex, alternativeIndex) {
         const alternatives = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation?.alternatives;
+        if (!Array.isArray(alternatives)) return;
+        alternatives.splice(alternativeIndex, 1);
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateVariantAccommodationField(stageIndex, variantIndex, field, value) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        if (!variant) return;
+        variant.accommodation = normalizeStageAccommodation(variant.accommodation);
+        variant.accommodation[field] = value;
+        markModified();
+    }
+
+    function addVariantAccommodationAlternative(stageIndex, variantIndex) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        if (!variant) return;
+        variant.accommodation = normalizeStageAccommodation(variant.accommodation);
+        variant.accommodation.alternatives.push({
+            url: "",
+            name: "",
+            photo: "",
+            price: ""
+        });
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value) {
+        const alternative = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.accommodation?.alternatives?.[alternativeIndex];
+        if (!alternative) return;
+        alternative[field] = value;
+        if (field === "name") {
+            const heading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-subitem-card[data-alternative-index="${alternativeIndex}"] strong`);
+            if (heading) heading.textContent = safeText(value, `Hébergement alternatif ${alternativeIndex + 1}`);
+        }
+        markModified();
+    }
+
+    function deleteVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex) {
+        const alternatives = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.accommodation?.alternatives;
         if (!Array.isArray(alternatives)) return;
         alternatives.splice(alternativeIndex, 1);
         rerenderEditorPreservingScroll();
@@ -1573,6 +1829,37 @@
 
     function deleteStageNote(stageIndex, noteIndex) {
         const notes = state.selectedRoadbook?.stages?.[stageIndex]?.noteItems;
+        if (!Array.isArray(notes)) return;
+        notes.splice(noteIndex, 1);
+        rerenderEditorPreservingScroll();
+    }
+
+    function addVariantNote(stageIndex, variantIndex) {
+        const variant = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex];
+        if (!variant) return;
+        if (!Array.isArray(variant.noteItems)) variant.noteItems = [];
+        variant.noteItems.push({
+            text: "",
+            photo: "",
+            createdAt: "",
+            source: ""
+        });
+        rerenderEditorPreservingScroll();
+    }
+
+    function updateVariantNote(stageIndex, variantIndex, noteIndex, field, value) {
+        const note = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.noteItems?.[noteIndex];
+        if (!note) return;
+        note[field] = value;
+        if (field === "text") {
+            const heading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-subitem-card[data-note-index="${noteIndex}"] strong`);
+            if (heading) heading.textContent = safeText(value, `Note ${noteIndex + 1}`);
+        }
+        markModified();
+    }
+
+    function deleteVariantNote(stageIndex, variantIndex, noteIndex) {
+        const notes = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.noteItems;
         if (!Array.isArray(notes)) return;
         notes.splice(noteIndex, 1);
         rerenderEditorPreservingScroll();
@@ -1768,17 +2055,29 @@
             else if (idx > stageIndex) newExpanded.add(idx - 1);
         });
         state.expandedStages = newExpanded;
+        const newExpandedVariants = new Set();
+        state.expandedVariants.forEach(key => {
+            const [rawStageIndex, rawVariantIndex] = String(key).split(":");
+            const currentStageIndex = integerOrNull(rawStageIndex);
+            const currentVariantIndex = integerOrNull(rawVariantIndex);
+            if (currentStageIndex == null || currentVariantIndex == null) return;
+            if (currentStageIndex < stageIndex) newExpandedVariants.add(variantPanelKey(currentStageIndex, currentVariantIndex));
+            else if (currentStageIndex > stageIndex) newExpandedVariants.add(variantPanelKey(currentStageIndex - 1, currentVariantIndex));
+        });
+        state.expandedVariants = newExpandedVariants;
         rerenderEditorPreservingScroll();
     }
 
     function addVariant(stageIndex) {
         const stage = state.selectedRoadbook?.stages?.[stageIndex];
         if (!stage) return;
+        const variantIndex = stage.variants.length;
         stage.variants.push(normalizeVariant({
             name: `Variante ${stage.variants.length + 1}`,
             distance: null,
             description: ""
-        }, stage.variants.length));
+        }, variantIndex));
+        state.expandedVariants.add(variantPanelKey(stageIndex, variantIndex));
         rerenderEditorPreservingScroll();
     }
 
@@ -1786,6 +2085,21 @@
         const variants = state.selectedRoadbook?.stages?.[stageIndex]?.variants;
         if (!Array.isArray(variants)) return;
         variants.splice(variantIndex, 1);
+        const newExpandedVariants = new Set();
+        state.expandedVariants.forEach(key => {
+            const [rawStageIndex, rawVariantIndex] = String(key).split(":");
+            const currentStageIndex = integerOrNull(rawStageIndex);
+            const currentVariantIndex = integerOrNull(rawVariantIndex);
+            if (currentStageIndex == null || currentVariantIndex == null) return;
+            if (currentStageIndex !== stageIndex) {
+                newExpandedVariants.add(variantPanelKey(currentStageIndex, currentVariantIndex));
+            } else if (currentVariantIndex < variantIndex) {
+                newExpandedVariants.add(variantPanelKey(currentStageIndex, currentVariantIndex));
+            } else if (currentVariantIndex > variantIndex) {
+                newExpandedVariants.add(variantPanelKey(currentStageIndex, currentVariantIndex - 1));
+            }
+        });
+        state.expandedVariants = newExpandedVariants;
         rerenderEditorPreservingScroll();
     }
 
@@ -1805,7 +2119,7 @@
         poi[field] = value;
         syncStagePoiAliases(variant);
         if (field === "name") {
-            const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-variant-card[data-variant-index="${variantIndex}"] .studio-subitem-card[data-poi-index="${poiIndex}"] strong`);
+            const heading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-subitem-card[data-poi-index="${poiIndex}"] strong`);
             if (heading) heading.textContent = safeText(value, `POI ${poiIndex + 1}`);
         }
         markModified();

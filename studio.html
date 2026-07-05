@@ -108,35 +108,66 @@
           </label>
         </div>
 
-        <section class="studio-variants" aria-label="Variantes de l'étape">
-          <div class="studio-variants__header">
-            <h4>Variantes</h4>
-          </div>
-          <div class="studio-variant-list"></div>
-        </section>
       </div>
     </article>
   </template>
 
   <template id="studio-variant-template">
-    <article class="studio-variant-card">
+    <article class="studio-variant-card" data-expanded="false">
       <div class="studio-variant-card__header">
-        <strong class="studio-variant-card__title"></strong>
-        <button type="button" class="terrain-button terrain-button--danger" data-action="delete-variant">Supprimer</button>
+        <div class="studio-variant-card__header-info">
+          <p class="studio-stage-card__eyebrow">Variante</p>
+          <h3 class="studio-variant-card__title"></h3>
+          <p class="studio-stage-card__summary"></p>
+        </div>
+        <div class="studio-stage-card__actions">
+          <button type="button" class="terrain-button terrain-button--danger" data-action="delete-variant">Supprimer</button>
+        </div>
       </div>
-      <div class="studio-form-grid studio-form-grid--variant">
-        <label>
-          Nom
-          <input data-field="name" type="text">
-        </label>
-        <label>
-          Distance (km)
-          <input data-field="distance" type="number" step="0.1">
-        </label>
-        <label class="studio-form-grid__full">
-          Description
-          <textarea data-field="description" rows="2"></textarea>
-        </label>
+
+      <div class="studio-variant-card__body" hidden>
+        <div class="studio-form-grid studio-form-grid--variant">
+          <label>
+            Nom
+            <input data-field="name" type="text">
+          </label>
+          <label>
+            Type
+            <input data-field="type" type="text" placeholder="Variante, option, raccourci…">
+          </label>
+          <label>
+            Départ
+            <input data-field="departure" type="text">
+          </label>
+          <label>
+            Arrivée
+            <input data-field="arrival" type="text">
+          </label>
+          <label>
+            Distance (km)
+            <input data-field="distance" type="number" step="0.1">
+          </label>
+          <label>
+            D+ (m)
+            <input data-field="elevationGain" type="number" step="1">
+          </label>
+          <label>
+            D− (m)
+            <input data-field="elevationLoss" type="number" step="1">
+          </label>
+          <label>
+            Photo
+            <input data-field="stagePhoto" type="text">
+          </label>
+          <label>
+            Type d'hébergement
+            <input data-field="accommodationType" type="text" placeholder="camping, maison, hôtel…">
+          </label>
+          <label class="studio-form-grid__full">
+            Description
+            <textarea data-field="description" rows="3"></textarea>
+          </label>
+        </div>
       </div>
     </article>
   </template>
