@@ -471,7 +471,7 @@
         officialGrid.className = "studio-form-grid studio-form-grid--compact";
         [
             { field: "distance", label: "Distance", inputType: "number" },
-            { field: "elevationGain", label: "D+" , inputType: "number" },
+            { field: "elevationGain", label: "D+", inputType: "number" },
             { field: "elevationLoss", label: "D−", inputType: "number" },
             { field: "gpx", label: "GPS" },
             { field: "mapEmbedUrl", label: "Carte intégrée" }
