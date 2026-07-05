@@ -22,7 +22,10 @@
       "gpx": null,
       "link": null
     },
-    "stagesTotalMarker": null
+    "stagesTotalMarker": null,
+    "distance": 73,
+    "elevationGain": 230,
+    "elevationLoss": 0
   },
   "stages": [
     {
@@ -44,16 +47,17 @@
       "elevationLoss": null,
       "notes": null,
       "gpx": "etape1.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "roadbooks/alsace-canal-marne-rhin/data/etape1.jpg",
       "accommodation": {
         "name": "",
         "website": "https://www.mittersheim-loisirs.fr/",
-        "url": "https://www.mittersheim-loisirs.fr/",
+        "url": "",
         "photo": "",
         "alternatives": [],
         "alternativeNames": [],
-        "alternativePhotos": []
+        "alternativePhotos": [],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -94,7 +98,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": ""
+      "legacyAccommodation": "",
+      "variants": []
     },
     {
       "id": "stage-2",
@@ -115,7 +120,7 @@
       "elevationLoss": null,
       "notes": null,
       "gpx": "etape2.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "Camping Les Mouettes",
@@ -124,7 +129,8 @@
         "photo": "",
         "alternatives": [],
         "alternativeNames": [],
-        "alternativePhotos": []
+        "alternativePhotos": [],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -165,7 +171,37 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping Les Mouettes"
+      "legacyAccommodation": "Camping Les Mouettes",
+      "variants": []
+    },
+    {
+      "stage": 3,
+      "title": "Étape 3",
+      "departure": "meaux",
+      "arrival": "montoolivet",
+      "distance": 50,
+      "elevationGain": null,
+      "elevationLoss": null,
+      "description": "",
+      "gpx": "",
+      "mapEmbedUrl": "",
+      "stagePhoto": "",
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "warning": [],
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "price": "",
+        "alternatives": []
+      },
+      "accommodationType": "",
+      "noteItems": [],
+      "variants": [],
+      "substeps": []
     }
   ],
   "variants": [],
@@ -177,7 +213,10 @@
       "website": "https://www.mittersheim-loisirs.fr/",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 2,
@@ -186,7 +225,10 @@
       "website": "",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     }
   ],
   "pois": [
@@ -206,149 +248,5 @@
     }
   ],
   "notes": [],
-  "contributions": [],
-  "days": [
-    {
-      "id": "stage-1",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 1,
-      "day": null,
-      "stageLabel": null,
-      "name": "Sarrebourg → Mittersheim",
-      "type": "principale",
-      "departure": "Sarrebourg",
-      "arrival": "Mittersheim",
-      "distance": 23,
-      "elevationGain": 230,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "etape1.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "roadbooks/alsace-canal-marne-rhin/data/etape1.jpg",
-      "accommodation": {
-        "name": "",
-        "website": "https://www.mittersheim-loisirs.fr/",
-        "url": "https://www.mittersheim-loisirs.fr/",
-        "photo": "",
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 1 - Sarrebourg → Mittersheim",
-      "elevation": 230,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [
-        {
-          "name": "Balade au pays des étangs",
-          "image": "",
-          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-          "region": ""
-        }
-      ],
-      "pointsOfInterest": [
-        {
-          "name": "Balade au pays des étangs",
-          "image": "",
-          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-          "region": ""
-        }
-      ],
-      "interest": [
-        {
-          "name": "Balade au pays des étangs",
-          "image": "",
-          "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-          "region": ""
-        }
-      ],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": ""
-    },
-    {
-      "id": "stage-2",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 2,
-      "day": null,
-      "stageLabel": null,
-      "name": "Mittersheim → gondrexange",
-      "type": "principale",
-      "departure": "Mittersheim",
-      "arrival": "gondrexange",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "etape2.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "Camping Les Mouettes",
-        "website": "",
-        "url": "",
-        "photo": "",
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 2 - Mittersheim → gondrexange",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [
-        {
-          "name": "Canal des Houillère",
-          "image": "",
-          "url": "",
-          "region": ""
-        }
-      ],
-      "pointsOfInterest": [
-        {
-          "name": "Canal des Houillère",
-          "image": "",
-          "url": "",
-          "region": ""
-        }
-      ],
-      "interest": [
-        {
-          "name": "Canal des Houillère",
-          "image": "",
-          "url": "",
-          "region": ""
-        }
-      ],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping Les Mouettes"
-    }
-  ]
+  "contributions": []
 }
