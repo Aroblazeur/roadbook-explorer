@@ -7,7 +7,7 @@
     const METADATA_LABELS = {
         project: "Projet"
     };
-    const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo"];
+    const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo", "price"];
     const STAGE_NOTE_FIELDS = ["text", "photo", "createdAt", "source"];
     const STAGE_REFERENCE_FIELDS = ["gpx", "mapEmbedUrl", "stagePhoto"];
     const POI_FIELDS = ["name", "region", "url", "image"];
@@ -244,7 +244,8 @@
         return alternatives.map(alternative => ({
             url: safeText(alternative?.url, ""),
             name: safeText(alternative?.name, ""),
-            photo: safeText(alternative?.photo, "")
+            photo: safeText(alternative?.photo, ""),
+            price: safeText(alternative?.price, "")
         }));
     }
 
@@ -932,7 +933,8 @@
         [
             { field: "name", label: "Nom" },
             { field: "url", label: "URL" },
-            { field: "photo", label: "Photo" }
+            { field: "photo", label: "Photo" },
+            { field: "price", label: "Prix" }
         ].forEach(({ field, label }) => {
             grid.appendChild(createBoundField({
                 label,
@@ -1244,6 +1246,7 @@
             website: "Site web",
             url: "URL",
             photo: "Photo",
+            price: "Prix",
             type: "Type",
             comment: "Commentaire",
             createdAt: "Créé le",
@@ -1376,7 +1379,8 @@
         stage.accommodation.alternatives.push({
             url: "",
             name: "",
-            photo: ""
+            photo: "",
+            price: ""
         });
         rerenderEditorPreservingScroll();
     }
