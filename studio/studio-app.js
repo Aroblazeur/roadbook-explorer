@@ -7,13 +7,16 @@
     const PUBLISH_WORKFLOW_FILE = "publish-roadbook.yml";
     const GITHUB_TOKEN_STORAGE_KEY = "roadbook-studio.github-token";
     const PRIMARY_METADATA_KEYS = ["project"];
+    const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
+    const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
+    const POI_ENRICHMENT_TIMEOUT_MS = 6_000;
     const METADATA_LABELS = {
         project: "Projet"
     };
     const STAGE_ACCOMMODATION_FIELDS = ["name", "website", "url", "photo", "price"];
     const STAGE_NOTE_FIELDS = ["text", "photo", "createdAt", "source"];
     const STAGE_REFERENCE_FIELDS = ["gpx", "mapEmbedUrl", "stagePhoto"];
-    const POI_FIELDS = ["name", "region", "url", "image"];
+    const POI_FIELDS = ["name", "region", "url", "image", "description"];
     const ROADBOOK_ACCOMMODATION_FIELDS = ["role", "name", "website", "url", "photo", "type", "comment", "createdAt", "source"];
     const ROADBOOK_NOTE_FIELDS = ["stage", "text", "photo", "createdAt", "source", "author", "timestamp"];
     const CONTRIBUTION_FIELDS = ["id", "type", "stage", "createdAt", "status", "source", "author", "timestamp"];
@@ -26,7 +29,9 @@
         expandedStages: new Set(),
         expandedVariants: new Set(),
         generalInfoExpanded: true,
-        gpxFiles: new Map()
+        gpxFiles: new Map(),
+        poiEnrichmentCache: new Map(),
+        localPoiEnrichmentCache: new Map()
     };
 
     const elements = {
@@ -2566,17 +2571,17 @@
         if (elements.publishGithub) elements.publishGithub.disabled = !hasExportableRoadbook;
     }
 
-    function downloadCurrentRoadbookJson() {
+    async function downloadCurrentRoadbookJson() {
         if (!state.selectedRoadbook) return;
-        const exportPayload = buildExportRoadbook(state.selectedRoadbook);
+        const { roadbook: exportPayload } = await buildExportRoadbookWithPoiEnrichment(state.selectedRoadbook);
         const id = safeText(exportPayload.id || state.selectedRoadbookId, "roadbook");
         downloadTextFile(`${id}-roadbook.json`, JSON.stringify(exportPayload, null, 2), "application/json");
     }
 
-    function downloadGithubIntegrationExport() {
+    async function downloadGithubIntegrationExport() {
         if (!state.selectedRoadbook) return;
 
-        const exportPayload = buildExportRoadbook(state.selectedRoadbook);
+        const { roadbook: exportPayload, enrichedPoiCount } = await buildExportRoadbookWithPoiEnrichment(state.selectedRoadbook);
         const id = normalizeRoadbookId(exportPayload.id || state.selectedRoadbookId);
         if (!id) {
             setStatus("Export GitHub impossible : ID du roadbook invalide.");
@@ -2598,13 +2603,14 @@
         }
 
         const gpxCount = state.gpxFiles.size;
-        setStatus(`Export GitHub genere pour "${safeText(exportPayload.title, id)}" · ${gpxCount ? gpxCount + " fichier(s) GPX inclus. " : ""}Fichiers a placer dans roadbooks/${id}/.`);
+        const poiSummary = enrichedPoiCount ? `${enrichedPoiCount} POI enrichi(s). ` : "";
+        setStatus(`Export GitHub genere pour "${safeText(exportPayload.title, id)}" · ${poiSummary}${gpxCount ? gpxCount + " fichier(s) GPX inclus. " : ""}Fichiers a placer dans roadbooks/${id}/.`);
     }
 
     async function prepareGithubActionsPublish() {
         if (!state.selectedRoadbook) return;
 
-        const exportPayload = buildExportRoadbook(state.selectedRoadbook);
+        const { roadbook: exportPayload, enrichedPoiCount } = await buildExportRoadbookWithPoiEnrichment(state.selectedRoadbook);
         const id = normalizeRoadbookId(exportPayload.id || state.selectedRoadbookId);
         if (!id) {
             setStatus("Publication GitHub impossible : ID du roadbook invalide.");
@@ -2651,7 +2657,7 @@
                 token
             });
 
-            setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}" : le workflow GitHub Actions va commit directement sur main.`);
+            setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}"${enrichedPoiCount ? ` · ${enrichedPoiCount} POI enrichi(s)` : ""} : le workflow GitHub Actions va commit directement sur main.`);
             window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
         } catch (error) {
             console.error("[Studio] Publication GitHub impossible", error);
@@ -2865,6 +2871,367 @@
             .map(part => part.charAt(0).toUpperCase() + part.slice(1))
             .join("");
         return pascal || "New";
+    }
+
+    async function buildExportRoadbookWithPoiEnrichment(roadbook) {
+        setStatus("Enrichissement discret des POI avant export...");
+        const clone = buildExportRoadbook(roadbook);
+        const enrichedPoiCount = await enrichRoadbookPois(clone);
+        return { roadbook: clone, enrichedPoiCount };
+    }
+
+    async function enrichRoadbookPois(roadbook) {
+        const references = collectPoiReferences(roadbook);
+        let enrichedCount = 0;
+
+        for (const reference of references) {
+            if (!shouldEnrichPoi(reference.poi)) continue;
+            const metadata = await findPoiMetadata(reference.poi.name, roadbook, reference.context);
+            if (applyPoiMetadata(reference.poi, metadata)) enrichedCount += 1;
+        }
+
+        return enrichedCount;
+    }
+
+    function collectPoiReferences(roadbook) {
+        const references = [];
+        const add = (pois, context = {}) => {
+            if (!Array.isArray(pois)) return;
+            pois.forEach(poi => references.push({ poi, context }));
+        };
+
+        add(roadbook.pois, { roadbook });
+        (Array.isArray(roadbook.stages) ? roadbook.stages : []).forEach(stage => {
+            const stageContext = {
+                roadbook,
+                departure: stage.departure,
+                arrival: stage.arrival,
+                stageTitle: stage.title
+            };
+            add(stage.pois, stageContext);
+            (Array.isArray(stage.variants) ? stage.variants : []).forEach(variant => {
+                add(variant.pois, {
+                    ...stageContext,
+                    departure: variant.departure || stage.departure,
+                    arrival: variant.arrival || stage.arrival,
+                    stageTitle: variant.name || variant.title || stage.title
+                });
+            });
+        });
+        return references;
+    }
+
+    function shouldEnrichPoi(poi) {
+        const name = safeText(poi?.name || poi?.label, "");
+        if (!name) return false;
+        return !safeText(poi.image)
+            || !safeText(poi.url)
+            || !safeText(poi.region)
+            || !safeText(poi.description);
+    }
+
+    async function findPoiMetadata(name, roadbook, context = {}) {
+        const normalizedName = normalizePoiLookupText(name);
+        if (!normalizedName) return null;
+
+        const cacheKey = `${safeText(roadbook?.id || state.selectedRoadbookId, "roadbook")}:${normalizedName}`;
+        if (state.poiEnrichmentCache.has(cacheKey)) return state.poiEnrichmentCache.get(cacheKey);
+
+        const localMetadata = await findLocalPoiMetadata(name, roadbook);
+        if (localMetadata) {
+            state.poiEnrichmentCache.set(cacheKey, localMetadata);
+            return localMetadata;
+        }
+
+        const wikidataMetadata = await findWikidataPoiMetadata(name, context);
+        if (wikidataMetadata) {
+            state.poiEnrichmentCache.set(cacheKey, wikidataMetadata);
+            return wikidataMetadata;
+        }
+
+        const commonsMetadata = await findCommonsPoiMetadata(name, context);
+        state.poiEnrichmentCache.set(cacheKey, commonsMetadata);
+        return commonsMetadata;
+    }
+
+    async function findLocalPoiMetadata(name, roadbook) {
+        const index = await loadLocalPoiEnrichmentIndex(safeText(roadbook?.id || state.selectedRoadbookId, ""));
+        return index.get(normalizePoiLookupText(name)) || null;
+    }
+
+    async function loadLocalPoiEnrichmentIndex(roadbookId) {
+        const id = normalizeRoadbookId(roadbookId);
+        if (!id) return new Map();
+        if (state.localPoiEnrichmentCache.has(id)) return state.localPoiEnrichmentCache.get(id);
+
+        const index = new Map();
+        try {
+            const response = await fetch(`roadbooks/${id}/data/poi-enrichment.json`, {
+                headers: { Accept: "application/json" },
+                cache: "no-store"
+            });
+            if (response.ok) {
+                const data = JSON.parse(await response.text());
+                (Array.isArray(data?.items) ? data.items : []).forEach(item => {
+                    if (!item || item.status !== "ok") return;
+                    const key = normalizePoiLookupText(item.name);
+                    if (key) index.set(key, sanitizePoiMetadata(item));
+                });
+            }
+        } catch (error) {
+            console.warn(`[Studio] Enrichissement POI local indisponible pour ${id}.`, error);
+        }
+
+        state.localPoiEnrichmentCache.set(id, index);
+        return index;
+    }
+
+    async function findWikidataPoiMetadata(name, context = {}) {
+        const candidate = await findBestWikidataPoiCandidate(name, context);
+        if (!candidate?.id) return null;
+        const entity = await fetchWikidataPoiEntity(candidate.id);
+        if (!entity) return null;
+        const imageName = claimValue(entity?.claims?.P18);
+        const image = imageName ? await commonsRedirectFromFilename(imageName) : "";
+        return sanitizePoiMetadata({
+            name,
+            image,
+            description: shortPoiDescription(entityDescription(entity) || candidate.description || ""),
+            coordinates: coordinatesFromClaims(entity?.claims?.P625),
+            url: `https://www.wikidata.org/wiki/${candidate.id}`,
+            source: "wikidata",
+            status: "ok"
+        });
+    }
+
+    async function findBestWikidataPoiCandidate(name, context = {}) {
+        const queries = poiSearchQueries(name, context);
+        let best = null;
+        for (const query of queries) {
+            for (const language of ["fr", "en", "es", "ca"]) {
+                const url = new URL(WIKIDATA_API);
+                url.search = new URLSearchParams({
+                    action: "wbsearchentities",
+                    format: "json",
+                    type: "item",
+                    limit: "5",
+                    language,
+                    uselang: "fr",
+                    origin: "*",
+                    search: query
+                }).toString();
+                const data = await fetchJsonWithTimeout(url);
+                (Array.isArray(data?.search) ? data.search : []).forEach(candidate => {
+                    const score = scorePoiCandidate(candidate, name);
+                    if (!best || score > best.score) best = { ...candidate, score };
+                });
+                if (best?.score >= 95) return best;
+            }
+        }
+        return best?.score >= 70 ? best : null;
+    }
+
+    async function fetchWikidataPoiEntity(id) {
+        if (!/^Q\d+$/.test(String(id || ""))) return null;
+        const url = new URL(WIKIDATA_API);
+        url.search = new URLSearchParams({
+            action: "wbgetentities",
+            format: "json",
+            ids: id,
+            props: "claims|descriptions|labels",
+            languages: "fr|en|es|ca",
+            languagefallback: "1",
+            origin: "*"
+        }).toString();
+        const data = await fetchJsonWithTimeout(url);
+        const entity = data?.entities?.[id];
+        return entity && !entity.missing ? entity : null;
+    }
+
+    async function findCommonsPoiMetadata(name, context = {}) {
+        const queries = poiSearchQueries(name, context);
+        for (const query of queries) {
+            const url = new URL(COMMONS_API);
+            url.search = new URLSearchParams({
+                action: "query",
+                format: "json",
+                generator: "search",
+                gsrnamespace: "6",
+                gsrlimit: "8",
+                gsrsearch: query,
+                prop: "imageinfo",
+                iiprop: "url",
+                origin: "*"
+            }).toString();
+            const data = await fetchJsonWithTimeout(url);
+            const pages = Object.values(data?.query?.pages || {});
+            const match = selectCommonsPoiImage(pages, name);
+            if (match) {
+                const filename = String(match.title || "").replace(/^File:/i, "").trim();
+                return sanitizePoiMetadata({
+                    name,
+                    image: filename ? `https://commons.wikimedia.org/wiki/Special:Redirect/file/${encodeURIComponent(filename)}` : "",
+                    url: filename ? `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(filename).replace(/%20/g, "_")}` : "",
+                    source: "wikimedia-commons",
+                    status: "ok"
+                });
+            }
+        }
+        return null;
+    }
+
+    function selectCommonsPoiImage(pages, name) {
+        const expectedTokens = meaningfulPoiTokens(name);
+        if (!expectedTokens.length) return null;
+        let best = null;
+        pages.forEach(page => {
+            const title = normalizePoiLookupText(String(page?.title || "").replace(/^File:/i, "").replace(/\.[a-z0-9]{2,5}$/i, ""));
+            const titleTokens = new Set(meaningfulPoiTokens(title));
+            const score = expectedTokens.every(token => titleTokens.has(token))
+                ? expectedTokens.length * 20 + (title.includes(normalizePoiLookupText(name)) ? 20 : 0)
+                : -1;
+            if (score > 0 && (!best || score > best.score)) best = { ...page, score };
+        });
+        return best;
+    }
+
+    async function commonsRedirectFromFilename(filename) {
+        const safeFilename = safeText(filename, "");
+        return safeFilename ? `https://commons.wikimedia.org/wiki/Special:Redirect/file/${encodeURIComponent(safeFilename)}` : "";
+    }
+
+    function applyPoiMetadata(poi, metadata) {
+        if (!poi || !metadata) return false;
+        let changed = false;
+        const applyString = (field, value) => {
+            const candidate = safeText(value, "");
+            if (!candidate || safeText(poi[field], "")) return;
+            poi[field] = candidate;
+            changed = true;
+        };
+        applyString("image", metadata.image);
+        applyString("url", metadata.url);
+        applyString("region", metadata.region);
+        applyString("description", metadata.description);
+        applyString("source", metadata.source);
+        if (!poi.coordinates && metadata.coordinates) {
+            poi.coordinates = metadata.coordinates;
+            changed = true;
+        }
+        return changed;
+    }
+
+    function sanitizePoiMetadata(item) {
+        if (!item || typeof item !== "object") return null;
+        return {
+            name: safeText(item.name, ""),
+            image: safeHttpInformationUrl(item.image),
+            url: safeHttpInformationUrl(item.url || item.link || item.sourceUrl),
+            region: safeText(item.region, ""),
+            description: safeText(item.description, ""),
+            coordinates: safeCoordinates(item.coordinates),
+            source: safeText(item.source, ""),
+            status: safeText(item.status, "")
+        };
+    }
+
+    function poiSearchQueries(name, context = {}) {
+        const base = safeText(name, "");
+        const location = safeText(context.region || context.arrival || context.departure || context.roadbook?.metadata?.destination, "");
+        return [...new Set([base, location ? `${base} ${location}` : "", removeAccents(base)].filter(Boolean))];
+    }
+
+    function scorePoiCandidate(candidate, originalName) {
+        const label = normalizePoiLookupText(candidate?.label || candidate?.match?.text || "");
+        const original = normalizePoiLookupText(originalName);
+        if (!label || !original) return 0;
+        if (label === original) return 100;
+        if (label.includes(original) || original.includes(label)) return 82;
+        const expectedTokens = meaningfulPoiTokens(original);
+        const candidateTokens = new Set(meaningfulPoiTokens(label));
+        const overlap = expectedTokens.filter(token => candidateTokens.has(token)).length;
+        return Math.round((overlap / Math.max(expectedTokens.length, 1)) * 70);
+    }
+
+    function meaningfulPoiTokens(value) {
+        return normalizePoiLookupText(value)
+            .split(" ")
+            .filter(token => token.length >= 3 && !["les", "des", "une", "dans", "avec", "pour", "the"].includes(token));
+    }
+
+    function normalizePoiLookupText(value) {
+        return safeText(value, "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[’']/g, " ")
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim()
+            .toLowerCase();
+    }
+
+    function removeAccents(value) {
+        return safeText(value, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function shortPoiDescription(value) {
+        const description = safeText(value, "");
+        return description.length <= 240 ? description : `${description.slice(0, 237).trim()}…`;
+    }
+
+    function entityDescription(entity) {
+        for (const language of ["fr", "en", "es", "ca"]) {
+            const value = entity?.descriptions?.[language]?.value;
+            if (value) return value;
+        }
+        return "";
+    }
+
+    function claimValue(claims) {
+        const claim = (Array.isArray(claims) ? claims : [])
+            .find(item => item.rank !== "deprecated" && item.mainsnak?.snaktype === "value");
+        return claim?.mainsnak?.datavalue?.value ?? null;
+    }
+
+    function coordinatesFromClaims(claims) {
+        return safeCoordinates(claimValue(claims));
+    }
+
+    function safeCoordinates(value) {
+        const lat = Number(value?.lat ?? value?.latitude);
+        const lng = Number(value?.lng ?? value?.longitude);
+        return Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+               Number.isFinite(lng) && lng >= -180 && lng <= 180
+            ? { lat, lng }
+            : null;
+    }
+
+    function safeHttpInformationUrl(value) {
+        const candidate = safeText(value, "");
+        if (!candidate || /wikipedia/i.test(candidate)) return "";
+        try {
+            const url = new URL(candidate);
+            return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+        } catch (error) {
+            return "";
+        }
+    }
+
+    async function fetchJsonWithTimeout(url) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), POI_ENRICHMENT_TIMEOUT_MS);
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: { Accept: "application/json" }
+            });
+            if (!response.ok) return {};
+            return JSON.parse(await response.text());
+        } catch (error) {
+            console.warn("[Studio] Enrichissement POI distant indisponible.", error);
+            return {};
+        } finally {
+            clearTimeout(timeout);
+        }
     }
 
     function buildExportRoadbook(roadbook) {

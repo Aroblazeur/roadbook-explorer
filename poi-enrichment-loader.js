@@ -39,7 +39,10 @@
                 name: safeText(item.name),
                 image: safeImageUrl(item.image),
                 description: safeDescription(item.description),
-                coordinates: safeCoordinates(item.coordinates)
+                coordinates: safeCoordinates(item.coordinates),
+                region: safeText(item.region),
+                url: safeInformationUrl(item.url || item.link || item.sourceUrl),
+                source: safeText(item.source)
             });
         });
         return index;
@@ -76,6 +79,17 @@
     function safeDescription(value) {
         const description = safeText(value);
         return /https?:\/\//i.test(description) || /wikipedia/i.test(description) ? "" : description;
+    }
+
+    function safeInformationUrl(value) {
+        const candidate = safeText(value);
+        if (!candidate || /wikipedia/i.test(candidate)) return "";
+        try {
+            const url = new URL(candidate);
+            return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+        } catch (error) {
+            return "";
+        }
     }
 
     function safeCoordinates(value) {
