@@ -5,8 +5,8 @@
   "metadata": {
     "activity": "Velo",
     "destination": "Alsace",
-    "project": "Deja fait",
-    "projectStatus": "done",
+    "project": "Voyage réalisé",
+    "projectStatus": "Voyage réalisé",
     "coverImage": "",
     "generatedAt": "2026-07-04T21:29:01.699Z",
     "source": "google-sheets",
@@ -15,9 +15,9 @@
   "summary": {
     "official": null,
     "stagesTotal": {
-      "distance": 23,
+      "distance": 73,
       "elevationGain": 230,
-      "elevationLoss": null,
+      "elevationLoss": 0,
       "mapEmbedUrl": null,
       "gpx": null,
       "link": null
@@ -75,7 +75,8 @@
           "name": "Balade au pays des étangs",
           "image": "",
           "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-          "region": ""
+          "region": "",
+          "description": ""
         }
       ],
       "pointsOfInterest": [
@@ -83,7 +84,8 @@
           "name": "Balade au pays des étangs",
           "image": "",
           "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-          "region": ""
+          "region": "",
+          "description": ""
         }
       ],
       "interest": [
@@ -91,7 +93,8 @@
           "name": "Balade au pays des étangs",
           "image": "",
           "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-          "region": ""
+          "region": "",
+          "description": ""
         }
       ],
       "restaurants": [],
@@ -146,9 +149,15 @@
       "pois": [
         {
           "name": "Canal des Houillère",
-          "image": "",
-          "url": "",
-          "region": ""
+          "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/CanalHouill%C3%A8resSarre.jpg",
+          "url": "https://www.wikidata.org/wiki/Q612380",
+          "region": "",
+          "description": "canal français",
+          "source": "wikidata",
+          "coordinates": {
+            "lat": 48.70027778,
+            "lng": 6.90972222
+          }
         }
       ],
       "pointsOfInterest": [
@@ -156,7 +165,8 @@
           "name": "Canal des Houillère",
           "image": "",
           "url": "",
-          "region": ""
+          "region": "",
+          "description": ""
         }
       ],
       "interest": [
@@ -164,7 +174,8 @@
           "name": "Canal des Houillère",
           "image": "",
           "url": "",
-          "region": ""
+          "region": "",
+          "description": ""
         }
       ],
       "restaurants": [],
@@ -189,9 +200,15 @@
       "pois": [
         {
           "name": "Butte de doue",
-          "region": "",
-          "url": "",
-          "image": ""
+          "region": "Doue, Seine-et-Marne",
+          "url": "https://www.caue77.fr/paysage/%C2%AB%20La%20butte%20de%20Gargantua%C2%BB%20-%20Butte%20de%20Doue%20%28Seine-et-Marne%29",
+          "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/La%20Butte%20de%20Doue.JPG",
+          "description": "Butte paysagère de Doue en Seine-et-Marne, dominant le plateau briard et aussi connue comme le phare de la Brie.",
+          "source": "caue77",
+          "coordinates": {
+            "lat": 48.86556,
+            "lng": 3.16472
+          }
         }
       ],
       "pointsOfInterest": [
@@ -199,7 +216,8 @@
           "name": "Butte de doue",
           "region": "",
           "url": "",
-          "image": ""
+          "image": "",
+          "description": ""
         }
       ],
       "interest": [
@@ -207,7 +225,8 @@
           "name": "Butte de doue",
           "region": "",
           "url": "",
-          "image": ""
+          "image": "",
+          "description": ""
         }
       ],
       "warning": [],
@@ -265,14 +284,21 @@
       "name": "Balade au pays des étangs",
       "image": "",
       "url": "https://www.outdooractive.com/fr/route/velo-de-route/lorraine/balade-au-pays-des-etangs/128258888/",
-      "region": ""
+      "region": "",
+      "description": ""
     },
     {
       "stage": 2,
       "name": "Canal des Houillère",
-      "image": "",
-      "url": "",
-      "region": ""
+      "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/CanalHouill%C3%A8resSarre.jpg",
+      "url": "https://www.wikidata.org/wiki/Q612380",
+      "region": "",
+      "description": "canal français",
+      "source": "wikidata",
+      "coordinates": {
+        "lat": 48.70027778,
+        "lng": 6.90972222
+      }
     }
   ],
   "notes": [],
