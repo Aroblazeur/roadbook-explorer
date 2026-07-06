@@ -9,6 +9,9 @@
     const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
     const CONTRIBUTION_ENDPOINT =
         "https://script.google.com/macros/s/AKfycby9vh9snguG8M8khWWkqi2e4mrsmKsKKVNkMrIogb7BanHnoYN9v7DoP-Z08Yh7EPHK_A/exec";
+    const CONTRIBUTION_FEED = Object.freeze({
+        endpoint: CONTRIBUTION_ENDPOINT
+    });
 
     const requested = resolveRequestedRoadbook(global.location);
     const safeId = sanitizeRoadbookId(requested.id) || DEFAULT_ROADBOOK_ID;
@@ -181,12 +184,14 @@
             shortId: id,
             title: "RoadBook Explorer",
             contributionEndpoint: CONTRIBUTION_ENDPOINT,
+            contributionFeed: CONTRIBUTION_FEED,
             sheets: {},
             options: {},
             ...config
         };
 
         normalizedConfig.contributionEndpoint = CONTRIBUTION_ENDPOINT;
+        normalizedConfig.contributionFeed = CONTRIBUTION_FEED;
 
         normalizedConfig.id = sanitizeRoadbookId(normalizedConfig.id || id) || id;
         normalizedConfig.shortId = sanitizeRoadbookId(normalizedConfig.shortId || normalizedConfig.id) || normalizedConfig.id;
