@@ -130,6 +130,7 @@ async function enrichPoi(name, existingItem) {
             imageStatus: imageInfo.imageStatus,
             description: shortDescription(entity ? (entityDescription(entity) || candidate?.description) : ""),
             coordinates: coordinatesFromClaims(entity?.claims?.P625),
+            url: entity ? `https://www.wikidata.org/wiki/${candidate.id}` : imageInfo.url,
             source: resolvePoiSource({ entity, imageSource: imageInfo.imageSource }),
             status
         };
@@ -154,6 +155,7 @@ async function resolvePoiImage(name, entity, existingItem) {
             if (image) {
                 return {
                     image,
+                    url: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(imageName.trim()).replace(/%20/g, "_")}`,
                     imageSource: "wikidata-p18",
                     imageStatus: "found"
                 };
@@ -244,6 +246,7 @@ async function findCommonsImage(name) {
         if (match) {
             return {
                 image: commonsFileRedirectUrl(match.title),
+                url: commonsFilePageUrl(match.title),
                 imageSource: query.imageSource,
                 imageStatus: "found"
             };
@@ -359,6 +362,7 @@ function preserveExistingPoi(name, item) {
         imageStatus: imageInfo.imageStatus,
         description: safeText(item?.description),
         coordinates: safeCoordinates(item?.coordinates),
+        url: safeHttpUrl(item?.url || item?.link || item?.sourceUrl),
         source: safeText(item?.source) || resolvePoiSource({ imageSource: imageInfo.imageSource }),
         status: safeText(item?.status) || "ok"
     };
@@ -485,6 +489,13 @@ function commonsFileRedirectUrl(title) {
         : "";
 }
 
+function commonsFilePageUrl(title) {
+    const filename = String(title || "").replace(/^File:/i, "").trim();
+    return filename
+        ? `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(filename).replace(/%20/g, "_")}`
+        : "";
+}
+
 function meaningfulTokens(value) {
     return meaningfulTokensFromNormalized(normalizeSearchText(value));
 }
@@ -562,6 +573,7 @@ function emptyPoi(name, status) {
         imageStatus: status === "error" ? "error" : "not_found",
         description: "",
         coordinates: null,
+        url: "",
         source: "wikidata",
         status
     };

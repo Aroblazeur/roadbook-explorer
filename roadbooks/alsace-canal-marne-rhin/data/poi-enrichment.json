@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-07-06T00:00:00.000Z",
+  "items": [
+    {
+      "name": "Butte de doue",
+      "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/La%20Butte%20de%20Doue.JPG",
+      "description": "Butte paysagère de Doue en Seine-et-Marne, dominant le plateau briard et aussi connue comme le phare de la Brie.",
+      "region": "Doue, Seine-et-Marne",
+      "coordinates": {
+        "lat": 48.86556,
+        "lng": 3.16472
+      },
+      "url": "https://www.caue77.fr/paysage/%C2%AB%20La%20butte%20de%20Gargantua%C2%BB%20-%20Butte%20de%20Doue%20%28Seine-et-Marne%29",
+      "source": "caue77",
+      "status": "ok"
+    }
+  ]
+}

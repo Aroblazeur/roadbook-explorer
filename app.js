@@ -1871,20 +1871,31 @@ function findPoiEnrichment(name) {
     return key ? poiEnrichmentIndex.get(key) || null : null;
 }
 
+function safePoiCoordinates(value) {
+    const lat = Number(value?.lat ?? value?.latitude);
+    const lng = Number(value?.lng ?? value?.longitude);
+    return Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+           Number.isFinite(lng) && lng >= -180 && lng <= 180
+        ? { lat, lng }
+        : null;
+}
+
 function resolvePoiEntry(poi, day) {
     const sourceName = typeof poi === "object" ? poi?.name || poi?.label : poi;
     const sourceDescription = typeof poi === "object" ? safeText(poi?.description, "") : "";
     const sourceImage = typeof poi === "object" ? safeText(poi?.image, "") : "";
     const sourceRegion = typeof poi === "object" ? safeText(poi?.region, "") : "";
     const sourceUrl = typeof poi === "object" ? safeText(poi?.url || poi?.link, "") : "";
+    const sourceCoordinates = typeof poi === "object" ? safePoiCoordinates(poi?.coordinates) : null;
     const name = safeText(sourceName, "Point d'intérêt");
     const metadata = findPoiEnrichment(name);
     const imageCandidate = sourceImage || metadata?.image || "";
     const image = isSafeUrl(imageCandidate) ? imageCandidate : "";
     const description = metadata?.description || sourceDescription || "";
-    const coordinates = metadata?.coordinates || null;
+    const coordinates = sourceCoordinates || metadata?.coordinates || null;
     const region = sourceRegion || metadata?.region || "";
-    const url = isSafeUrl(sourceUrl) ? sourceUrl : "";
+    const metadataUrl = safeText(metadata?.url || metadata?.sourceUrl, "");
+    const url = isSafeUrl(sourceUrl) ? sourceUrl : isSafeUrl(metadataUrl) ? metadataUrl : "";
 
     const contextCity = safeText(day?.arrival || day?.departure || "", "");
     const mapQuery = coordinates
