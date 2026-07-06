@@ -151,7 +151,7 @@ Depuis RoadBook Explorer, le POST est envoyé en :
 Content-Type: text/plain;charset=utf-8
 ```
 
-Cela évite les préflights CORS inutiles avec Apps Script.
+Le navigateur l’envoie en requête simple `no-cors`. La réponse POST Apps Script n’est donc pas lue directement par le site ; la confirmation se fait par relecture live des contributions.
 
 ## Sécurité future
 
