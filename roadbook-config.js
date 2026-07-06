@@ -8,7 +8,7 @@
     const EXCLUDED_CATALOG_IDS = new Set(["template"]);
     const KNOWN_ROADBOOK_IDS = Object.freeze([DEFAULT_ROADBOOK_ID]);
     const CONTRIBUTION_ENDPOINT =
-        "https://script.google.com/macros/s/AKfycby9vh9snguG8M8khWWkqi2e4mrsmKsKKVNkMrIogb7BanHnoYN9v7DoP-Z08Yh7EPHK_A/exec";
+        "https://script.google.com/macros/s/AKfycbx2DJNd3bNNbF5usb9WBbwxMbg8cAzvCVTpP_jPLRRWRKZJDUN2-yeVzBZYutweiahBjg/exec";
     const CONTRIBUTION_FEED = Object.freeze({
         endpoint: CONTRIBUTION_ENDPOINT
     });
