@@ -738,6 +738,14 @@
             setSummaryStatsFromGpx("stagesTotal", gpxVal, tracedStatus, tracedGrid);
         });
         tracedActions.appendChild(tracedCalcBtn);
+        const tracedFromStagesBtn = document.createElement("button");
+        tracedFromStagesBtn.type = "button";
+        tracedFromStagesBtn.className = "terrain-button terrain-button--secondary";
+        tracedFromStagesBtn.textContent = "Recalculer le tracé actuel depuis les étapes";
+        tracedFromStagesBtn.addEventListener("click", () => {
+            recalculateStagesTotalFromStages(tracedStatus, tracedGrid);
+        });
+        tracedActions.appendChild(tracedFromStagesBtn);
         tracedSection.appendChild(tracedActions);
         body.appendChild(tracedSection);
 
@@ -831,6 +839,66 @@
             accumulator.elevationLoss += toFiniteNumber(stage.elevationLoss) || 0;
             return accumulator;
         }, { distance: 0, elevationGain: 0, elevationLoss: 0 });
+    }
+
+    function hasMetricValue(value) {
+        if (value === null || value === undefined) return false;
+        if (typeof value === "string" && !value.trim()) return false;
+        return Number.isFinite(decimalOrNull(value));
+    }
+
+    function stageMissingComputedMetrics(stage) {
+        return ["distance", "elevationGain", "elevationLoss"].filter(field => !hasMetricValue(stage?.[field]));
+    }
+
+    function applyMissingStageMetrics(stage, stats) {
+        if (!stage || !stats) return [];
+        const updatedFields = [];
+        ["distance", "elevationGain", "elevationLoss"].forEach(field => {
+            if (hasMetricValue(stage[field]) || !Number.isFinite(stats[field])) return;
+            stage[field] = stats[field];
+            updatedFields.push(field);
+        });
+        return updatedFields;
+    }
+
+    async function completeMainStageMetricsFromGpx(roadbook) {
+        const stages = Array.isArray(roadbook?.stages) ? roadbook.stages : [];
+        const completed = [];
+        const failed = [];
+
+        for (let stageIndex = 0; stageIndex < stages.length; stageIndex += 1) {
+            const stage = stages[stageIndex];
+            const missing = stageMissingComputedMetrics(stage);
+            const gpx = safeText(stage?.gpx, "");
+            if (!missing.length || !gpx) continue;
+
+            const result = await fetchAndComputeGpx(gpx);
+            if (result.error) {
+                failed.push({ stageIndex, stage, error: result.error });
+                continue;
+            }
+
+            const updatedFields = applyMissingStageMetrics(stage, result.stats);
+            if (updatedFields.length) {
+                completed.push({ stageIndex, stage, fields: updatedFields });
+            }
+        }
+
+        return { completed, failed };
+    }
+
+    function refreshStagesTotalSummary(roadbook) {
+        if (!roadbook) return { distance: 0, elevationGain: 0, elevationLoss: 0 };
+        if (!roadbook.summary || typeof roadbook.summary !== "object" || Array.isArray(roadbook.summary)) {
+            roadbook.summary = {};
+        }
+        const computed = computeSummary(Array.isArray(roadbook.stages) ? roadbook.stages : []);
+        roadbook.summary.stagesTotal = {
+            ...(roadbook.summary.stagesTotal || {}),
+            ...computed
+        };
+        return computed;
     }
 
     function createMetric(label, value) {
@@ -2876,6 +2944,8 @@
     async function buildExportRoadbookWithPoiEnrichment(roadbook) {
         setStatus("Enrichissement discret des POI avant export...");
         const clone = buildExportRoadbook(roadbook);
+        await completeMainStageMetricsFromGpx(clone);
+        refreshStagesTotalSummary(clone);
         const enrichedPoiCount = await enrichRoadbookPois(clone);
         return { roadbook: clone, enrichedPoiCount };
     }
@@ -3494,20 +3564,21 @@
         let distanceKm = 0;
         let gain = 0;
         let loss = 0;
-        let prevEle = null;
+        let elevationAnchor = null;
         for (let i = 0; i < points.length; i++) {
             if (i > 0) {
                 distanceKm += haversineKm(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon);
             }
             const ele = points[i].ele;
-            if (ele !== null && prevEle !== null) {
-                const diff = ele - prevEle;
+            if (ele !== null && elevationAnchor !== null) {
+                const diff = ele - elevationAnchor;
                 if (Math.abs(diff) >= 3) {
                     if (diff > 0) gain += diff;
                     else loss += Math.abs(diff);
+                    elevationAnchor = ele;
                 }
             }
-            if (ele !== null) prevEle = ele;
+            if (ele !== null && elevationAnchor === null) elevationAnchor = ele;
         }
         return {
             distance: Math.round(distanceKm * 10) / 10,
@@ -3651,5 +3722,52 @@
             statusEl.classList.add("studio-gpx-status--success");
             statusEl.classList.remove("studio-gpx-status--error");
         });
+    }
+
+    async function recalculateStagesTotalFromStages(statusEl, gridEl) {
+        const roadbook = state.selectedRoadbook;
+        if (!roadbook) return;
+
+        statusEl.textContent = "Recalcul du tracé actuel depuis les étapes...";
+        statusEl.classList.remove("studio-gpx-status--error", "studio-gpx-status--success");
+
+        const { completed, failed } = await completeMainStageMetricsFromGpx(roadbook);
+        completed.forEach(({ stageIndex, stage }) => {
+            updateStageMetricControls(stageIndex, stage);
+        });
+
+        const computed = refreshStagesTotalSummary(roadbook);
+        updateSummaryGridControls(gridEl, computed);
+        markModified();
+
+        const completedStages = completed.length;
+        const failedStages = failed.length;
+        const failureText = failedStages ? ` · ${failedStages} étape(s) avec GPX non exploitable` : "";
+        statusEl.textContent = `Tracé actuel recalculé : ${computed.distance} km, D+ ${computed.elevationGain} m, D− ${computed.elevationLoss} m · ${completedStages} étape(s) complétée(s) depuis GPX${failureText}`;
+        statusEl.classList.add(failedStages ? "studio-gpx-status--error" : "studio-gpx-status--success");
+        statusEl.classList.remove(failedStages ? "studio-gpx-status--success" : "studio-gpx-status--error");
+    }
+
+    function updateStageMetricControls(stageIndex, stage) {
+        const stageCard = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"]`);
+        if (!stageCard) return;
+        const distInput = stageCard.querySelector('[data-field="distance"]');
+        const gainInput = stageCard.querySelector('[data-field="elevationGain"]');
+        const lossInput = stageCard.querySelector('[data-field="elevationLoss"]');
+        if (distInput) distInput.value = stage.distance ?? "";
+        if (gainInput) gainInput.value = stage.elevationGain ?? "";
+        if (lossInput) lossInput.value = stage.elevationLoss ?? "";
+        const summaryEl = stageCard.querySelector(".studio-stage-card__summary");
+        if (summaryEl) summaryEl.textContent = buildStageSummaryText(stage);
+    }
+
+    function updateSummaryGridControls(gridEl, values) {
+        if (!gridEl || !values) return;
+        const distInput = findFieldControl(gridEl, "distance");
+        const gainInput = findFieldControl(gridEl, "elevationGain");
+        const lossInput = findFieldControl(gridEl, "elevationLoss");
+        if (distInput) distInput.value = values.distance ?? "";
+        if (gainInput) gainInput.value = values.elevationGain ?? "";
+        if (lossInput) lossInput.value = values.elevationLoss ?? "";
     }
 })();
