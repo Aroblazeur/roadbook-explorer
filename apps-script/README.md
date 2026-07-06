@@ -55,7 +55,7 @@ Si l’onglet est vide, le script crée automatiquement les en-têtes.
 5. Dans les propriétés du script, créer :
 
 ```text
-ROADBOOK_CONTRIBUTIONS_SHEET_ID = ID_DU_GOOGLE_SHEET_CENTRAL
+ROADBOOK_CONTRIBUTIONS_SHEET_ID = 1TA3NCbR6EMI__-dyF3x5Ir4JXDfN78qQ2448hrNrxnc
 ```
 
 Alternative moins recommandée : renseigner directement `CENTRAL_SPREADSHEET_ID` dans `Code.gs`.
@@ -69,14 +69,18 @@ Exécuter en tant que : Moi
 Accès : Tout le monde
 ```
 
-Copier l’URL `/exec`. Elle est utilisée globalement par RoadBook Explorer dans `roadbook-config.js`.
+L’URL `/exec` actuellement utilisée globalement par RoadBook Explorer est :
+
+```text
+https://script.google.com/macros/s/AKfycbx2DJNd3bNNbF5usb9WBbwxMbg8cAzvCVTpP_jPLRRWRKZJDUN2-yeVzBZYutweiahBjg/exec
+```
 
 ## Test GET
 
 Ouvrir :
 
 ```text
-https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+https://script.google.com/macros/s/AKfycbx2DJNd3bNNbF5usb9WBbwxMbg8cAzvCVTpP_jPLRRWRKZJDUN2-yeVzBZYutweiahBjg/exec
 ```
 
 Réponse attendue :
