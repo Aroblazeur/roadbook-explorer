@@ -1860,7 +1860,7 @@ function updatePois(day) {
         return;
     }
 
-    renderPoiList(list, pois);
+    renderPoiList(list, pois, day);
 
 }
 
@@ -1871,7 +1871,7 @@ function findPoiEnrichment(name) {
     return key ? poiEnrichmentIndex.get(key) || null : null;
 }
 
-function resolvePoiEntry(poi) {
+function resolvePoiEntry(poi, day) {
     const sourceName = typeof poi === "object" ? poi?.name || poi?.label : poi;
     const sourceDescription = typeof poi === "object" ? safeText(poi?.description, "") : "";
     const sourceImage = typeof poi === "object" ? safeText(poi?.image, "") : "";
@@ -1885,9 +1885,15 @@ function resolvePoiEntry(poi) {
     const coordinates = metadata?.coordinates || null;
     const region = sourceRegion || metadata?.region || "";
     const url = isSafeUrl(sourceUrl) ? sourceUrl : "";
+
+    const contextCity = safeText(day?.arrival || day?.departure || "", "");
     const mapQuery = coordinates
         ? `${coordinates.lat},${coordinates.lng}`
-        : [metadata?.name || name, region].filter(Boolean).join(" ");
+        : [name, region || contextCity].filter(Boolean).join(" ");
+
+    const wikiSearchUrl = !url && name
+        ? `https://fr.wikipedia.org/wiki/Special:Search/${encodeURIComponent(name)}`
+        : "";
 
     return {
         name: metadata?.name || name,
@@ -1895,6 +1901,7 @@ function resolvePoiEntry(poi) {
         region,
         description,
         url,
+        wikiSearchUrl,
         coordinates,
         mapQuery,
         isEnriched: Boolean(image || region || description || coordinates || url)
@@ -1947,6 +1954,14 @@ function appendPoiCard(list, entry) {
         sourceLink.rel = "noopener noreferrer";
         sourceLink.textContent = "Ouvrir le lien";
         content.appendChild(sourceLink);
+    } else if (entry.wikiSearchUrl) {
+        const wikiLink = document.createElement("a");
+        wikiLink.className = "terrain-button terrain-button--secondary poi-card__map-link";
+        wikiLink.href = entry.wikiSearchUrl;
+        wikiLink.target = "_blank";
+        wikiLink.rel = "noopener noreferrer";
+        wikiLink.textContent = "Rechercher sur Wikipédia";
+        content.appendChild(wikiLink);
     }
 
     if (entry.mapQuery) {
@@ -1963,8 +1978,8 @@ function appendPoiCard(list, entry) {
     list.appendChild(li);
 }
 
-function renderPoiList(list, pois) {
-    const entries = pois.map(resolvePoiEntry);
+function renderPoiList(list, pois, day) {
+    const entries = pois.map(poi => resolvePoiEntry(poi, day));
     const hasEnrichedPoi = entries.some(entry => entry.isEnriched);
 
     list.classList.toggle("poi-list--enriched", hasEnrichedPoi);
