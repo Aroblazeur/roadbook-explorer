@@ -187,12 +187,19 @@ function listContributions(e) {
 }
 
 function parseJsonRequest(e) {
-  if (!e || !e.postData || !e.postData.contents) {
+  var contents = "";
+  if (e && e.parameter && e.parameter.payload) {
+    contents = e.parameter.payload;
+  } else if (e && e.postData && e.postData.contents) {
+    contents = e.postData.contents;
+  }
+
+  if (!contents) {
     throw createError("EMPTY_BODY", "Le corps de la requête est vide.", 400);
   }
 
   try {
-    return JSON.parse(e.postData.contents);
+    return JSON.parse(contents);
   } catch (error) {
     throw createError("INVALID_JSON", "Le corps de la requête doit être un JSON valide.", 400);
   }

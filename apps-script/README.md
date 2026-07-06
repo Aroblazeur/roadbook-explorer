@@ -145,13 +145,13 @@ Pour un hébergement, `name` ou `url` suffit. Il n’est plus nécessaire de fou
 
 ## CORS / requête simple
 
-Depuis RoadBook Explorer, le POST est envoyé en :
+Depuis RoadBook Explorer, le POST public est envoyé par formulaire caché vers une iframe invisible, avec un champ unique :
 
-```http
-Content-Type: text/plain;charset=utf-8
+```text
+payload = JSON.stringify(...)
 ```
 
-Le navigateur l’envoie comme requête simple, sans `application/json` et sans `no-cors`. La réponse JSON Apps Script doit rester lisible par le site, et le message de succès n’est affiché que si la réponse contient `ok: true`.
+`Code.gs` accepte aussi le JSON brut via `e.postData.contents`. Le site n’utilise pas `no-cors` comme preuve de succès : il confirme l’écriture par relecture live (`GET /exec?action=list&roadbookId=...`) et n’affiche un succès que si la contribution apparaît dans la liste.
 
 ## Sécurité future
 
