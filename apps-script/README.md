@@ -151,7 +151,7 @@ Depuis RoadBook Explorer, le POST est envoyé en :
 Content-Type: text/plain;charset=utf-8
 ```
 
-Le navigateur l’envoie en requête simple `no-cors`. La réponse POST Apps Script n’est donc pas lue directement par le site ; la confirmation se fait par relecture live des contributions.
+Le navigateur l’envoie comme requête simple, sans `application/json` et sans `no-cors`. La réponse JSON Apps Script doit rester lisible par le site, et le message de succès n’est affiché que si la réponse contient `ok: true`.
 
 ## Sécurité future
 

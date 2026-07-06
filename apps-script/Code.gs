@@ -407,12 +407,23 @@ function createError(code, message, status, details) {
 }
 
 function jsonResponse(data, status) {
+  var isOk = data && data.ok === true;
+  var payload = {
+    ok: isOk,
+    status: status || 200,
+    timestamp: new Date().toISOString()
+  };
+
+  if (isOk) {
+    payload.data = data;
+  } else if (data && data.error) {
+    payload.error = data.error;
+  } else {
+    payload.data = data;
+  }
+
   return ContentService
-    .createTextOutput(JSON.stringify({
-      status: status || 200,
-      timestamp: new Date().toISOString(),
-      data: data
-    }))
+    .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
