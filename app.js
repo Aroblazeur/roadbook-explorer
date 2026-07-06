@@ -2334,17 +2334,10 @@ async function sendContribution(contributionType, stage, payload) {
     console.info("[RoadBook Contribution] Payload envoyé", requestPayload);
     console.info("[RoadBook Contribution] Endpoint utilisé", endpoint);
 
-    let response;
     try {
-        response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify(requestPayload)
-        });
+        await submitContributionViaHiddenForm(endpoint, requestPayload);
     } catch (error) {
-        const wrapped = new Error(`Erreur réseau pendant l'envoi : ${error?.message || "échec fetch"}`);
+        const wrapped = new Error(`Erreur réseau pendant l'envoi : ${error?.message || "échec du formulaire"}`);
         wrapped.details = {
             payload: requestPayload,
             error: error?.message || String(error)
@@ -2353,49 +2346,113 @@ async function sendContribution(contributionType, stage, payload) {
         throw wrapped;
     }
 
-    const responseText = await response.text();
-    const parsedResponse = parseContributionResponse(responseText);
+    const confirmation = await confirmContributionWrite(requestPayload);
     const result = {
         payload: requestPayload,
         response: {
-            httpStatus: response.status,
-            httpOk: response.ok,
-            body: parsedResponse ?? responseText
+            transport: "hidden-form",
+            confirmed: confirmation.confirmed,
+            body: confirmation.items
         }
     };
 
-    console.info("[RoadBook Contribution] Réponse reçue", result.response);
-
-    if (!parsedResponse) {
-        const statusHint = response.status ? ` (HTTP ${response.status})` : "";
-        const error = new Error(`Réponse Apps Script illisible${statusHint} : l'écriture n'est pas confirmée.`);
+    if (!confirmation.confirmed) {
+        const error = new Error("Contribution non retrouvée après relecture live : l'écriture n'est pas confirmée.");
         error.details = result;
-        console.error("[RoadBook Contribution] Réponse illisible", result);
+        console.error("[RoadBook Contribution] Écriture non confirmée", result);
         throw error;
     }
 
-    const responseOk = parsedResponse.ok === true || parsedResponse?.data?.ok === true;
-    if (!response.ok || !responseOk) {
-        const errorMessage =
-            parsedResponse?.error?.message ||
-            parsedResponse?.data?.error?.message ||
-            `Écriture refusée par l'endpoint (HTTP ${response.status}).`;
-        const error = new Error(errorMessage);
-        error.details = result;
-        console.error("[RoadBook Contribution] Échec d'écriture", result);
-        throw error;
-    }
-
+    console.info("[RoadBook Contribution] Écriture confirmée par relecture live", result.response);
     return result;
 }
 
-function parseContributionResponse(text) {
-    if (!text) return null;
-    try {
-        return JSON.parse(text);
-    } catch (error) {
-        return null;
+function submitContributionViaHiddenForm(endpoint, requestPayload) {
+    return new Promise((resolve, reject) => {
+        const iframeName = `contribution-target-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const iframe = document.createElement("iframe");
+        iframe.name = iframeName;
+        iframe.hidden = true;
+        iframe.setAttribute("aria-hidden", "true");
+
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = endpoint;
+        form.target = iframeName;
+        form.enctype = "application/x-www-form-urlencoded";
+        form.hidden = true;
+
+        const payloadField = document.createElement("input");
+        payloadField.type = "hidden";
+        payloadField.name = "payload";
+        payloadField.value = JSON.stringify(requestPayload);
+        form.appendChild(payloadField);
+
+        const cleanup = () => {
+            window.setTimeout(() => {
+                iframe.remove();
+                form.remove();
+            }, 0);
+        };
+
+        document.body.appendChild(iframe);
+        document.body.appendChild(form);
+        try {
+            form.submit();
+            window.setTimeout(() => {
+                cleanup();
+                resolve();
+            }, 800);
+        } catch (error) {
+            cleanup();
+            reject(error);
+        }
+    });
+}
+
+async function confirmContributionWrite(requestPayload) {
+    const endpoint = contributionFeedEndpoint();
+    const id = roadbookId();
+    if (!endpoint || !id) return { confirmed: false, items: [] };
+
+    const attempts = 5;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        await delay(1000 + attempt * 400);
+        try {
+            const items = await loadLiveContributions(endpoint, id);
+            const matches = items.filter(item => isMatchingContribution(item, requestPayload));
+            if (matches.length > 0) {
+                return { confirmed: true, items: matches };
+            }
+        } catch (error) {
+            console.info("[RoadBook Contribution] Confirmation live indisponible", error);
+        }
     }
+
+    return { confirmed: false, items: [] };
+}
+
+function isMatchingContribution(item, requestPayload) {
+    if (!item || !requestPayload) return false;
+    const expectedType = requestPayload.type;
+    const itemType = normalizeContributionType(item.type || item.contributionType);
+    if (itemType !== expectedType) return false;
+    if (sanitizeRoadbookId(item.roadbookId) !== requestPayload.roadbookId) return false;
+    if (safeText(item.stage, "") !== safeText(requestPayload.stage, "")) return false;
+
+    if (expectedType === "note") {
+        return safeText(item.text || item.note, "") === safeText(requestPayload.payload?.note || requestPayload.payload?.text, "");
+    }
+
+    if (expectedType === "accommodation") {
+        return normalizeContributionAccommodationKey(item) === normalizeContributionAccommodationKey(requestPayload.payload);
+    }
+
+    return false;
+}
+
+function delay(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
 }
 
 function setContributionStatus(trigger, message, state = "", details = null) {
