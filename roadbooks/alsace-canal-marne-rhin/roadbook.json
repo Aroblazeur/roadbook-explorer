@@ -15,17 +15,17 @@
   "summary": {
     "official": null,
     "stagesTotal": {
-      "distance": 73,
-      "elevationGain": 230,
-      "elevationLoss": 0,
+      "distance": 112.2,
+      "elevationGain": 340,
+      "elevationLoss": 252,
       "mapEmbedUrl": null,
       "gpx": null,
       "link": null
     },
     "stagesTotalMarker": null,
-    "distance": 73,
-    "elevationGain": 230,
-    "elevationLoss": 0
+    "distance": 112.2,
+    "elevationGain": 340,
+    "elevationLoss": 252
   },
   "stages": [
     {
@@ -44,7 +44,7 @@
       "arrival": "Mittersheim",
       "distance": 23,
       "elevationGain": 230,
-      "elevationLoss": null,
+      "elevationLoss": 174,
       "notes": null,
       "gpx": "etape1.gpx",
       "mapEmbedUrl": "",
@@ -118,9 +118,9 @@
       "type": "principale",
       "departure": "Mittersheim",
       "arrival": "gondrexange",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 39.2,
+      "elevationGain": 110,
+      "elevationLoss": 78,
       "notes": null,
       "gpx": "etape2.gpx",
       "mapEmbedUrl": "",
