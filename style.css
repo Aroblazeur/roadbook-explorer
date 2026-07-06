@@ -879,11 +879,6 @@ li{
     gap:12px;
 }
 
-.accommodation-resource__button-wrapper--text{
-    align-items:center;
-    justify-content:flex-start;
-}
-
 .accommodation-resource__website-link{
     flex:1;
     min-width:0;
@@ -892,6 +887,10 @@ li{
     text-decoration:none;
     text-align:center;
     overflow-wrap:anywhere;
+    cursor:inherit;
+}
+.accommodation-resource__website-link:not(:any-link){
+    cursor:default;
 }
 
 .accommodation-map-link--in-button{

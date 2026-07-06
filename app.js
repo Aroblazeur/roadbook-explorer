@@ -2028,25 +2028,33 @@ function renderAlternativeAccommodation(accommodation, stageNumber, day) {
     const container = document.getElementById("alternative-accommodation");
     container.replaceChildren();
 
+    const contextCity = resolveAccommodationContextCity(day);
+
     const alternatives = Array.isArray(accommodation?.alternatives)
         ? accommodation.alternatives
-            .map((entry, index) => ({
-                url: safeText(typeof entry === "object" ? entry?.url : entry, ""),
-                rawName: safeText(
+            .map((entry, index) => {
+                const entryUrl = safeText(typeof entry === "object" ? entry?.website || entry?.url : entry, "");
+                const entryName = safeText(
                     typeof entry === "object" ? entry?.name : "",
                     ""
-                ),
-                name: safeText(
+                );
+                const entryDisplayName = safeText(
                     typeof entry === "object" ? entry?.displayName || entry?.name : "",
                     ""
-                ),
-                photo: safeText(
-                    typeof entry === "object"
-                        ? entry?.photo
-                        : accommodation?.alternativePhotos?.[index],
-                    ""
-                )
-            }))
+                );
+                const effectiveUrl = entryUrl || (entryName ? buildNameOnlyMapUrl(entryName, day) : "");
+                return {
+                    url: effectiveUrl,
+                    rawName: entryName,
+                    name: entryDisplayName,
+                    photo: safeText(
+                        typeof entry === "object"
+                            ? entry?.photo
+                            : accommodation?.alternativePhotos?.[index],
+                        ""
+                    )
+                };
+            })
             .filter(item => item.url || item.name || item.photo)
         : [];
 
@@ -2481,40 +2489,47 @@ function appendAccommodationResource(container, url, preferredLabel, metadata, i
         websiteUrl: isMapOnlyUrl ? "" : url,
         label
     });
-    if (url) {
-        if (isMapOnlyUrl) {
-            appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
-        } else {
-            const mapLink = createAccommodationMapLink(mapQueryCandidates);
-            if (mapLink) {
-                mapLink.classList.add("accommodation-map-link--in-button");
-                const wrapper = document.createElement("div");
-                wrapper.className = "terrain-button terrain-button--secondary accommodation-resource__button-wrapper";
-                const websiteLink = document.createElement("a");
-                websiteLink.href = url;
-                websiteLink.target = "_blank";
-                websiteLink.rel = "noopener noreferrer";
-                websiteLink.className = "accommodation-resource__website-link";
-                websiteLink.textContent = labelWithIcon;
-                wrapper.append(websiteLink, mapLink);
-                resource.appendChild(wrapper);
-            } else {
-                appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
-            }
-        }
-    } else {
-        const text = document.createElement("span");
-        text.className = "accommodation-resource__label";
-        text.textContent = labelWithIcon;
-        const mapLink = createAccommodationMapLink(mapQueryCandidates);
+
+    const mapLink = createAccommodationMapLink(mapQueryCandidates);
+
+    if (url && !isMapOnlyUrl) {
         if (mapLink) {
+            mapLink.classList.add("accommodation-map-link--in-button");
             const wrapper = document.createElement("div");
-            wrapper.className = "accommodation-resource__button-wrapper accommodation-resource__button-wrapper--text";
-            wrapper.append(text, mapLink);
+            wrapper.className = "terrain-button terrain-button--secondary accommodation-resource__button-wrapper";
+            const websiteLink = document.createElement("a");
+            websiteLink.href = url;
+            websiteLink.target = "_blank";
+            websiteLink.rel = "noopener noreferrer";
+            websiteLink.className = "accommodation-resource__website-link";
+            websiteLink.textContent = labelWithIcon;
+            wrapper.append(websiteLink, mapLink);
             resource.appendChild(wrapper);
         } else {
-            resource.appendChild(text);
+            appendResource(resource, url, labelWithIcon, "terrain-button terrain-button--secondary");
         }
+    } else {
+        const wrapper = document.createElement("div");
+        wrapper.className = "terrain-button terrain-button--secondary accommodation-resource__button-wrapper";
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "accommodation-resource__website-link";
+        nameSpan.textContent = labelWithIcon;
+        wrapper.appendChild(nameSpan);
+        if (mapLink) {
+            mapLink.classList.add("accommodation-map-link--in-button");
+            wrapper.appendChild(mapLink);
+        } else if (url && isMapOnlyUrl) {
+            const directMapLink = document.createElement("a");
+            directMapLink.className = "accommodation-map-link accommodation-map-link--in-button";
+            directMapLink.href = url;
+            directMapLink.target = "_blank";
+            directMapLink.rel = "noopener noreferrer";
+            directMapLink.title = "Rechercher sur Google Maps";
+            directMapLink.setAttribute("aria-label", "Rechercher sur Google Maps");
+            directMapLink.appendChild(createAccommodationMapIcon());
+            wrapper.appendChild(directMapLink);
+        }
+        resource.appendChild(wrapper);
     }
     container.appendChild(resource);
     return resource;
