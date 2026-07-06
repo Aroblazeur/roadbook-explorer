@@ -1157,10 +1157,10 @@ function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
         }));
 
     stages.forEach((stage, stageIndex) => {
-        const substeps = [
-            ...safeArray(sourceStages[stageIndex]?.substeps),
-            ...safeArray(sourceStages[stageIndex]?.variants)
-        ].map((variant, variantIndex) => normalizeStageJson(variant, variantIndex, {
+        const sourceSubsteps = safeArray(sourceStages[stageIndex]?.substeps);
+        const sourceVariants = safeArray(sourceStages[stageIndex]?.variants);
+        const embeddedSubsteps = sourceSubsteps.length ? sourceSubsteps : sourceVariants;
+        const substeps = embeddedSubsteps.map((variant, variantIndex) => normalizeStageJson(variant, variantIndex, {
             isSubstep: true,
             parentStage: stage.stage
         }));

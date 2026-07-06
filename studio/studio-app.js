@@ -3480,28 +3480,27 @@
         clone.metadata = clone.metadata && typeof clone.metadata === "object" ? clone.metadata : {};
         clone.metadata.project = normalizeProjectLabel(clone.metadata.project || clone.metadata.projectStatus);
         clone.metadata.projectStatus = clone.metadata.project;
-        clone.stages = clone.stages.map(stage => ({
-            ...stage,
-            pois: normalizePois(stage.pois),
-            pointsOfInterest: normalizePois(stage.pois),
-            interest: normalizePois(stage.pois),
-            warning: normalizeStringList(stage.warning),
-            accommodation: normalizeStageAccommodation(stage.accommodation),
-            noteItems: normalizeStageNoteItems(stage.noteItems),
-            substeps: normalizeVariants(stage.variants),
-            variants: normalizeVariants(stage.variants)
-        }));
+        clone.stages = clone.stages.map(stage => {
+            const stageNumber = toFiniteNumber(stage.stage);
+            const variants = normalizeVariants(stage.variants)
+                .map((variant, variantIndex) => normalizeExportSubstep(variant, stageNumber, variantIndex));
+            return {
+                ...stage,
+                pois: normalizePois(stage.pois),
+                pointsOfInterest: normalizePois(stage.pois),
+                interest: normalizePois(stage.pois),
+                warning: normalizeStringList(stage.warning),
+                accommodation: normalizeStageAccommodation(stage.accommodation),
+                noteItems: normalizeStageNoteItems(stage.noteItems),
+                substeps: variants,
+                variants
+            };
+        });
         clone.accommodation = normalizeRoadbookAccommodations(clone.accommodation);
         clone.pois = normalizeRoadbookPois(clone.pois);
         clone.notes = normalizeRoadbookNotes(clone.notes);
         clone.contributions = normalizeContributions(clone.contributions);
-        clone.variants = clone.stages.flatMap(stage =>
-            normalizeVariants(stage.variants).map(variant => ({
-                ...variant,
-                parentStage: stage.stage,
-                parentStageReference: stage.stage
-            }))
-        );
+        clone.variants = [];
         hydrateStageAccommodationFromRoadbookCollection(clone);
         hydrateStageNotesFromRoadbookNotes(clone);
         const computedStagesTotal = computeSummary(clone.stages);
@@ -3513,6 +3512,31 @@
             }
         };
         return clone;
+    }
+
+    function normalizeExportSubstep(variant, parentStageNumber, variantIndex) {
+        const parentStage = toFiniteNumber(parentStageNumber);
+        const name = safeText(variant?.name || variant?.title, `Variante ${variantIndex + 1}`);
+        const id = safeText(
+            variant?.id,
+            `substep-${parentStage ?? "unknown"}-${normalizeRoadbookId(name) || `variante-${variantIndex + 1}`}`
+        );
+
+        return {
+            ...variant,
+            id,
+            itemType: "substep",
+            isSubstep: true,
+            hierarchyLevel: 1,
+            parentStage,
+            parentStageReference: parentStage,
+            stage: toFiniteNumber(variant?.stage) ?? parentStage,
+            stageReference: parentStage,
+            name,
+            title: safeText(variant?.title, name),
+            type: safeText(variant?.type, "option"),
+            substeps: []
+        };
     }
 
     function hydrateStageAccommodationFromRoadbookCollection(roadbook) {
