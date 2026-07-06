@@ -160,7 +160,7 @@
         elements.createForm.reset();
         hideCreateRoadbookForm();
         renderRoadbookEditor();
-        setStatus(`Nouveau roadbook "${title}" créé localement · export attendu : roadbooks/${id}/roadbook.json.`);
+        setStatus(`Nouveau roadbook "${title}" créé. Vous pouvez maintenant l’éditer, l’exporter ou le publier.`);
     }
 
     function normalizeRoadbookId(value) {
@@ -502,36 +502,10 @@
         elements.detail.replaceChildren();
 
         elements.detail.appendChild(createGeneralInfoEditor(roadbook));
-        elements.detail.appendChild(createExportPathHint(roadbook));
         elements.detail.appendChild(createSummaryGrid(roadbook));
         elements.detail.appendChild(createStageEditorList(roadbook.stages));
 
         syncEditorActionButtons();
-    }
-
-    function createExportPathHint(roadbook) {
-        const section = document.createElement("section");
-        section.className = "studio-export-hint";
-        const id = safeText(roadbook.id, state.selectedRoadbookId || "nouveau-roadbook");
-        const title = document.createElement("h3");
-        title.textContent = "Export et intégration";
-        const text = document.createElement("p");
-        text.innerHTML = `Chemin cible attendu : <code>roadbooks/${escapeHtml(id)}/roadbook.json</code>.`;
-        const configPath = document.createElement("p");
-        configPath.innerHTML = `Config cible attendue : <code>roadbooks/${escapeHtml(id)}/config.js</code>.`;
-        const catalogInstruction = document.createElement("p");
-        catalogInstruction.innerHTML = `Catalogue : ajouter <code>${escapeHtml(id)}</code> au tableau <code>roadbooks</code> de <code>roadbooks/catalog.json</code>.`;
-        const publishInstruction = document.createElement("p");
-        publishInstruction.innerHTML = `Publication automatique : le bouton <strong>Publier sur GitHub</strong> déclenche le workflow <code>${escapeHtml(PUBLISH_WORKFLOW_FILE)}</code> via l’API GitHub, puis le workflow commit directement ces fichiers sur <code>main</code>.`;
-        const workflowLink = document.createElement("p");
-        workflowLink.innerHTML = `Workflow : <a href="https://github.com/${escapeHtml(GITHUB_REPOSITORY)}/actions/workflows/${escapeHtml(PUBLISH_WORKFLOW_FILE)}" target="_blank" rel="noopener noreferrer">ouvrir GitHub Actions</a>.`;
-        const meta = document.createElement("p");
-        meta.className = "studio-roadbook-card__meta";
-        meta.textContent = state.catalogIds.includes(id)
-            ? "Roadbook chargé depuis le catalogue existant."
-            : "Roadbook créé localement, pas encore présent dans le catalogue. Utilise « Exporter pour GitHub » pour récupérer les fichiers d’intégration.";
-        section.append(title, text, configPath, catalogInstruction, publishInstruction, workflowLink, meta);
-        return section;
     }
 
     function createSummaryGrid(roadbook) {
@@ -2525,7 +2499,7 @@
 
     function markModified() {
         syncEditorActionButtons();
-        setStatus("Modifications locales non publiées · JSON prêt à exporter.");
+        setStatus("Modifications non publiées · JSON prêt à exporter.");
     }
 
     function syncEditorActionButtons() {
