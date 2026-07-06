@@ -325,8 +325,13 @@ function loadOptionalAccommodationEnrichment() {
     if (!loader || typeof loader.loadAccommodationEnrichment !== "function") {
         return Promise.resolve(new Map());
     }
+    const path = safeText(getRoadbookConfig()?.enrichment?.accommodationPath, "");
+    if (!path) return Promise.resolve(new Map());
     return loader.loadAccommodationEnrichment({
-        path: getRoadbookConfig()?.enrichment?.accommodationPath
+        path
+    }).catch(error => {
+        console.info("[Roadbook] Enrichissement hébergements optionnel indisponible.", error);
+        return new Map();
     });
 }
 
@@ -472,8 +477,13 @@ function loadOptionalPoiEnrichment() {
     if (!loader || typeof loader.loadPoiEnrichment !== "function") {
         return Promise.resolve(new Map());
     }
+    const path = safeText(getRoadbookConfig()?.enrichment?.poiPath, "");
+    if (!path) return Promise.resolve(new Map());
     return loader.loadPoiEnrichment({
-        path: getRoadbookConfig()?.enrichment?.poiPath
+        path
+    }).catch(error => {
+        console.info("[Roadbook] Enrichissement POI optionnel indisponible.", error);
+        return new Map();
     });
 }
 
@@ -1484,7 +1494,7 @@ function renderStagePhoto(day) {
     const existing = card.querySelector(".stage-photo");
     if (existing) existing.remove();
 
-    const photo = !day?.isSubstep && isSafeLibraryImageSource(day?.stagePhoto)
+    const photo = isSafeLibraryImageSource(day?.stagePhoto)
         ? safeText(day.stagePhoto, "")
         : "";
     if (!photo) return;
