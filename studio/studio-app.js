@@ -46,7 +46,6 @@
         createForm: document.getElementById("studio-create-form"),
         addStage: document.getElementById("studio-add-stage"),
         downloadJson: document.getElementById("studio-download-json"),
-        exportGithub: document.getElementById("studio-export-github"),
         publishGithub: document.getElementById("studio-publish-github"),
         stageTemplate: document.getElementById("studio-stage-template"),
         variantTemplate: document.getElementById("studio-variant-template")
@@ -58,7 +57,6 @@
     elements.createForm?.querySelector('[data-action="cancel-create-roadbook"]')?.addEventListener("click", hideCreateRoadbookForm);
     elements.addStage?.addEventListener("click", handleAddStage);
     elements.downloadJson?.addEventListener("click", downloadCurrentRoadbookJson);
-    elements.exportGithub?.addEventListener("click", downloadGithubIntegrationExport);
     elements.publishGithub?.addEventListener("click", prepareGithubActionsPublish);
 
     loadCatalog();
@@ -2674,7 +2672,6 @@
         const hasExportableRoadbook = Boolean(state.selectedRoadbook);
         if (elements.addStage) elements.addStage.disabled = !hasExportableRoadbook;
         if (elements.downloadJson) elements.downloadJson.disabled = !hasExportableRoadbook;
-        if (elements.exportGithub) elements.exportGithub.disabled = !hasExportableRoadbook;
         if (elements.publishGithub) elements.publishGithub.disabled = !hasExportableRoadbook;
     }
 
@@ -2683,39 +2680,6 @@
         const { roadbook: exportPayload } = await buildExportRoadbookWithPoiEnrichment(state.selectedRoadbook);
         const id = safeText(exportPayload.id || state.selectedRoadbookId, "roadbook");
         downloadTextFile(`${id}-roadbook.json`, JSON.stringify(exportPayload, null, 2), "application/json");
-    }
-
-    async function downloadGithubIntegrationExport() {
-        if (!state.selectedRoadbook) return;
-
-        const { roadbook: exportPayload, enrichedPoiCount } = await buildExportRoadbookWithPoiEnrichment(state.selectedRoadbook);
-        const id = normalizeRoadbookId(exportPayload.id || state.selectedRoadbookId);
-        if (!id) {
-            setStatus("Export GitHub impossible : ID du roadbook invalide.");
-            return;
-        }
-
-        const roadbookJson = JSON.stringify({ ...exportPayload, id }, null, 2);
-        const configJs = buildRoadbookConfigJs({ ...exportPayload, id });
-        const manifest = buildIntegrationManifest({ ...exportPayload, id });
-        const catalogPatch = buildCatalogPatch(id);
-
-        downloadTextFile(`${id}-roadbook.json`, roadbookJson, "application/json");
-        downloadTextFile(`${id}-config.js`, configJs, "text/javascript");
-        downloadTextFile(`${id}-integration-manifest.json`, JSON.stringify(manifest, null, 2), "application/json");
-        downloadTextFile(`${id}-catalog.patch.json`, JSON.stringify(catalogPatch, null, 2), "application/json");
-
-        for (const [relativePath, file] of state.gpxFiles) {
-            downloadBlobFile(file, `${id}-${relativePath.replace(/\//g, "-")}`);
-        }
-        for (const [relativePath, file] of state.mediaFiles) {
-            downloadBlobFile(file, `${id}-${relativePath.replace(/\//g, "-")}`);
-        }
-
-        const gpxCount = state.gpxFiles.size;
-        const mediaCount = state.mediaFiles.size;
-        const poiSummary = enrichedPoiCount ? `${enrichedPoiCount} POI enrichi(s). ` : "";
-        setStatus(`Export GitHub genere pour "${safeText(exportPayload.title, id)}" · ${poiSummary}${gpxCount ? gpxCount + " fichier(s) GPX inclus. " : ""}${mediaCount ? mediaCount + " image(s) incluse(s). " : ""}Fichiers a placer dans roadbooks/${id}/.`);
     }
 
     async function prepareGithubActionsPublish() {
@@ -2932,53 +2896,6 @@
     });
 })(typeof window !== "undefined" ? window : globalThis);
 `;
-    }
-
-    function buildIntegrationManifest(roadbook) {
-        const id = normalizeRoadbookId(roadbook.id || state.selectedRoadbookId);
-        return {
-            roadbookId: id,
-            title: safeText(roadbook.title, id),
-            generatedAt: new Date().toISOString(),
-            files: [
-                {
-                    sourceDownload: `${id}-roadbook.json`,
-                    targetPath: `roadbooks/${id}/roadbook.json`
-                },
-                {
-                    sourceDownload: `${id}-config.js`,
-                    targetPath: `roadbooks/${id}/config.js`
-                }
-            ],
-            catalog: {
-                path: "roadbooks/catalog.json",
-                action: "add-roadbook-id",
-                id,
-                example: {
-                    roadbooks: [...new Set([...state.catalogIds, id])]
-                }
-            },
-            directories: [
-                `roadbooks/${id}/`,
-                `roadbooks/${id}/gpx/`,
-                `roadbooks/${id}/photos/`,
-                `roadbooks/${id}/data/`
-            ],
-            notes: [
-                "Le Studio ne modifie pas GitHub automatiquement.",
-                "Place roadbook.json et config.js dans les chemins cible indiqués.",
-                "Ajoute l’ID du roadbook au tableau roadbooks de roadbooks/catalog.json."
-            ]
-        };
-    }
-
-    function buildCatalogPatch(id) {
-        return {
-            path: "roadbooks/catalog.json",
-            action: "add-roadbook-id",
-            id,
-            roadbooks: [...new Set([...state.catalogIds, id])]
-        };
     }
 
     function toPascalCase(value) {
@@ -3449,7 +3366,6 @@
         elements.detail.appendChild(message);
         elements.addStage.disabled = true;
         elements.downloadJson.disabled = true;
-        if (elements.exportGithub) elements.exportGithub.disabled = true;
         if (elements.publishGithub) elements.publishGithub.disabled = true;
     }
 
