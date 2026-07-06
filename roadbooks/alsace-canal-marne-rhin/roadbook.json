@@ -186,9 +186,30 @@
       "gpx": "",
       "mapEmbedUrl": "",
       "stagePhoto": "",
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
+      "pois": [
+        {
+          "name": "Butte de doue",
+          "region": "",
+          "url": "",
+          "image": ""
+        }
+      ],
+      "pointsOfInterest": [
+        {
+          "name": "Butte de doue",
+          "region": "",
+          "url": "",
+          "image": ""
+        }
+      ],
+      "interest": [
+        {
+          "name": "Butte de doue",
+          "region": "",
+          "url": "",
+          "image": ""
+        }
+      ],
       "warning": [],
       "accommodation": {
         "name": "gite meaux",
