@@ -63,12 +63,32 @@ function main() {
         console.log(`[publish-roadbook] GPX written: ${toPosixPath(path.relative(WORKSPACE, gpxFilePath))} (${content.length} bytes)`);
     });
 
+    const mediaFiles = Array.isArray(payload.mediaFiles) ? payload.mediaFiles : [];
+    const dataDir = resolveInsideWorkspace("roadbooks", roadbookId, "data");
+    if (mediaFiles.length > 0) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
+    mediaFiles.forEach(mediaFile => {
+        if (!mediaFile || typeof mediaFile !== "object" || !mediaFile.path || !mediaFile.base64) return;
+        const relativePath = mediaFile.path.replace(/^\.?\/+/, "");
+        if (!relativePath.startsWith("data/")) return;
+        const safeName = sanitizeMediaFilename(relativePath.split("/").pop());
+        if (!safeName || !isAllowedImageFilename(safeName)) return;
+        const mediaFilePath = path.join(dataDir, safeName);
+        const content = Buffer.from(mediaFile.base64, "base64");
+        fs.writeFileSync(mediaFilePath, content);
+        console.log(`[publish-roadbook] Media written: ${toPosixPath(path.relative(WORKSPACE, mediaFilePath))} (${content.length} bytes)`);
+    });
+
     console.log(`[publish-roadbook] Roadbook written: ${toPosixPath(path.relative(WORKSPACE, roadbookPath))}`);
     console.log(`[publish-roadbook] Config written: ${toPosixPath(path.relative(WORKSPACE, configPath))}`);
     console.log(`[publish-roadbook] Catalog updated: ${toPosixPath(path.relative(WORKSPACE, catalogPath))}`);
     console.log(`[publish-roadbook] Catalog contains "${roadbookId}": ${catalog.roadbooks.includes(roadbookId)}`);
     if (gpxFiles.length > 0) {
         console.log(`[publish-roadbook] GPX files processed: ${gpxFiles.length}`);
+    }
+    if (mediaFiles.length > 0) {
+        console.log(`[publish-roadbook] Media files processed: ${mediaFiles.length}`);
     }
 }
 
@@ -176,6 +196,21 @@ function normalizeRoadbookId(value) {
         .replace(/[^a-z0-9-]+/g, "-")
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");
+}
+
+function sanitizeMediaFilename(value) {
+    return String(value || "")
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+}
+
+function isAllowedImageFilename(value) {
+    return /\.(jpe?g|png|webp)$/i.test(value || "");
 }
 
 function ensureTrailingNewline(value) {

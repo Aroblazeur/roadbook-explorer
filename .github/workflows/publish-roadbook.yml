@@ -73,6 +73,9 @@ jobs:
           if [ -d "roadbooks/${ROADBOOK_ID}/gpx" ]; then
             git add "roadbooks/${ROADBOOK_ID}/gpx/"
           fi
+          if [ -d "roadbooks/${ROADBOOK_ID}/data" ]; then
+            git add "roadbooks/${ROADBOOK_ID}/data/"
+          fi
 
           if git diff --cached --quiet; then
             echo "No roadbook changes to publish."
