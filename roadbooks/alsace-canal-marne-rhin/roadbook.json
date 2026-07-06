@@ -294,7 +294,16 @@
             "alternatives": []
           },
           "accommodationType": "",
-          "noteItems": []
+          "noteItems": [],
+          "id": "substep-3-variante-1",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 3,
+          "parentStageReference": 3,
+          "stage": 3,
+          "stageReference": 3,
+          "substeps": []
         }
       ],
       "substeps": [
@@ -324,43 +333,21 @@
             "alternatives": []
           },
           "accommodationType": "",
-          "noteItems": []
+          "noteItems": [],
+          "id": "substep-3-variante-1",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 3,
+          "parentStageReference": 3,
+          "stage": 3,
+          "stageReference": 3,
+          "substeps": []
         }
       ]
     }
   ],
-  "variants": [
-    {
-      "name": "Variante 1",
-      "distance": null,
-      "description": "",
-      "type": "option",
-      "title": "Variante 1",
-      "departure": "",
-      "arrival": "",
-      "elevationGain": null,
-      "elevationLoss": null,
-      "gpx": "",
-      "mapEmbedUrl": "",
-      "stagePhoto": "data/variant-stage-03-variante-1.jpg",
-      "warning": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "accommodation": {
-        "name": "",
-        "website": "",
-        "url": "",
-        "photo": "",
-        "price": "",
-        "alternatives": []
-      },
-      "accommodationType": "",
-      "noteItems": [],
-      "parentStage": 3,
-      "parentStageReference": 3
-    }
-  ],
+  "variants": [],
   "accommodation": [
     {
       "stage": 1,
