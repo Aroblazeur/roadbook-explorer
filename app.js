@@ -2334,10 +2334,10 @@ async function sendContribution(contributionType, stage, payload) {
     console.info("[RoadBook Contribution] Payload envoyé", requestPayload);
     console.info("[RoadBook Contribution] Endpoint utilisé", endpoint);
 
+    let response;
     try {
-        await fetch(endpoint, {
+        response = await fetch(endpoint, {
             method: "POST",
-            mode: "no-cors",
             headers: {
                 "Content-Type": "text/plain;charset=utf-8"
             },
@@ -2353,68 +2353,42 @@ async function sendContribution(contributionType, stage, payload) {
         throw wrapped;
     }
 
-    const confirmation = await confirmContributionWrite(requestPayload);
+    const responseText = await response.text();
+    const parsedResponse = parseContributionResponse(responseText);
     const result = {
         payload: requestPayload,
         response: {
-            mode: "no-cors",
-            readable: false,
-            confirmed: confirmation.confirmed,
-            body: confirmation.items
+            httpStatus: response.status,
+            httpOk: response.ok,
+            body: parsedResponse ?? responseText
         }
     };
 
-    if (confirmation.confirmed) {
-        console.info("[RoadBook Contribution] Écriture confirmée par relecture live", result.response);
-    } else {
-        console.info("[RoadBook Contribution] POST envoyé en mode no-cors ; réponse Apps Script non lisible par le navigateur", result.response);
+    console.info("[RoadBook Contribution] Réponse reçue", result.response);
+
+    if (!parsedResponse) {
+        const statusHint = response.status ? ` (HTTP ${response.status})` : "";
+        const error = new Error(`Réponse Apps Script illisible${statusHint} : l'écriture n'est pas confirmée.`);
+        error.details = result;
+        console.error("[RoadBook Contribution] Réponse illisible", result);
+        throw error;
+    }
+
+    const responseOk = parsedResponse.ok === true || parsedResponse?.data?.ok === true;
+    if (!response.ok || !responseOk) {
+        const errorMessage =
+            parsedResponse?.error?.message ||
+            parsedResponse?.data?.error?.message ||
+            `Écriture refusée par l'endpoint (HTTP ${response.status}).`;
+        const error = new Error(errorMessage);
+        error.details = result;
+        console.error("[RoadBook Contribution] Échec d'écriture", result);
+        throw error;
     }
 
     return result;
 }
 
-async function confirmContributionWrite(requestPayload) {
-    const endpoint = contributionFeedEndpoint();
-    const id = roadbookId();
-    if (!endpoint || !id) return { confirmed: false, items: [] };
-
-    await delay(1200);
-
-    try {
-        const items = await loadLiveContributions(endpoint, id);
-        const confirmed = items.some(item => isMatchingContribution(item, requestPayload));
-        return {
-            confirmed,
-            items: confirmed ? items.filter(item => isMatchingContribution(item, requestPayload)) : []
-        };
-    } catch (error) {
-        console.info("[RoadBook Contribution] Confirmation live indisponible", error);
-        return { confirmed: false, items: [] };
-    }
-}
-
-function isMatchingContribution(item, requestPayload) {
-    if (!item || !requestPayload) return false;
-    const expectedType = requestPayload.type;
-    const itemType = normalizeContributionType(item.type || item.contributionType);
-    if (itemType !== expectedType) return false;
-    if (sanitizeRoadbookId(item.roadbookId) !== requestPayload.roadbookId) return false;
-    if (safeText(item.stage, "") !== safeText(requestPayload.stage, "")) return false;
-
-    if (expectedType === "note") {
-        return safeText(item.text || item.note, "") === safeText(requestPayload.payload?.note || requestPayload.payload?.text, "");
-    }
-
-    if (expectedType === "accommodation") {
-        return normalizeContributionAccommodationKey(item) === normalizeContributionAccommodationKey(requestPayload.payload);
-    }
-
-    return false;
-}
-
-function delay(ms) {
-    return new Promise(resolve => window.setTimeout(resolve, ms));
-}
 function parseContributionResponse(text) {
     if (!text) return null;
     try {
