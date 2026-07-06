@@ -1072,6 +1072,7 @@ function normalizeNoteJson(value) {
 
 function normalizeStageJson(stage, index = 0, options = {}) {
     const source = stage && typeof stage === "object" ? stage : {};
+    const config = options.config || currentRoadbookConfig();
     const isSubstep = Boolean(options.isSubstep ?? source.isSubstep);
     const parentStage = toNumber(source.parentStage ?? source.parentStageReference ?? source.stageReference ?? options.parentStage);
     const stageNumber = toNumber(source.stage ?? source.number ?? source.numero) ?? (isSubstep ? parentStage : index + 1);
@@ -1111,7 +1112,7 @@ function normalizeStageJson(stage, index = 0, options = {}) {
         notes: typeof source.notes === "string" ? source.notes : "",
         gpx: normalizeValue(source.gpx || source.route?.gpx) || "",
         mapEmbedUrl: sanitizeMapEmbedUrl(source.mapEmbedUrl || source.embeddedMapUrl || source.externalMapEmbed),
-        stagePhoto: sanitizeImageUrl(source.stagePhoto || source.stepPhoto || source.photo),
+        stagePhoto: sanitizeStagePhotoJson(source.stagePhoto || source.stepPhoto || source.photo, config),
         accommodation,
         alternativeAccommodation: {
             name: firstAlternative?.name || firstAlternative?.url || "",
@@ -1137,6 +1138,15 @@ function normalizeStageJson(stage, index = 0, options = {}) {
     };
 }
 
+function sanitizeStagePhotoJson(value, config = currentRoadbookConfig()) {
+    const candidate = normalizeValue(value);
+    if (!candidate) return "";
+    if (/^data\//i.test(candidate) || /^[^/:?#]+$/i.test(candidate)) {
+        return resolveRoadbookDataImage(candidate, config);
+    }
+    return sanitizeImageUrl(candidate);
+}
+
 function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
     if (!payload || typeof payload !== "object") {
         throw new Error("JSON roadbook invalide");
@@ -1145,7 +1155,7 @@ function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
     const sourceStages = safeArray(payload.stages).length
         ? safeArray(payload.stages)
         : safeArray(payload.days).filter(day => !day?.isSubstep);
-    const stages = sourceStages.map((stage, index) => normalizeStageJson(stage, index, { isSubstep: false }));
+    const stages = sourceStages.map((stage, index) => normalizeStageJson(stage, index, { isSubstep: false, config }));
 
     const hasEmbeddedSubsteps = sourceStages.some(stage =>
         safeArray(stage?.substeps).length || safeArray(stage?.variants).length
@@ -1153,7 +1163,8 @@ function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
     const topLevelVariants = hasEmbeddedSubsteps ? [] : safeArray(payload.variants)
         .map((variant, index) => normalizeStageJson(variant, index, {
             isSubstep: true,
-            parentStage: variant?.parentStage ?? variant?.parentStageReference ?? variant?.stageReference ?? variant?.stage
+            parentStage: variant?.parentStage ?? variant?.parentStageReference ?? variant?.stageReference ?? variant?.stage,
+            config
         }));
 
     stages.forEach((stage, stageIndex) => {
@@ -1162,7 +1173,8 @@ function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
         const embeddedSubsteps = sourceSubsteps.length ? sourceSubsteps : sourceVariants;
         const substeps = embeddedSubsteps.map((variant, variantIndex) => normalizeStageJson(variant, variantIndex, {
             isSubstep: true,
-            parentStage: stage.stage
+            parentStage: stage.stage,
+            config
         }));
 
         stage.substeps = substeps;

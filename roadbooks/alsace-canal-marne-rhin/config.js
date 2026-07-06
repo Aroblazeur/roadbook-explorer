@@ -12,7 +12,6 @@
         googleSheetId: "",
         sheets: Object.freeze({}),
         enrichment: Object.freeze({
-            accommodationPath: "roadbooks/alsace-canal-marne-rhin/data/accommodation-enrichment.json",
             poiPath: "roadbooks/alsace-canal-marne-rhin/data/poi-enrichment.json"
         }),
         fallbackJsonPaths: Object.freeze(["roadbooks/alsace-canal-marne-rhin/roadbook.json"]),
