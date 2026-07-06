@@ -1891,17 +1891,12 @@ function resolvePoiEntry(poi, day) {
         ? `${coordinates.lat},${coordinates.lng}`
         : [name, region || contextCity].filter(Boolean).join(" ");
 
-    const wikiSearchUrl = !url && name
-        ? `https://fr.wikipedia.org/wiki/Special:Search/${encodeURIComponent(name)}`
-        : "";
-
     return {
         name: metadata?.name || name,
         image,
         region,
         description,
         url,
-        wikiSearchUrl,
         coordinates,
         mapQuery,
         isEnriched: Boolean(image || region || description || coordinates || url)
@@ -1954,14 +1949,6 @@ function appendPoiCard(list, entry) {
         sourceLink.rel = "noopener noreferrer";
         sourceLink.textContent = "Ouvrir le lien";
         content.appendChild(sourceLink);
-    } else if (entry.wikiSearchUrl) {
-        const wikiLink = document.createElement("a");
-        wikiLink.className = "terrain-button terrain-button--secondary poi-card__map-link";
-        wikiLink.href = entry.wikiSearchUrl;
-        wikiLink.target = "_blank";
-        wikiLink.rel = "noopener noreferrer";
-        wikiLink.textContent = "Rechercher sur Wikipédia";
-        content.appendChild(wikiLink);
     }
 
     if (entry.mapQuery) {
