@@ -22,6 +22,10 @@
     const CONTRIBUTION_FIELDS = ["id", "type", "stage", "createdAt", "status", "source", "author", "timestamp"];
     const CONTRIBUTION_PAYLOAD_FIELDS = ["text", "name", "url", "photo", "comment"];
     const IMAGE_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+    const WORKFLOW_PAYLOAD_BASE64_MAX_LENGTH = 60_000;
+    const MEDIA_DIRECT_UPLOAD_MAX_BYTES = 1_200_000;
+    const MEDIA_OPTIMIZE_MAX_DIMENSION = 1800;
+    const MEDIA_OPTIMIZE_QUALITY = 0.78;
 
     const state = {
         catalogIds: [],
@@ -2695,7 +2699,7 @@
         const roadbook = { ...exportPayload, id };
 
         const gpxFileEntries = await buildPublicationFileEntries(state.gpxFiles, "GPX");
-        const mediaFileEntries = await buildPublicationFileEntries(state.mediaFiles, "image");
+        const mediaUploadEntries = await buildPublicationMediaUploadEntries(state.mediaFiles);
 
         const publicationPayload = {
             roadbookId: id,
@@ -2703,12 +2707,13 @@
             roadbookJson: JSON.stringify(roadbook, null, 2),
             configJs: buildRoadbookConfigJs(roadbook),
             gpxFiles: gpxFileEntries,
-            mediaFiles: mediaFileEntries
+            mediaFiles: []
         };
 
         try {
             setStatus("Preparation et envoi du workflow GitHub Actions...");
             const encodedPayload = await encodeWorkflowPayload(publicationPayload);
+            validateWorkflowPayloadSize(encodedPayload);
             const token = await getGitHubTokenForPublish();
             if (!token) {
                 setStatus("Publication annulee : aucun token GitHub fourni.");
@@ -2716,6 +2721,10 @@
             }
 
             if (elements.publishGithub) elements.publishGithub.disabled = true;
+            if (mediaUploadEntries.length > 0) {
+                setStatus(`Publication des images sur GitHub... ${mediaUploadEntries.length} fichier(s)`);
+                await uploadMediaFilesToGithub({ id, entries: mediaUploadEntries, token });
+            }
             await dispatchGithubPublishWorkflow({
                 id,
                 encoding: encodedPayload.encoding,
@@ -2724,7 +2733,7 @@
             });
 
             const gpxSummary = gpxFileEntries.length ? ` · ${gpxFileEntries.length} GPX` : "";
-            const mediaSummary = mediaFileEntries.length ? ` · ${mediaFileEntries.length} image(s)` : "";
+            const mediaSummary = mediaUploadEntries.length ? ` · ${mediaUploadEntries.length} image(s)` : "";
             setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}"${enrichedPoiCount ? ` · ${enrichedPoiCount} POI enrichi(s)` : ""}${gpxSummary}${mediaSummary} : le workflow GitHub Actions va commit directement sur main.`);
             window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
         } catch (error) {
@@ -2808,6 +2817,201 @@
             }
         }
         return entries;
+    }
+
+    async function buildPublicationMediaUploadEntries(files) {
+        const entries = [];
+        for (const [relativePath, file] of files) {
+            try {
+                const optimized = await optimizeMediaFileForPublication(file, relativePath);
+                const arrayBuffer = await optimized.file.arrayBuffer();
+                entries.push({
+                    path: optimized.path,
+                    base64: arrayBufferToBase64(arrayBuffer),
+                    size: optimized.file.size,
+                    originalSize: file.size
+                });
+            } catch (error) {
+                throw new Error(`Image trop volumineuse pour publication directe (${relativePath}). Réduis la taille de l'image ou utilise un lien. ${safeText(error?.message, "")}`);
+            }
+        }
+        return entries;
+    }
+
+    async function optimizeMediaFileForPublication(file, relativePath) {
+        if (!file) throw new Error("Fichier image absent.");
+        const targetType = mimeTypeForImagePath(relativePath) || file.type || "image/jpeg";
+        const optimizedBlob = await resizeImageBlob(file, targetType);
+        const mustUseOptimizedType = Boolean(file.type && targetType && file.type !== targetType);
+        if (mustUseOptimizedType && !optimizedBlob) {
+            throw new Error("Conversion d'image impossible.");
+        }
+        const candidate = optimizedBlob && (mustUseOptimizedType || optimizedBlob.size < file.size)
+            ? optimizedBlob
+            : file;
+
+        if (candidate.size > MEDIA_DIRECT_UPLOAD_MAX_BYTES) {
+            throw new Error(`Taille finale ${formatBytes(candidate.size)} supérieure à ${formatBytes(MEDIA_DIRECT_UPLOAD_MAX_BYTES)}.`);
+        }
+
+        return {
+            path: relativePath,
+            file: candidate
+        };
+    }
+
+    async function resizeImageBlob(file, targetType) {
+        if (!file || typeof document === "undefined") return null;
+
+        const bitmap = await loadImageBitmap(file);
+        const scale = Math.min(1, MEDIA_OPTIMIZE_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+        const width = Math.max(1, Math.round(bitmap.width * scale));
+        const height = Math.max(1, Math.round(bitmap.height * scale));
+
+        if (scale >= 1 && file.size <= MEDIA_DIRECT_UPLOAD_MAX_BYTES && (!file.type || file.type === targetType)) {
+            bitmap.close?.();
+            return null;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+            bitmap.close?.();
+            return null;
+        }
+
+        if (targetType === "image/jpeg") {
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, width, height);
+        }
+        context.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close?.();
+
+        return new Promise(resolve => {
+            canvas.toBlob(blob => resolve(blob), targetType, MEDIA_OPTIMIZE_QUALITY);
+        });
+    }
+
+    async function loadImageBitmap(file) {
+        if (typeof createImageBitmap === "function") {
+            return createImageBitmap(file);
+        }
+
+        return new Promise((resolve, reject) => {
+            const objectUrl = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve(image);
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("Image illisible."));
+            };
+            image.src = objectUrl;
+        });
+    }
+
+    function mimeTypeForImagePath(relativePath) {
+        const extension = fileExtension(relativePath);
+        if (extension === ".jpg" || extension === ".jpeg") return "image/jpeg";
+        if (extension === ".png") return "image/png";
+        if (extension === ".webp") return "image/webp";
+        return "";
+    }
+
+    function validateWorkflowPayloadSize(encodedPayload) {
+        const size = safeText(encodedPayload?.payloadBase64, "").length;
+        if (size <= WORKFLOW_PAYLOAD_BASE64_MAX_LENGTH) return;
+
+        throw new Error(
+            `Payload GitHub Actions trop volumineux (${formatBytes(size)} encodés). ` +
+            "Les images ne sont plus envoyées dans le workflow ; vérifie surtout la taille des GPX ou du JSON."
+        );
+    }
+
+    async function uploadMediaFilesToGithub({ id, entries, token }) {
+        for (const entry of entries) {
+            const safePath = normalizeMediaUploadPath(id, entry.path);
+            if (!safePath) {
+                throw new Error(`Chemin image invalide : ${entry.path}`);
+            }
+            await putGithubFile({
+                path: safePath,
+                contentBase64: entry.base64,
+                message: `chore: publish ${id} media ${safePath.split("/").pop()}`,
+                token
+            });
+        }
+    }
+
+    function normalizeMediaUploadPath(id, relativePath) {
+        const cleanId = normalizeRoadbookId(id);
+        const filename = sanitizeMediaFilename(String(relativePath || "").split("/").pop());
+        if (!cleanId || !filename || !IMAGE_FILE_EXTENSIONS.includes(fileExtension(filename))) return "";
+        return `roadbooks/${cleanId}/data/${filename}`;
+    }
+
+    async function putGithubFile({ path, contentBase64, message, token }) {
+        const endpoint = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${encodeURIComponentPath(path)}`;
+        const existingSha = await readGithubFileSha(endpoint, token);
+        const body = {
+            message,
+            content: contentBase64,
+            branch: "main"
+        };
+        if (existingSha) body.sha = existingSha;
+
+        const response = await fetch(endpoint, {
+            method: "PUT",
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) return;
+        const errorBody = await readGithubError(response);
+        const error = new Error(`GitHub media API ${response.status}${errorBody ? ` - ${errorBody}` : ""}`);
+        error.status = response.status;
+        throw error;
+    }
+
+    async function readGithubFileSha(endpoint, token) {
+        const response = await fetch(`${endpoint}?ref=main`, {
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+        });
+        if (response.status === 404) return "";
+        if (!response.ok) {
+            const errorBody = await readGithubError(response);
+            throw new Error(`GitHub media API ${response.status}${errorBody ? ` - ${errorBody}` : ""}`);
+        }
+        const body = await response.json();
+        return safeText(body?.sha, "");
+    }
+
+    function encodeURIComponentPath(path) {
+        return String(path || "")
+            .split("/")
+            .map(segment => encodeURIComponent(segment))
+            .join("/");
+    }
+
+    function formatBytes(bytes) {
+        const value = Number(bytes);
+        if (!Number.isFinite(value) || value < 0) return "taille inconnue";
+        if (value < 1024) return `${Math.round(value)} o`;
+        if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
+        return `${(value / 1024 / 1024).toFixed(1)} Mo`;
     }
 
     async function encodeWorkflowPayload(payload) {
@@ -3494,7 +3698,8 @@
     }
 
     function autoImagePath(context, file) {
-        const extension = fileExtension(file.name) || ".jpg";
+        const sourceExtension = fileExtension(file.name);
+        const extension = sourceExtension === ".webp" ? ".webp" : ".jpg";
         const stem = autoImageStem(context);
         const filename = sanitizeMediaFilename(`${stem}${extension}`);
         return filename ? `data/${filename}` : "";
