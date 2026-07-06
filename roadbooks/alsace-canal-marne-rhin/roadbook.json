@@ -7,7 +7,7 @@
     "destination": "Alsace",
     "project": "Voyage réalisé",
     "projectStatus": "Voyage réalisé",
-    "coverImage": "",
+    "coverImage": "data/cover.webp",
     "generatedAt": "2026-07-04T21:29:01.699Z",
     "source": "google-sheets",
     "googleSheetId": "1uAD98fd3HjDHBGxquWZybm7YXdA9wOFad0eiygy4qrA"
@@ -163,19 +163,29 @@
       "pointsOfInterest": [
         {
           "name": "Canal des Houillère",
-          "image": "",
-          "url": "",
+          "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/CanalHouill%C3%A8resSarre.jpg",
+          "url": "https://www.wikidata.org/wiki/Q612380",
           "region": "",
-          "description": ""
+          "description": "canal français",
+          "source": "wikidata",
+          "coordinates": {
+            "lat": 48.70027778,
+            "lng": 6.90972222
+          }
         }
       ],
       "interest": [
         {
           "name": "Canal des Houillère",
-          "image": "",
-          "url": "",
+          "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/CanalHouill%C3%A8resSarre.jpg",
+          "url": "https://www.wikidata.org/wiki/Q612380",
           "region": "",
-          "description": ""
+          "description": "canal français",
+          "source": "wikidata",
+          "coordinates": {
+            "lat": 48.70027778,
+            "lng": 6.90972222
+          }
         }
       ],
       "restaurants": [],
@@ -214,19 +224,29 @@
       "pointsOfInterest": [
         {
           "name": "Butte de doue",
-          "region": "",
-          "url": "",
-          "image": "",
-          "description": ""
+          "region": "Doue, Seine-et-Marne",
+          "url": "https://www.caue77.fr/paysage/%C2%AB%20La%20butte%20de%20Gargantua%C2%BB%20-%20Butte%20de%20Doue%20%28Seine-et-Marne%29",
+          "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/La%20Butte%20de%20Doue.JPG",
+          "description": "Butte paysagère de Doue en Seine-et-Marne, dominant le plateau briard et aussi connue comme le phare de la Brie.",
+          "source": "caue77",
+          "coordinates": {
+            "lat": 48.86556,
+            "lng": 3.16472
+          }
         }
       ],
       "interest": [
         {
           "name": "Butte de doue",
-          "region": "",
-          "url": "",
-          "image": "",
-          "description": ""
+          "region": "Doue, Seine-et-Marne",
+          "url": "https://www.caue77.fr/paysage/%C2%AB%20La%20butte%20de%20Gargantua%C2%BB%20-%20Butte%20de%20Doue%20%28Seine-et-Marne%29",
+          "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/La%20Butte%20de%20Doue.JPG",
+          "description": "Butte paysagère de Doue en Seine-et-Marne, dominant le plateau briard et aussi connue comme le phare de la Brie.",
+          "source": "caue77",
+          "coordinates": {
+            "lat": 48.86556,
+            "lng": 3.16472
+          }
         }
       ],
       "warning": [],
@@ -247,11 +267,100 @@
           "source": ""
         }
       ],
-      "variants": [],
-      "substeps": []
+      "variants": [
+        {
+          "name": "Variante 1",
+          "distance": null,
+          "description": "",
+          "type": "option",
+          "title": "Variante 1",
+          "departure": "",
+          "arrival": "",
+          "elevationGain": null,
+          "elevationLoss": null,
+          "gpx": "",
+          "mapEmbedUrl": "",
+          "stagePhoto": "data/variant-stage-03-variante-1.jpg",
+          "warning": [],
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "accommodation": {
+            "name": "",
+            "website": "",
+            "url": "",
+            "photo": "",
+            "price": "",
+            "alternatives": []
+          },
+          "accommodationType": "",
+          "noteItems": []
+        }
+      ],
+      "substeps": [
+        {
+          "name": "Variante 1",
+          "distance": null,
+          "description": "",
+          "type": "option",
+          "title": "Variante 1",
+          "departure": "",
+          "arrival": "",
+          "elevationGain": null,
+          "elevationLoss": null,
+          "gpx": "",
+          "mapEmbedUrl": "",
+          "stagePhoto": "data/variant-stage-03-variante-1.jpg",
+          "warning": [],
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "accommodation": {
+            "name": "",
+            "website": "",
+            "url": "",
+            "photo": "",
+            "price": "",
+            "alternatives": []
+          },
+          "accommodationType": "",
+          "noteItems": []
+        }
+      ]
     }
   ],
-  "variants": [],
+  "variants": [
+    {
+      "name": "Variante 1",
+      "distance": null,
+      "description": "",
+      "type": "option",
+      "title": "Variante 1",
+      "departure": "",
+      "arrival": "",
+      "elevationGain": null,
+      "elevationLoss": null,
+      "gpx": "",
+      "mapEmbedUrl": "",
+      "stagePhoto": "data/variant-stage-03-variante-1.jpg",
+      "warning": [],
+      "pois": [],
+      "pointsOfInterest": [],
+      "interest": [],
+      "accommodation": {
+        "name": "",
+        "website": "",
+        "url": "",
+        "photo": "",
+        "price": "",
+        "alternatives": []
+      },
+      "accommodationType": "",
+      "noteItems": [],
+      "parentStage": 3,
+      "parentStageReference": 3
+    }
+  ],
   "accommodation": [
     {
       "stage": 1,
