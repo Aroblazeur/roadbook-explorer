@@ -122,6 +122,10 @@ function contributionEndpoint() {
     return safeText(getRoadbookConfig()?.contributionEndpoint, "");
 }
 
+function contributionFeedEndpoint() {
+    return safeText(getRoadbookConfig()?.contributionFeed?.endpoint || contributionEndpoint(), "");
+}
+
 function roadbookId() {
     const config = getRoadbookConfig();
     return sanitizeRoadbookId(config?.id || config?.shortId || window.roadbookContext?.id);
@@ -299,6 +303,7 @@ async function ensureRoadbookLoaded(id) {
         throw new Error("Le roadbook ne contient aucune étape exploitable.");
     }
 
+    await applyLiveContributions();
     applyAccommodationDisplayData();
     renderHomePage();
 
@@ -323,6 +328,137 @@ function loadOptionalAccommodationEnrichment() {
     return loader.loadAccommodationEnrichment({
         path: getRoadbookConfig()?.enrichment?.accommodationPath
     });
+}
+
+async function applyLiveContributions() {
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+
+    const endpoint = contributionFeedEndpoint();
+    const id = roadbookId();
+    if (!endpoint || !id) return;
+
+    let items = [];
+    try {
+        items = await loadLiveContributions(endpoint, id);
+    } catch (error) {
+        console.warn("[RoadBook Contributions] Contributions live indisponibles :", error);
+        return;
+    }
+
+    attachLiveContributions(items, id);
+}
+
+async function loadLiveContributions(endpoint, id) {
+    const url = new URL(endpoint, window.location.href);
+    url.searchParams.set("action", "list");
+    url.searchParams.set("roadbookId", id);
+    url.searchParams.set("t", String(Date.now()));
+
+    const response = await fetch(url.href, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const payload = await response.json();
+    const data = payload?.data || payload;
+    return Array.isArray(data?.items) ? data.items : [];
+}
+
+function attachLiveContributions(items, id) {
+    const filteredItems = Array.isArray(items)
+        ? items.filter(item => sanitizeRoadbookId(item?.roadbookId) === id)
+        : [];
+
+    filteredItems.forEach(item => {
+        const day = findContributionDay(item.stage);
+        if (!day) return;
+
+        const type = normalizeContributionType(item.type || item.contributionType);
+        if (type === "note") {
+            attachLiveNote(day, item);
+        } else if (type === "accommodation") {
+            attachLiveAccommodation(day, item);
+        }
+    });
+}
+
+function normalizeContributionType(value) {
+    const normalized = String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s-]+/g, "");
+    if (["note", "travelernote"].includes(normalized)) return "note";
+    if (["accommodation", "addedaccommodation", "hebergement"].includes(normalized)) return "accommodation";
+    return "";
+}
+
+function findContributionDay(stage) {
+    const stageText = safeText(stage, "");
+    if (!stageText || !Array.isArray(roadbook?.days)) return null;
+    return roadbook.days.find(day =>
+        safeText(day?.stage, "") === stageText ||
+        safeText(day?.stageReference, "") === stageText ||
+        safeText(day?.parentStageReference, "") === stageText
+    ) || null;
+}
+
+function attachLiveNote(day, item) {
+    const text = safeText(item.text || item.note, "");
+    if (!text) return;
+
+    if (!Array.isArray(day.noteItems)) day.noteItems = [];
+    const photo = safeText(item.photo, "");
+    const alreadyExists = day.noteItems.some(note =>
+        safeText(note?.text || note?.note, "") === text &&
+        safeText(note?.photo, "") === photo
+    );
+    if (alreadyExists) return;
+
+    day.noteItems.push({
+        text,
+        photo,
+        createdAt: safeText(item.createdAt, ""),
+        source: "liveContribution"
+    });
+    day.notes = day.noteItems;
+}
+
+function attachLiveAccommodation(day, item) {
+    const name = safeText(item.name, "");
+    const url = safeText(item.url || item.website, "");
+    const photo = safeText(item.photo, "");
+    if (!name && !url && !photo) return;
+
+    if (!day.accommodation || typeof day.accommodation !== "object" || Array.isArray(day.accommodation)) {
+        day.accommodation = {
+            name: safeText(day.accommodation, ""),
+            website: "",
+            url: "",
+            photo: "",
+            alternatives: []
+        };
+    }
+    if (!Array.isArray(day.accommodation.alternatives)) {
+        day.accommodation.alternatives = [];
+    }
+
+    const key = normalizeContributionAccommodationKey({ name, url });
+    const alreadyExists = day.accommodation.alternatives.some(entry =>
+        normalizeContributionAccommodationKey(entry) === key
+    );
+    if (alreadyExists) return;
+
+    day.accommodation.alternatives.push({
+        name,
+        url,
+        website: url,
+        photo,
+        source: "liveContribution"
+    });
+}
+
+function normalizeContributionAccommodationKey(item) {
+    const url = safeText(item?.url || item?.website, "").toLowerCase();
+    if (url) return `url:${url.replace(/\/+$/, "")}`;
+    return `name:${normalizeAccommodationText(item?.name || "")}`;
 }
 
 function renderCurrentAccommodation() {
@@ -2102,8 +2238,7 @@ function appendAddAccommodationButton(container, stageNumber) {
 }
 
 function canSendContributions() {
-    const config = getRoadbookConfig();
-    return Boolean(contributionEndpoint() && config?.googleSheetId && roadbookId());
+    return Boolean(contributionEndpoint() && roadbookId());
 }
 
 async function requestTravelerNote(stageNumber, trigger) {
@@ -2131,16 +2266,17 @@ async function requestTravelerNote(stageNumber, trigger) {
 }
 
 async function requestAddedAccommodation(stageNumber, trigger) {
-    const url = window.prompt("URL de l'hébergement à ajouter :");
-    if (url === null) return;
+    const name = window.prompt("Nom de l'hébergement à ajouter :");
+    if (name === null) return;
 
+    const cleanedName = safeText(name, "");
+    const url = window.prompt("URL optionnelle :", "") || "";
     const cleanedUrl = safeText(url, "");
-    if (!cleanedUrl) {
-        setContributionStatus(trigger, "URL vide : rien à envoyer.", "error");
+    if (!cleanedName && !cleanedUrl) {
+        setContributionStatus(trigger, "Nom ou URL obligatoire : rien à envoyer.", "error");
         return;
     }
 
-    const name = window.prompt("Nom de l'hébergement optionnel :", "") || "";
     const photo = window.prompt("URL photo optionnelle :", "") || "";
 
     await submitContributionFromButton(trigger, {
@@ -2148,14 +2284,13 @@ async function requestAddedAccommodation(stageNumber, trigger) {
         stage: stageNumber,
         payload: {
             url: cleanedUrl,
-            name: safeText(name, ""),
+            name: cleanedName,
             photo: safeText(photo, "")
         },
         pendingMessage: "Envoi de l'hébergement…",
         successMessage: "Hébergement envoyé. Recharge la page pour le voir apparaître."
     });
 }
-
 async function submitContributionFromButton(trigger, options) {
     const button = trigger instanceof HTMLElement ? trigger : null;
     const previousDisabled = button?.disabled || false;
@@ -2179,18 +2314,20 @@ async function submitContributionFromButton(trigger, options) {
 }
 
 async function sendContribution(contributionType, stage, payload) {
-    const config = getRoadbookConfig();
     const endpoint = contributionEndpoint();
     if (!endpoint) throw new Error("Endpoint de contribution non configuré.");
-    if (!config?.googleSheetId) throw new Error("Google Sheet ID du roadbook absent.");
     if (!roadbookId()) throw new Error("Identifiant roadbook absent.");
 
     const requestPayload = {
         roadbookId: roadbookId(),
-        googleSheetId: config.googleSheetId,
         contributionType,
+        type: contributionType === "travelerNote" ? "note" : "accommodation",
         stage: safeText(stage, ""),
-        payload: payload || {}
+        payload: {
+            ...(payload || {}),
+            createdAt: new Date().toISOString(),
+            source: "public-roadbook"
+        }
     };
 
     console.info("[RoadBook Contribution] Payload envoyé", requestPayload);
@@ -2241,7 +2378,6 @@ async function sendContribution(contributionType, stage, payload) {
 
     return result;
 }
-
 function parseContributionResponse(text) {
     if (!text) return null;
     try {

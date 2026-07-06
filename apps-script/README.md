@@ -1,16 +1,13 @@
-# RoadBook Explorer — Google Apps Script Contribution API
+# RoadBook Explorer — Apps Script contributions centrales
 
 Ce dossier contient le projet Google Apps Script officiel de RoadBook Explorer.
 
-Il est indépendant de Pirenexus et peut être utilisé par n’importe quel roadbook à condition que la requête fournisse :
+Il sert de point d’entrée unique pour les contributions publiques de tous les roadbooks :
 
-- `roadbookId`
-- `googleSheetId`
-- `contributionType`
-- `stage`
-- `payload`
+- notes voyageurs ;
+- hébergements ajoutés.
 
-Le moteur web RoadBook Explorer ne doit pas connaître les détails internes du script. Il appelle uniquement l’URL `/exec` du déploiement Apps Script.
+Le site public reste JSON-first. Les contributions rapides sont stockées dans un Google Sheet central, puis relues en live et filtrées par `roadbookId`.
 
 ## Fichiers
 
@@ -21,244 +18,143 @@ apps-script/
 └── README.md
 ```
 
-## Créer le projet Google Apps Script
+## Structure du Google Sheet central
+
+Créer un Google Sheet central avec un onglet :
+
+```text
+Contributions
+```
+
+La première ligne doit contenir ces colonnes :
+
+```text
+roadbookId | stage | type | text | name | url | website | photo | createdAt | source
+```
+
+Rôle des colonnes :
+
+- `roadbookId` : identifiant du roadbook, par exemple `alsace-canal-marne-rhin`.
+- `stage` : numéro d’étape.
+- `type` : `note` ou `accommodation`.
+- `text` : contenu d’une note.
+- `name` : nom d’un hébergement.
+- `url` / `website` : lien d’hébergement.
+- `photo` : URL photo optionnelle.
+- `createdAt` : date ISO ou date Apps Script.
+- `source` : origine, par exemple `public-roadbook`.
+
+Si l’onglet est vide, le script crée automatiquement les en-têtes.
+
+## Configuration du projet Apps Script
 
 1. Aller sur [script.google.com](https://script.google.com/).
 2. Créer un nouveau projet.
-3. Renommer le projet, par exemple :
+3. Copier le contenu de `Code.gs` dans le fichier `Code.gs`.
+4. Copier le contenu de `appsscript.json` dans le manifeste Apps Script.
+5. Dans les propriétés du script, créer :
 
-   ```text
-   RoadBook Explorer Contribution API
-   ```
+```text
+ROADBOOK_CONTRIBUTIONS_SHEET_ID = ID_DU_GOOGLE_SHEET_CENTRAL
+```
 
-4. Copier le contenu de `Code.gs` dans le fichier `Code.gs` du projet Apps Script.
-5. Ouvrir les paramètres du projet Apps Script.
-6. Activer l’option :
+Alternative moins recommandée : renseigner directement `CENTRAL_SPREADSHEET_ID` dans `Code.gs`.
 
-   ```text
-   Afficher le fichier manifeste "appsscript.json" dans l’éditeur
-   ```
+## Déploiement
 
-7. Ouvrir `appsscript.json` dans Apps Script.
-8. Remplacer son contenu par celui du fichier `apps-script/appsscript.json` du dépôt.
+Déployer comme Application Web :
 
-## Publier comme Application Web
+```text
+Exécuter en tant que : Moi
+Accès : Tout le monde
+```
 
-1. Dans Apps Script, cliquer sur `Déployer`.
-2. Choisir `Nouveau déploiement`.
-3. Sélectionner le type :
+Copier l’URL `/exec`. Elle est utilisée globalement par RoadBook Explorer dans `roadbook-config.js`.
 
-   ```text
-   Application Web
-   ```
+## Test GET
 
-4. Configurer :
+Ouvrir :
 
-   ```text
-   Exécuter en tant que : Moi
-   Accès : Tout le monde
-   ```
-
-5. Cliquer sur `Déployer`.
-6. Autoriser les permissions demandées.
-7. Copier l’URL se terminant par `/exec`.
-
-Cette URL `/exec` est l’URL à utiliser côté RoadBook Explorer.
-
-## Tester le service
-
-Ouvrir l’URL `/exec` dans un navigateur.
+```text
+https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+```
 
 Réponse attendue :
 
 ```json
 {
   "status": 200,
-  "timestamp": "2026-01-01T00:00:00.000Z",
   "data": {
     "ok": true,
-    "service": "RoadBook Explorer Contribution API",
-    "version": "1.0.0"
+    "service": "RoadBook Explorer Central Contribution API",
+    "version": "2.0.0"
   }
 }
 ```
 
-## Requête POST
+## Lecture live des contributions
 
-Le corps de la requête doit être un JSON.
+Le site public appelle :
 
-Structure commune :
+```text
+/exec?action=list&roadbookId=alsace-canal-marne-rhin
+```
+
+Le script retourne les lignes de l’onglet `Contributions`, filtrées par `roadbookId`.
+
+## POST note voyageur
 
 ```json
 {
-  "roadbookId": "perinexus",
-  "googleSheetId": "ID_DU_GOOGLE_SHEET",
+  "roadbookId": "alsace-canal-marne-rhin",
   "contributionType": "travelerNote",
-  "stage": "3",
-  "payload": {}
-}
-```
-
-## Type `travelerNote`
-
-Feuille cible :
-
-```text
-Notes voyageurs
-```
-
-Payload :
-
-```json
-{
-  "note": "Très belle étape.",
-  "photo": "https://example.com/photo.jpg"
-}
-```
-
-Champs obligatoires :
-
-- `stage`
-- `payload.note`
-
-En-têtes reconnus dans la feuille :
-
-- `Étape`
-- `Note`
-- `Photo`
-- optionnels : `Roadbook ID`, `Horodatage`, `Type`
-
-## Type `addedAccommodation`
-
-Feuille cible :
-
-```text
-ajout hebergement
-```
-
-Payload :
-
-```json
-{
-  "url": "https://example.com/hebergement",
-  "name": "Camping exemple",
-  "photo": "https://example.com/photo.jpg"
-}
-```
-
-Champs obligatoires :
-
-- `stage`
-- `payload.url`
-
-En-têtes reconnus dans la feuille :
-
-- `Étape`
-- `URL hébergement`
-- `Nom`
-- `Photo`
-- optionnels : `Roadbook ID`, `Horodatage`, `Type`
-
-## Exemple JavaScript
-
-```js
-await fetch("https://script.google.com/macros/s/DEPLOYMENT_ID/exec", {
-  method: "POST",
-  headers: {
-    "Content-Type": "text/plain;charset=utf-8"
-  },
-  body: JSON.stringify({
-    roadbookId: "perinexus",
-    googleSheetId: "ID_DU_GOOGLE_SHEET",
-    contributionType: "travelerNote",
-    stage: "3",
-    payload: {
-      note: "Point d’eau utile à la sortie du village.",
-      photo: ""
-    }
-  })
-});
-```
-
-Remarque : avec Apps Script Web App, `Content-Type: text/plain` évite souvent les préflights CORS inutiles depuis une application statique.
-
-## Réponses d’erreur
-
-Le script retourne toujours du JSON.
-
-Exemple :
-
-```json
-{
-  "status": 400,
-  "timestamp": "2026-01-01T00:00:00.000Z",
-  "data": {
-    "ok": false,
-    "error": {
-      "code": "MISSING_FIELD",
-      "message": "Champ obligatoire manquant.",
-      "details": {
-        "field": "googleSheetId"
-      }
-    }
+  "type": "note",
+  "stage": "2",
+  "payload": {
+    "note": "Très belle étape.",
+    "photo": "",
+    "createdAt": "2026-07-06T12:00:00.000Z",
+    "source": "public-roadbook"
   }
 }
 ```
 
-Erreurs prévues :
+## POST hébergement
 
-- `EMPTY_BODY`
-- `INVALID_JSON`
-- `MISSING_FIELD`
-- `MISSING_STAGE`
-- `INVALID_PAYLOAD`
-- `UNSUPPORTED_CONTRIBUTION_TYPE`
-- `MISSING_PAYLOAD_FIELDS`
-- `SHEET_NOT_FOUND`
-- `EMPTY_HEADER_ROW`
-- `MISSING_REQUIRED_HEADERS`
-- `INVALID_API_KEY`
-- `ROADBOOK_NOT_ALLOWED`
+```json
+{
+  "roadbookId": "alsace-canal-marne-rhin",
+  "contributionType": "addedAccommodation",
+  "type": "accommodation",
+  "stage": "2",
+  "payload": {
+    "name": "Camping exemple",
+    "url": "https://example.com",
+    "photo": "",
+    "createdAt": "2026-07-06T12:00:00.000Z",
+    "source": "public-roadbook"
+  }
+}
+```
 
-## Extension future
+Pour un hébergement, `name` ou `url` suffit. Il n’est plus nécessaire de fournir un Google Sheet dédié au roadbook.
 
-L’architecture est prévue pour ajouter facilement :
+## CORS / requête simple
 
-- `addedPhoto`
-- `correction`
-- `poiSuggestion`
-- `restaurantSuggestion`
-- `shopSuggestion`
-- `waterSuggestion`
+Depuis RoadBook Explorer, le POST est envoyé en :
 
-Pour ajouter un type :
+```http
+Content-Type: text/plain;charset=utf-8
+```
 
-1. Ajouter une entrée dans `CONTRIBUTION_TYPES`.
-2. Définir :
-   - `sheetName`
-   - `requiredPayloadFields`
-   - `fieldAliases`
-   - `buildValues(request)`
-3. Ajouter la feuille et ses en-têtes dans chaque Google Sheet de roadbook.
-
-À chaque nouveau type de contribution ou nouvelle feuille associée, mettre aussi à jour :
-
-- `roadbooks/_template/config.js` si la configuration des feuilles change ;
-- `scripts/create-roadbook.js` si de nouveaux placeholders ou fichiers deviennent nécessaires ;
-- la documentation du template (`roadbooks/_template/README.md` et `roadbooks/template/README.md`) si une nouvelle règle est introduite.
+Cela évite les préflights CORS inutiles avec Apps Script.
 
 ## Sécurité future
 
-Le fichier `Code.gs` contient déjà un bloc `SECURITY` prévu pour activer plus tard :
+`Code.gs` contient déjà des points d’extension pour :
 
 - clé API simple ;
-- liste blanche des `roadbookId` ;
-- limitation anti-spam.
+- liste blanche de roadbooks ;
+- anti-spam.
 
-Par défaut, ces protections sont désactivées pour faciliter le premier déploiement.
-
-## Important
-
-Ce composant est générique.
-
-Il ne contient aucune configuration spécifique à un roadbook particulier. Le choix du Google Sheet se fait uniquement via `googleSheetId`.
+Ces protections sont désactivées par défaut pour permettre les contributions publiques rapides.
