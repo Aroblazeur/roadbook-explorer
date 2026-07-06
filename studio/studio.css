@@ -452,3 +452,40 @@
   opacity: 0;
   pointer-events: none;
 }
+
+.studio-media-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.studio-media-upload__button {
+  width: fit-content;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.studio-media-upload__status {
+  color: var(--studio-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.studio-media-upload__status--success {
+  color: #2e7d32;
+}
+
+.studio-media-upload__status--error {
+  color: #c62828;
+}
+
+.studio-media-upload input[type="file"][hidden] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

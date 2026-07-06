@@ -178,6 +178,10 @@ function sanitizeImageUrl(value) {
         }
     }
 
+    if (/^data\//i.test(candidate)) {
+        return resolveRoadbookDataImage(candidate);
+    }
+
     const path = candidate.split(/[?#]/)[0];
     const unsafe =
         !path ||
@@ -215,7 +219,11 @@ function resolveRoadbookDataImage(value, config = currentRoadbookConfig()) {
         return sanitizeImageUrl(candidate);
     }
 
-    const filename = sanitizeRoadbookAssetName(candidate);
+    if (/^roadbooks\/[^/]+\/data\//i.test(candidate)) {
+        return sanitizeImageUrl(candidate);
+    }
+
+    const filename = sanitizeRoadbookAssetName(candidate.replace(/^data\//i, ""));
     const base = roadbookDataAssetBase(config);
     return filename && base ? `${base}/${filename}` : "";
 }

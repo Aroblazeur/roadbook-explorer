@@ -21,6 +21,7 @@
     const ROADBOOK_NOTE_FIELDS = ["stage", "text", "photo", "createdAt", "source", "author", "timestamp"];
     const CONTRIBUTION_FIELDS = ["id", "type", "stage", "createdAt", "status", "source", "author", "timestamp"];
     const CONTRIBUTION_PAYLOAD_FIELDS = ["text", "name", "url", "photo", "comment"];
+    const IMAGE_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
     const state = {
         catalogIds: [],
@@ -30,6 +31,7 @@
         expandedVariants: new Set(),
         generalInfoExpanded: true,
         gpxFiles: new Map(),
+        mediaFiles: new Map(),
         poiEnrichmentCache: new Map(),
         localPoiEnrichmentCache: new Map()
     };
@@ -162,6 +164,7 @@
         state.expandedStages = new Set();
         state.expandedVariants = new Set();
         state.gpxFiles.clear();
+        state.mediaFiles.clear();
         elements.createForm.reset();
         hideCreateRoadbookForm();
         renderRoadbookEditor();
@@ -246,6 +249,7 @@
             state.expandedVariants = new Set();
             state.generalInfoExpanded = true;
             state.gpxFiles.clear();
+            state.mediaFiles.clear();
             renderRoadbookEditor();
             setStatus(`${safeText(state.selectedRoadbook.title, id)} chargé.`);
         } catch (error) {
@@ -603,6 +607,14 @@
             isTextarea: true,
             fullWidth: true,
             onChange: value => updateRoadbookField("description", value.trim())
+        }));
+        grid.appendChild(createBoundField({
+            label: "Image de couverture",
+            field: "coverImage",
+            value: roadbook.metadata?.coverImage ?? "",
+            fullWidth: true,
+            onChange: value => updateMetadataField("coverImage", value.trim()),
+            mediaContext: { type: "cover" }
         }));
 
         body.appendChild(grid);
@@ -976,6 +988,7 @@
         bindStageField(fragment, "elevationGain", stage.elevationGain, value => updateStage(stageIndex, "elevationGain", decimalOrNull(value)));
         bindStageField(fragment, "elevationLoss", stage.elevationLoss, value => updateStage(stageIndex, "elevationLoss", decimalOrNull(value)));
         bindStageField(fragment, "stagePhoto", stage.stagePhoto, value => updateStage(stageIndex, "stagePhoto", value.trim()));
+        attachTemplateImageUpload(fragment, "stagePhoto", { type: "stage-photo", stageIndex });
         bindStageField(fragment, "description", stage.description, value => updateStage(stageIndex, "description", value.trim()));
         bindStageField(fragment, "accommodationType", stage.accommodationType, value => updateStage(stageIndex, "accommodationType", value.trim()));
 
@@ -1058,6 +1071,12 @@
         bindVariantField(fragment, "elevationGain", variant.elevationGain, value => updateVariant(stageIndex, variantIndex, "elevationGain", decimalOrNull(value)));
         bindVariantField(fragment, "elevationLoss", variant.elevationLoss, value => updateVariant(stageIndex, variantIndex, "elevationLoss", decimalOrNull(value)));
         bindVariantField(fragment, "stagePhoto", variant.stagePhoto, value => updateVariant(stageIndex, variantIndex, "stagePhoto", value.trim()));
+        attachTemplateImageUpload(fragment, "stagePhoto", {
+            type: "variant-photo",
+            stageIndex,
+            variantIndex,
+            label: variant.name || variant.title
+        });
         bindVariantField(fragment, "accommodationType", variant.accommodationType, value => updateVariant(stageIndex, variantIndex, "accommodationType", value.trim()));
         bindVariantField(fragment, "description", variant.description, value => updateVariant(stageIndex, variantIndex, "description", value.trim()));
         const appendTarget = body || variantCard;
@@ -1252,6 +1271,7 @@
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
                 value: stage.accommodation?.[field] ?? "",
+                mediaContext: field === "photo" ? { type: "stage-accommodation-photo", stageIndex } : null,
                 onChange: value => updateStageAccommodationField(stageIndex, field, value.trim())
             }));
         });
@@ -1314,6 +1334,7 @@
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
                 value: variant.accommodation?.[field] ?? "",
+                mediaContext: field === "photo" ? { type: "variant-accommodation-photo", stageIndex, variantIndex } : null,
                 onChange: value => updateVariantAccommodationField(stageIndex, variantIndex, field, value.trim())
             }));
         });
@@ -1466,6 +1487,7 @@
             grid.appendChild(createBoundField({
                 label: getPoiFieldLabel(field),
                 value: poi[field] ?? "",
+                mediaContext: field === "image" ? { type: "poi-image", itemIndex: poiIndex, label: poi.name } : null,
                 onChange: value => onUpdate(field, value.trim())
             }));
         });
@@ -1565,6 +1587,7 @@
             grid.appendChild(createBoundField({
                 label,
                 value: alternative[field] ?? "",
+                mediaContext: field === "photo" ? { type: "stage-alternative-accommodation-photo", stageIndex, itemIndex: alternativeIndex } : null,
                 onChange: value => updateStageAccommodationAlternative(stageIndex, alternativeIndex, field, value.trim())
             }));
         });
@@ -1600,6 +1623,7 @@
             grid.appendChild(createBoundField({
                 label,
                 value: alternative[field] ?? "",
+                mediaContext: field === "photo" ? { type: "variant-alternative-accommodation-photo", stageIndex, variantIndex, itemIndex: alternativeIndex } : null,
                 onChange: value => updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value.trim())
             }));
         });
@@ -1688,6 +1712,7 @@
             grid.appendChild(createBoundField({
                 label: getNoteFieldLabel(field),
                 value: note[field] ?? "",
+                mediaContext: field === "photo" ? { type: "stage-note-photo", stageIndex, itemIndex: noteIndex } : null,
                 onChange: value => updateStageNote(stageIndex, noteIndex, field, value.trim())
             }));
         });
@@ -1724,6 +1749,7 @@
             grid.appendChild(createBoundField({
                 label: getNoteFieldLabel(field),
                 value: note[field] ?? "",
+                mediaContext: field === "photo" ? { type: "variant-note-photo", stageIndex, variantIndex, itemIndex: noteIndex } : null,
                 onChange: value => updateVariantNote(stageIndex, variantIndex, noteIndex, field, value.trim())
             }));
         });
@@ -1786,6 +1812,7 @@
             grid.appendChild(createBoundField({
                 label: getAccommodationFieldLabel(field),
                 value: item[field] ?? "",
+                mediaContext: field === "photo" ? { type: "roadbook-accommodation-photo", itemIndex: accommodationIndex } : null,
                 onChange: value => updateRoadbookAccommodation(accommodationIndex, field, value.trim())
             }));
         });
@@ -1865,6 +1892,7 @@
             grid.appendChild(createBoundField({
                 label: getNoteFieldLabel(field),
                 value: note[field] ?? "",
+                mediaContext: field === "photo" ? { type: "roadbook-note-photo", itemIndex: noteIndex } : null,
                 onChange: value => updateRoadbookNote(noteIndex, field, value.trim())
             }));
         });
@@ -1950,6 +1978,7 @@
             inputType = "text",
             isTextarea = false,
             fullWidth = false,
+            mediaContext = null,
             onChange
         } = options;
         const wrapper = document.createElement("label");
@@ -1969,6 +1998,9 @@
         input.value = value ?? "";
         input.addEventListener("input", event => onChange(event.target.value));
         wrapper.appendChild(input);
+        if (mediaContext) {
+            wrapper.appendChild(createImageUploadControl(mediaContext, input));
+        }
         return wrapper;
     }
 
@@ -2056,6 +2088,13 @@
         if (!input) return;
         input.value = value ?? "";
         input.addEventListener("input", event => onChange(event.target.value));
+    }
+
+    function attachTemplateImageUpload(root, field, mediaContext) {
+        const input = root.querySelector(`[data-field="${field}"]`);
+        const wrapper = input?.closest("label");
+        if (!input || !wrapper) return;
+        wrapper.appendChild(createImageUploadControl(mediaContext, input));
     }
 
     function updateStage(stageIndex, field, value) {
@@ -2669,10 +2708,14 @@
         for (const [relativePath, file] of state.gpxFiles) {
             downloadBlobFile(file, `${id}-${relativePath.replace(/\//g, "-")}`);
         }
+        for (const [relativePath, file] of state.mediaFiles) {
+            downloadBlobFile(file, `${id}-${relativePath.replace(/\//g, "-")}`);
+        }
 
         const gpxCount = state.gpxFiles.size;
+        const mediaCount = state.mediaFiles.size;
         const poiSummary = enrichedPoiCount ? `${enrichedPoiCount} POI enrichi(s). ` : "";
-        setStatus(`Export GitHub genere pour "${safeText(exportPayload.title, id)}" · ${poiSummary}${gpxCount ? gpxCount + " fichier(s) GPX inclus. " : ""}Fichiers a placer dans roadbooks/${id}/.`);
+        setStatus(`Export GitHub genere pour "${safeText(exportPayload.title, id)}" · ${poiSummary}${gpxCount ? gpxCount + " fichier(s) GPX inclus. " : ""}${mediaCount ? mediaCount + " image(s) incluse(s). " : ""}Fichiers a placer dans roadbooks/${id}/.`);
     }
 
     async function prepareGithubActionsPublish() {
@@ -2687,25 +2730,16 @@
 
         const roadbook = { ...exportPayload, id };
 
-        const gpxFileEntries = [];
-        if (state.gpxFiles.size > 0) {
-            for (const [relativePath, file] of state.gpxFiles) {
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const base64 = arrayBufferToBase64(arrayBuffer);
-                    gpxFileEntries.push({ path: relativePath, base64 });
-                } catch (_) {
-                    console.warn(`[Studio] Impossible de lire le fichier GPX : ${relativePath}`);
-                }
-            }
-        }
+        const gpxFileEntries = await buildPublicationFileEntries(state.gpxFiles, "GPX");
+        const mediaFileEntries = await buildPublicationFileEntries(state.mediaFiles, "image");
 
         const publicationPayload = {
             roadbookId: id,
             generatedAt: new Date().toISOString(),
             roadbookJson: JSON.stringify(roadbook, null, 2),
             configJs: buildRoadbookConfigJs(roadbook),
-            gpxFiles: gpxFileEntries
+            gpxFiles: gpxFileEntries,
+            mediaFiles: mediaFileEntries
         };
 
         try {
@@ -2725,7 +2759,9 @@
                 token
             });
 
-            setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}"${enrichedPoiCount ? ` · ${enrichedPoiCount} POI enrichi(s)` : ""} : le workflow GitHub Actions va commit directement sur main.`);
+            const gpxSummary = gpxFileEntries.length ? ` · ${gpxFileEntries.length} GPX` : "";
+            const mediaSummary = mediaFileEntries.length ? ` · ${mediaFileEntries.length} image(s)` : "";
+            setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}"${enrichedPoiCount ? ` · ${enrichedPoiCount} POI enrichi(s)` : ""}${gpxSummary}${mediaSummary} : le workflow GitHub Actions va commit directement sur main.`);
             window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
         } catch (error) {
             console.error("[Studio] Publication GitHub impossible", error);
@@ -2794,6 +2830,20 @@
         } catch (error) {
             return "";
         }
+    }
+
+    async function buildPublicationFileEntries(files, label) {
+        const entries = [];
+        for (const [relativePath, file] of files) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const base64 = arrayBufferToBase64(arrayBuffer);
+                entries.push({ path: relativePath, base64 });
+            } catch (_) {
+                console.warn(`[Studio] Impossible de lire le fichier ${label} : ${relativePath}`);
+            }
+        }
+        return entries;
     }
 
     async function encodeWorkflowPayload(payload) {
@@ -3440,6 +3490,153 @@
     }
 
     /* ── GPX file upload, safe naming & in-memory store ── */
+
+    /* -- Media file upload, safe naming & in-memory store -- */
+
+    function createImageUploadControl(context, targetInput) {
+        const container = document.createElement("span");
+        container.className = "studio-media-upload";
+
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = IMAGE_FILE_EXTENSIONS.join(",");
+        fileInput.hidden = true;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "terrain-button terrain-button--secondary studio-media-upload__button";
+        button.textContent = "Choisir une image";
+        button.addEventListener("click", () => fileInput.click());
+
+        const status = document.createElement("small");
+        status.className = "studio-media-upload__status";
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            handleImageFileUpload(context, file, targetInput, status);
+            fileInput.value = "";
+        });
+
+        container.append(fileInput, button, status);
+        return container;
+    }
+
+    function handleImageFileUpload(context, file, targetInput, statusEl) {
+        const validationError = validateImageFile(file);
+        if (validationError) {
+            setMediaStatus(statusEl, validationError, true);
+            return;
+        }
+
+        const path = autoImagePath(context, file);
+        if (!path) {
+            setMediaStatus(statusEl, "Impossible de générer un chemin image sûr.", true);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            state.mediaFiles.set(path, file);
+            if (targetInput) {
+                targetInput.value = path;
+                targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+            setMediaStatus(statusEl, `Image prête · ${path}`, false);
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            setMediaStatus(statusEl, `Le fichier "${file.name}" n'est pas une image lisible.`, true);
+        };
+        image.src = objectUrl;
+    }
+
+    function setMediaStatus(statusEl, message, isError) {
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.classList.toggle("studio-media-upload__status--error", Boolean(isError));
+        statusEl.classList.toggle("studio-media-upload__status--success", !isError);
+    }
+
+    function validateImageFile(file) {
+        if (!file) return "Aucun fichier sélectionné.";
+        const extension = fileExtension(file.name);
+        if (!IMAGE_FILE_EXTENSIONS.includes(extension)) {
+            return `Le fichier "${file.name}" doit être une image JPG, PNG ou WebP.`;
+        }
+        if (file.type && !file.type.startsWith("image/")) {
+            return `Le fichier "${file.name}" n'est pas reconnu comme une image.`;
+        }
+        if (file.size > 20 * 1024 * 1024) {
+            return `Le fichier "${file.name}" dépasse 20 Mo.`;
+        }
+        return null;
+    }
+
+    function autoImagePath(context, file) {
+        const extension = fileExtension(file.name) || ".jpg";
+        const stem = autoImageStem(context);
+        const filename = sanitizeMediaFilename(`${stem}${extension}`);
+        return filename ? `data/${filename}` : "";
+    }
+
+    function autoImageStem(context = {}) {
+        const stageNumber = Number.isFinite(context.stageIndex) ? String(context.stageIndex + 1).padStart(2, "0") : "";
+        const variantNumber = Number.isFinite(context.variantIndex) ? String(context.variantIndex + 1) : "";
+        const itemNumber = Number.isFinite(context.itemIndex) ? String(context.itemIndex + 1).padStart(2, "0") : "";
+        const label = normalizeRoadbookId(context.label || "");
+
+        switch (context.type) {
+            case "cover":
+                return "cover";
+            case "stage-photo":
+                return `stage-${stageNumber || "00"}`;
+            case "variant-photo":
+                return `variant-stage-${stageNumber || "00"}-${label || variantNumber || "1"}`;
+            case "stage-accommodation-photo":
+                return `accommodation-stage-${stageNumber || "00"}-main`;
+            case "variant-accommodation-photo":
+                return `accommodation-variant-stage-${stageNumber || "00"}-${variantNumber || "1"}-main`;
+            case "stage-alternative-accommodation-photo":
+                return `accommodation-stage-${stageNumber || "00"}-alternative-${itemNumber || "01"}`;
+            case "variant-alternative-accommodation-photo":
+                return `accommodation-variant-stage-${stageNumber || "00"}-${variantNumber || "1"}-alternative-${itemNumber || "01"}`;
+            case "stage-note-photo":
+                return `note-stage-${stageNumber || "00"}-${itemNumber || "01"}`;
+            case "variant-note-photo":
+                return `note-variant-stage-${stageNumber || "00"}-${variantNumber || "1"}-${itemNumber || "01"}`;
+            case "roadbook-note-photo":
+                return `note-roadbook-${itemNumber || "01"}`;
+            case "roadbook-accommodation-photo":
+                return `accommodation-roadbook-${itemNumber || "01"}`;
+            case "poi-image":
+                return `poi-${label || itemNumber || "01"}`;
+            default:
+                return `media-${Date.now()}`;
+        }
+    }
+
+    function fileExtension(filename) {
+        const match = String(filename || "").toLowerCase().match(/\.[a-z0-9]+$/);
+        return match ? match[0] : "";
+    }
+
+    function sanitizeMediaFilename(filename) {
+        const normalized = String(filename || "")
+            .trim()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9._-]+/g, "-")
+            .replace(/-+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .toLowerCase();
+        if (!normalized || normalized.includes("..") || normalized.includes("/") || normalized.includes("\\")) return "";
+        return normalized;
+    }
 
     function autoGpxPath(context) {
         const { type, stageIndex, variantIndex } = context;
