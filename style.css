@@ -879,6 +879,11 @@ li{
     gap:12px;
 }
 
+.accommodation-resource__button-wrapper--text{
+    align-items:center;
+    justify-content:flex-start;
+}
+
 .accommodation-resource__website-link{
     flex:1;
     min-width:0;

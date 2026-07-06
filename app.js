@@ -390,20 +390,13 @@ function drawRoadbookLibraryCards() {
 
 function createRoadbookLibraryGroups(cards) {
     const groups = [
-        { key: "todo", title: "À faire", items: [] },
-        { key: "done", title: "Déjà faits", items: [] }
+        { key: "todo", title: "En projet", items: [] },
+        { key: "done", title: "Voyage réalisé", items: [] }
     ];
     const byKey = new Map(groups.map(group => [group.key, group]));
 
     cards.forEach(item => {
-        const rawProject = safeText(item.project, "");
         const key = roadbookProjectStatus(item) === "done" ? "done" : "todo";
-        console.info("[Roadbook Library] Classement projet", {
-            roadbookId: item.id || item.shortId || "",
-            rawProject,
-            normalizedProject: normalizeProjectValue(rawProject || item.projectStatus || ""),
-            category: key
-        });
         byKey.get(key).items.push(item);
     });
 
@@ -413,8 +406,8 @@ function createRoadbookLibraryGroups(cards) {
 function roadbookProjectStatus(item) {
     const value = item?.projectStatus || item?.project || "";
     const normalized = normalizeProjectValue(value);
-    if (["done", "deja fait", "deja faits", "deja-fait", "fait", "termine"].includes(normalized)) return "done";
-    if (["todo", "a faire", "a-faire", "planned"].includes(normalized)) return "todo";
+    if (["done", "deja fait", "deja faits", "deja-fait", "fait", "termine", "voyage realise", "voyage-realise", "realise", "realized"].includes(normalized)) return "done";
+    if (["todo", "a faire", "a-faire", "planned", "en projet", "en-projet", "projet"].includes(normalized)) return "todo";
     return "todo";
 }
 
@@ -1164,6 +1157,32 @@ function stageRouteLabel(day, index) {
     return route || safeText(day.title, `Étape ${index + 1}`);
 }
 
+function stageNumberLabel(day, index) {
+    return safeText(day?.stage || (index + 1), String(index + 1));
+}
+
+function isGenericStageDisplayTitle(title, day, index) {
+    const normalized = normalizeProjectValue(title);
+    if (!normalized) return true;
+    const number = stageNumberLabel(day, index);
+    return [
+        "etape",
+        `etape ${number}`,
+        `jour ${number}`,
+        "stage"
+    ].includes(normalized);
+}
+
+function stageDisplayTitle(day, index) {
+    const title = safeText(day?.title, "");
+    if (!isGenericStageDisplayTitle(title, day, index)) return title;
+
+    const departure = safeText(day?.departure, "");
+    const arrival = safeText(day?.arrival, "");
+    const route = [departure, arrival].filter(Boolean).join(" → ");
+    return `Étape ${stageNumberLabel(day, index)}${route ? ` - ${route}` : ""}`;
+}
+
 function appendSummaryStatIfPresent(container, icon, label, value, formatter) {
     if (!Number.isFinite(value)) return;
     appendSummaryStat(container, icon, label, formatter(value));
@@ -1290,7 +1309,7 @@ function renderStageTitle(day, index) {
     const heading = document.getElementById("day-title");
     if (!heading) return;
 
-    const fallbackTitle = `Étape ${day.stage || (index + 1)}`;
+    const fallbackTitle = stageDisplayTitle(day, index);
     if (day?.isSubstep) {
         const type = safeText(day.type, "Option");
         const departure = safeText(day.departure, "");
@@ -1299,7 +1318,7 @@ function renderStageTitle(day, index) {
         return;
     }
 
-    const title = safeText(day.title, fallbackTitle);
+    const title = stageDisplayTitle(day, index) || safeText(day.title, fallbackTitle);
     const departure = safeText(day.departure, "");
     const arrival = safeText(day.arrival, "");
     heading.replaceChildren(...buildStageTitleContent(title, departure, arrival));
@@ -1645,7 +1664,8 @@ function setSectionHidden(id, hidden) {
 
 function updateRoadbookChrome(day = null, options = {}) {
     const title = safeText(options.title || roadbook?.title, "RoadBook Explorer");
-    const pageTitle = day?.title ? `${safeText(day.title)} - ${title}` : title;
+    const dayTitle = day ? stageDisplayTitle(day, currentDay) : "";
+    const pageTitle = dayTitle ? `${dayTitle} - ${title}` : title;
     const headerTitle = document.getElementById("roadbook-title");
     const footerTitle = document.getElementById("footer-roadbook-title");
 
@@ -1856,20 +1876,28 @@ function resolvePoiEntry(poi) {
     const sourceDescription = typeof poi === "object" ? safeText(poi?.description, "") : "";
     const sourceImage = typeof poi === "object" ? safeText(poi?.image, "") : "";
     const sourceRegion = typeof poi === "object" ? safeText(poi?.region, "") : "";
+    const sourceUrl = typeof poi === "object" ? safeText(poi?.url || poi?.link, "") : "";
     const name = safeText(sourceName, "Point d'intérêt");
     const metadata = findPoiEnrichment(name);
     const imageCandidate = sourceImage || metadata?.image || "";
     const image = isSafeUrl(imageCandidate) ? imageCandidate : "";
     const description = metadata?.description || sourceDescription || "";
     const coordinates = metadata?.coordinates || null;
+    const region = sourceRegion || metadata?.region || "";
+    const url = isSafeUrl(sourceUrl) ? sourceUrl : "";
+    const mapQuery = coordinates
+        ? `${coordinates.lat},${coordinates.lng}`
+        : [metadata?.name || name, region].filter(Boolean).join(" ");
 
     return {
         name: metadata?.name || name,
         image,
-        region: sourceRegion,
+        region,
         description,
+        url,
         coordinates,
-        isEnriched: Boolean(image || sourceRegion || description || coordinates)
+        mapQuery,
+        isEnriched: Boolean(image || region || description || coordinates || url)
     };
 }
 
@@ -1911,11 +1939,20 @@ function appendPoiCard(list, entry) {
         content.appendChild(description);
     }
 
-    if (entry.coordinates) {
-        const { lat, lng } = entry.coordinates;
+    if (entry.url) {
+        const sourceLink = document.createElement("a");
+        sourceLink.className = "terrain-button terrain-button--secondary poi-card__map-link";
+        sourceLink.href = entry.url;
+        sourceLink.target = "_blank";
+        sourceLink.rel = "noopener noreferrer";
+        sourceLink.textContent = "Ouvrir le lien";
+        content.appendChild(sourceLink);
+    }
+
+    if (entry.mapQuery) {
         const mapLink = document.createElement("a");
         mapLink.className = "terrain-button terrain-button--secondary poi-card__map-link";
-        mapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+        mapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entry.mapQuery)}`;
         mapLink.target = "_blank";
         mapLink.rel = "noopener noreferrer";
         mapLink.textContent = "Ouvrir sur la carte";
@@ -1932,15 +1969,6 @@ function renderPoiList(list, pois) {
 
     list.classList.toggle("poi-list--enriched", hasEnrichedPoi);
 
-    if (!hasEnrichedPoi) {
-        entries.forEach(entry => {
-            const item = document.createElement("li");
-            item.textContent = entry.name;
-            list.appendChild(item);
-        });
-        return;
-    }
-
     entries.forEach(entry => {
         appendPoiCard(list, entry);
     });
@@ -1953,18 +1981,11 @@ function renderFieldNavigation(day) {
 function renderAccommodation(accommodation, day) {
     const stageNumber = day?.stage || (currentDay + 1);
     renderPrimaryAccommodation(accommodation, day);
-    renderAlternativeAccommodation(accommodation, stageNumber);
+    renderAlternativeAccommodation(accommodation, stageNumber, day);
 }
 
 function resolveAccommodationContextCity(day) {
     return safeText(day?.arrival || day?.departure || "", "");
-}
-
-function buildNameOnlyMapUrl(name, day) {
-    const city = resolveAccommodationContextCity(day);
-    const query = [name, city].filter(Boolean).join(" ");
-    if (!query) return "";
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 function renderPrimaryAccommodation(accommodation, day) {
@@ -1976,8 +1997,7 @@ function renderPrimaryAccommodation(accommodation, day) {
         const name = safeText(accommodation, "");
         section.hidden = !name;
         if (!name) return;
-        const mapUrl = buildNameOnlyMapUrl(name, day);
-        appendAccommodationResource(container, mapUrl, name, null, name, "", [name]);
+        appendAccommodationResource(container, "", name, null, name, "", [[name, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), name]);
         return;
     }
 
@@ -1988,22 +2008,21 @@ function renderPrimaryAccommodation(accommodation, day) {
     const mainDisplayLabel = mainName || mainMetadata?.name || genericAccommodationLabel(mainUrl);
     const mainIconSource = mainName || mainMetadata?.name || mainUrl;
 
-    const effectiveUrl = mainUrl || (mainName ? buildNameOnlyMapUrl(mainName, day) : "");
     section.hidden = !mainName && !mainUrl && !mainPhoto && !mainMetadata?.image;
     if (section.hidden) return;
 
     appendAccommodationResource(
         container,
-        effectiveUrl,
+        mainUrl,
         mainDisplayLabel,
         mainMetadata,
         mainIconSource,
         mainPhoto,
-        [accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl, mainName]
+        [[mainName, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl]
     );
 }
 
-function renderAlternativeAccommodation(accommodation, stageNumber) {
+function renderAlternativeAccommodation(accommodation, stageNumber, day) {
     const section = document.getElementById("alternative-accommodation-card");
     const title = document.getElementById("alternative-accommodation-title");
     const container = document.getElementById("alternative-accommodation");
@@ -2035,7 +2054,7 @@ function renderAlternativeAccommodation(accommodation, stageNumber) {
 
     title.textContent = "Hébergements alternatifs";
 
-    appendResourceList(container, "Hébergements alternatifs", alternatives, false);
+    appendResourceList(container, "Hébergements alternatifs", alternatives, false, day);
     appendAddAccommodationButton(container, stageNumber);
 }
 
@@ -2340,7 +2359,7 @@ function isSafeNotePhoto(value) {
     );
 }
 
-function appendResourceList(container, title, values, showHeading = true) {
+function appendResourceList(container, title, values, showHeading = true, day = null) {
     const items = Array.isArray(values) ? values.filter(Boolean) : [];
     if (!items.length) return;
     const list = document.createElement("ul");
@@ -2361,7 +2380,7 @@ function appendResourceList(container, title, values, showHeading = true) {
             metadata,
             preferredLabel || metadata?.name || url,
             photo,
-            [rawName, preferredLabel, metadata?.name, url]
+            [[preferredLabel || rawName || metadata?.name, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), rawName, preferredLabel, metadata?.name, url]
         );
         list.appendChild(item);
     });
@@ -2487,7 +2506,15 @@ function appendAccommodationResource(container, url, preferredLabel, metadata, i
         const text = document.createElement("span");
         text.className = "accommodation-resource__label";
         text.textContent = labelWithIcon;
-        resource.appendChild(text);
+        const mapLink = createAccommodationMapLink(mapQueryCandidates);
+        if (mapLink) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "accommodation-resource__button-wrapper accommodation-resource__button-wrapper--text";
+            wrapper.append(text, mapLink);
+            resource.appendChild(wrapper);
+        } else {
+            resource.appendChild(text);
+        }
     }
     container.appendChild(resource);
     return resource;

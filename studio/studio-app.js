@@ -141,7 +141,7 @@
         const roadbook = createCanonicalRoadbook({
             id,
             title,
-            project: safeText(formData.get("project"), "a faire"),
+            project: normalizeProjectLabel(formData.get("project")),
             description: safeText(formData.get("description"), ""),
             officialDistance: decimalOrNull(formData.get("officialDistance")),
             officialElevationGain: decimalOrNull(formData.get("officialElevationGain")),
@@ -173,6 +173,19 @@
             .replace(/^-+|-+$/g, "");
     }
 
+    function normalizeProjectLabel(value) {
+        const normalized = String(value || "")
+            .trim()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, " ");
+        if (["deja fait", "deja faits", "deja-fait", "fait", "termine", "done", "voyage realise", "voyage-realise", "realise"].includes(normalized)) {
+            return "Voyage réalisé";
+        }
+        return "En projet";
+    }
+
     function createCanonicalRoadbook(values) {
         const now = new Date().toISOString();
         return {
@@ -182,8 +195,8 @@
             metadata: {
                 activity: "",
                 destination: "",
-                project: values.project,
-                projectStatus: values.project,
+                project: normalizeProjectLabel(values.project),
+                projectStatus: normalizeProjectLabel(values.project),
                 coverImage: "",
                 generatedAt: now,
                 source: "studio",
@@ -268,6 +281,8 @@
         PRIMARY_METADATA_KEYS.forEach(key => {
             normalized[key] = safeText(normalized[key], "");
         });
+        normalized.project = normalizeProjectLabel(normalized.project || normalized.projectStatus);
+        normalized.projectStatus = normalized.project;
 
         return normalized;
     }
@@ -573,8 +588,9 @@
         }));
         grid.appendChild(createGeneralField({
             label: "Projet",
-            value: roadbook.metadata?.project ?? "",
-            onChange: value => updateMetadataField("project", value.trim())
+            value: normalizeProjectLabel(roadbook.metadata?.project ?? roadbook.metadata?.projectStatus),
+            options: ["En projet", "Voyage réalisé"],
+            onChange: value => updateMetadataField("project", normalizeProjectLabel(value))
         }));
         grid.appendChild(createGeneralField({
             label: "Description",
@@ -764,13 +780,22 @@
     }
 
     function createGeneralField(options) {
-        const { label, value, readOnly = false, isTextarea = false, fullWidth = false, onChange } = options;
+        const { label, value, readOnly = false, isTextarea = false, fullWidth = false, onChange, options: choices = null } = options;
         const wrapper = document.createElement("label");
         if (fullWidth) wrapper.className = "studio-form-grid__full";
         wrapper.appendChild(document.createTextNode(label));
 
-        const input = isTextarea ? document.createElement("textarea") : document.createElement("input");
-        if (isTextarea) {
+        const input = Array.isArray(choices)
+            ? document.createElement("select")
+            : isTextarea ? document.createElement("textarea") : document.createElement("input");
+        if (Array.isArray(choices)) {
+            choices.forEach(choice => {
+                const option = document.createElement("option");
+                option.value = choice;
+                option.textContent = choice;
+                input.appendChild(option);
+            });
+        } else if (isTextarea) {
             input.rows = 3;
         } else {
             input.type = "text";
@@ -1969,7 +1994,13 @@
         if (!roadbook.metadata || typeof roadbook.metadata !== "object") {
             roadbook.metadata = {};
         }
-        roadbook.metadata[key] = value;
+        if (key === "project") {
+            const label = normalizeProjectLabel(value);
+            roadbook.metadata.project = label;
+            roadbook.metadata.projectStatus = label;
+        } else {
+            roadbook.metadata[key] = value;
+        }
         markModified();
     }
 
@@ -2813,6 +2844,9 @@
 
     function buildExportRoadbook(roadbook) {
         const clone = structuredClone(roadbook);
+        clone.metadata = clone.metadata && typeof clone.metadata === "object" ? clone.metadata : {};
+        clone.metadata.project = normalizeProjectLabel(clone.metadata.project || clone.metadata.projectStatus);
+        clone.metadata.projectStatus = clone.metadata.project;
         clone.stages = clone.stages.map(stage => ({
             ...stage,
             pois: normalizePois(stage.pois),
