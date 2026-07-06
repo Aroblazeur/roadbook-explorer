@@ -15,6 +15,11 @@ let poiEnrichmentIndex = new Map();
 let durationRequestId = 0;
 let activeRoadbookId = "";
 let libraryRoadbooks = [];
+let roadbookLoadVersion = 0;
+
+const liveContributionsCache = new Map();
+const enrichmentLoadCache = new Map();
+const LIVE_CONTRIBUTIONS_TIMEOUT_MS = 2_500;
 
 const STAT_ICONS = Object.freeze({
     steps: [
@@ -289,9 +294,9 @@ async function ensureRoadbookLoaded(id) {
 
     await window.loadRoadbookConfigById(safeId, { activate: true });
     activeRoadbookId = safeId;
-
-    const accommodationEnrichmentPromise = loadOptionalAccommodationEnrichment();
-    const poiEnrichmentPromise = loadOptionalPoiEnrichment();
+    const loadVersion = ++roadbookLoadVersion;
+    accommodationEnrichmentIndex = new Map();
+    poiEnrichmentIndex = new Map();
 
     if (typeof loadRoadbook !== "function") {
         throw new Error("Loader indisponible");
@@ -303,21 +308,53 @@ async function ensureRoadbookLoaded(id) {
         throw new Error("Le roadbook ne contient aucune étape exploitable.");
     }
 
-    await applyLiveContributions();
     applyAccommodationDisplayData();
     renderHomePage();
-
-    [accommodationEnrichmentIndex, poiEnrichmentIndex] = await Promise.all([
-        accommodationEnrichmentPromise,
-        poiEnrichmentPromise
-    ]);
-    applyAccommodationDisplayData();
-    if (currentView === "home") updateSummary();
-    if (currentView === "stage") {
-        renderCurrentAccommodation();
-        renderCurrentPois();
-    }
+    scheduleRoadbookBackgroundHydration(safeId, loadVersion);
     return true;
+}
+
+function scheduleRoadbookBackgroundHydration(id, loadVersion) {
+    window.setTimeout(() => {
+        hydrateRoadbookInBackground(id, loadVersion);
+    }, 0);
+}
+
+async function hydrateRoadbookInBackground(id, loadVersion) {
+    const isCurrent = () => activeRoadbookId === id && roadbookLoadVersion === loadVersion;
+    if (!isCurrent()) return;
+
+    applyLiveContributions().then(() => {
+        if (!isCurrent()) return;
+        refreshDynamicRoadbookSections();
+    }).catch(error => {
+        console.info("[Roadbook] Contributions live ignorées en arrière-plan.", error);
+    });
+
+    Promise.all([
+        loadOptionalAccommodationEnrichment(),
+        loadOptionalPoiEnrichment()
+    ]).then(([accommodationIndex, poiIndex]) => {
+        if (!isCurrent()) return;
+        accommodationEnrichmentIndex = accommodationIndex;
+        poiEnrichmentIndex = poiIndex;
+        applyAccommodationDisplayData();
+        refreshDynamicRoadbookSections();
+    }).catch(error => {
+        console.info("[Roadbook] Enrichissements ignorés en arrière-plan.", error);
+    });
+}
+
+function refreshDynamicRoadbookSections() {
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+    if (currentView === "home") {
+        updateSummary();
+        return;
+    }
+    if (currentView !== "stage") return;
+    renderCurrentAccommodation();
+    renderCurrentPois();
+    renderCurrentNotes();
 }
 
 function loadOptionalAccommodationEnrichment() {
@@ -327,12 +364,17 @@ function loadOptionalAccommodationEnrichment() {
     }
     const path = safeText(getRoadbookConfig()?.enrichment?.accommodationPath, "");
     if (!path) return Promise.resolve(new Map());
-    return loader.loadAccommodationEnrichment({
+    if (enrichmentLoadCache.has(`accommodation:${path}`)) {
+        return enrichmentLoadCache.get(`accommodation:${path}`);
+    }
+    const promise = loader.loadAccommodationEnrichment({
         path
     }).catch(error => {
         console.info("[Roadbook] Enrichissement hébergements optionnel indisponible.", error);
         return new Map();
     });
+    enrichmentLoadCache.set(`accommodation:${path}`, promise);
+    return promise;
 }
 
 async function applyLiveContributions() {
@@ -354,17 +396,45 @@ async function applyLiveContributions() {
 }
 
 async function loadLiveContributions(endpoint, id) {
+    return loadLiveContributionsWithOptions(endpoint, id);
+}
+
+async function loadLiveContributionsWithOptions(endpoint, id, options = {}) {
+    const { force = false, timeoutMs = LIVE_CONTRIBUTIONS_TIMEOUT_MS } = options;
+    const cacheKey = `${endpoint}::${id}`;
+    if (!force && liveContributionsCache.has(cacheKey)) {
+        return liveContributionsCache.get(cacheKey);
+    }
+
     const url = new URL(endpoint, window.location.href);
     url.searchParams.set("action", "list");
     url.searchParams.set("roadbookId", id);
     url.searchParams.set("t", String(Date.now()));
 
-    const response = await fetch(url.href, { cache: "no-store" });
+    const response = await fetchWithTimeout(url.href, {
+        cache: "no-store",
+        headers: { Accept: "application/json" }
+    }, timeoutMs);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const payload = await response.json();
     const data = payload?.data || payload;
-    return Array.isArray(data?.items) ? data.items : [];
+    const items = Array.isArray(data?.items) ? data.items : [];
+    liveContributionsCache.set(cacheKey, items);
+    return items;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 3_000) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+    } finally {
+        window.clearTimeout(timeout);
+    }
 }
 
 function attachLiveContributions(items, id) {
@@ -479,18 +549,29 @@ function loadOptionalPoiEnrichment() {
     }
     const path = safeText(getRoadbookConfig()?.enrichment?.poiPath, "");
     if (!path) return Promise.resolve(new Map());
-    return loader.loadPoiEnrichment({
+    if (enrichmentLoadCache.has(`poi:${path}`)) {
+        return enrichmentLoadCache.get(`poi:${path}`);
+    }
+    const promise = loader.loadPoiEnrichment({
         path
     }).catch(error => {
         console.info("[Roadbook] Enrichissement POI optionnel indisponible.", error);
         return new Map();
     });
+    enrichmentLoadCache.set(`poi:${path}`, promise);
+    return promise;
 }
 
 function renderCurrentPois() {
     if (!roadbook || !Array.isArray(roadbook.days)) return;
     const day = roadbook.days[currentDay];
     if (day) updatePois(day);
+}
+
+function renderCurrentNotes() {
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+    const day = roadbook.days[currentDay];
+    if (day) renderNotes(day.noteItems || day.notes, day.stage || (currentDay + 1));
 }
 
 /**
@@ -2429,7 +2510,7 @@ async function confirmContributionWrite(requestPayload) {
     for (let attempt = 0; attempt < attempts; attempt += 1) {
         await delay(1000 + attempt * 400);
         try {
-            const items = await loadLiveContributions(endpoint, id);
+            const items = await loadLiveContributionsWithOptions(endpoint, id, { force: true, timeoutMs: 4_000 });
             const matches = items.filter(item => isMatchingContribution(item, requestPayload));
             if (matches.length > 0) {
                 return { confirmed: true, items: matches };
