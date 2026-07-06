@@ -235,9 +235,13 @@ function normalizeAccommodationType(value) {
 function normalizeProjectStatus(value) {
     const normalized = normalizeHeader(value);
     if (!normalized) return "todo";
-    if (["deja fait", "deja faits", "deja-fait", "fait", "termine", "done"].includes(normalized)) return "done";
-    if (["a faire", "a-faire", "todo", "planned"].includes(normalized)) return "todo";
+    if (["deja fait", "deja faits", "deja-fait", "fait", "termine", "done", "voyage realise", "voyage-realise", "realise"].includes(normalized)) return "done";
+    if (["a faire", "a-faire", "todo", "planned", "en projet", "en-projet", "projet"].includes(normalized)) return "todo";
     return "todo";
+}
+
+function projectDisplayLabel(value) {
+    return normalizeProjectStatus(value) === "done" ? "Voyage réalisé" : "En projet";
 }
 
 function sanitizeNotePhotoUrl(value) {
@@ -1074,7 +1078,7 @@ function normalizeStageJson(stage, index = 0, options = {}) {
     const pois = safeArray(source.pois || source.pointsOfInterest || source.interest)
         .map(normalizePoiJson)
         .filter(Boolean);
-    const accommodation = normalizeAccommodationJson(source.accommodation);
+    const accommodation = normalizeAccommodationJson(source.accommodation || source.legacyAccommodation);
     const firstAlternative = accommodation.alternatives[0] || null;
 
     return {
@@ -1171,12 +1175,17 @@ function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
         summary.stagesTotal = buildComputedStagesTotal(stages, summary.stagesTotalMarker);
     }
 
+    const metadata = payload.metadata && typeof payload.metadata === "object" ? { ...payload.metadata } : {};
+    const project = metadata.projectStatus || metadata.project || payload.projectStatus || payload.project || config.project || config.options?.project || "";
+    metadata.project = projectDisplayLabel(project);
+    metadata.projectStatus = metadata.project;
+
     return {
         ...payload,
         id: normalizeValue(payload.id) || config.id || config.shortId || "roadbook",
         title: normalizeValue(payload.title) || config.title || "RoadBook Explorer",
         description: normalizeValue(payload.description) || config.description || "Roadbook d'itinÃ©rance Ã  vÃ©lo.",
-        metadata: payload.metadata && typeof payload.metadata === "object" ? payload.metadata : {},
+        metadata,
         summary,
         stages,
         days
@@ -1184,6 +1193,7 @@ function normalizeRoadbookJson(payload, config = currentRoadbookConfig()) {
 }
 
 function roadbookLibraryFallback(config = {}) {
+    const project = config.project || config.options?.project || "";
     return {
         id: config.id || config.shortId || "roadbook",
         title: config.title || "RoadBook Explorer",
@@ -1191,9 +1201,41 @@ function roadbookLibraryFallback(config = {}) {
         destination: config.destination || config.options?.destination || "",
         description: config.description || "Roadbook d'itinérance à vélo.",
         coverImage: resolveRoadbookDataImage(config.coverImage || config.options?.coverImage || "", config),
-        project: config.project || config.options?.project || "",
-        projectStatus: normalizeProjectStatus(config.project || config.options?.project || "")
+        project: projectDisplayLabel(project),
+        projectStatus: normalizeProjectStatus(project)
     };
+}
+
+async function loadRoadbookJsonLibraryMetadata(config = {}, fallback = roadbookLibraryFallback(config)) {
+    const paths = [
+        config.jsonPath,
+        ...(Array.isArray(config.fallbackJsonPaths) ? config.fallbackJsonPaths : [])
+    ].filter(Boolean);
+    const uniquePaths = [...new Set(paths)];
+
+    for (const path of uniquePaths) {
+        try {
+            const response = await fetch(path, NETWORK_FIRST_FETCH_OPTIONS);
+            if (!response.ok) continue;
+            const payload = await response.json();
+            const metadata = payload?.metadata && typeof payload.metadata === "object" ? payload.metadata : {};
+            const project = metadata.projectStatus || metadata.project || payload.projectStatus || payload.project || fallback.project;
+            return {
+                ...fallback,
+                title: normalizeValue(payload.title) || fallback.title,
+                description: normalizeValue(payload.description) || normalizeValue(metadata.description) || fallback.description,
+                activity: normalizeValue(metadata.activity) || fallback.activity,
+                destination: normalizeValue(metadata.destination) || fallback.destination,
+                project: projectDisplayLabel(project),
+                projectStatus: normalizeProjectStatus(project),
+                coverImage: resolveRoadbookDataImage(metadata.coverImage || payload.coverImage || fallback.coverImage, config)
+            };
+        } catch (error) {
+            console.warn(`[Roadbook] Métadonnées JSON indisponibles pour "${fallback.id}" (${path}).`, error);
+        }
+    }
+
+    return fallback;
 }
 
 function metadataValueFromObject(values, candidates) {
@@ -1237,7 +1279,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
             activity: firstValue(directRow, ["activite", "activité", "activity", "type activite", "type activité"]) || fallback.activity,
             destination: firstValue(directRow, ["destination", "lieu", "region", "région"]) || fallback.destination,
             description: firstValue(directRow, ["description", "resume", "résumé"]) || fallback.description,
-            project,
+            project: projectDisplayLabel(project),
             projectStatus: normalizeProjectStatus(project),
             coverImage: rawCoverImage ? resolveRoadbookDataImage(rawCoverImage, config) : fallback.coverImage
         };
@@ -1264,7 +1306,7 @@ function extractRoadbookLibraryMetadata(rows, config = {}) {
         activity: metadataValueFromObject(keyValues, ["activite", "activité", "activity", "type activite", "type activité"]) || fallback.activity,
         destination: metadataValueFromObject(keyValues, ["destination", "lieu", "region", "région"]) || fallback.destination,
         description: metadataValueFromObject(keyValues, ["description", "resume", "résumé"]) || fallback.description,
-        project,
+        project: projectDisplayLabel(project),
         projectStatus: normalizeProjectStatus(project),
         coverImage: rawCoverImage ? resolveRoadbookDataImage(rawCoverImage, config) : fallback.coverImage
     };
@@ -1274,18 +1316,31 @@ async function loadRoadbookLibraryMetadata(configs = []) {
     const source = Array.isArray(configs) ? configs.filter(Boolean) : [];
     const cards = await Promise.all(source.map(async config => {
         const fallback = roadbookLibraryFallback(config);
+        const jsonMetadata = await loadRoadbookJsonLibraryMetadata(config, fallback);
         const sheetConfig = config.sheets?.configuration || config.sheets?.config || LIBRARY_CONFIGURATION_SHEET;
         const url = googleSheetCsvUrl(sheetConfig, config);
-        if (!url) return fallback;
+        if (!url) return jsonMetadata;
 
         try {
             const csv = await fetchCsv(url);
             const rows = parseCsv(csv);
-            return extractRoadbookLibraryMetadata(rows, config);
+            return extractRoadbookLibraryMetadata(rows, {
+                ...config,
+                title: jsonMetadata.title,
+                activity: jsonMetadata.activity,
+                destination: jsonMetadata.destination,
+                description: jsonMetadata.description,
+                coverImage: jsonMetadata.coverImage,
+                project: jsonMetadata.project,
+                options: {
+                    ...(config.options || {}),
+                    project: jsonMetadata.project
+                }
+            });
         } catch (error) {
             const reason = error?.message || "erreur inconnue";
             console.warn(`[Roadbook] Configuration de bibliothèque indisponible pour "${fallback.id}" : ${reason}.`);
-            return fallback;
+            return jsonMetadata;
         }
     }));
 
