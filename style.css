@@ -103,6 +103,25 @@ body{
 
 }
 
+.roadbook-title--interactive{
+
+    cursor:pointer;
+
+    text-decoration-thickness:2px;
+
+    text-underline-offset:6px;
+
+}
+
+.roadbook-title--interactive:hover,
+.roadbook-title--interactive:focus-visible{
+
+    text-decoration:underline;
+
+    outline:none;
+
+}
+
 .header p{
 
     opacity:.9;
