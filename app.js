@@ -19,7 +19,8 @@ let roadbookLoadVersion = 0;
 
 const liveContributionsCache = new Map();
 const enrichmentLoadCache = new Map();
-const LIVE_CONTRIBUTIONS_TIMEOUT_MS = 2_500;
+const LIVE_CONTRIBUTIONS_TIMEOUT_MS = 8_000;
+const LIVE_CONTRIBUTIONS_RETRY_TIMEOUT_MS = 12_000;
 
 const STAT_ICONS = Object.freeze({
     steps: [
@@ -400,7 +401,11 @@ async function loadLiveContributions(endpoint, id) {
 }
 
 async function loadLiveContributionsWithOptions(endpoint, id, options = {}) {
-    const { force = false, timeoutMs = LIVE_CONTRIBUTIONS_TIMEOUT_MS } = options;
+    const {
+        force = false,
+        timeoutMs = LIVE_CONTRIBUTIONS_TIMEOUT_MS,
+        retryTimeoutMs = LIVE_CONTRIBUTIONS_RETRY_TIMEOUT_MS
+    } = options;
     const cacheKey = `${endpoint}::${id}`;
     if (!force && liveContributionsCache.has(cacheKey)) {
         return liveContributionsCache.get(cacheKey);
@@ -411,17 +416,47 @@ async function loadLiveContributionsWithOptions(endpoint, id, options = {}) {
     url.searchParams.set("roadbookId", id);
     url.searchParams.set("t", String(Date.now()));
 
-    const response = await fetchWithTimeout(url.href, {
-        cache: "no-store",
-        headers: { Accept: "application/json" }
-    }, timeoutMs);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const attempts = [timeoutMs, retryTimeoutMs].filter((value, index, values) =>
+        Number.isFinite(value) && value > 0 && values.indexOf(value) === index
+    );
+    let lastError = null;
 
-    const payload = await response.json();
+    for (const [index, attemptTimeoutMs] of attempts.entries()) {
+        try {
+            const response = await fetchWithTimeout(url.href, {
+                cache: "no-store",
+                headers: { Accept: "application/json" }
+            }, attemptTimeoutMs);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const payload = await response.json();
+            const items = parseLiveContributionItems(payload);
+            liveContributionsCache.set(cacheKey, items);
+            return items;
+        } catch (error) {
+            lastError = error;
+            if (index < attempts.length - 1) {
+                console.warn(`[RoadBook Contributions] Essai ${index + 1} echoue, nouvel essai avec timeout ${attempts[index + 1]} ms.`, error);
+            }
+        }
+    }
+
+    console.warn("[RoadBook Contributions] Contributions live indisponibles apres retry.", lastError);
+    throw lastError || new Error("Contributions live indisponibles.");
+}
+
+function parseLiveContributionItems(payload) {
+    if (payload?.ok === false) {
+        throw new Error(safeText(payload?.error, "Reponse contributions invalide."));
+    }
+
     const data = payload?.data || payload;
-    const items = Array.isArray(data?.items) ? data.items : [];
-    liveContributionsCache.set(cacheKey, items);
-    return items;
+    if (Array.isArray(data)) return data;
+    if (!data || !Array.isArray(data.items)) {
+        throw new Error("Schema contributions invalide : items manquant.");
+    }
+
+    return data.items;
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 3_000) {
