@@ -6,6 +6,8 @@
     const GITHUB_REPOSITORY = "Aroblazeur/roadbook-explorer";
     const PUBLISH_WORKFLOW_FILE = "publish-roadbook.yml";
     const GITHUB_TOKEN_STORAGE_KEY = "roadbook-studio.github-token";
+    const LOCAL_DRAFT_STORAGE_KEY = "roadbook-studio.local-drafts.v1";
+    const LOCAL_DRAFT_SCHEMA_VERSION = 1;
     const PRIMARY_METADATA_KEYS = ["project"];
     const WIKIDATA_API = "https://www.wikidata.org/w/api.php";
     const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
@@ -172,6 +174,7 @@
         state.mediaFiles.clear();
         elements.createForm.reset();
         hideCreateRoadbookForm();
+        saveLocalDraft();
         renderRoadbookEditor();
         setStatus(`Nouveau roadbook "${title}" créé. Vous pouvez maintenant l’éditer, l’exporter ou le publier.`);
     }
@@ -244,10 +247,70 @@
         };
     }
 
+    function readLocalDraftStore() {
+        try {
+            const raw = localStorage.getItem(LOCAL_DRAFT_STORAGE_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+        } catch (error) {
+            console.warn("[Studio] Brouillons locaux indisponibles en lecture.", error);
+            return {};
+        }
+    }
+
+    function writeLocalDraftStore(store) {
+        try {
+            localStorage.setItem(LOCAL_DRAFT_STORAGE_KEY, JSON.stringify(store || {}));
+            return true;
+        } catch (error) {
+            console.warn("[Studio] Brouillons locaux indisponibles en écriture.", error);
+            return false;
+        }
+    }
+
+    function getLocalDraft(id) {
+        const roadbookId = normalizeRoadbookId(id);
+        if (!roadbookId) return null;
+        const draft = readLocalDraftStore()[roadbookId];
+        if (!draft || draft.schemaVersion !== LOCAL_DRAFT_SCHEMA_VERSION || draft.roadbookId !== roadbookId || !draft.roadbook) {
+            return null;
+        }
+        return draft;
+    }
+
+    function saveLocalDraft() {
+        const roadbookId = normalizeRoadbookId(state.selectedRoadbookId || state.selectedRoadbook?.id);
+        if (!roadbookId || !state.selectedRoadbook) return false;
+
+        const store = readLocalDraftStore();
+        store[roadbookId] = {
+            schemaVersion: LOCAL_DRAFT_SCHEMA_VERSION,
+            roadbookId,
+            updatedAt: new Date().toISOString(),
+            roadbook: structuredClone(state.selectedRoadbook)
+        };
+        return writeLocalDraftStore(store);
+    }
+
+    function clearLocalDraft(id) {
+        const roadbookId = normalizeRoadbookId(id);
+        if (!roadbookId) return false;
+        const store = readLocalDraftStore();
+        if (!Object.prototype.hasOwnProperty.call(store, roadbookId)) return true;
+        delete store[roadbookId];
+        return writeLocalDraftStore(store);
+    }
+
     async function openRoadbook(id) {
         setStatus(`Chargement de ${id}…`);
         try {
-            const roadbook = await fetchJson(ROADBOOK_PATH(id), { forceReload: true });
+            const remoteRoadbook = await fetchJson(ROADBOOK_PATH(id), { forceReload: true });
+            const draft = getLocalDraft(id);
+            const useDraft = draft
+                ? window.confirm(`Un brouillon local non synchronisé existe pour "${id}".\nOK : reprendre le brouillon\nAnnuler : charger la version synchronisée.`)
+                : false;
+            const roadbook = useDraft ? draft.roadbook : remoteRoadbook;
             state.selectedRoadbookId = id;
             state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
             state.expandedStages = new Set();
@@ -256,7 +319,9 @@
             state.gpxFiles.clear();
             state.mediaFiles.clear();
             renderRoadbookEditor();
-            setStatus(`${safeText(state.selectedRoadbook.title, id)} chargé.`);
+            setStatus(useDraft
+                ? `Brouillon local restauré pour "${id}".`
+                : `${safeText(state.selectedRoadbook.title, id)} chargé.`);
         } catch (error) {
             console.error(`[Studio] Roadbook indisponible : ${id}`, error);
             renderErrorDetail(id);
@@ -2672,7 +2737,8 @@
 
     function markModified() {
         syncEditorActionButtons();
-        setStatus("Modifications non publiées · JSON prêt à exporter.");
+        saveLocalDraft();
+        setStatus("Brouillon local sauvegardé · modifications non publiées.");
     }
 
     function syncEditorActionButtons() {
@@ -2738,6 +2804,7 @@
             const gpxSummary = gpxFileEntries.length ? ` · ${gpxFileEntries.length} GPX` : "";
             const mediaSummary = mediaUploadEntries.length ? ` · ${mediaUploadEntries.length} image(s)` : "";
             setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}"${enrichedPoiCount ? ` · ${enrichedPoiCount} POI enrichi(s)` : ""}${gpxSummary}${mediaSummary} : le workflow GitHub Actions va commit directement sur main.`);
+            clearLocalDraft(id);
             window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
         } catch (error) {
             console.error("[Studio] Publication GitHub impossible", error);
