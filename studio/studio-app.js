@@ -41,6 +41,8 @@
         generalInfoExpanded: true,
         gpxFiles: new Map(),
         mediaFiles: new Map(),
+        gpxFilesByRoadbook: new Map(),
+        mediaFilesByRoadbook: new Map(),
         poiEnrichmentCache: new Map(),
         localPoiEnrichmentCache: new Map()
     };
@@ -152,6 +154,8 @@
             return;
         }
 
+        persistCurrentRoadbookFileMaps();
+
         const roadbook = createCanonicalRoadbook({
             id,
             title,
@@ -170,8 +174,7 @@
         state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
         state.expandedStages = new Set();
         state.expandedVariants = new Set();
-        state.gpxFiles.clear();
-        state.mediaFiles.clear();
+        activateRoadbookFileMaps(id);
         elements.createForm.reset();
         hideCreateRoadbookForm();
         saveLocalDraft();
@@ -302,7 +305,32 @@
         return writeLocalDraftStore(store);
     }
 
+    function currentRoadbookId() {
+        return normalizeRoadbookId(state.selectedRoadbookId || state.selectedRoadbook?.id);
+    }
+
+    function fileMapForRoadbook(store, roadbookId) {
+        const id = normalizeRoadbookId(roadbookId);
+        if (!id) return new Map();
+        if (!store.has(id)) store.set(id, new Map());
+        return store.get(id);
+    }
+
+    function persistCurrentRoadbookFileMaps() {
+        const id = currentRoadbookId();
+        if (!id) return;
+        state.gpxFilesByRoadbook.set(id, state.gpxFiles instanceof Map ? state.gpxFiles : new Map());
+        state.mediaFilesByRoadbook.set(id, state.mediaFiles instanceof Map ? state.mediaFiles : new Map());
+    }
+
+    function activateRoadbookFileMaps(roadbookId) {
+        const id = normalizeRoadbookId(roadbookId);
+        state.gpxFiles = fileMapForRoadbook(state.gpxFilesByRoadbook, id);
+        state.mediaFiles = fileMapForRoadbook(state.mediaFilesByRoadbook, id);
+    }
+
     async function openRoadbook(id) {
+        persistCurrentRoadbookFileMaps();
         setStatus(`Chargement de ${id}…`);
         try {
             const remoteRoadbook = await fetchJson(ROADBOOK_PATH(id), { forceReload: true });
@@ -316,8 +344,7 @@
             state.expandedStages = new Set();
             state.expandedVariants = new Set();
             state.generalInfoExpanded = true;
-            state.gpxFiles.clear();
-            state.mediaFiles.clear();
+            activateRoadbookFileMaps(id);
             renderRoadbookEditor();
             setStatus(useDraft
                 ? `Brouillon local restauré pour "${id}".`
@@ -742,6 +769,15 @@
             handleGpxFileUpload({ type: "official" }, file, gpxInput, officialStatus);
             officialFileInput.value = "";
         });
+        const officialGithubBtn = document.createElement("button");
+        officialGithubBtn.type = "button";
+        officialGithubBtn.className = "terrain-button terrain-button--secondary";
+        officialGithubBtn.textContent = "Choisir depuis GitHub";
+        officialGithubBtn.addEventListener("click", () => {
+            const gpxInput = findFieldControl(officialGrid, "gpx");
+            openGithubFilePicker({ kind: "gpx", targetInput: gpxInput, statusEl: officialStatus });
+        });
+        officialActions.appendChild(officialGithubBtn);
         officialActions.appendChild(officialStatus);
         const officialCalcBtn = document.createElement("button");
         officialCalcBtn.type = "button";
@@ -809,6 +845,15 @@
             handleGpxFileUpload({ type: "stagesTotal" }, file, gpxInput, tracedStatus);
             tracedFileInput.value = "";
         });
+        const tracedGithubBtn = document.createElement("button");
+        tracedGithubBtn.type = "button";
+        tracedGithubBtn.className = "terrain-button terrain-button--secondary";
+        tracedGithubBtn.textContent = "Choisir depuis GitHub";
+        tracedGithubBtn.addEventListener("click", () => {
+            const gpxInput = findFieldControl(tracedGrid, "gpx");
+            openGithubFilePicker({ kind: "gpx", targetInput: gpxInput, statusEl: tracedStatus });
+        });
+        tracedActions.appendChild(tracedGithubBtn);
         tracedActions.appendChild(tracedStatus);
         const tracedCalcBtn = document.createElement("button");
         tracedCalcBtn.type = "button";
@@ -1279,6 +1324,15 @@
                 handleGpxFileUpload(uploadContext, file, gpxInput, status);
                 fileInput.value = "";
             });
+
+            const githubButton = document.createElement("button");
+            githubButton.type = "button";
+            githubButton.className = "terrain-button terrain-button--secondary";
+            githubButton.textContent = "Choisir depuis GitHub";
+            githubButton.addEventListener("click", () => {
+                openGithubFilePicker({ kind: "gpx", targetInput: gpxInput, statusEl: status });
+            });
+            actions.appendChild(githubButton);
 
             actions.appendChild(status);
         }
@@ -2875,6 +2929,326 @@
         }
     }
 
+    async function openGithubFilePicker({ kind, targetInput, statusEl = null }) {
+        const roadbookId = currentRoadbookId();
+        if (!roadbookId) {
+            setGithubFilePickerStatus(statusEl, "Aucun roadbook charge.", true);
+            return;
+        }
+
+        const token = await getGitHubTokenForPublish();
+        if (!token) {
+            setGithubFilePickerStatus(statusEl, "Token GitHub requis pour lister les fichiers du depot.", true);
+            return;
+        }
+
+        const modal = createGithubFilePickerModal(kind);
+        document.body.appendChild(modal.overlay);
+
+        try {
+            modal.setMessage("Chargement des fichiers GitHub...");
+            const files = await listGithubRoadbookFiles({ id: roadbookId, kind, token });
+            renderGithubFilePickerList({
+                modal,
+                files,
+                kind,
+                token,
+                roadbookId,
+                targetInput,
+                statusEl
+            });
+        } catch (error) {
+            console.error("[Studio] Gestionnaire de fichiers GitHub indisponible", error);
+            modal.setMessage(`Impossible de lister les fichiers GitHub : ${safeText(error?.message, "erreur inconnue")}.`, true);
+            setGithubFilePickerStatus(statusEl, "Liste GitHub indisponible.", true);
+        }
+    }
+
+    function createGithubFilePickerModal(kind) {
+        const overlay = document.createElement("div");
+        overlay.style.position = "fixed";
+        overlay.style.inset = "0";
+        overlay.style.zIndex = "1000";
+        overlay.style.background = "rgba(15, 23, 42, 0.45)";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+        overlay.style.padding = "1rem";
+
+        const panel = document.createElement("section");
+        panel.setAttribute("role", "dialog");
+        panel.setAttribute("aria-modal", "true");
+        panel.style.width = "min(860px, 100%)";
+        panel.style.maxHeight = "min(760px, 90vh)";
+        panel.style.overflow = "auto";
+        panel.style.background = "#fff";
+        panel.style.borderRadius = "18px";
+        panel.style.boxShadow = "0 24px 80px rgba(15, 23, 42, 0.3)";
+        panel.style.padding = "1rem";
+
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.alignItems = "center";
+        header.style.justifyContent = "space-between";
+        header.style.gap = "1rem";
+
+        const title = document.createElement("h3");
+        title.textContent = kind === "image" ? "Choisir une image depuis GitHub" : "Choisir un GPX depuis GitHub";
+        title.style.margin = "0";
+
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "terrain-button terrain-button--secondary";
+        close.textContent = "Fermer";
+        close.addEventListener("click", () => overlay.remove());
+
+        const message = document.createElement("p");
+        message.setAttribute("role", "status");
+        message.setAttribute("aria-live", "polite");
+        message.style.margin = "1rem 0";
+
+        const list = document.createElement("div");
+        list.style.display = "grid";
+        list.style.gap = "0.75rem";
+
+        header.append(title, close);
+        panel.append(header, message, list);
+        overlay.appendChild(panel);
+
+        return {
+            overlay,
+            list,
+            setMessage(text, isError = false) {
+                message.textContent = text;
+                message.style.color = isError ? "#b91c1c" : "#475569";
+            }
+        };
+    }
+
+    function renderGithubFilePickerList({ modal, files, kind, token, roadbookId, targetInput, statusEl }) {
+        modal.list.replaceChildren();
+        if (!files.length) {
+            modal.setMessage(kind === "image"
+                ? "Aucune image trouvee dans roadbooks/<id>/data/."
+                : "Aucun GPX trouve dans roadbooks/<id>/gpx/.");
+            return;
+        }
+
+        modal.setMessage(`${files.length} fichier(s) trouve(s).`);
+        files.forEach(file => {
+            const row = document.createElement("article");
+            row.style.display = "grid";
+            row.style.gridTemplateColumns = kind === "image" ? "72px minmax(0, 1fr) auto" : "minmax(0, 1fr) auto";
+            row.style.alignItems = "center";
+            row.style.gap = "0.75rem";
+            row.style.padding = "0.75rem";
+            row.style.border = "1px solid #dbe5dc";
+            row.style.borderRadius = "14px";
+
+            if (kind === "image") {
+                const thumb = document.createElement("img");
+                thumb.src = file.downloadUrl || rawGithubUrl(file.path);
+                thumb.alt = "";
+                thumb.loading = "lazy";
+                thumb.style.width = "72px";
+                thumb.style.height = "54px";
+                thumb.style.objectFit = "cover";
+                thumb.style.borderRadius = "10px";
+                thumb.style.background = "#eef6ef";
+                thumb.addEventListener("error", () => {
+                    thumb.style.display = "none";
+                }, { once: true });
+                row.appendChild(thumb);
+            }
+
+            const details = document.createElement("div");
+            details.style.minWidth = "0";
+            const name = document.createElement("strong");
+            name.textContent = file.name;
+            const path = document.createElement("p");
+            path.textContent = file.relativePath;
+            path.style.margin = "0.25rem 0 0";
+            path.style.color = "#64748b";
+            path.style.overflowWrap = "anywhere";
+            details.append(name, path);
+
+            const actions = document.createElement("div");
+            actions.style.display = "flex";
+            actions.style.flexWrap = "wrap";
+            actions.style.gap = "0.5rem";
+            actions.style.justifyContent = "flex-end";
+
+            const choose = document.createElement("button");
+            choose.type = "button";
+            choose.className = "terrain-button terrain-button--secondary";
+            choose.textContent = "Choisir";
+            choose.addEventListener("click", () => {
+                applyGithubFileSelection({ kind, targetInput, relativePath: file.relativePath, statusEl });
+                modal.overlay.remove();
+            });
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "terrain-button terrain-button--secondary";
+            remove.textContent = "Supprimer";
+            remove.addEventListener("click", async () => {
+                await confirmAndDeleteGithubFile({
+                    file,
+                    token,
+                    kind,
+                    modal,
+                    statusEl,
+                    onDeleted: () => row.remove()
+                });
+            });
+
+            actions.append(choose, remove);
+            row.append(details, actions);
+            modal.list.appendChild(row);
+        });
+    }
+
+    async function listGithubRoadbookFiles({ id, kind, token }) {
+        const directory = kind === "image" ? "data" : "gpx";
+        const repoPath = `roadbooks/${normalizeRoadbookId(id)}/${directory}`;
+        const endpoint = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${encodeURIComponentPath(repoPath)}?ref=main`;
+        const response = await fetch(endpoint, {
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "X-GitHub-Api-Version": "2022-11-28"
+            }
+        });
+        if (response.status === 404) return [];
+        if (!response.ok) {
+            const errorBody = await readGithubError(response);
+            throw new Error(`GitHub contents API ${response.status}${errorBody ? ` - ${errorBody}` : ""}`);
+        }
+        const body = await response.json();
+        if (!Array.isArray(body)) return [];
+        return body
+            .filter(item => item?.type === "file")
+            .filter(item => kind === "image"
+                ? IMAGE_FILE_EXTENSIONS.includes(fileExtension(item.name))
+                : fileExtension(item.name) === ".gpx")
+            .map(item => ({
+                name: item.name,
+                path: item.path,
+                sha: item.sha,
+                downloadUrl: item.download_url,
+                relativePath: `${directory}/${item.name}`
+            }))
+            .sort((a, b) => a.relativePath.localeCompare(b.relativePath, "fr"));
+    }
+
+    function applyGithubFileSelection({ kind, targetInput, relativePath, statusEl }) {
+        const cleanPath = kind === "image"
+            ? normalizeGithubImageReference(relativePath)
+            : normalizeGpxReferencePath(relativePath);
+        if (!cleanPath) {
+            setGithubFilePickerStatus(statusEl, "Chemin GitHub invalide.", true);
+            return;
+        }
+
+        if (kind === "image") {
+            state.mediaFiles.delete(cleanPath);
+        } else {
+            state.gpxFiles.delete(cleanPath);
+        }
+
+        if (targetInput) {
+            targetInput.value = cleanPath;
+            targetInput.dispatchEvent(new Event("input", { bubbles: true }));
+        } else {
+            markModified();
+        }
+        saveLocalDraft();
+        setGithubFilePickerStatus(statusEl, `Fichier GitHub selectionne - ${cleanPath}`, false);
+    }
+
+    function normalizeGithubImageReference(value) {
+        const raw = safeText(value, "").replace(/^\.?\/+/, "");
+        if (!raw || /^https?:\/\//i.test(raw)) return raw;
+        const withoutRoadbookPrefix = raw.replace(/^roadbooks\/[^/]+\//i, "");
+        const filename = sanitizeMediaFilename(withoutRoadbookPrefix.split("/").pop());
+        if (!filename || !IMAGE_FILE_EXTENSIONS.includes(fileExtension(filename))) return "";
+        return `data/${filename}`;
+    }
+
+    async function confirmAndDeleteGithubFile({ file, token, kind, modal, statusEl, onDeleted }) {
+        const referenced = isRoadbookPathReferenced(file.relativePath);
+        const warning = referenced
+            ? `\n\nAttention : "${file.relativePath}" est encore reference dans le roadbook courant. Le supprimer peut casser une image ou un GPX tant que le JSON n'est pas modifie.`
+            : "";
+        const confirmed = window.confirm(`Supprimer "${file.relativePath}" du depot GitHub ?${warning}`);
+        if (!confirmed) return;
+
+        try {
+            modal.setMessage(`Suppression de ${file.relativePath}...`);
+            await deleteGithubFile({
+                path: file.path,
+                sha: file.sha,
+                token,
+                message: `chore: delete ${currentRoadbookId()} ${kind === "image" ? "media" : "gpx"} ${file.name}`
+            });
+            if (kind === "image") state.mediaFiles.delete(file.relativePath);
+            if (kind === "gpx") state.gpxFiles.delete(file.relativePath);
+            onDeleted?.();
+            modal.setMessage(`Fichier supprime : ${file.relativePath}.`);
+            setGithubFilePickerStatus(statusEl, `Fichier GitHub supprime - ${file.relativePath}`, false);
+        } catch (error) {
+            console.error("[Studio] Suppression GitHub impossible", error);
+            modal.setMessage(`Suppression impossible : ${safeText(error?.message, "erreur inconnue")}.`, true);
+            setGithubFilePickerStatus(statusEl, "Suppression GitHub impossible.", true);
+        }
+    }
+
+    async function deleteGithubFile({ path, sha, token, message }) {
+        if (!path || !sha) throw new Error("Chemin ou SHA GitHub manquant.");
+        const endpoint = `https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/${encodeURIComponentPath(path)}`;
+        const response = await fetch(endpoint, {
+            method: "DELETE",
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+                "X-GitHub-Api-Version": "2022-11-28"
+            },
+            body: JSON.stringify({
+                message,
+                sha,
+                branch: "main"
+            })
+        });
+        if (response.ok) return;
+        const errorBody = await readGithubError(response);
+        const error = new Error(`GitHub contents API ${response.status}${errorBody ? ` - ${errorBody}` : ""}`);
+        error.status = response.status;
+        throw error;
+    }
+
+    function isRoadbookPathReferenced(relativePath) {
+        const path = safeText(relativePath, "");
+        if (!path || !state.selectedRoadbook) return false;
+        const serialized = JSON.stringify(state.selectedRoadbook);
+        return serialized.includes(`"${path}"`) || serialized.includes(`/${path}"`);
+    }
+
+    function rawGithubUrl(path) {
+        return `https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/${encodeURIComponentPath(path)}`;
+    }
+
+    function setGithubFilePickerStatus(statusEl, message, isError) {
+        if (!statusEl) {
+            setStatus(message);
+            return;
+        }
+        statusEl.textContent = message;
+        statusEl.classList.toggle("studio-gpx-status--error", Boolean(isError));
+        statusEl.classList.toggle("studio-gpx-status--success", !isError);
+        statusEl.classList.toggle("studio-media-upload__status--error", Boolean(isError));
+    }
+
     async function buildPublicationFileEntries(files, label) {
         const entries = [];
         for (const [relativePath, file] of files) {
@@ -3757,10 +4131,19 @@
         button.textContent = "Choisir une image";
         button.addEventListener("click", () => fileInput.click());
 
+        const githubButton = document.createElement("button");
+        githubButton.type = "button";
+        githubButton.className = "terrain-button terrain-button--secondary studio-media-upload__button";
+        githubButton.textContent = "Choisir depuis GitHub";
+
         const status = document.createElement("small");
         status.className = "studio-media-upload__status";
         status.setAttribute("role", "status");
         status.setAttribute("aria-live", "polite");
+
+        githubButton.addEventListener("click", () => {
+            openGithubFilePicker({ kind: "image", targetInput, statusEl: status });
+        });
 
         fileInput.addEventListener("change", () => {
             const file = fileInput.files[0];
@@ -3769,7 +4152,7 @@
             fileInput.value = "";
         });
 
-        container.append(fileInput, button, status);
+        container.append(fileInput, button, githubButton, status);
         return container;
     }
 
