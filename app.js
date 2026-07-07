@@ -157,6 +157,28 @@ function buildRoadbookHomeUrl(id) {
     return url.href;
 }
 
+function buildStudioUrl(index = null) {
+    const url = new URL("studio.html", window.location.href);
+    const id = roadbookId();
+    if (id) url.searchParams.set("roadbook", id);
+
+    if (Number.isInteger(index) && roadbook && Array.isArray(roadbook.days)) {
+        const day = roadbook.days[index];
+        const stageNumber = Number(day?.isSubstep
+            ? (day.parentStageReference || day.parentStage || day.stage)
+            : day?.stage);
+        if (Number.isFinite(stageNumber) && stageNumber > 0) {
+            url.searchParams.set("stage", String(stageNumber));
+        }
+        if (day?.isSubstep) {
+            const substageNumber = substageNumberForIndex(index);
+            if (substageNumber !== null) url.searchParams.set("substage", String(substageNumber));
+        }
+    }
+
+    return url.href;
+}
+
 function sanitizeRoadbookId(value) {
     const normalized = String(value || "").trim().toLowerCase();
     return /^[a-z0-9-]+$/.test(normalized) ? normalized : "";
@@ -1552,7 +1574,7 @@ function navigationCenterLabel(day, index) {
         ? substepNavigationLabel(day, index)
         : mainStageNavigationLabel(day, index);
 
-    return [label, dayLabel].filter(Boolean).join(" · ");
+    return [label, dayLabel].filter(Boolean).join(" - ");
 }
 
 function mainStageNavigationLabel(day, index) {
@@ -1930,6 +1952,7 @@ function updateRoadbookChrome(day = null, options = {}) {
     const pageTitle = dayTitle ? `${dayTitle} - ${title}` : title;
     const headerTitle = document.getElementById("roadbook-title");
     const footerTitle = document.getElementById("footer-roadbook-title");
+    const studioLink = document.getElementById("studio-link");
 
     document.title = pageTitle;
 
@@ -1938,6 +1961,15 @@ function updateRoadbookChrome(day = null, options = {}) {
         updateRoadbookTitleInteraction(headerTitle);
     }
     if (footerTitle) footerTitle.textContent = title;
+    if (studioLink) updateStudioShortcut(studioLink);
+}
+
+function updateStudioShortcut(link) {
+    const stageIndex = currentView === "stage" ? currentDay : null;
+    link.href = buildStudioUrl(stageIndex);
+    link.textContent = currentView === "stage" ? "✏️" : "✏️ Studio";
+    link.title = currentView === "stage" ? "Modifier cette étape dans le Studio" : "Ouvrir le Studio";
+    link.setAttribute("aria-label", link.title);
 }
 
 function updateRoadbookTitleInteraction(headerTitle) {
