@@ -172,8 +172,7 @@
 
         state.selectedRoadbookId = id;
         state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
-        state.expandedStages = new Set();
-        state.expandedVariants = new Set();
+        collapseStageEditors();
         activateRoadbookFileMaps(id);
         elements.createForm.reset();
         hideCreateRoadbookForm();
@@ -329,6 +328,11 @@
         state.mediaFiles = fileMapForRoadbook(state.mediaFilesByRoadbook, id);
     }
 
+    function collapseStageEditors() {
+        state.expandedStages = new Set();
+        state.expandedVariants = new Set();
+    }
+
     async function openRoadbook(id) {
         persistCurrentRoadbookFileMaps();
         setStatus(`Chargement de ${id}…`);
@@ -341,8 +345,7 @@
             const roadbook = useDraft ? draft.roadbook : remoteRoadbook;
             state.selectedRoadbookId = id;
             state.selectedRoadbook = normalizeRoadbookForEditing(roadbook, id);
-            state.expandedStages = new Set();
-            state.expandedVariants = new Set();
+            collapseStageEditors();
             state.generalInfoExpanded = true;
             activateRoadbookFileMaps(id);
             renderRoadbookEditor();
