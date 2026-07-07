@@ -83,6 +83,8 @@ body{
 
     gap:16px;
 
+    flex-wrap:wrap;
+
 }
 
 .header-logo{
@@ -119,6 +121,47 @@ body{
     text-decoration:underline;
 
     outline:none;
+
+}
+
+.studio-shortcut{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    min-height:38px;
+
+    padding:7px 11px;
+
+    border-radius:999px;
+
+    color:white;
+
+    background:rgba(255,255,255,.18);
+
+    border:1px solid rgba(255,255,255,.42);
+
+    font-size:.9rem;
+
+    font-weight:700;
+
+    text-decoration:none;
+
+}
+
+.studio-shortcut:hover,
+.studio-shortcut:focus-visible{
+
+    color:white;
+
+    background:rgba(255,255,255,.28);
+
+    outline:2px solid rgba(255,255,255,.55);
+
+    outline-offset:2px;
 
 }
 

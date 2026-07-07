@@ -332,6 +332,11 @@
   margin-top: 0.75rem;
 }
 
+.studio-stage-card[data-expanded="false"] .studio-stage-card__body,
+.studio-variant-card[data-expanded="false"] .studio-variant-card__body {
+  display: none;
+}
+
 .terrain-button--secondary {
   background: rgba(46, 125, 50, 0.12);
   color: #1d4f21;

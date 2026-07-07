@@ -46,6 +46,7 @@
         poiEnrichmentCache: new Map(),
         localPoiEnrichmentCache: new Map()
     };
+    let initialStudioRouteApplied = false;
 
     const elements = {
         status: document.getElementById("studio-status"),
@@ -84,6 +85,7 @@
             setStatus(state.catalogIds.length
                 ? `${state.catalogIds.length} roadbook(s) disponible(s).`
                 : "Aucun roadbook trouvé dans le catalogue.");
+            applyInitialStudioRoute();
         } catch (error) {
             console.error("[Studio] Catalogue indisponible", error);
             setStatus("Impossible de charger le catalogue roadbooks/catalog.json.");
@@ -333,7 +335,7 @@
         state.expandedVariants = new Set();
     }
 
-    async function openRoadbook(id) {
+    async function openRoadbook(id, routeOptions = {}) {
         persistCurrentRoadbookFileMaps();
         setStatus(`Chargement de ${id}…`);
         try {
@@ -348,7 +350,9 @@
             collapseStageEditors();
             state.generalInfoExpanded = true;
             activateRoadbookFileMaps(id);
+            applyStudioRouteExpansion(routeOptions);
             renderRoadbookEditor();
+            scrollToStudioRouteTarget(routeOptions);
             setStatus(useDraft
                 ? `Brouillon local restauré pour "${id}".`
                 : `${safeText(state.selectedRoadbook.title, id)} chargé.`);
@@ -357,6 +361,71 @@
             renderErrorDetail(id);
             setStatus(`Impossible de charger ${ROADBOOK_PATH(id)}.`);
         }
+    }
+
+    function applyInitialStudioRoute() {
+        if (initialStudioRouteApplied) return;
+        initialStudioRouteApplied = true;
+        const route = readStudioRouteParams();
+        if (!route.roadbook) return;
+        openRoadbook(route.roadbook, route).catch(error => {
+            console.warn("[Studio] Ouverture directe impossible.", error);
+        });
+    }
+
+    function readStudioRouteParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            roadbook: normalizeRoadbookId(params.get("roadbook")),
+            stage: integerOrNull(params.get("stage")),
+            substage: integerOrNull(params.get("substage"))
+        };
+    }
+
+    function applyStudioRouteExpansion(routeOptions = {}) {
+        const stageIndex = findStudioStageIndex(routeOptions.stage);
+        if (stageIndex === null) return;
+        state.expandedStages.add(stageIndex);
+
+        const variantIndex = findStudioVariantIndex(stageIndex, routeOptions.substage);
+        if (variantIndex !== null) {
+            state.expandedVariants.add(variantPanelKey(stageIndex, variantIndex));
+        }
+    }
+
+    function scrollToStudioRouteTarget(routeOptions = {}) {
+        const stageIndex = findStudioStageIndex(routeOptions.stage);
+        if (stageIndex === null) return;
+        const variantIndex = findStudioVariantIndex(stageIndex, routeOptions.substage);
+        window.setTimeout(() => {
+            const selector = variantIndex !== null
+                ? `.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"]`
+                : `.studio-stage-card[data-stage-index="${stageIndex}"]`;
+            elements.detail.querySelector(selector)?.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }, 0);
+    }
+
+    function findStudioStageIndex(stageValue) {
+        const stageNumber = integerOrNull(stageValue);
+        if (!Number.isFinite(stageNumber)) return null;
+        const stages = state.selectedRoadbook?.stages;
+        if (!Array.isArray(stages)) return null;
+        const foundIndex = stages.findIndex((stage, index) =>
+            integerOrNull(stage.stage) === stageNumber || index + 1 === stageNumber
+        );
+        return foundIndex >= 0 ? foundIndex : null;
+    }
+
+    function findStudioVariantIndex(stageIndex, substageValue) {
+        const substageNumber = integerOrNull(substageValue);
+        if (!Number.isFinite(substageNumber) || substageNumber <= 0) return null;
+        const variants = state.selectedRoadbook?.stages?.[stageIndex]?.variants;
+        if (!Array.isArray(variants)) return null;
+        const index = substageNumber - 1;
+        return variants[index] ? index : null;
     }
 
     async function fetchJson(path, options = {}) {
@@ -1059,7 +1128,7 @@
     function createStageEditorList(stages) {
         const section = document.createElement("section");
         const title = document.createElement("h3");
-        title.textContent = `Étapes (${stages.length})`;
+        title.textContent = "Étapes :";
         const list = document.createElement("div");
         list.className = "studio-stage-list";
         stages.forEach((stage, stageIndex) => {
@@ -1146,9 +1215,8 @@
 
     function buildStageSummaryText(stage) {
         const parts = [];
-        if (stage.departure || stage.arrival) {
-            parts.push(`${stage.departure || "?"} → ${stage.arrival || "?"}`);
-        }
+        const description = safeText(stage?.description, "");
+        if (description) parts.push(description);
         if (stage.distance != null) {
             parts.push(`${stage.distance} km`);
         }
@@ -2256,7 +2324,7 @@
             const heading = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__title`);
             if (heading) heading.textContent = safeText(value, `Étape ${stage.stage ?? stageIndex + 1}`);
         }
-        if (["departure", "arrival", "distance"].includes(field)) {
+        if (["description", "distance"].includes(field)) {
             const summaryEl = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-stage-card__summary`);
             if (summaryEl) summaryEl.textContent = buildStageSummaryText(stage);
         }
