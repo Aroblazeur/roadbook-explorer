@@ -1113,6 +1113,7 @@
         }
 
         bindStageField(fragment, "stage", stage.stage, value => updateStage(stageIndex, "stage", integerOrNull(value)));
+        bindStageField(fragment, "day", stage.day, value => updateStage(stageIndex, "day", value.trim()));
         bindStageField(fragment, "title", stage.title, value => updateStage(stageIndex, "title", value.trim()));
         bindStageField(fragment, "departure", stage.departure, value => updateStage(stageIndex, "departure", value.trim()));
         bindStageField(fragment, "arrival", stage.arrival, value => updateStage(stageIndex, "arrival", value.trim()));
@@ -2671,6 +2672,7 @@
         const nextStageNumber = state.selectedRoadbook.stages.length + 1;
         state.selectedRoadbook.stages.push({
             stage: nextStageNumber,
+            day: "",
             title: `Étape ${nextStageNumber}`,
             departure: "",
             arrival: "",

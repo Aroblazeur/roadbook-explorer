@@ -1933,8 +1933,35 @@ function updateRoadbookChrome(day = null, options = {}) {
 
     document.title = pageTitle;
 
-    if (headerTitle) headerTitle.textContent = title;
+    if (headerTitle) {
+        headerTitle.textContent = title;
+        updateRoadbookTitleInteraction(headerTitle);
+    }
     if (footerTitle) footerTitle.textContent = title;
+}
+
+function updateRoadbookTitleInteraction(headerTitle) {
+    const canReturnHome = currentView === "stage" && Boolean(roadbook && Array.isArray(roadbook.days));
+    headerTitle.classList.toggle("roadbook-title--interactive", canReturnHome);
+    if (canReturnHome) {
+        headerTitle.setAttribute("role", "button");
+        headerTitle.setAttribute("tabindex", "0");
+        headerTitle.setAttribute("title", "Revenir a la liste des etapes");
+        headerTitle.setAttribute("aria-label", "Revenir a la liste des etapes");
+    } else {
+        headerTitle.removeAttribute("role");
+        headerTitle.removeAttribute("tabindex");
+        headerTitle.removeAttribute("title");
+        headerTitle.removeAttribute("aria-label");
+    }
+}
+
+function handleRoadbookTitleNavigation(event) {
+    if (currentView !== "stage" || !roadbook || !Array.isArray(roadbook.days)) return;
+    if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    showHomePage({ updateUrl: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderStageMetricsAndDuration(day, index) {
@@ -3083,6 +3110,14 @@ document
 document
     .getElementById("next-day")
     .addEventListener("click", nextDay);
+
+document
+    .getElementById("roadbook-title")
+    ?.addEventListener("click", handleRoadbookTitleNavigation);
+
+document
+    .getElementById("roadbook-title")
+    ?.addEventListener("keydown", handleRoadbookTitleNavigation);
 
 document
     .getElementById("refresh-catalog-button")
