@@ -5,8 +5,8 @@
   "metadata": {
     "activity": "Velo",
     "destination": "Moselle Saone",
-    "project": "A faire",
-    "projectStatus": "todo",
+    "project": "En projet",
+    "projectStatus": "En projet",
     "coverImage": "roadbooks/voie-bleue/data/Couverture.jpg",
     "generatedAt": "2026-07-04T21:29:02.778Z",
     "source": "google-sheets",
@@ -22,9 +22,9 @@
       "link": null
     },
     "stagesTotal": {
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 294.6,
+      "elevationGain": 1376,
+      "elevationLoss": 1209,
       "mapEmbedUrl": null,
       "gpx": null,
       "link": null
@@ -46,21 +46,22 @@
       "type": "principale",
       "departure": "schengen",
       "arrival": "Volstroff",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 47.7,
+      "elevationGain": 232,
+      "elevationLoss": 188,
       "notes": null,
       "gpx": "01.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "Camping CapFun  Mirabelle",
         "website": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
-        "url": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
+        "url": "",
         "photo": "",
         "alternatives": [],
         "alternativeNames": [],
-        "alternativePhotos": []
+        "alternativePhotos": [],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -80,7 +81,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping CapFun  Mirabelle"
+      "legacyAccommodation": "Camping CapFun  Mirabelle",
+      "variants": []
     },
     {
       "id": "stage-2",
@@ -96,21 +98,22 @@
       "type": "principale",
       "departure": "Volstroff",
       "arrival": "Corny-Sur-Moselle",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 48.5,
+      "elevationGain": 135,
+      "elevationLoss": 164,
       "notes": null,
       "gpx": "02.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "camping le paquis",
         "website": "https://www.campingcorny.com/",
-        "url": "https://www.campingcorny.com/",
+        "url": "",
         "photo": "",
         "alternatives": [],
         "alternativeNames": [],
-        "alternativePhotos": []
+        "alternativePhotos": [],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -130,7 +133,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "camping le paquis"
+      "legacyAccommodation": "camping le paquis",
+      "variants": []
     },
     {
       "id": "stage-3",
@@ -146,21 +150,22 @@
       "type": "principale",
       "departure": "Corny-Sur-Moselle",
       "arrival": "Liverdun",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 47.3,
+      "elevationGain": 262,
+      "elevationLoss": 240,
       "notes": null,
       "gpx": "03.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "Camping les boucles de la moselle",
         "website": "https://www.lesbouclesdelamoselle.com/fr/",
-        "url": "https://www.lesbouclesdelamoselle.com/fr/",
+        "url": "",
         "photo": "",
         "alternatives": [],
         "alternativeNames": [],
-        "alternativePhotos": []
+        "alternativePhotos": [],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -180,7 +185,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping les boucles de la moselle"
+      "legacyAccommodation": "Camping les boucles de la moselle",
+      "variants": []
     },
     {
       "id": "stage-4",
@@ -196,23 +202,24 @@
       "type": "principale",
       "departure": "Liverdun",
       "arrival": "Bayon",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 55.6,
+      "elevationGain": 203,
+      "elevationLoss": 151,
       "notes": null,
       "gpx": "04.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "Camping du Passe-Temps",
         "website": "https://www.bayon.mairie54.fr/fr/camping-du-passe-temps.html",
-        "url": "https://www.bayon.mairie54.fr/fr/camping-du-passe-temps.html",
+        "url": "",
         "photo": "",
         "alternatives": [
           {
             "url": "https://www.lile-aux-mille-charmes.fr/le-camping",
             "name": "",
-            "photo": ""
+            "photo": "",
+            "price": ""
           }
         ],
         "alternativeNames": [
@@ -220,7 +227,8 @@
         ],
         "alternativePhotos": [
           ""
-        ]
+        ],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "https://www.lile-aux-mille-charmes.fr/le-camping",
@@ -240,7 +248,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping du Passe-Temps"
+      "legacyAccommodation": "Camping du Passe-Temps",
+      "variants": []
     },
     {
       "id": "stage-5",
@@ -256,33 +265,36 @@
       "type": "principale",
       "departure": "Bayon",
       "arrival": "chaumousey",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 58.2,
+      "elevationGain": 293,
+      "elevationLoss": 156,
       "notes": null,
       "gpx": "05.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "Camping les amis de la nature",
         "website": "https://chaumousey.amis-nature-vosges.org/",
-        "url": "https://chaumousey.amis-nature-vosges.org/",
+        "url": "",
         "photo": "",
         "alternatives": [
           {
             "url": "https://www.airbnb.fr/rooms/2893566?check_in=2026-07-30&check_out=2026-07-31&guests=3&adults=2&children=1&s=67&unique_share_id=dc8ed550-6dae-486f-8835-25bf0aa40a72",
             "name": "Gite airbnb",
-            "photo": ""
+            "photo": "",
+            "price": ""
           },
           {
             "url": "https://lesnidsdulac.com/",
             "name": "Camping les nids du lac",
-            "photo": ""
+            "photo": "",
+            "price": ""
           },
           {
             "url": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
             "name": "",
-            "photo": ""
+            "photo": "",
+            "price": ""
           }
         ],
         "alternativeNames": [
@@ -294,7 +306,8 @@
           "",
           "",
           ""
-        ]
+        ],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "Gite airbnb",
@@ -314,7 +327,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": "Camping les amis de la nature"
+      "legacyAccommodation": "Camping les amis de la nature",
+      "variants": []
     },
     {
       "id": "stage-6",
@@ -330,21 +344,22 @@
       "type": "principale",
       "departure": "chaumousey",
       "arrival": "Fontenoy-le-Château",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
+      "distance": 37.3,
+      "elevationGain": 251,
+      "elevationLoss": 310,
       "notes": null,
       "gpx": "06.gpx",
-      "mapEmbedUrl": null,
+      "mapEmbedUrl": "",
       "stagePhoto": "",
       "accommodation": {
         "name": "",
         "website": "https://www.campingfontenoy.com/",
-        "url": "https://www.campingfontenoy.com/",
+        "url": "",
         "photo": "",
         "alternatives": [],
         "alternativeNames": [],
-        "alternativePhotos": []
+        "alternativePhotos": [],
+        "price": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -364,7 +379,8 @@
       "shops": [],
       "water": [],
       "warning": [],
-      "legacyAccommodation": ""
+      "legacyAccommodation": "",
+      "variants": []
     }
   ],
   "variants": [],
@@ -376,7 +392,10 @@
       "website": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 2,
@@ -385,7 +404,10 @@
       "website": "https://www.campingcorny.com/",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 3,
@@ -394,7 +416,10 @@
       "website": "https://www.lesbouclesdelamoselle.com/fr/",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 4,
@@ -403,7 +428,10 @@
       "website": "https://www.bayon.mairie54.fr/fr/camping-du-passe-temps.html",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 4,
@@ -412,7 +440,10 @@
       "website": "https://www.lile-aux-mille-charmes.fr/le-camping",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 5,
@@ -421,7 +452,10 @@
       "website": "https://chaumousey.amis-nature-vosges.org/",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 5,
@@ -430,7 +464,10 @@
       "website": "https://www.airbnb.fr/rooms/2893566?check_in=2026-07-30&check_out=2026-07-31&guests=3&adults=2&children=1&s=67&unique_share_id=dc8ed550-6dae-486f-8835-25bf0aa40a72",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 5,
@@ -439,7 +476,10 @@
       "website": "https://lesnidsdulac.com/",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 5,
@@ -448,7 +488,10 @@
       "website": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     },
     {
       "stage": 6,
@@ -457,346 +500,13 @@
       "website": "https://www.campingfontenoy.com/",
       "photo": "",
       "createdAt": "",
-      "source": ""
+      "source": "",
+      "url": "",
+      "type": "",
+      "comment": ""
     }
   ],
   "pois": [],
   "notes": [],
-  "contributions": [],
-  "days": [
-    {
-      "id": "stage-1",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 1,
-      "day": null,
-      "stageLabel": null,
-      "name": "schengen → Volstroff",
-      "type": "principale",
-      "departure": "schengen",
-      "arrival": "Volstroff",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "01.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "Camping CapFun  Mirabelle",
-        "website": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
-        "url": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
-        "photo": "",
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 1 - schengen → Volstroff",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping CapFun  Mirabelle"
-    },
-    {
-      "id": "stage-2",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 2,
-      "day": null,
-      "stageLabel": null,
-      "name": "Volstroff → Corny-Sur-Moselle",
-      "type": "principale",
-      "departure": "Volstroff",
-      "arrival": "Corny-Sur-Moselle",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "02.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "camping le paquis",
-        "website": "https://www.campingcorny.com/",
-        "url": "https://www.campingcorny.com/",
-        "photo": "",
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 2 - Volstroff → Corny-Sur-Moselle",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "camping le paquis"
-    },
-    {
-      "id": "stage-3",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 3,
-      "day": null,
-      "stageLabel": null,
-      "name": "Corny-Sur-Moselle → Liverdun",
-      "type": "principale",
-      "departure": "Corny-Sur-Moselle",
-      "arrival": "Liverdun",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "03.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "Camping les boucles de la moselle",
-        "website": "https://www.lesbouclesdelamoselle.com/fr/",
-        "url": "https://www.lesbouclesdelamoselle.com/fr/",
-        "photo": "",
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 3 - Corny-Sur-Moselle → Liverdun",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping les boucles de la moselle"
-    },
-    {
-      "id": "stage-4",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 4,
-      "day": null,
-      "stageLabel": null,
-      "name": "Liverdun → Bayon",
-      "type": "principale",
-      "departure": "Liverdun",
-      "arrival": "Bayon",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "04.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "Camping du Passe-Temps",
-        "website": "https://www.bayon.mairie54.fr/fr/camping-du-passe-temps.html",
-        "url": "https://www.bayon.mairie54.fr/fr/camping-du-passe-temps.html",
-        "photo": "",
-        "alternatives": [
-          {
-            "url": "https://www.lile-aux-mille-charmes.fr/le-camping",
-            "name": "",
-            "photo": ""
-          }
-        ],
-        "alternativeNames": [
-          ""
-        ],
-        "alternativePhotos": [
-          ""
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "https://www.lile-aux-mille-charmes.fr/le-camping",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 4 - Liverdun → Bayon",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping du Passe-Temps"
-    },
-    {
-      "id": "stage-5",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 5,
-      "day": null,
-      "stageLabel": null,
-      "name": "Bayon → chaumousey",
-      "type": "principale",
-      "departure": "Bayon",
-      "arrival": "chaumousey",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "05.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "Camping les amis de la nature",
-        "website": "https://chaumousey.amis-nature-vosges.org/",
-        "url": "https://chaumousey.amis-nature-vosges.org/",
-        "photo": "",
-        "alternatives": [
-          {
-            "url": "https://www.airbnb.fr/rooms/2893566?check_in=2026-07-30&check_out=2026-07-31&guests=3&adults=2&children=1&s=67&unique_share_id=dc8ed550-6dae-486f-8835-25bf0aa40a72",
-            "name": "Gite airbnb",
-            "photo": ""
-          },
-          {
-            "url": "https://lesnidsdulac.com/",
-            "name": "Camping les nids du lac",
-            "photo": ""
-          },
-          {
-            "url": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
-            "name": "",
-            "photo": ""
-          }
-        ],
-        "alternativeNames": [
-          "Gite airbnb",
-          "Camping les nids du lac",
-          ""
-        ],
-        "alternativePhotos": [
-          "",
-          "",
-          ""
-        ]
-      },
-      "alternativeAccommodation": {
-        "name": "Gite airbnb",
-        "photo": ""
-      },
-      "accommodationType": "les deux",
-      "substeps": [],
-      "title": "Étape 5 - Bayon → chaumousey",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": "Camping les amis de la nature"
-    },
-    {
-      "id": "stage-6",
-      "itemType": "main",
-      "isSubstep": false,
-      "hierarchyLevel": 0,
-      "parentStage": null,
-      "parentStageReference": null,
-      "stage": 6,
-      "day": null,
-      "stageLabel": null,
-      "name": "chaumousey → Fontenoy-le-Château",
-      "type": "principale",
-      "departure": "chaumousey",
-      "arrival": "Fontenoy-le-Château",
-      "distance": null,
-      "elevationGain": null,
-      "elevationLoss": null,
-      "notes": null,
-      "gpx": "06.gpx",
-      "mapEmbedUrl": null,
-      "stagePhoto": "",
-      "accommodation": {
-        "name": "",
-        "website": "https://www.campingfontenoy.com/",
-        "url": "https://www.campingfontenoy.com/",
-        "photo": "",
-        "alternatives": [],
-        "alternativeNames": [],
-        "alternativePhotos": []
-      },
-      "alternativeAccommodation": {
-        "name": "",
-        "photo": ""
-      },
-      "accommodationType": "",
-      "substeps": [],
-      "title": "Étape 6 - chaumousey → Fontenoy-le-Château",
-      "elevation": 0,
-      "duration": "",
-      "description": "",
-      "noteItems": [],
-      "pois": [],
-      "pointsOfInterest": [],
-      "interest": [],
-      "restaurants": [],
-      "shops": [],
-      "water": [],
-      "warning": [],
-      "legacyAccommodation": ""
-    }
-  ]
+  "contributions": []
 }
