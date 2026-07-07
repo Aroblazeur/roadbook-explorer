@@ -2812,17 +2812,39 @@
     async function prepareGithubActionsPublish() {
         if (!state.selectedRoadbook) return;
 
+        const progress = createPublicationProgressModal();
+        document.body.appendChild(progress.overlay);
+        progress.setStep("preparation", "active");
+        progress.setMessage("Preparation du roadbook...");
+        if (elements.publishGithub) elements.publishGithub.disabled = true;
+
+        try {
         const { roadbook: exportPayload, enrichedPoiCount } = await buildExportRoadbookWithPoiEnrichment(state.selectedRoadbook);
         const id = normalizeRoadbookId(exportPayload.id || state.selectedRoadbookId);
         if (!id) {
+            progress.setError("Publication GitHub impossible : ID du roadbook invalide.");
             setStatus("Publication GitHub impossible : ID du roadbook invalide.");
             return;
         }
 
+        progress.setStep("preparation", "done");
+        progress.setStep("poi", "done", enrichedPoiCount
+            ? `${enrichedPoiCount} POI enrichi(s).`
+            : "Aucun enrichissement POI supplementaire.");
+
         const roadbook = { ...exportPayload, id };
 
         const gpxFileEntries = await buildPublicationFileEntries(state.gpxFiles, "GPX");
-        const mediaUploadEntries = await buildPublicationMediaUploadEntries(state.mediaFiles);
+        progress.setStep("images", "active");
+        progress.setMessage("Optimisation des images...");
+        const mediaUploadEntries = await buildPublicationMediaUploadEntries(state.mediaFiles, ({ index, total, name }) => {
+            progress.setStep("images", "active", total
+                ? `Image ${index} / ${total} - ${name}`
+                : "Aucune image locale a optimiser.");
+        });
+        progress.setStep("images", "done", mediaUploadEntries.length
+            ? `${mediaUploadEntries.length} image(s) prete(s).`
+            : "Aucune image locale a envoyer.");
 
         const publicationPayload = {
             roadbookId: id,
@@ -2833,42 +2855,209 @@
             mediaFiles: []
         };
 
-        try {
             setStatus("Preparation et envoi du workflow GitHub Actions...");
+            progress.setStep("workflow", "active", "Encodage du payload...");
             const encodedPayload = await encodeWorkflowPayload(publicationPayload);
             validateWorkflowPayloadSize(encodedPayload);
             const token = await getGitHubTokenForPublish();
             if (!token) {
+                progress.setError("Publication annulee : aucun token GitHub fourni.");
                 setStatus("Publication annulee : aucun token GitHub fourni.");
                 return;
             }
 
-            if (elements.publishGithub) elements.publishGithub.disabled = true;
             if (mediaUploadEntries.length > 0) {
+                progress.setStep("upload", "active", `${mediaUploadEntries.length} fichier(s) a envoyer.`);
                 setStatus(`Publication des images sur GitHub... ${mediaUploadEntries.length} fichier(s)`);
-                await uploadMediaFilesToGithub({ id, entries: mediaUploadEntries, token });
+                await uploadMediaFilesToGithub({
+                    id,
+                    entries: mediaUploadEntries,
+                    token,
+                    onProgress: ({ index, total, name }) => {
+                        progress.setStep("upload", "active", `Fichier ${index} / ${total} - ${name}`);
+                    }
+                });
+                progress.setStep("upload", "done", `${mediaUploadEntries.length} image(s) envoyee(s).`);
+            } else {
+                progress.setStep("upload", "done", "Aucune image locale a envoyer.");
             }
+            progress.setStep("workflow", "active", "Declenchement du workflow GitHub...");
             await dispatchGithubPublishWorkflow({
                 id,
                 encoding: encodedPayload.encoding,
                 payloadBase64: encodedPayload.payloadBase64,
                 token
             });
+            progress.setStep("workflow", "done");
+            progress.setStep("launched", "done");
 
             const gpxSummary = gpxFileEntries.length ? ` · ${gpxFileEntries.length} GPX` : "";
             const mediaSummary = mediaUploadEntries.length ? ` · ${mediaUploadEntries.length} image(s)` : "";
             setStatus(`Publication declenchee pour "${safeText(roadbook.title, id)}"${enrichedPoiCount ? ` · ${enrichedPoiCount} POI enrichi(s)` : ""}${gpxSummary}${mediaSummary} : le workflow GitHub Actions va commit directement sur main.`);
             clearLocalDraft(id);
-            window.open(`https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`, "_blank", "noopener,noreferrer");
+            progress.setSuccess("Publication lancee avec succes.");
         } catch (error) {
             console.error("[Studio] Publication GitHub impossible", error);
             if (error?.status === 401 || error?.status === 403) {
                 sessionStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY);
             }
             setStatus(`Publication GitHub impossible : ${safeText(error?.message, "consulte la console pour le detail")}.`);
+            progress.setError(`Publication GitHub impossible : ${safeText(error?.message, "consulte la console pour le detail")}.`);
         } finally {
             syncEditorActionButtons();
         }
+    }
+
+    function createPublicationProgressModal() {
+        const workflowUrl = `https://github.com/${GITHUB_REPOSITORY}/actions/workflows/${PUBLISH_WORKFLOW_FILE}`;
+        const steps = [
+            ["preparation", "Preparation du roadbook"],
+            ["poi", "Enrichissement POI"],
+            ["images", "Optimisation des images"],
+            ["upload", "Upload des images"],
+            ["workflow", "Declenchement du workflow GitHub"],
+            ["launched", "Publication lancee"]
+        ];
+
+        const overlay = document.createElement("div");
+        overlay.style.position = "fixed";
+        overlay.style.inset = "0";
+        overlay.style.zIndex = "1100";
+        overlay.style.background = "rgba(15, 23, 42, 0.48)";
+        overlay.style.display = "flex";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+        overlay.style.padding = "1rem";
+
+        const panel = document.createElement("section");
+        panel.setAttribute("role", "dialog");
+        panel.setAttribute("aria-modal", "true");
+        panel.style.width = "min(640px, 100%)";
+        panel.style.background = "#fff";
+        panel.style.borderRadius = "18px";
+        panel.style.boxShadow = "0 24px 80px rgba(15, 23, 42, 0.30)";
+        panel.style.padding = "1.25rem";
+
+        const title = document.createElement("h3");
+        title.textContent = "Publication GitHub";
+        title.style.margin = "0 0 0.5rem";
+
+        const message = document.createElement("p");
+        message.setAttribute("role", "status");
+        message.setAttribute("aria-live", "polite");
+        message.textContent = "Preparation...";
+        message.style.margin = "0 0 1rem";
+        message.style.color = "#475569";
+
+        const list = document.createElement("ol");
+        list.style.display = "grid";
+        list.style.gap = "0.65rem";
+        list.style.padding = "0";
+        list.style.margin = "0";
+        list.style.listStyle = "none";
+
+        const stepNodes = new Map();
+        steps.forEach(([key, label]) => {
+            const item = document.createElement("li");
+            item.style.display = "grid";
+            item.style.gridTemplateColumns = "1.75rem minmax(0, 1fr)";
+            item.style.gap = "0.65rem";
+            item.style.alignItems = "start";
+            item.style.padding = "0.65rem";
+            item.style.border = "1px solid #dbe5dc";
+            item.style.borderRadius = "12px";
+            item.style.background = "#f8fbf8";
+
+            const marker = document.createElement("span");
+            marker.textContent = "○";
+            marker.style.color = "#6b7f6c";
+            marker.style.fontWeight = "700";
+
+            const text = document.createElement("div");
+            const main = document.createElement("strong");
+            main.textContent = label;
+            const detail = document.createElement("p");
+            detail.style.margin = "0.2rem 0 0";
+            detail.style.color = "#64748b";
+            detail.style.fontSize = "0.92rem";
+
+            text.append(main, detail);
+            item.append(marker, text);
+            list.appendChild(item);
+            stepNodes.set(key, { item, marker, detail });
+        });
+
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.flexWrap = "wrap";
+        actions.style.justifyContent = "flex-end";
+        actions.style.gap = "0.75rem";
+        actions.style.marginTop = "1rem";
+
+        const workflowButton = document.createElement("button");
+        workflowButton.type = "button";
+        workflowButton.className = "terrain-button terrain-button--secondary";
+        workflowButton.textContent = "Voir le workflow GitHub";
+        workflowButton.hidden = true;
+        workflowButton.addEventListener("click", () => {
+            window.open(workflowUrl, "_blank", "noopener,noreferrer");
+        });
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.className = "terrain-button terrain-button--secondary";
+        closeButton.textContent = "Fermer";
+        closeButton.hidden = true;
+        closeButton.addEventListener("click", () => overlay.remove());
+
+        actions.append(workflowButton, closeButton);
+        panel.append(title, message, list, actions);
+        overlay.appendChild(panel);
+
+        const setStep = (key, status, detailText = "") => {
+            const node = stepNodes.get(key);
+            if (!node) return;
+            if (status === "active") {
+                node.marker.textContent = "●";
+                node.marker.style.color = "#2f6f3e";
+                node.item.style.borderColor = "#8fcf9e";
+                node.item.style.background = "#f0faf2";
+            } else if (status === "done") {
+                node.marker.textContent = "✓";
+                node.marker.style.color = "#2f6f3e";
+                node.item.style.borderColor = "#cfe7d3";
+                node.item.style.background = "#f8fbf8";
+            } else if (status === "error") {
+                node.marker.textContent = "!";
+                node.marker.style.color = "#b91c1c";
+                node.item.style.borderColor = "#fecaca";
+                node.item.style.background = "#fff7f7";
+            }
+            if (detailText) node.detail.textContent = detailText;
+        };
+
+        return {
+            overlay,
+            setMessage(text, isError = false) {
+                message.textContent = text;
+                message.style.color = isError ? "#b91c1c" : "#475569";
+            },
+            setStep,
+            setSuccess(text) {
+                message.textContent = text;
+                message.style.color = "#2f6f3e";
+                workflowButton.hidden = false;
+                closeButton.hidden = false;
+            },
+            setError(text) {
+                message.textContent = text;
+                message.style.color = "#b91c1c";
+                closeButton.hidden = false;
+                for (const [key, node] of stepNodes) {
+                    if (node.marker.textContent === "●") setStep(key, "error");
+                }
+            }
+        };
     }
 
     async function getGitHubTokenForPublish() {
@@ -3263,10 +3452,16 @@
         return entries;
     }
 
-    async function buildPublicationMediaUploadEntries(files) {
+    async function buildPublicationMediaUploadEntries(files, onProgress = null) {
         const entries = [];
-        for (const [relativePath, file] of files) {
+        const fileEntries = [...files];
+        for (const [index, [relativePath, file]] of fileEntries.entries()) {
             try {
+                onProgress?.({
+                    index: index + 1,
+                    total: fileEntries.length,
+                    name: relativePath
+                });
                 const optimized = await optimizeMediaFileForPublication(file, relativePath);
                 const arrayBuffer = await optimized.file.arrayBuffer();
                 entries.push({
@@ -3411,12 +3606,17 @@
         );
     }
 
-    async function uploadMediaFilesToGithub({ id, entries, token }) {
-        for (const entry of entries) {
+    async function uploadMediaFilesToGithub({ id, entries, token, onProgress = null }) {
+        for (const [index, entry] of entries.entries()) {
             const safePath = normalizeMediaUploadPath(id, entry.path);
             if (!safePath) {
                 throw new Error(`Chemin image invalide : ${entry.path}`);
             }
+            onProgress?.({
+                index: index + 1,
+                total: entries.length,
+                name: safePath.split("/").pop()
+            });
             await putGithubFile({
                 path: safePath,
                 contentBase64: entry.base64,
