@@ -228,12 +228,12 @@
 }
 
 .studio-variants {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .studio-stage-extra {
-  margin-top: 1rem;
-  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
   border-top: 1px solid var(--studio-border);
 }
 
@@ -248,7 +248,7 @@
   gap: 0.75rem;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.55rem;
 }
 
 .studio-form-grid--compact {
@@ -329,7 +329,7 @@
 
 .studio-stage-card__body,
 .studio-variant-card__body {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .terrain-button--secondary {
@@ -342,17 +342,35 @@
   color: #8b1e1e;
 }
 
+.studio-action-button--compact {
+  min-width: 2.55rem;
+  min-height: 2.35rem;
+  width: auto;
+  max-width: max-content;
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
 /* ── Visual editor zones ───────────────────────────────── */
 
 .studio-zone {
-  margin-top: 1rem;
-  padding: 0.85rem;
+  margin-top: 0.8rem;
+  padding: 0.75rem;
   border-radius: 0.85rem;
   border: 1px solid transparent;
 }
 
 .studio-zone__title {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.4rem;
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -361,7 +379,7 @@
 
 .studio-zone .studio-form-grid,
 .studio-zone .studio-form-grid--compact {
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
 }
 
 .studio-zone .studio-stage-extra:first-child {
@@ -426,11 +444,14 @@
 .studio-gpx-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
 }
 
 .studio-gpx-status {
+  order: 99;
+  flex: 1 1 100%;
   margin: 0;
   font-size: 0.85rem;
   color: var(--studio-muted);
@@ -456,18 +477,18 @@
 .studio-media-upload {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
 }
 
 .studio-media-upload__button {
   width: fit-content;
-  padding: 0.55rem 0.75rem;
-  font-size: 0.9rem;
 }
 
 .studio-media-upload__status {
+  order: 99;
+  flex: 1 1 100%;
   color: var(--studio-muted);
   font-size: 0.78rem;
   font-weight: 500;

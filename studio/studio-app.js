@@ -754,8 +754,10 @@
         officialSection.appendChild(officialFileInput);
         const officialUploadBtn = document.createElement("button");
         officialUploadBtn.type = "button";
-        officialUploadBtn.className = "terrain-button terrain-button--secondary";
-        officialUploadBtn.textContent = "Choisir un fichier GPX";
+        officialUploadBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        officialUploadBtn.textContent = "📁";
+        officialUploadBtn.title = "Choisir un fichier GPX";
+        officialUploadBtn.setAttribute("aria-label", "Choisir un fichier GPX");
         officialUploadBtn.addEventListener("click", () => officialFileInput.click());
         officialActions.appendChild(officialUploadBtn);
         const officialStatus = document.createElement("p");
@@ -771,8 +773,10 @@
         });
         const officialGithubBtn = document.createElement("button");
         officialGithubBtn.type = "button";
-        officialGithubBtn.className = "terrain-button terrain-button--secondary";
-        officialGithubBtn.textContent = "Choisir depuis GitHub";
+        officialGithubBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        officialGithubBtn.textContent = "GH";
+        officialGithubBtn.title = "Choisir un fichier GPX depuis GitHub";
+        officialGithubBtn.setAttribute("aria-label", "Choisir un fichier GPX depuis GitHub");
         officialGithubBtn.addEventListener("click", () => {
             const gpxInput = findFieldControl(officialGrid, "gpx");
             openGithubFilePicker({ kind: "gpx", targetInput: gpxInput, statusEl: officialStatus });
@@ -781,8 +785,10 @@
         officialActions.appendChild(officialStatus);
         const officialCalcBtn = document.createElement("button");
         officialCalcBtn.type = "button";
-        officialCalcBtn.className = "terrain-button terrain-button--secondary";
-        officialCalcBtn.textContent = "Calculer depuis le GPX";
+        officialCalcBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        officialCalcBtn.textContent = "Lire";
+        officialCalcBtn.title = "Calculer distance et dénivelé depuis le GPX";
+        officialCalcBtn.setAttribute("aria-label", "Calculer distance et dénivelé depuis le GPX");
         officialCalcBtn.addEventListener("click", () => {
             const gpxInput = findFieldControl(officialGrid, "gpx");
             const gpxVal = gpxInput ? gpxInput.value : "";
@@ -830,8 +836,10 @@
         tracedSection.appendChild(tracedFileInput);
         const tracedUploadBtn = document.createElement("button");
         tracedUploadBtn.type = "button";
-        tracedUploadBtn.className = "terrain-button terrain-button--secondary";
-        tracedUploadBtn.textContent = "Choisir un fichier GPX";
+        tracedUploadBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        tracedUploadBtn.textContent = "📁";
+        tracedUploadBtn.title = "Choisir un fichier GPX";
+        tracedUploadBtn.setAttribute("aria-label", "Choisir un fichier GPX");
         tracedUploadBtn.addEventListener("click", () => tracedFileInput.click());
         tracedActions.appendChild(tracedUploadBtn);
         const tracedStatus = document.createElement("p");
@@ -847,8 +855,10 @@
         });
         const tracedGithubBtn = document.createElement("button");
         tracedGithubBtn.type = "button";
-        tracedGithubBtn.className = "terrain-button terrain-button--secondary";
-        tracedGithubBtn.textContent = "Choisir depuis GitHub";
+        tracedGithubBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        tracedGithubBtn.textContent = "GH";
+        tracedGithubBtn.title = "Choisir un fichier GPX depuis GitHub";
+        tracedGithubBtn.setAttribute("aria-label", "Choisir un fichier GPX depuis GitHub");
         tracedGithubBtn.addEventListener("click", () => {
             const gpxInput = findFieldControl(tracedGrid, "gpx");
             openGithubFilePicker({ kind: "gpx", targetInput: gpxInput, statusEl: tracedStatus });
@@ -857,8 +867,10 @@
         tracedActions.appendChild(tracedStatus);
         const tracedCalcBtn = document.createElement("button");
         tracedCalcBtn.type = "button";
-        tracedCalcBtn.className = "terrain-button terrain-button--secondary";
-        tracedCalcBtn.textContent = "Calculer depuis le GPX";
+        tracedCalcBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        tracedCalcBtn.textContent = "Lire";
+        tracedCalcBtn.title = "Calculer distance et dénivelé depuis le GPX";
+        tracedCalcBtn.setAttribute("aria-label", "Calculer distance et dénivelé depuis le GPX");
         tracedCalcBtn.addEventListener("click", () => {
             const gpxInput = findFieldControl(tracedGrid, "gpx");
             const gpxVal = gpxInput ? gpxInput.value : "";
@@ -867,8 +879,10 @@
         tracedActions.appendChild(tracedCalcBtn);
         const tracedFromStagesBtn = document.createElement("button");
         tracedFromStagesBtn.type = "button";
-        tracedFromStagesBtn.className = "terrain-button terrain-button--secondary";
-        tracedFromStagesBtn.textContent = "Recalculer le tracé actuel depuis les étapes";
+        tracedFromStagesBtn.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+        tracedFromStagesBtn.textContent = "Calc";
+        tracedFromStagesBtn.title = "Recalculer le tracé depuis les étapes";
+        tracedFromStagesBtn.setAttribute("aria-label", "Recalculer le tracé depuis les étapes");
         tracedFromStagesBtn.addEventListener("click", () => {
             recalculateStagesTotalFromStages(tracedStatus, tracedGrid);
         });
@@ -1308,8 +1322,10 @@
 
             const uploadButton = document.createElement("button");
             uploadButton.type = "button";
-            uploadButton.className = "terrain-button terrain-button--secondary";
-            uploadButton.textContent = "Choisir un fichier GPX";
+            uploadButton.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+            uploadButton.textContent = "📁";
+            uploadButton.title = "Choisir un fichier GPX";
+            uploadButton.setAttribute("aria-label", "Choisir un fichier GPX");
             uploadButton.addEventListener("click", () => fileInput.click());
             actions.appendChild(uploadButton);
 
@@ -1327,8 +1343,10 @@
 
             const githubButton = document.createElement("button");
             githubButton.type = "button";
-            githubButton.className = "terrain-button terrain-button--secondary";
-            githubButton.textContent = "Choisir depuis GitHub";
+            githubButton.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+            githubButton.textContent = "GH";
+            githubButton.title = "Choisir un fichier GPX depuis GitHub";
+            githubButton.setAttribute("aria-label", "Choisir un fichier GPX depuis GitHub");
             githubButton.addEventListener("click", () => {
                 openGithubFilePicker({ kind: "gpx", targetInput: gpxInput, statusEl: status });
             });
@@ -1340,8 +1358,10 @@
         if (typeof computeGpx === "function") {
             const button = document.createElement("button");
             button.type = "button";
-            button.className = "terrain-button terrain-button--secondary";
-            button.textContent = "Calculer depuis le GPX";
+            button.className = "terrain-button terrain-button--secondary studio-action-button--compact";
+            button.textContent = "Lire";
+            button.title = "Calculer distance et dénivelé depuis le GPX";
+            button.setAttribute("aria-label", "Calculer distance et dénivelé depuis le GPX");
 
             const targetStatus = uploadContext
                 ? actions.querySelector(".studio-gpx-status")
@@ -2667,6 +2687,7 @@
             noteItems: [],
             variants: []
         });
+        state.expandedStages.add(state.selectedRoadbook.stages.length - 1);
         rerenderEditorPreservingScroll();
     }
 
@@ -4327,14 +4348,18 @@
 
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "terrain-button terrain-button--secondary studio-media-upload__button";
-        button.textContent = "Choisir une image";
+        button.className = "terrain-button terrain-button--secondary studio-media-upload__button studio-action-button--compact";
+        button.textContent = "📁";
+        button.title = "Choisir une image";
+        button.setAttribute("aria-label", "Choisir une image");
         button.addEventListener("click", () => fileInput.click());
 
         const githubButton = document.createElement("button");
         githubButton.type = "button";
-        githubButton.className = "terrain-button terrain-button--secondary studio-media-upload__button";
-        githubButton.textContent = "Choisir depuis GitHub";
+        githubButton.className = "terrain-button terrain-button--secondary studio-media-upload__button studio-action-button--compact";
+        githubButton.textContent = "GH";
+        githubButton.title = "Choisir une image depuis GitHub";
+        githubButton.setAttribute("aria-label", "Choisir une image depuis GitHub");
 
         const status = document.createElement("small");
         status.className = "studio-media-upload__status";
@@ -4534,7 +4559,7 @@
                 gpxPathInput.value = path;
                 gpxPathInput.dispatchEvent(new Event("input", { bubbles: true }));
             }
-            statusEl.textContent = `${file.name} prêt · chemin JSON : ${path}. Clique sur "Calculer depuis le GPX" pour remplir les métriques.`;
+            statusEl.textContent = `${file.name} prêt · chemin JSON : ${path}. Clique sur "Lire" pour remplir les métriques.`;
             statusEl.classList.add("studio-gpx-status--success");
             statusEl.classList.remove("studio-gpx-status--error");
         };
