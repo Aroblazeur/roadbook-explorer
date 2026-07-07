@@ -24,8 +24,11 @@
     const IMAGE_FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
     const WORKFLOW_PAYLOAD_BASE64_MAX_LENGTH = 60_000;
     const MEDIA_DIRECT_UPLOAD_MAX_BYTES = 1_200_000;
-    const MEDIA_OPTIMIZE_MAX_DIMENSION = 1800;
-    const MEDIA_OPTIMIZE_QUALITY = 0.78;
+    const MEDIA_OPTIMIZATION_PROFILES = Object.freeze({
+        cover: Object.freeze({ maxWidth: 800, quality: 0.70, preferredType: "image/webp", maxBytes: 350_000 }),
+        stage: Object.freeze({ maxWidth: 1200, quality: 0.75, preferredType: "image/webp", maxBytes: 650_000 }),
+        secondary: Object.freeze({ maxWidth: 900, quality: 0.72, preferredType: "image/webp", maxBytes: 450_000 })
+    });
 
     const state = {
         catalogIds: [],
@@ -2840,9 +2843,15 @@
 
     async function optimizeMediaFileForPublication(file, relativePath) {
         if (!file) throw new Error("Fichier image absent.");
-        const targetType = mimeTypeForImagePath(relativePath) || file.type || "image/jpeg";
-        const optimizedBlob = await resizeImageBlob(file, targetType);
-        const mustUseOptimizedType = Boolean(file.type && targetType && file.type !== targetType);
+        const profile = mediaOptimizationProfileForPath(relativePath);
+        const pathType = mimeTypeForImagePath(relativePath);
+        const targetType = pathType && supportedCanvasMimeType(pathType)
+            ? pathType
+            : supportedCanvasMimeType(profile.preferredType)
+                ? profile.preferredType
+                : fallbackMimeTypeForImage(file, relativePath);
+        const optimizedBlob = await resizeImageBlob(file, targetType, profile);
+        const mustUseOptimizedType = Boolean(targetType && file.type !== targetType);
         if (mustUseOptimizedType && !optimizedBlob) {
             throw new Error("Conversion d'image impossible.");
         }
@@ -2850,8 +2859,9 @@
             ? optimizedBlob
             : file;
 
-        if (candidate.size > MEDIA_DIRECT_UPLOAD_MAX_BYTES) {
-            throw new Error(`Taille finale ${formatBytes(candidate.size)} supérieure à ${formatBytes(MEDIA_DIRECT_UPLOAD_MAX_BYTES)}.`);
+        const maxBytes = Math.min(profile.maxBytes, MEDIA_DIRECT_UPLOAD_MAX_BYTES);
+        if (candidate.size > maxBytes) {
+            throw new Error(`Taille finale ${formatBytes(candidate.size)} supérieure à ${formatBytes(maxBytes)}.`);
         }
 
         return {
@@ -2860,15 +2870,17 @@
         };
     }
 
-    async function resizeImageBlob(file, targetType) {
+    async function resizeImageBlob(file, targetType, profile) {
         if (!file || typeof document === "undefined") return null;
 
         const bitmap = await loadImageBitmap(file);
-        const scale = Math.min(1, MEDIA_OPTIMIZE_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+        const maxWidth = Math.max(1, Number(profile?.maxWidth) || 900);
+        const scale = Math.min(1, maxWidth / Math.max(bitmap.width, 1));
         const width = Math.max(1, Math.round(bitmap.width * scale));
         const height = Math.max(1, Math.round(bitmap.height * scale));
 
-        if (scale >= 1 && file.size <= MEDIA_DIRECT_UPLOAD_MAX_BYTES && (!file.type || file.type === targetType)) {
+        const maxBytes = Math.min(Number(profile?.maxBytes) || MEDIA_DIRECT_UPLOAD_MAX_BYTES, MEDIA_DIRECT_UPLOAD_MAX_BYTES);
+        if (scale >= 1 && file.size <= maxBytes && file.type === targetType) {
             bitmap.close?.();
             return null;
         }
@@ -2890,7 +2902,7 @@
         bitmap.close?.();
 
         return new Promise(resolve => {
-            canvas.toBlob(blob => resolve(blob), targetType, MEDIA_OPTIMIZE_QUALITY);
+            canvas.toBlob(blob => resolve(blob), targetType, Number(profile?.quality) || 0.72);
         });
     }
 
@@ -2920,6 +2932,32 @@
         if (extension === ".png") return "image/png";
         if (extension === ".webp") return "image/webp";
         return "";
+    }
+
+    function mediaOptimizationProfileForPath(relativePath) {
+        const filename = String(relativePath || "").split("/").pop() || "";
+        if (/^cover\./i.test(filename)) return MEDIA_OPTIMIZATION_PROFILES.cover;
+        if (/^(stage-|variant-stage-)/i.test(filename)) return MEDIA_OPTIMIZATION_PROFILES.stage;
+        return MEDIA_OPTIMIZATION_PROFILES.secondary;
+    }
+
+    function supportedCanvasMimeType(mimeType) {
+        if (!mimeType || typeof document === "undefined") return false;
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = 1;
+            canvas.height = 1;
+            return canvas.toDataURL(mimeType).startsWith(`data:${mimeType}`);
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function fallbackMimeTypeForImage(file, relativePath) {
+        const pathType = mimeTypeForImagePath(relativePath);
+        if (pathType && supportedCanvasMimeType(pathType)) return pathType;
+        if (file?.type === "image/png" && supportedCanvasMimeType("image/png")) return "image/png";
+        return "image/jpeg";
     }
 
     function validateWorkflowPayloadSize(encodedPayload) {
@@ -3722,8 +3760,7 @@
     }
 
     function autoImagePath(context, file) {
-        const sourceExtension = fileExtension(file.name);
-        const extension = sourceExtension === ".webp" ? ".webp" : ".jpg";
+        const extension = supportedCanvasMimeType("image/webp") ? ".webp" : ".jpg";
         const stem = autoImageStem(context);
         const filename = sanitizeMediaFilename(`${stem}${extension}`);
         return filename ? `data/${filename}` : "";
