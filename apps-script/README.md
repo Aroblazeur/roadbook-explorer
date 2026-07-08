@@ -72,7 +72,7 @@ Accès : Tout le monde
 L’URL `/exec` actuellement utilisée globalement par RoadBook Explorer est :
 
 ```text
-https://script.google.com/macros/s/AKfycbx2DJNd3bNNbF5usb9WBbwxMbg8cAzvCVTpP_jPLRRWRKZJDUN2-yeVzBZYutweiahBjg/exec
+https://script.google.com/macros/s/AKfycbzjxJUgeDkee0dJNxg4VSi6bWiVPcYBxtQpuA9wh9eoeEY98qs96z7qijGMyy3ue4EceQ/exec
 ```
 
 ## Test GET
@@ -80,7 +80,7 @@ https://script.google.com/macros/s/AKfycbx2DJNd3bNNbF5usb9WBbwxMbg8cAzvCVTpP_jPL
 Ouvrir :
 
 ```text
-https://script.google.com/macros/s/AKfycbx2DJNd3bNNbF5usb9WBbwxMbg8cAzvCVTpP_jPLRRWRKZJDUN2-yeVzBZYutweiahBjg/exec
+https://script.google.com/macros/s/AKfycbzjxJUgeDkee0dJNxg4VSi6bWiVPcYBxtQpuA9wh9eoeEY98qs96z7qijGMyy3ue4EceQ/exec
 ```
 
 Réponse attendue :
