@@ -114,6 +114,8 @@ export default function RoadbooksPage() {
               {" — "}
               {rb.is_public ? "public" : "privé"}
               {rb.description && <> — {rb.description}</>}
+              {" — "}
+              <Link href={`/roadbooks/${rb.slug}`}>Voir</Link>
             </li>
           ))}
         </ul>

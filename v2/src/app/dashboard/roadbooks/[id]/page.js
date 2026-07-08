@@ -226,7 +226,11 @@ export default function RoadbookDetailPage() {
         </dl>
       </section>
 
-      <p><Link href="/dashboard/roadbooks">Retour à la liste</Link></p>
+      <nav>
+        <Link href={`/roadbooks/${roadbook?.slug}`}>Voir le roadbook</Link>
+        {" | "}
+        <Link href="/dashboard/roadbooks">Retour à la liste</Link>
+      </nav>
     </main>
   );
 }
