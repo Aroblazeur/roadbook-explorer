@@ -9,7 +9,10 @@ export default function Home() {
           Roadbook Explorer nouvelle génération — Next.js + Supabase.
         </p>
         <div className={styles.ctas}>
-          <a className={styles.primary} href="/login">
+          <a className={styles.primary} href="/explore">
+            Explorer
+          </a>
+          <a className={styles.secondary} href="/login">
             Connexion
           </a>
           <a className={styles.secondary} href="/dashboard">

@@ -29,6 +29,8 @@ export default function DashboardPage() {
       <p>Connecté en tant que : <strong>{user.email}</strong></p>
       <p>ID utilisateur : <code>{user.id}</code></p>
       <nav>
+        <Link href="/explore">Explorer</Link>
+        {" | "}
         <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
       </nav>
       <button type="button" onClick={handleLogout}>
