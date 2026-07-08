@@ -427,6 +427,17 @@ async function applyLiveContributions() {
         return;
     }
 
+    if (!Array.isArray(items) || !items.length) {
+        const existingForThisRoadbook = Array.isArray(liveContributionItems)
+            ? liveContributionItems.filter(item => sanitizeRoadbookId(item?.roadbookId) === id)
+            : [];
+        if (existingForThisRoadbook.length) {
+            console.info("[RoadBook Contributions] Lecture vide ignorée, contributions live conservées.");
+            return;
+        }
+    }
+
+    console.info("[RoadBook Contributions] reçues", items.length);
     liveContributionItems = items;
     attachLiveContributions(items, id);
 }
@@ -582,6 +593,42 @@ function findContributionDay(stage) {
     }) || null;
 }
 
+function getLiveContributionsForDay(day) {
+    const notes = [];
+    const accommodations = [];
+    if (!Array.isArray(liveContributionItems) || !day) return { notes, accommodations };
+
+    const seenNoteKeys = new Set();
+    const seenAccommodationKeys = new Set();
+
+    liveContributionItems.forEach(item => {
+        const matchDay = findContributionDay(item.stage);
+        if (matchDay !== day) return;
+
+        const type = normalizeContributionType(item.type || item.contributionType);
+
+        if (type === "note") {
+            const noteKey = `${safeText(item.text || item.note, "")}::${safeText(item.photo, "")}`;
+            if (!seenNoteKeys.has(noteKey)) {
+                seenNoteKeys.add(noteKey);
+                notes.push({ text: safeText(item.text || item.note, ""), photo: safeText(item.photo, "") });
+            }
+        } else if (type === "accommodation") {
+            const key = normalizeContributionAccommodationKey(item);
+            if (!seenAccommodationKeys.has(key)) {
+                seenAccommodationKeys.add(key);
+                accommodations.push({
+                    name: safeText(item.name, ""),
+                    url: safeText(item.url || item.website, ""),
+                    photo: safeText(item.photo, "")
+                });
+            }
+        }
+    });
+
+    return { notes, accommodations };
+}
+
 function attachLiveNote(day, item) {
     const text = safeText(item.text || item.note, "");
     if (!text) return;
@@ -643,10 +690,60 @@ function normalizeContributionAccommodationKey(item) {
     return `name:${normalizeAccommodationText(item?.name || "")}`;
 }
 
+function mergeAccommodationWithLiveContributions(day) {
+    if (!day) return null;
+    const accommodation = day.accommodation;
+    const { accommodations: liveAccommodations } = getLiveContributionsForDay(day);
+    if (!liveAccommodations.length) return accommodation;
+
+    const merged = accommodation && typeof accommodation === "object"
+        ? { ...accommodation }
+        : { name: typeof accommodation === "string" ? accommodation : "", alternatives: [] };
+
+    if (!Array.isArray(merged.alternatives)) {
+        merged.alternatives = [];
+    }
+
+    const existingKeys = new Set();
+    merged.alternatives.forEach(alt => {
+        const altUrl = safeText(typeof alt === "object" ? alt?.website || alt?.url : alt, "").toLowerCase();
+        if (altUrl) existingKeys.add(`url:${altUrl.replace(/\/+$/, "")}`);
+        const altName = safeText(typeof alt === "object" ? alt?.name : "", "");
+        if (altName) existingKeys.add(`name:${normalizeAccommodationText(altName)}`);
+    });
+
+    const mainUrl = safeText(merged?.website || merged?.url, "").toLowerCase();
+    if (mainUrl) existingKeys.add(`url:${mainUrl.replace(/\/+$/, "")}`);
+    const mainName = normalizeAccommodationText(merged?.name || "");
+    if (mainName) existingKeys.add(`name:${mainName}`);
+
+    liveAccommodations.forEach(liveAlt => {
+        const key = normalizeContributionAccommodationKey(liveAlt);
+        if (!existingKeys.has(key)) {
+            existingKeys.add(key);
+            merged.alternatives.push({
+                name: liveAlt.name,
+                url: liveAlt.url,
+                photo: liveAlt.photo
+            });
+        }
+    });
+
+    return merged;
+}
+
 function renderCurrentAccommodation() {
     if (!roadbook || !Array.isArray(roadbook.days)) return;
     const day = roadbook.days[currentDay];
-    if (day) renderAccommodation(day.accommodation);
+    if (!day) return;
+
+    const mergedAccommodation = mergeAccommodationWithLiveContributions(day);
+    const stageNumber = day.stage || (currentDay + 1);
+    const liveAccommodations = getLiveContributionsForDay(day).accommodations;
+
+    console.info("[RoadBook Contributions] hébergements live étape", stageNumber, liveAccommodations.length);
+
+    renderAccommodation(mergedAccommodation, day);
 }
 
 function loadOptionalPoiEnrichment() {
@@ -678,7 +775,28 @@ function renderCurrentPois() {
 function renderCurrentNotes() {
     if (!roadbook || !Array.isArray(roadbook.days)) return;
     const day = roadbook.days[currentDay];
-    if (day) renderNotes(day.noteItems || day.notes, day.stage || (currentDay + 1));
+    if (!day) return;
+
+    const jsonNotes = day.noteItems || day.notes || [];
+    const { notes: liveNotes } = getLiveContributionsForDay(day);
+    const stageNumber = day.stage || (currentDay + 1);
+
+    console.info("[RoadBook Contributions] notes live étape", stageNumber, liveNotes.length);
+
+    const seenKeys = new Set();
+    const mergedNotes = [];
+
+    [...jsonNotes, ...liveNotes].forEach(note => {
+        const text = safeText(note.text || note.note, "");
+        if (!text) return;
+        const key = `${text}::${safeText(note.photo, "")}`;
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            mergedNotes.push({ text, photo: safeText(note.photo, "") });
+        }
+    });
+
+    renderNotes(mergedNotes, stageNumber);
 }
 
 /**
