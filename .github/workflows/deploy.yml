@@ -18,10 +18,10 @@ permissions:
   pages: write
   id-token: write
 
-# Prevent stale deploys from racing with newer commits; GitHub Pages rejects overlapping deployments.
+# Serialize Pages deploys so newer runs wait instead of colliding with an in-progress deployment.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
