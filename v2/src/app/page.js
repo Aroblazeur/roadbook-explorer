@@ -1,4 +1,5 @@
 import styles from "./page.module.css";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -9,15 +10,15 @@ export default function Home() {
           Roadbook Explorer nouvelle génération — Next.js + Supabase.
         </p>
         <div className={styles.ctas}>
-          <a className={styles.primary} href="/explore">
+          <Link className={styles.primary} href="/explore">
             Explorer
-          </a>
-          <a className={styles.secondary} href="/login">
+          </Link>
+          <Link className={styles.secondary} href="/login">
             Connexion
-          </a>
-          <a className={styles.secondary} href="/dashboard">
+          </Link>
+          <Link className={styles.secondary} href="/dashboard">
             Dashboard
-          </a>
+          </Link>
         </div>
       </main>
     </div>

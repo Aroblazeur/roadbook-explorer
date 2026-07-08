@@ -11,6 +11,7 @@ export default function RoadbookDetailPage() {
   const { id } = useParams();
   const [roadbook, setRoadbook] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
@@ -37,15 +38,15 @@ export default function RoadbookDetailPage() {
   const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
-    if (!authLoading && !user) router.push("/login");
+    if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading]);
 
   function loadData() {
     if (!user || !id) return;
     supabase.from("roadbooks").select("*").eq("id", id).single()
       .then(({ data, error: err }) => {
-        if (err) { setError(err.message); }
-        else if (!data) { setError("Roadbook introuvable."); }
+        if (err) { setFetchError(err.message); }
+        else if (!data) { setFetchError("Roadbook introuvable."); }
         else {
           setRoadbook(data);
           setTitle(data.title);
@@ -57,7 +58,7 @@ export default function RoadbookDetailPage() {
 
     supabase.from("stages").select("*").eq("roadbook_id", Number(id))
       .order("stage_number", { ascending: true })
-      .then(({ data }) => { if (data) setStages(data); });
+      .then(({ data, error: err }) => { if (err) console.error(err); else if (data) setStages(data); });
   }
 
   useEffect(() => { loadData(); }, [user, id]);
@@ -144,9 +145,9 @@ export default function RoadbookDetailPage() {
     setDeleting(null);
   }
 
-  if (authLoading || loading) return <main><p>Chargement…</p></main>;
+  if (authLoading || loading) return <main><p>Chargement du roadbook…</p></main>;
   if (!user) return null;
-  if (error && !roadbook) return <main><p style={{ color: "red" }}>{error}</p><Link href="/dashboard/roadbooks">Retour</Link></main>;
+  if (fetchError && !roadbook) return <main><h1>Erreur</h1><p style={{ color: "red" }}>{fetchError}</p><Link href="/dashboard/roadbooks">Retour à la liste</Link></main>;
 
   return (
     <main>
@@ -227,6 +228,8 @@ export default function RoadbookDetailPage() {
       </section>
 
       <nav>
+        <Link href="/explore">Explorer</Link>
+        {" | "}
         <Link href={`/roadbooks/${roadbook?.slug}`}>Voir le roadbook</Link>
         {" | "}
         <Link href="/dashboard/roadbooks">Retour à la liste</Link>

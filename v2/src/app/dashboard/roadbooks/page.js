@@ -14,9 +14,10 @@ export default function RoadbooksPage() {
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
   const [error, setError] = useState(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
+    if (!loading && !user) router.replace("/login");
   }, [user, loading]);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function RoadbooksPage() {
       .select("id, slug, title, description, is_public, created_at")
       .order("created_at", { ascending: false })
       .then(({ data, error: err }) => {
-        if (err) console.error(err);
+        if (err) setError(err.message);
         else setRoadbooks(data ?? []);
         setFetching(false);
       });
@@ -35,11 +36,22 @@ export default function RoadbooksPage() {
   async function handleCreate(e) {
     e.preventDefault();
     setError(null);
-    const slug = title
+    setCreating(true);
+    let slug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .slice(0, 80) || `roadbook-${Date.now()}`;
+
+    const { data: existing } = await supabase
+      .from("roadbooks")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (existing) {
+      slug = `${slug}-${Date.now()}`;
+    }
 
     const { error: insertError } = await supabase.from("roadbooks").insert({
       slug,
@@ -60,11 +72,20 @@ export default function RoadbooksPage() {
         .select("id, slug, title, description, is_public, created_at")
         .order("created_at", { ascending: false });
       setRoadbooks(data ?? []);
+      setCreating(false);
     }
   }
 
-  if (loading || fetching) return <main><p>Chargement…</p></main>;
+  if (loading) return <main><p>Chargement…</p></main>;
   if (!user) return null;
+
+  if (fetching) {
+    return <main><h1>Mes roadbooks</h1><p>Chargement de la liste…</p></main>;
+  }
+
+  if (error && !roadbooks.length) {
+    return <main><h1>Mes roadbooks</h1><p style={{ color: "red" }}>{error}</p><p><Link href="/dashboard/roadbooks">Réessayer</Link></p></main>;
+  }
 
   return (
     <main>
@@ -98,7 +119,7 @@ export default function RoadbooksPage() {
             Public
           </label>
           {error && <p style={{ color: "red" }}>{error}</p>}
-          <button type="submit">Créer</button>
+          <button type="submit" disabled={creating}>{creating ? "Création…" : "Créer"}</button>
         </form>
       </section>
 
@@ -121,7 +142,7 @@ export default function RoadbooksPage() {
         </ul>
       </section>
 
-      <p><Link href="/dashboard">Retour au dashboard</Link></p>
+      <p><Link href="/explore">Explorer</Link> | <Link href="/dashboard">Retour au dashboard</Link></p>
     </main>
   );
 }
