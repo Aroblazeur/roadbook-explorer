@@ -512,17 +512,30 @@ function attachLiveContributions(items, id) {
         ? items.filter(item => sanitizeRoadbookId(item?.roadbookId) === id)
         : [];
 
+    let attached = 0;
+    let skipped = 0;
+
     filteredItems.forEach(item => {
         const day = findContributionDay(item.stage);
-        if (!day) return;
+        if (!day) {
+            skipped++;
+            console.warn("[RoadBook Contributions] Étape introuvable pour contribution", item);
+            return;
+        }
 
         const type = normalizeContributionType(item.type || item.contributionType);
         if (type === "note") {
             attachLiveNote(day, item);
+            attached++;
         } else if (type === "accommodation") {
             attachLiveAccommodation(day, item);
+            attached++;
+        } else {
+            skipped++;
         }
     });
+
+    console.info(`[RoadBook Contributions] ${filteredItems.length} contribution(s) reçue(s), ${attached} attachée(s), ${skipped} ignorée(s)`);
 }
 
 function normalizeContributionType(value) {
@@ -535,14 +548,38 @@ function normalizeContributionType(value) {
     return "";
 }
 
+function normalizeContributionStage(value) {
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+
+    const directNumber = Number(text);
+    if (Number.isFinite(directNumber)) return directNumber;
+
+    const match = text.match(/(?:etape|étape|stage|jour|day)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i);
+    if (match) return Number(match[1]);
+
+    return null;
+}
+
 function findContributionDay(stage) {
-    const stageText = safeText(stage, "");
-    if (!stageText || !Array.isArray(roadbook?.days)) return null;
-    return roadbook.days.find(day =>
-        safeText(day?.stage, "") === stageText ||
-        safeText(day?.stageReference, "") === stageText ||
-        safeText(day?.parentStageReference, "") === stageText
-    ) || null;
+    if (!Array.isArray(roadbook?.days)) return null;
+    const normalizedStage = normalizeContributionStage(stage);
+    const stageText = safeText(stage, "").toLowerCase().trim();
+
+    return roadbook.days.find(day => {
+        if (normalizedStage !== null) {
+            if (Number(day?.stage) === normalizedStage) return true;
+            if (Number(day?.stageReference) === normalizedStage) return true;
+            if (Number(day?.parentStage) === normalizedStage) return true;
+            if (Number(day?.parentStageReference) === normalizedStage) return true;
+        }
+        if (stageText) {
+            if (safeText(day?.id, "").toLowerCase().includes(stageText)) return true;
+            if (safeText(day?.stage, "").toLowerCase() === stageText) return true;
+            if (safeText(day?.name, "").toLowerCase().includes(stageText)) return true;
+        }
+        return false;
+    }) || null;
 }
 
 function attachLiveNote(day, item) {
