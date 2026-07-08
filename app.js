@@ -18,6 +18,7 @@ let libraryRoadbooks = [];
 let roadbookLoadVersion = 0;
 
 const liveContributionsCache = new Map();
+let liveContributionItems = [];
 const enrichmentLoadCache = new Map();
 const LIVE_CONTRIBUTIONS_TIMEOUT_MS = 8_000;
 const LIVE_CONTRIBUTIONS_RETRY_TIMEOUT_MS = 12_000;
@@ -343,33 +344,44 @@ function scheduleRoadbookBackgroundHydration(id, loadVersion) {
     }, 0);
 }
 
+function applyStoredLiveContributions() {
+    if (!roadbook || !Array.isArray(roadbook.days)) return;
+    const id = roadbookId();
+    if (!id || !Array.isArray(liveContributionItems) || !liveContributionItems.length) return;
+    attachLiveContributions(liveContributionItems, id);
+}
+
 async function hydrateRoadbookInBackground(id, loadVersion) {
     const isCurrent = () => activeRoadbookId === id && roadbookLoadVersion === loadVersion;
     if (!isCurrent()) return;
 
-    applyLiveContributions().then(() => {
+    try {
+        await applyLiveContributions();
         if (!isCurrent()) return;
         refreshDynamicRoadbookSections();
-    }).catch(error => {
+    } catch (error) {
         console.info("[Roadbook] Contributions live ignorées en arrière-plan.", error);
-    });
+    }
 
-    Promise.all([
-        loadOptionalAccommodationEnrichment(),
-        loadOptionalPoiEnrichment()
-    ]).then(([accommodationIndex, poiIndex]) => {
+    try {
+        const [accommodationIndex, poiIndex] = await Promise.all([
+            loadOptionalAccommodationEnrichment(),
+            loadOptionalPoiEnrichment()
+        ]);
         if (!isCurrent()) return;
         accommodationEnrichmentIndex = accommodationIndex;
         poiEnrichmentIndex = poiIndex;
         applyAccommodationDisplayData();
+        applyStoredLiveContributions();
         refreshDynamicRoadbookSections();
-    }).catch(error => {
+    } catch (error) {
         console.info("[Roadbook] Enrichissements ignorés en arrière-plan.", error);
-    });
+    }
 }
 
 function refreshDynamicRoadbookSections() {
     if (!roadbook || !Array.isArray(roadbook.days)) return;
+    applyStoredLiveContributions();
     if (currentView === "home") {
         updateSummary();
         return;
@@ -415,6 +427,7 @@ async function applyLiveContributions() {
         return;
     }
 
+    liveContributionItems = items;
     attachLiveContributions(items, id);
 }
 
@@ -638,6 +651,7 @@ function updateSummary() {
 
     if (!roadbook || !Array.isArray(roadbook.days)) return;
 
+    applyStoredLiveContributions();
     updateRoadbookChrome();
 
     const info = document.getElementById("roadbook-info");
@@ -1539,6 +1553,8 @@ function displayDay(index, options = {}) {
 
     if (!roadbook || !Array.isArray(roadbook.days)) return;
     if (!Number.isInteger(index) || index < 0 || index >= roadbook.days.length) return;
+
+    applyStoredLiveContributions();
 
     const { updateUrl = true, replace = false } = options;
     const day = roadbook.days[index];
@@ -2446,7 +2462,7 @@ async function requestTravelerNote(stageNumber, trigger) {
             photo: safeText(photo, "")
         },
         pendingMessage: "Envoi de la note…",
-        successMessage: "Note envoyée. Recharge la page pour la voir apparaître."
+        successMessage: "Note envoyée et affichée."
     });
 }
 
@@ -2473,7 +2489,7 @@ async function requestAddedAccommodation(stageNumber, trigger) {
             photo: safeText(photo, "")
         },
         pendingMessage: "Envoi de l'hébergement…",
-        successMessage: "Hébergement envoyé. Recharge la page pour le voir apparaître."
+        successMessage: "Hébergement envoyé et affiché."
     });
 }
 async function submitContributionFromButton(trigger, options) {
@@ -2549,6 +2565,19 @@ async function sendContribution(contributionType, stage, payload) {
     }
 
     console.info("[RoadBook Contribution] Écriture confirmée par relecture live", result.response);
+
+    const confirmedItems = Array.isArray(confirmation.items) ? confirmation.items : [];
+    if (confirmedItems.length) {
+        const id = roadbookId();
+        const existingKeys = new Set(liveContributionItems.map(item => contributionItemKey(item)));
+        const newItems = confirmedItems.filter(item => !existingKeys.has(contributionItemKey(item)));
+        if (newItems.length) {
+            liveContributionItems.push(...newItems);
+            applyStoredLiveContributions();
+            refreshDynamicRoadbookSections();
+        }
+    }
+
     return result;
 }
 
@@ -2615,6 +2644,14 @@ async function confirmContributionWrite(requestPayload) {
     }
 
     return { confirmed: false, items: [] };
+}
+
+function contributionItemKey(item) {
+    const type = safeText(item.type || item.contributionType, "");
+    const stage = safeText(item.stage, "");
+    const text = safeText(item.text || item.note || item.name, "");
+    const url = safeText(item.url || item.website, "");
+    return `${type}::${stage}::${text}::${url}`;
 }
 
 function isMatchingContribution(item, requestPayload) {
