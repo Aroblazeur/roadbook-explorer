@@ -317,8 +317,13 @@ create table if not exists public.media (
   bucket      text not null,
   path        text not null,
   public_url  text,
-  roadbook_id bigint references public.roadbooks(id) on delete cascade,
-  uploaded_by uuid references public.profiles(id) on delete set null,
+  roadbook_id bigint not null references public.roadbooks(id) on delete cascade,
+  stage_id    bigint references public.stages(id) on delete cascade,
+  type        text not null default 'other'
+              check (type in ('image','gpx','document','other')),
+  file_name   text,
+  mime_type   text,
+  uploaded_by uuid not null references public.profiles(id) on delete set null,
   metadata    jsonb not null default '{}'::jsonb,
   created_at  timestamptz not null default now(),
 
@@ -327,6 +332,8 @@ create table if not exists public.media (
 
 create index if not exists idx_media_uploader on public.media(uploaded_by);
 create index if not exists idx_media_roadbook on public.media(roadbook_id);
+create index if not exists idx_media_stage on public.media(stage_id);
+create index if not exists idx_media_type on public.media(type);
 
 alter table public.media enable row level security;
 
@@ -334,8 +341,7 @@ alter table public.media enable row level security;
 create policy "Anyone can read media of public roadbooks"
   on public.media for select
   using (
-    roadbook_id is null
-    or exists (
+    exists (
       select 1 from public.roadbooks r
       where r.id = roadbook_id and r.is_public = true
     )
@@ -354,13 +360,10 @@ create policy "Owner can read media of own roadbooks"
 create policy "Owner can insert media on own roadbooks"
   on public.media for insert
   with check (
-    auth.role() = 'authenticated'
-    and (
-      roadbook_id is null
-      or exists (
-        select 1 from public.roadbooks r
-        where r.id = roadbook_id and r.owner_id = auth.uid()
-      )
+    auth.uid() = uploaded_by
+    and exists (
+      select 1 from public.roadbooks r
+      where r.id = roadbook_id and r.owner_id = auth.uid()
     )
   );
 

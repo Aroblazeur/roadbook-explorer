@@ -35,7 +35,16 @@ async function getRoadbook(slug) {
     .eq("roadbook_id", roadbook.id)
     .order("stage_number", { ascending: true });
 
-  return { roadbook, stages: stages ?? [], private: false };
+  const stageIds = (stages ?? []).map(s => s.id);
+  let pois = [], variants = [];
+  if (stageIds.length) {
+    const { data: p } = await supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true });
+    const { data: v } = await supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true });
+    pois = p ?? [];
+    variants = v ?? [];
+  }
+
+  return { roadbook, stages: stages ?? [], pois, variants, private: false };
 }
 
 export default async function RoadbookViewPage({ params }) {
@@ -54,7 +63,12 @@ export default async function RoadbookViewPage({ params }) {
     );
   }
 
-  const { roadbook, stages } = result;
+  const { roadbook, stages, pois, variants } = result;
+
+  const poisByStage = {};
+  pois.forEach(p => { if (!poisByStage[p.stage_id]) poisByStage[p.stage_id] = []; poisByStage[p.stage_id].push(p); });
+  const variantsByStage = {};
+  variants.forEach(v => { if (!variantsByStage[v.stage_id]) variantsByStage[v.stage_id] = []; variantsByStage[v.stage_id].push(v); });
 
   return (
     <main>
@@ -71,7 +85,7 @@ export default async function RoadbookViewPage({ params }) {
           <h2>Étapes ({stages.length})</h2>
           {stages.length === 0 && <p>Ce roadbook n&apos;a pas encore d&apos;étapes.</p>}
           <ol style={{ listStyle: "none", padding: 0 }}>
-            {stages.map(stage => <li key={stage.id}>{renderStageCard(stage)}</li>)}
+            {stages.map(stage => <li key={stage.id}>{renderStageCard(stage, poisByStage[stage.id] ?? [], variantsByStage[stage.id] ?? [])}</li>)}
           </ol>
         </section>
       </article>
@@ -105,7 +119,7 @@ function renderMetrics(roadbook) {
   );
 }
 
-function renderStageCard(stage) {
+function renderStageCard(stage, pois = [], variants = []) {
   const meta = stage.metadata ?? {};
   return (
     <article style={{ border: "1px solid #ccc", borderRadius: 8, padding: "1rem", marginBottom: "1rem" }}>
@@ -136,6 +150,37 @@ function renderStageCard(stage) {
           <ul>
             {stage.notes.map((note, i) => (
               <li key={i}>{note.text ?? note}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {pois.length > 0 && (
+        <details style={{ marginTop: "0.5rem" }}>
+          <summary>Points d&apos;intérêt ({pois.length})</summary>
+          <ul>
+            {pois.map(poi => (
+              <li key={poi.id}>
+                {poi.poi_type && <strong>[{poi.poi_type}]</strong>} {poi.name}
+                {poi.description && <> — {poi.description}</>}
+                {poi.lat != null && poi.lng != null && <span> ({poi.lat}, {poi.lng})</span>}
+                {poi.link_url && <> — <a href={poi.link_url} target="_blank" rel="noopener">lien</a></>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {variants.length > 0 && (
+        <details style={{ marginTop: "0.5rem" }}>
+          <summary>Variantes ({variants.length})</summary>
+          <ul>
+            {variants.map(v => (
+              <li key={v.id}>
+                <strong>{v.label}</strong>
+                {v.description && <> — {v.description}</>}
+                {v.distance_km != null && <> — {v.distance_km} km</>}
+              </li>
             ))}
           </ul>
         </details>

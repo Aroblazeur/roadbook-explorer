@@ -63,16 +63,86 @@ Les droits sont **hérités** du roadbook parent via une sous-requête :
 
 ### Media
 
-La table `media` a une colonne `roadbook_id` optionnelle qui lie le fichier à un roadbook.
-Les droits sont **hérités** du roadbook parent quand `roadbook_id` est renseigné.
+Chaque fichier est lié à un roadbook (`roadbook_id` obligatoire) et optionnellement à une étape (`stage_id`).
+Un champ `type` (`image`, `gpx`, `document`, `other`) permet de filtrer par catégorie.
 
-| Policy                                      | SELECT                    | INSERT                    | UPDATE             | DELETE             |
-|---------------------------------------------|---------------------------|---------------------------|--------------------|--------------------|
-| Anyone can read media of public roadbooks   | is_public ou roadbook null|                           |                    |                    |
-| Owner can read media of own roadbooks       | ✓ uid                     |                           |                    |                    |
-| Owner can insert media on own roadbooks     |                           | ✓ auth + owner roadbook   |                    |                    |
-| Owner can update media of own roadbooks     |                           |                           | ✓ uid ou uploader  |                    |
-| Owner can delete media of own roadbooks     |                           |                           |                    | ✓ uid ou uploader  |
+| Policy                                      | SELECT        | INSERT                 | UPDATE            | DELETE            |
+|---------------------------------------------|---------------|------------------------|-------------------|-------------------|
+| Anyone can read media of public roadbooks   | is_public     |                        |                   |                   |
+| Owner can read media of own roadbooks       | ✓ uid         |                        |                   |                   |
+| Owner can insert media on own roadbooks     |               | ✓ uid + owner roadbook |                   |                   |
+| Owner can update media of own roadbooks     |               |                        | ✓ uid ou uploader |                   |
+| Owner can delete media of own roadbooks     |               |                        |                   | ✓ uid ou uploader |
+
+## Storage setup
+
+Créer ces buckets dans le dashboard Supabase → **Storage** :
+
+| Bucket            | Public  | Usage                     |
+|-------------------|---------|---------------------------|
+| `roadbook-images` | Oui     | Photos (couverture, étapes) |
+| `roadbook-gpx`    | Non     | Fichiers GPX traces       |
+
+### Convention de chemins
+
+```
+roadbook-images/{userId}/{roadbookId}/{uuid}-{filename}
+roadbook-gpx/{userId}/{roadbookId}/{stageId?}/{uuid}-{filename}
+```
+
+### Politiques RLS des buckets
+
+Pour `roadbook-images` (bucket public) :
+
+```sql
+create policy "Anyone can read images"
+  on storage.objects for select
+  using ( bucket_id = 'roadbook-images' );
+
+create policy "Owner can insert images on own roadbooks"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'roadbook-images'
+    and auth.role() = 'authenticated'
+  );
+
+create policy "Owner can update/delete own images"
+  on storage.objects for update
+  using ( bucket_id = 'roadbook-images' and auth.uid() = owner_id );
+```
+
+Pour `roadbook-gpx` (bucket privé) :
+
+```sql
+create policy "Owner can read own gpx"
+  on storage.objects for select
+  using ( bucket_id = 'roadbook-gpx' and auth.uid() = owner_id );
+
+create policy "Owner can insert gpx on own roadbooks"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'roadbook-gpx'
+    and auth.role() = 'authenticated'
+  );
+
+create policy "Owner can update/delete own gpx"
+  on storage.objects for update
+  using ( bucket_id = 'roadbook-gpx' and auth.uid() = owner_id );
+```
+
+### Ce qui va dans la table `media` à l'upload
+
+| Champ         | Valeur                                              |
+|---------------|------------------------------------------------------|
+| `bucket`      | `roadbook-images` ou `roadbook-gpx`                 |
+| `path`        | Chemin complet dans le bucket                       |
+| `public_url`  | Résultat de `getPublicUrl()` (pour images)          |
+| `roadbook_id` | Roadbook parent (obligatoire)                       |
+| `stage_id`    | Étape parent (optionnel, pour GPX d'étape)          |
+| `type`        | `image`, `gpx`, `document`, `other`                 |
+| `file_name`   | Nom original du fichier                             |
+| `mime_type`   | Type MIME détecté                                   |
+| `uploaded_by` | `auth.uid()`                                        |
 
 ## Trigger `updated_at`
 

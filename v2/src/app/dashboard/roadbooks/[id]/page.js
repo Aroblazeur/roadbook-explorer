@@ -37,6 +37,25 @@ export default function RoadbookDetailPage() {
   const [editingStage, setEditingStage] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
+  // POI state
+  const [poisByStage, setPoisByStage] = useState({});
+  const [variantsByStage, setVariantsByStage] = useState({});
+  const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
+  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", description: "", distance_km: "", elevation_gain_m: "", editing: null });
+
+  // Image state
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [deletingImage, setDeletingImage] = useState(null);
+
+  // GPX state
+  const [gpxError, setGpxError] = useState(null);
+  const [uploadingGpx, setUploadingGpx] = useState(null); // "official" | "custom" | stageId
+  const [gpxOfficial, setGpxOfficial] = useState(null);
+  const [gpxCustom, setGpxCustom] = useState(null);
+  const [gpxByStage, setGpxByStage] = useState({});
+
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading]);
@@ -56,9 +75,35 @@ export default function RoadbookDetailPage() {
         setLoading(false);
       });
 
+    loadImages();
+    loadGpx();
+
     supabase.from("stages").select("*").eq("roadbook_id", Number(id))
       .order("stage_number", { ascending: true })
-      .then(({ data, error: err }) => { if (err) console.error(err); else if (data) setStages(data); });
+      .then(({ data, error: err }) => {
+        if (err) { console.error(err); return; }
+        if (!data) return;
+        setStages(data);
+        const stageIds = data.map(s => s.id);
+        if (stageIds.length) {
+          supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
+            .then(({ data: pois }) => {
+              if (pois) {
+                const map = {};
+                pois.forEach(p => { if (!map[p.stage_id]) map[p.stage_id] = []; map[p.stage_id].push(p); });
+                setPoisByStage(map);
+              }
+            });
+          supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
+            .then(({ data: variants }) => {
+              if (variants) {
+                const map = {};
+                variants.forEach(v => { if (!map[v.stage_id]) map[v.stage_id] = []; map[v.stage_id].push(v); });
+                setVariantsByStage(map);
+              }
+            });
+        }
+      });
   }
 
   useEffect(() => { loadData(); }, [user, id]);
@@ -145,6 +190,261 @@ export default function RoadbookDetailPage() {
     setDeleting(null);
   }
 
+  function clearPoiForm() { setPoiForm({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null }); }
+  function clearVariantForm() { setVariantForm({ stage_id: null, title: "", description: "", distance_km: "", elevation_gain_m: "", editing: null }); }
+
+  function reloadPoisVariants(stageIds) {
+    if (!stageIds?.length) return;
+    supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
+      .then(({ data: pois }) => {
+        if (pois) { const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m); }
+      });
+    supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
+      .then(({ data: variants }) => {
+        if (variants) { const m = {}; variants.forEach(v => { if (!m[v.stage_id]) m[v.stage_id] = []; m[v.stage_id].push(v); }); setVariantsByStage(m); }
+      });
+  }
+
+  async function handlePoiSubmit(e) {
+    e.preventDefault();
+    setStageError(null); setStageSuccess(null);
+    const record = { stage_id: poiForm.stage_id, name: poiForm.name, poi_type: poiForm.type || null, description: poiForm.description || null, lat: poiForm.lat ? Number(poiForm.lat) : null, lng: poiForm.lng ? Number(poiForm.lng) : null, link_url: poiForm.url || null };
+    if (poiForm.editing) {
+      const { error: updateError } = await supabase.from("stage_pois").update(record).eq("id", poiForm.editing);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess("POI mis à jour.");
+    } else {
+      const { error: insertError } = await supabase.from("stage_pois").insert(record);
+      if (insertError) { setStageError(insertError.message); return; }
+      setStageSuccess("POI créé.");
+    }
+    clearPoiForm();
+    reloadPoisVariants(stages.map(s => s.id));
+  }
+
+  async function handleDeletePoi(poiId) {
+    if (!window.confirm("Supprimer ce POI ?")) return;
+    const { error: deleteError } = await supabase.from("stage_pois").delete().eq("id", poiId);
+    if (deleteError) { setStageError(deleteError.message); return; }
+    setStageSuccess("POI supprimé.");
+    reloadPoisVariants(stages.map(s => s.id));
+  }
+
+  async function handleVariantSubmit(e) {
+    e.preventDefault();
+    setStageError(null); setStageSuccess(null);
+    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, metadata: { elevation_gain_m: variantForm.elevation_gain_m ? Number(variantForm.elevation_gain_m) : null } };
+    if (variantForm.editing) {
+      const { error: updateError } = await supabase.from("stage_variants").update(record).eq("id", variantForm.editing);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess("Variante mise à jour.");
+    } else {
+      const { error: insertError } = await supabase.from("stage_variants").insert(record);
+      if (insertError) { setStageError(insertError.message); return; }
+      setStageSuccess("Variante créée.");
+    }
+    clearVariantForm();
+    reloadPoisVariants(stages.map(s => s.id));
+  }
+
+  async function handleDeleteVariant(variantId) {
+    if (!window.confirm("Supprimer cette variante ?")) return;
+    const { error: deleteError } = await supabase.from("stage_variants").delete().eq("id", variantId);
+    if (deleteError) { setStageError(deleteError.message); return; }
+    setStageSuccess("Variante supprimée.");
+    reloadPoisVariants(stages.map(s => s.id));
+  }
+
+  function resizeImage(file, maxWidth = 1600) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        if (width > maxWidth) { height = Math.round(height * maxWidth / width); width = maxWidth; }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error("Échec de la compression")); return; }
+          resolve({ blob, width, height, size: blob.size });
+        }, "image/jpeg", 0.85);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  async function handleSignedUrl(path) {
+    const { data } = await supabase.storage.from("roadbook-images").createSignedUrl(path, 3600);
+    return data?.signedUrl;
+  }
+
+  async function loadImages() {
+    if (!user || !id) return;
+    const { data: mediaRows } = await supabase
+      .from("media").select("*").eq("roadbook_id", Number(id)).eq("type", "image").order("created_at", { ascending: false });
+    if (!mediaRows) return;
+    const rowsWithUrls = await Promise.all(mediaRows.map(async row => {
+      const signedUrl = await handleSignedUrl(row.path);
+      return { ...row, signedUrl };
+    }));
+    setImages(rowsWithUrls);
+  }
+
+  async function handleUploadImage(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null); setUploading(true);
+    try {
+      const { blob, width, height, size } = await resizeImage(file);
+      const ext = "jpg";
+      const uuid = crypto.randomUUID();
+      const path = `${user.id}/${id}/${uuid}-${file.name}`;
+      const { error: storageError } = await supabase.storage.from("roadbook-images").upload(path, blob, { contentType: "image/jpeg", upsert: false });
+      if (storageError) { setUploadError(storageError.message); return; }
+      const { error: dbError } = await supabase.from("media").insert({
+        roadbook_id: Number(id), stage_id: null, type: "image",
+        bucket: "roadbook-images", path, file_name: file.name,
+        mime_type: "image/jpeg",
+        uploaded_by: user.id,
+        metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg" },
+      });
+      if (dbError) { setUploadError(dbError.message); return; }
+      await loadImages();
+    } catch (err) { setUploadError(err.message); }
+    finally { setUploading(false); e.target.value = ""; }
+  }
+
+  async function handleDeleteImage(mediaRow) {
+    if (!window.confirm("Supprimer cette image ?")) return;
+    setDeletingImage(mediaRow.id);
+    try {
+      const { error: storageError } = await supabase.storage.from("roadbook-images").remove([mediaRow.path]);
+      if (storageError) { setUploadError(storageError.message); return; }
+      const { error: dbError } = await supabase.from("media").delete().eq("id", mediaRow.id);
+      if (dbError) { setUploadError(dbError.message); return; }
+      setImages(prev => prev.filter(i => i.id !== mediaRow.id));
+    } catch (err) { setUploadError(err.message); }
+    finally { setDeletingImage(null); }
+  }
+
+  const GPX_BUCKET = "roadbook-gpx";
+
+  function buildGpxPath(scope, role, stageId) {
+    if (scope === "stage" && stageId) return `${user.id}/${id}/stages/${stageId}/${crypto.randomUUID()}`;
+    return `${user.id}/${id}/roadbook/${role}/${crypto.randomUUID()}`;
+  }
+
+  function validateGpx(file) {
+    const name = file.name.toLowerCase();
+    const accept = name.endsWith(".gpx") || ["application/gpx+xml","application/xml","text/xml"].includes(file.type);
+    if (!accept) return "Seuls les fichiers .gpx sont acceptés.";
+    if (file.size > 10 * 1024 * 1024) return "Le fichier dépasse 10 Mo.";
+    return null;
+  }
+
+  async function loadGpx() {
+    if (!user || !id) return;
+    const { data: rows } = await supabase
+      .from("media").select("*").eq("roadbook_id", Number(id)).eq("type", "gpx");
+    if (!rows) return;
+    const official = rows.find(r => r.metadata?.gpx_role === "official");
+    const custom = rows.find(r => r.metadata?.gpx_role === "custom");
+    setGpxOfficial(official ?? null);
+    setGpxCustom(custom ?? null);
+    const byStage = {};
+    rows.filter(r => r.metadata?.scope === "stage" && r.stage_id).forEach(r => { byStage[r.stage_id] = r; });
+    setGpxByStage(byStage);
+  }
+
+  async function handleGpxDownload(mediaRow) {
+    const { data } = await supabase.storage.from(GPX_BUCKET).createSignedUrl(mediaRow.path, 3600);
+    if (!data?.signedUrl) return;
+    const a = document.createElement("a"); a.href = data.signedUrl; a.download = mediaRow.file_name; a.click();
+  }
+
+  async function handleGpxReplace(mediaRow, scope, role, stageId) {
+    const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx";
+    input.onchange = async () => {
+      const file = input.files?.[0]; if (!file) return;
+      const valErr = validateGpx(file); if (valErr) { setGpxError(valErr); return; }
+      setGpxError(null); setUploadingGpx(role ?? stageId);
+      try {
+        await supabase.storage.from(GPX_BUCKET).remove([mediaRow.path]);
+        const path = buildGpxPath(scope, role, stageId) + `-${file.name}`;
+        const { error: storageError } = await supabase.storage.from(GPX_BUCKET).upload(path, file, { contentType: "application/gpx+xml", upsert: false });
+        if (storageError) { setGpxError(storageError.message); return; }
+        const meta = { ...mediaRow.metadata, original_name: file.name, original_size: file.size };
+        const { error: dbError } = await supabase.from("media").update({ path, file_name: file.name, metadata: meta }).eq("id", mediaRow.id);
+        if (dbError) { setGpxError(dbError.message); return; }
+        await loadGpx();
+      } catch (err) { setGpxError(err.message); }
+      finally { setUploadingGpx(null); }
+    };
+    input.click();
+  }
+
+  async function handleGpxUpload(scope, role, stageId) {
+    const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx";
+    input.onchange = async () => {
+      const file = input.files?.[0]; if (!file) return;
+      const valErr = validateGpx(file); if (valErr) { setGpxError(valErr); return; }
+      setGpxError(null); setUploadingGpx(role ?? stageId);
+      try {
+        const path = buildGpxPath(scope, role, stageId) + `-${file.name}`;
+        const { error: storageError } = await supabase.storage.from(GPX_BUCKET).upload(path, file, { contentType: "application/gpx+xml", upsert: false });
+        if (storageError) { setGpxError(storageError.message); return; }
+        const meta = { scope, original_name: file.name, original_size: file.size };
+        if (role) meta.gpx_role = role;
+        const { error: dbError } = await supabase.from("media").insert({
+          roadbook_id: Number(id), stage_id: scope === "stage" ? stageId : null, type: "gpx",
+          bucket: GPX_BUCKET, path, file_name: file.name, mime_type: "application/gpx+xml",
+          uploaded_by: user.id, metadata: meta,
+        });
+        if (dbError) { setGpxError(dbError.message); return; }
+        await loadGpx();
+      } catch (err) { setGpxError(err.message); }
+      finally { setUploadingGpx(null); }
+    };
+    input.click();
+  }
+
+  async function handleGpxDelete(mediaRow) {
+    if (!window.confirm("Supprimer ce GPX ?")) return;
+    setUploadingGpx("delete");
+    try {
+      await supabase.storage.from(GPX_BUCKET).remove([mediaRow.path]);
+      await supabase.from("media").delete().eq("id", mediaRow.id);
+      await loadGpx();
+    } catch (err) { setGpxError(err.message); }
+    finally { setUploadingGpx(null); }
+  }
+
+  function renderGpxBlock(label, mediaRow, scope, role, stageId) {
+    const isUploading = uploadingGpx === (role ?? stageId);
+    const loadingLabel = uploadingGpx === "delete" ? "Suppression…" : isUploading ? "Upload…" : null;
+    return (
+      <div style={{ marginTop: "0.3rem" }}>
+        <strong>{label} :</strong>
+        {mediaRow ? (
+          <span>
+            {mediaRow.file_name}
+            <button type="button" onClick={() => handleGpxDownload(mediaRow)} disabled={!!uploadingGpx}>Télécharger</button>
+            <button type="button" onClick={() => handleGpxReplace(mediaRow, scope, role, stageId)} disabled={!!uploadingGpx}>Remplacer</button>
+            <button type="button" onClick={() => handleGpxDelete(mediaRow)} disabled={!!uploadingGpx}>Supprimer</button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => scope === "stage" ? handleGpxUpload("stage", null, stageId) : handleGpxUpload("roadbook", role, null)} disabled={!!uploadingGpx}>
+            {loadingLabel ?? `Upload ${label}`}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   if (authLoading || loading) return <main><p>Chargement du roadbook…</p></main>;
   if (!user) return null;
   if (fetchError && !roadbook) return <main><h1>Erreur</h1><p style={{ color: "red" }}>{fetchError}</p><Link href="/dashboard/roadbooks">Retour à la liste</Link></main>;
@@ -165,6 +465,36 @@ export default function RoadbookDetailPage() {
         <h2>Visibilité</h2>
         <p>Actuellement : {isPublic ? "public" : "privé"}</p>
         <button type="button" onClick={handleToggleVisibility}>Passer en {isPublic ? "privé" : "public"}</button>
+      </section>
+
+      <section>
+        <h2>Images du roadbook</h2>
+        {uploadError && <p style={{ color: "red" }}>{uploadError}</p>}
+        <div>
+          <label style={{ cursor: "pointer", display: "inline-block", padding: "0.5rem 1rem", border: "1px solid #ccc", borderRadius: 4, background: uploading ? "#eee" : "#fff" }}>
+            {uploading ? "Upload en cours…" : "Choisir une image"}
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUploadImage} disabled={uploading} />
+          </label>
+        </div>
+        {images.length === 0 && <p>Aucune image.</p>}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "1rem", marginTop: "0.5rem" }}>
+          {images.map(img => (
+            <div key={img.id} style={{ position: "relative", width: 200 }}>
+              {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 4 }} />}
+              <div style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>{img.file_name}</div>
+              <button type="button" onClick={() => handleDeleteImage(img)} disabled={deletingImage === img.id}>
+                {deletingImage === img.id ? "Suppression…" : "Supprimer"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2>GPX du roadbook</h2>
+        {gpxError && <p style={{ color: "red" }}>{gpxError}</p>}
+        {renderGpxBlock("GPX officiel", gpxOfficial, "roadbook", "official", null)}
+        {renderGpxBlock("GPX personnalisé", gpxCustom, "roadbook", "custom", null)}
       </section>
 
       <section>
@@ -196,8 +526,10 @@ export default function RoadbookDetailPage() {
         <ul>
           {stages.map(stage => {
             const meta = stage.metadata ?? {};
+            const stagePois = poisByStage[stage.id] ?? [];
+            const stageVariants = variantsByStage[stage.id] ?? [];
             return (
-              <li key={stage.id}>
+              <li key={stage.id} style={{ marginBottom: "1.5rem", border: "1px solid #ccc", borderRadius: 8, padding: "1rem" }}>
                 <strong>Jour {stage.stage_number}</strong>{stage.title && <> — {stage.title}</>}
                 <br />
                 {stage.departure && <>Départ : {stage.departure}</>}
@@ -211,6 +543,69 @@ export default function RoadbookDetailPage() {
                 <div>
                   <button type="button" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id}>Modifier</button>
                   <button type="button" onClick={() => handleDeleteStage(stage.id)} disabled={deleting === stage.id}>Supprimer</button>
+                </div>
+
+                {/* POIs */}
+                <details style={{ marginTop: "0.5rem" }}>
+                  <summary>POI ({stagePois.length})</summary>
+                  {stagePois.length > 0 && <ul>{stagePois.map(poi => (
+                    <li key={poi.id}>
+                      {poi.poi_type && <strong>[{poi.poi_type}]</strong>} {poi.name}
+                      {poi.description && <> — {poi.description}</>}
+                      {poi.lat != null && poi.lng != null && <> ({poi.lat}, {poi.lng})</>}
+                      {poi.link_url && <> — <a href={poi.link_url} target="_blank" rel="noopener">lien</a></>}
+                      <button type="button" onClick={() => {
+                        setPoiForm({ stage_id: stage.id, type: poi.poi_type ?? "", name: poi.name, description: poi.description ?? "", lat: poi.lat != null ? String(poi.lat) : "", lng: poi.lng != null ? String(poi.lng) : "", url: poi.link_url ?? "", editing: poi.id });
+                      }}>Modifier</button>
+                      <button type="button" onClick={() => handleDeletePoi(poi.id)}>Supprimer</button>
+                    </li>
+                  ))}</ul>}
+                  {poiForm.stage_id === stage.id && (
+                    <form onSubmit={handlePoiSubmit} style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#f5f5f5", borderRadius: 4 }}>
+                      <label>Type<input type="text" value={poiForm.type} onChange={e => setPoiForm({ ...poiForm, type: e.target.value })} placeholder="ex: eau, vue" /></label>
+                      <label>Nom<input type="text" value={poiForm.name} onChange={e => setPoiForm({ ...poiForm, name: e.target.value })} required /></label>
+                      <label>Description<textarea value={poiForm.description} onChange={e => setPoiForm({ ...poiForm, description: e.target.value })} /></label>
+                      <label>Latitude<input type="number" step="any" value={poiForm.lat} onChange={e => setPoiForm({ ...poiForm, lat: e.target.value })} /></label>
+                      <label>Longitude<input type="number" step="any" value={poiForm.lng} onChange={e => setPoiForm({ ...poiForm, lng: e.target.value })} /></label>
+                      <label>URL<input type="url" value={poiForm.url} onChange={e => setPoiForm({ ...poiForm, url: e.target.value })} /></label>
+                      <button type="submit">{poiForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                      <button type="button" onClick={clearPoiForm}>Annuler</button>
+                    </form>
+                  )}
+                  {poiForm.stage_id !== stage.id && <button type="button" onClick={() => setPoiForm({ ...poiForm, stage_id: stage.id })}>+ Ajouter un POI</button>}
+                </details>
+
+                {/* Variantes */}
+                <details style={{ marginTop: "0.5rem" }}>
+                  <summary>Variantes ({stageVariants.length})</summary>
+                  {stageVariants.length > 0 && <ul>{stageVariants.map(v => (
+                    <li key={v.id}>
+                      <strong>{v.label}</strong>
+                      {v.description && <> — {v.description}</>}
+                      {v.distance_km != null && <> — {v.distance_km} km</>}
+                      {v.metadata?.elevation_gain_m != null && <> — D+ {v.metadata.elevation_gain_m}m</>}
+                      <button type="button" onClick={() => {
+                        setVariantForm({ stage_id: stage.id, title: v.label, description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: v.metadata?.elevation_gain_m != null ? String(v.metadata.elevation_gain_m) : "", editing: v.id });
+                      }}>Modifier</button>
+                      <button type="button" onClick={() => handleDeleteVariant(v.id)}>Supprimer</button>
+                    </li>
+                  ))}</ul>}
+                  {variantForm.stage_id === stage.id && (
+                    <form onSubmit={handleVariantSubmit} style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#f5f5f5", borderRadius: 4 }}>
+                      <label>Titre<input type="text" value={variantForm.title} onChange={e => setVariantForm({ ...variantForm, title: e.target.value })} required /></label>
+                      <label>Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
+                      <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
+                      <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
+                      <button type="submit">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                      <button type="button" onClick={clearVariantForm}>Annuler</button>
+                    </form>
+                  )}
+                  {variantForm.stage_id !== stage.id && <button type="button" onClick={() => setVariantForm({ ...variantForm, stage_id: stage.id })}>+ Ajouter une variante</button>}
+                </details>
+
+                {/* GPX de l'étape */}
+                <div style={{ marginTop: "0.5rem", padding: "0.3rem 0", borderTop: "1px solid #eee" }}>
+                  {renderGpxBlock("GPX d'étape", gpxByStage[stage.id] ?? null, "stage", null, stage.id)}
                 </div>
               </li>
             );
