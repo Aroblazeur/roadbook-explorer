@@ -63,11 +63,16 @@ Les droits sont **hérités** du roadbook parent via une sous-requête :
 
 ### Media
 
-| Policy                                | SELECT | INSERT     | UPDATE | DELETE |
-|---------------------------------------|--------|------------|--------|--------|
-| Anyone can view media                 | ✓ tous |            |        |        |
-| Authenticated users can insert media  |        | ✓ auth     |        |        |
-| Uploader can update / delete media    |        |            | ✓ uid  | ✓ uid  |
+La table `media` a une colonne `roadbook_id` optionnelle qui lie le fichier à un roadbook.
+Les droits sont **hérités** du roadbook parent quand `roadbook_id` est renseigné.
+
+| Policy                                      | SELECT                    | INSERT                    | UPDATE             | DELETE             |
+|---------------------------------------------|---------------------------|---------------------------|--------------------|--------------------|
+| Anyone can read media of public roadbooks   | is_public ou roadbook null|                           |                    |                    |
+| Owner can read media of own roadbooks       | ✓ uid                     |                           |                    |                    |
+| Owner can insert media on own roadbooks     |                           | ✓ auth + owner roadbook   |                    |                    |
+| Owner can update media of own roadbooks     |                           |                           | ✓ uid ou uploader  |                    |
+| Owner can delete media of own roadbooks     |                           |                           |                    | ✓ uid ou uploader  |
 
 ## Trigger `updated_at`
 

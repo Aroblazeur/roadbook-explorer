@@ -317,6 +317,7 @@ create table if not exists public.media (
   bucket      text not null,
   path        text not null,
   public_url  text,
+  roadbook_id bigint references public.roadbooks(id) on delete cascade,
   uploaded_by uuid references public.profiles(id) on delete set null,
   metadata    jsonb not null default '{}'::jsonb,
   created_at  timestamptz not null default now(),
@@ -325,27 +326,64 @@ create table if not exists public.media (
 );
 
 create index if not exists idx_media_uploader on public.media(uploaded_by);
+create index if not exists idx_media_roadbook on public.media(roadbook_id);
 
 alter table public.media enable row level security;
 
--- Lecture : tout le monde peut voir les médias
-create policy "Anyone can view media"
+-- Lecture : visible si le roadbook parent est public, ou si on en est le owner
+create policy "Anyone can read media of public roadbooks"
   on public.media for select
-  using (true);
+  using (
+    roadbook_id is null
+    or exists (
+      select 1 from public.roadbooks r
+      where r.id = roadbook_id and r.is_public = true
+    )
+  );
 
--- Upload : utilisateur connecté
-create policy "Authenticated users can insert media"
+create policy "Owner can read media of own roadbooks"
+  on public.media for select
+  using (
+    exists (
+      select 1 from public.roadbooks r
+      where r.id = roadbook_id and r.owner_id = auth.uid()
+    )
+  );
+
+-- Upload : l'utilisateur doit être le owner du roadbook lié
+create policy "Owner can insert media on own roadbooks"
   on public.media for insert
-  with check (auth.role() = 'authenticated');
+  with check (
+    auth.role() = 'authenticated'
+    and (
+      roadbook_id is null
+      or exists (
+        select 1 from public.roadbooks r
+        where r.id = roadbook_id and r.owner_id = auth.uid()
+      )
+    )
+  );
 
--- Modification/suppression : uploader seulement
-create policy "Uploader can update media"
+-- Modification/suppression : owner du roadbook parent ou uploader
+create policy "Owner can update media of own roadbooks"
   on public.media for update
-  using (auth.uid() = uploaded_by);
+  using (
+    auth.uid() = uploaded_by
+    or exists (
+      select 1 from public.roadbooks r
+      where r.id = roadbook_id and r.owner_id = auth.uid()
+    )
+  );
 
-create policy "Uploader can delete media"
+create policy "Owner can delete media of own roadbooks"
   on public.media for delete
-  using (auth.uid() = uploaded_by);
+  using (
+    auth.uid() = uploaded_by
+    or exists (
+      select 1 from public.roadbooks r
+      where r.id = roadbook_id and r.owner_id = auth.uid()
+    )
+  );
 
 -- -----------------------------------------------------------
 -- 8. Helper : trigger updated_at
