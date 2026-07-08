@@ -37,24 +37,27 @@ export default function RoadbookDetailPage() {
   const [editingStage, setEditingStage] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  // POI state
   const [poisByStage, setPoisByStage] = useState({});
   const [variantsByStage, setVariantsByStage] = useState({});
   const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
   const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", description: "", distance_km: "", elevation_gain_m: "", editing: null });
 
-  // Image state
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [deletingImage, setDeletingImage] = useState(null);
 
-  // GPX state
   const [gpxError, setGpxError] = useState(null);
-  const [uploadingGpx, setUploadingGpx] = useState(null); // "official" | "custom" | stageId
+  const [uploadingGpx, setUploadingGpx] = useState(null);
   const [gpxOfficial, setGpxOfficial] = useState(null);
   const [gpxCustom, setGpxCustom] = useState(null);
   const [gpxByStage, setGpxByStage] = useState({});
+
+  const [coverMode, setCoverMode] = useState(null); // "url" | "media"
+  const [coverUrl, setCoverUrl] = useState("");
+  const [coverMediaId, setCoverMediaId] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const [duplicating, setDuplicating] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -71,6 +74,16 @@ export default function RoadbookDetailPage() {
           setTitle(data.title);
           setDescription(data.description ?? "");
           setIsPublic(data.is_public);
+          setCoverUrl(data.cover_image_url ?? "");
+          setCoverMediaId(data.cover_media_id ?? null);
+          if (data.cover_image_url) { setCoverMode("url"); setCoverPreview(data.cover_image_url); }
+          else if (data.cover_media_id) {
+            setCoverMode("media"); setCoverPreview(null);
+            supabase.from("media").select("bucket, path").eq("id", data.cover_media_id).maybeSingle()
+              .then(({ data: m }) => {
+                if (m) supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400).then(({ data: s }) => setCoverPreview(s?.signedUrl ?? null));
+              });
+          } else { setCoverMode(null); setCoverPreview(null); }
         }
         setLoading(false);
       });
@@ -300,7 +313,6 @@ export default function RoadbookDetailPage() {
     setUploadError(null); setUploading(true);
     try {
       const { blob, width, height, size } = await resizeImage(file);
-      const ext = "jpg";
       const uuid = crypto.randomUUID();
       const path = `${user.id}/${id}/${uuid}-${file.name}`;
       const { error: storageError } = await supabase.storage.from("roadbook-images").upload(path, blob, { contentType: "image/jpeg", upsert: false });
@@ -425,7 +437,7 @@ export default function RoadbookDetailPage() {
 
   function renderGpxBlock(label, mediaRow, scope, role, stageId) {
     const isUploading = uploadingGpx === (role ?? stageId);
-    const loadingLabel = uploadingGpx === "delete" ? "Suppression…" : isUploading ? "Upload…" : null;
+    const loadingLabel = uploadingGpx === "delete" ? "Suppression..." : isUploading ? "Upload..." : null;
     return (
       <div style={{ marginTop: "0.3rem" }}>
         <strong>{label} :</strong>
@@ -445,7 +457,104 @@ export default function RoadbookDetailPage() {
     );
   }
 
-  if (authLoading || loading) return <main><p>Chargement du roadbook…</p></main>;
+  // --- Cover image ---
+  async function handleSetCoverFromMedia(mediaId) {
+    const { error } = await supabase.from("roadbooks").update({ cover_media_id: mediaId, cover_image_url: null }).eq("id", id);
+    if (error) { setUploadError(error.message); return; }
+    setCoverMediaId(mediaId); setCoverUrl(""); setCoverMode("media"); setCoverPreview(null);
+    supabase.from("media").select("bucket, path").eq("id", mediaId).maybeSingle()
+      .then(({ data: m }) => {
+        if (m) supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400).then(({ data: s }) => setCoverPreview(s?.signedUrl ?? null));
+      });
+    setSuccess("Image de couverture mise à jour.");
+  }
+
+  async function handleSetCoverFromUrl(url) {
+    const cleanUrl = url || null;
+    const { error } = await supabase.from("roadbooks").update({ cover_image_url: cleanUrl, cover_media_id: null }).eq("id", id);
+    if (error) { setUploadError(error.message); return; }
+    setCoverUrl(url); setCoverMediaId(null); setCoverMode(cleanUrl ? "url" : null); setCoverPreview(cleanUrl);
+    setSuccess(cleanUrl ? "Image de couverture mise à jour." : "Image de couverture retirée.");
+  }
+
+  async function handleRemoveCover() {
+    const { error } = await supabase.from("roadbooks").update({ cover_image_url: null, cover_media_id: null }).eq("id", id);
+    if (error) { setUploadError(error.message); return; }
+    setCoverUrl(""); setCoverMediaId(null); setCoverMode(null); setCoverPreview(null);
+    setSuccess("Image de couverture retirée.");
+  }
+
+  // --- Reorder stages ---
+  async function handleMoveStage(stage, direction) {
+    const sorted = [...stages].sort((a, b) => a.stage_number - b.stage_number);
+    const idx = sorted.findIndex(s => s.id === stage.id);
+    const target = direction === "up" ? idx - 1 : idx + 1;
+    if (target < 0 || target >= sorted.length) return;
+    const a = sorted[idx];
+    const b = sorted[target];
+    const { error } = await supabase.rpc("swap_stage_numbers", { id_a: a.id, id_b: b.id });
+    if (error) {
+      // fallback: manual swap
+      const tmp = a.stage_number;
+      await supabase.from("stages").update({ stage_number: b.stage_number }).eq("id", a.id);
+      await supabase.from("stages").update({ stage_number: tmp }).eq("id", b.id);
+    }
+    const { data } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+    if (data) setStages(data);
+  }
+
+  // --- Duplicate ---
+  async function handleDuplicate() {
+    if (!window.confirm("Dupliquer ce roadbook ? Les fichiers (images, GPX) ne seront pas copiés.")) return;
+    setDuplicating(true);
+    setError(null);
+    try {
+      const slug = `${roadbook.slug}-copie-${Date.now()}`;
+      const { data: newRb, error: rbError } = await supabase.from("roadbooks").insert({
+        slug, owner_id: user.id, title: `${roadbook.title} (copie)`, description: roadbook.description, is_public: false,
+      }).select("id").single();
+      if (rbError) { setError(rbError.message); return; }
+
+      for (const stage of stages) {
+        const { data: newStage, error: sError } = await supabase.from("stages").insert({
+          roadbook_id: newRb.id, stage_number: stage.stage_number, title: stage.title,
+          departure: stage.departure, arrival: stage.arrival, distance_km: stage.distance_km,
+          elevation_gain_m: stage.elevation_gain_m, elevation_loss_m: stage.elevation_loss_m,
+          gpx_url: null, accommodation_name: stage.accommodation_name, accommodation_url: stage.accommodation_url,
+          accommodation_photo: null, accommodation_type: stage.accommodation_type,
+          notes: stage.notes, alternatives: stage.alternatives,
+          is_substep: stage.is_substep, parent_stage_number: stage.parent_stage_number,
+          metadata: stage.metadata,
+        }).select("id").single();
+        if (sError) { setError(sError.message); return; }
+
+        const stagePois = poisByStage[stage.id] ?? [];
+        for (const poi of stagePois) {
+          const { error: pError } = await supabase.from("stage_pois").insert({
+            stage_id: newStage.id, name: poi.name, lat: poi.lat, lng: poi.lng,
+            poi_type: poi.poi_type, description: poi.description, photo_url: null,
+            link_url: poi.link_url, sort_order: poi.sort_order, metadata: poi.metadata,
+          });
+          if (pError) { setError(pError.message); return; }
+        }
+
+        const stageVariants = variantsByStage[stage.id] ?? [];
+        for (const v of stageVariants) {
+          const { error: vError } = await supabase.from("stage_variants").insert({
+            stage_id: newStage.id, label: v.label, distance_km: v.distance_km,
+            gpx_url: null, description: v.description, sort_order: v.sort_order, metadata: v.metadata,
+          });
+          if (vError) { setError(vError.message); return; }
+        }
+      }
+
+      setSuccess("Roadbook dupliqué ! Redirection...");
+      setTimeout(() => router.push(`/dashboard/roadbooks/${newRb.id}`), 1000);
+    } catch (err) { setError(err.message); }
+    finally { setDuplicating(false); }
+  }
+
+  if (authLoading || loading) return <main><p>Chargement du roadbook...</p></main>;
   if (!user) return null;
   if (fetchError && !roadbook) return <main><h1>Erreur</h1><p style={{ color: "red" }}>{fetchError}</p><Link href="/dashboard/roadbooks">Retour à la liste</Link></main>;
 
@@ -458,7 +567,7 @@ export default function RoadbookDetailPage() {
         <label>Description<textarea value={description} onChange={e => setDescription(e.target.value)} /></label>
         {error && <p style={{ color: "red" }}>{error}</p>}
         {success && <p style={{ color: "green" }}>{success}</p>}
-        <button type="submit" disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
+        <button type="submit" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</button>
       </form>
 
       <section>
@@ -467,12 +576,44 @@ export default function RoadbookDetailPage() {
         <button type="button" onClick={handleToggleVisibility}>Passer en {isPublic ? "privé" : "public"}</button>
       </section>
 
+      {/* Cover image */}
+      <section>
+        <h2>Image de couverture</h2>
+        {coverUrl && (
+          <div style={{ marginBottom: "0.5rem" }}>
+            <img src={coverUrl} alt="Couverture" style={{ maxWidth: 300, maxHeight: 200, borderRadius: 4 }} />
+            <button type="button" onClick={handleRemoveCover}>Retirer la couverture</button>
+          </div>
+        )}
+        {!coverUrl && <p>Aucune image de couverture.</p>}
+
+        <div style={{ marginBottom: "0.5rem" }}>
+          <label>URL externe :
+            <input type="url" value={coverUrl} onChange={e => setCoverUrl(e.target.value)} placeholder="https://..." style={{ width: 300 }} />
+          </label>
+          <button type="button" onClick={() => handleSetCoverFromUrl(coverUrl)}>Définir comme couverture</button>
+        </div>
+
+        {images.length > 0 && (
+          <div>
+            <p>Ou choisir parmi les images uploadées :</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {images.map(img => (
+                <div key={img.id} style={{ width: 100, cursor: "pointer", border: "2px solid transparent", borderRadius: 4, borderColor: coverUrl === img.signedUrl ? "blue" : "transparent" }} onClick={() => handleSetCoverFromMedia(img.id)}>
+                  {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? ""} style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 2 }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
       <section>
         <h2>Images du roadbook</h2>
         {uploadError && <p style={{ color: "red" }}>{uploadError}</p>}
         <div>
           <label style={{ cursor: "pointer", display: "inline-block", padding: "0.5rem 1rem", border: "1px solid #ccc", borderRadius: 4, background: uploading ? "#eee" : "#fff" }}>
-            {uploading ? "Upload en cours…" : "Choisir une image"}
+            {uploading ? "Upload en cours..." : "Choisir une image"}
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUploadImage} disabled={uploading} />
           </label>
         </div>
@@ -483,7 +624,7 @@ export default function RoadbookDetailPage() {
               {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 150, objectFit: "cover", borderRadius: 4 }} />}
               <div style={{ fontSize: "0.8rem", marginTop: "0.25rem" }}>{img.file_name}</div>
               <button type="button" onClick={() => handleDeleteImage(img)} disabled={deletingImage === img.id}>
-                {deletingImage === img.id ? "Suppression…" : "Supprimer"}
+                {deletingImage === img.id ? "Suppression..." : "Supprimer"}
               </button>
             </div>
           ))}
@@ -524,10 +665,12 @@ export default function RoadbookDetailPage() {
 
         {stages.length === 0 && <p>Aucune étape.</p>}
         <ul>
-          {stages.map(stage => {
+          {stages.map((stage, index) => {
             const meta = stage.metadata ?? {};
             const stagePois = poisByStage[stage.id] ?? [];
             const stageVariants = variantsByStage[stage.id] ?? [];
+            const isFirst = index === 0;
+            const isLast = index === stages.length - 1;
             return (
               <li key={stage.id} style={{ marginBottom: "1.5rem", border: "1px solid #ccc", borderRadius: 8, padding: "1rem" }}>
                 <strong>Jour {stage.stage_number}</strong>{stage.title && <> — {stage.title}</>}
@@ -540,12 +683,13 @@ export default function RoadbookDetailPage() {
                 {meta.difficulty && <> — {meta.difficulty}</>}
                 {stage.accommodation_name && <> — {stage.accommodation_name}</>}
                 {meta.warning && <p style={{ color: "orange" }}>{meta.warning}</p>}
-                <div>
+                <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginTop: "0.3rem" }}>
                   <button type="button" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id}>Modifier</button>
                   <button type="button" onClick={() => handleDeleteStage(stage.id)} disabled={deleting === stage.id}>Supprimer</button>
+                  {!isFirst && <button type="button" onClick={() => handleMoveStage(stage, "up")} disabled={deleting === stage.id}>Monter</button>}
+                  {!isLast && <button type="button" onClick={() => handleMoveStage(stage, "down")} disabled={deleting === stage.id}>Descendre</button>}
                 </div>
 
-                {/* POIs */}
                 <details style={{ marginTop: "0.5rem" }}>
                   <summary>POI ({stagePois.length})</summary>
                   {stagePois.length > 0 && <ul>{stagePois.map(poi => (
@@ -575,7 +719,6 @@ export default function RoadbookDetailPage() {
                   {poiForm.stage_id !== stage.id && <button type="button" onClick={() => setPoiForm({ ...poiForm, stage_id: stage.id })}>+ Ajouter un POI</button>}
                 </details>
 
-                {/* Variantes */}
                 <details style={{ marginTop: "0.5rem" }}>
                   <summary>Variantes ({stageVariants.length})</summary>
                   {stageVariants.length > 0 && <ul>{stageVariants.map(v => (
@@ -603,7 +746,6 @@ export default function RoadbookDetailPage() {
                   {variantForm.stage_id !== stage.id && <button type="button" onClick={() => setVariantForm({ ...variantForm, stage_id: stage.id })}>+ Ajouter une variante</button>}
                 </details>
 
-                {/* GPX de l'étape */}
                 <div style={{ marginTop: "0.5rem", padding: "0.3rem 0", borderTop: "1px solid #eee" }}>
                   {renderGpxBlock("GPX d'étape", gpxByStage[stage.id] ?? null, "stage", null, stage.id)}
                 </div>
@@ -611,6 +753,13 @@ export default function RoadbookDetailPage() {
             );
           })}
         </ul>
+      </section>
+
+      <section>
+        <h2>Actions</h2>
+        <button type="button" onClick={handleDuplicate} disabled={duplicating}>
+          {duplicating ? "Duplication en cours..." : "Dupliquer ce roadbook"}
+        </button>
       </section>
 
       <section>

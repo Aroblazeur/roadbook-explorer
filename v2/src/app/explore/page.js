@@ -17,11 +17,22 @@ async function getPublicRoadbooks() {
 
   const { data } = await supabase
     .from("roadbooks")
-    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at")
+    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id")
     .eq("is_public", true)
     .order("created_at", { ascending: false });
 
   const roadbooks = data ?? [];
+
+  const signedUrls = {};
+  for (const rb of roadbooks) {
+    if (rb.cover_media_id) {
+      const { data: m } = await supabase.from("media").select("bucket, path").eq("id", rb.cover_media_id).maybeSingle();
+      if (m) {
+        const { data: s } = await supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400);
+        signedUrls[rb.id] = s?.signedUrl ?? null;
+      }
+    }
+  }
 
   const stagesCount = await Promise.all(
     roadbooks.map(rb =>
@@ -38,6 +49,7 @@ async function getPublicRoadbooks() {
   return roadbooks.map(rb => ({
     ...rb,
     stage_count: countMap[rb.id] ?? 0,
+    coverSignedUrl: rb.cover_image_url || signedUrls[rb.id] || null,
   }));
 }
 
@@ -53,6 +65,7 @@ export default async function ExplorePage() {
       <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
         {roadbooks.map(rb => (
           <article key={rb.id} style={{ border: "1px solid #ccc", borderRadius: 8, padding: "1rem" }}>
+            {rb.coverSignedUrl && <img src={rb.coverSignedUrl} alt="" style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 4, marginBottom: "0.5rem" }} />}
             <h2 style={{ marginTop: 0 }}>
               <Link href={`/roadbooks/${rb.slug}`} style={{ textDecoration: "none" }}>
                 {rb.title}

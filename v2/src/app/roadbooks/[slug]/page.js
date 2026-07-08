@@ -44,7 +44,48 @@ async function getRoadbook(slug) {
     variants = v ?? [];
   }
 
-  return { roadbook, stages: stages ?? [], pois, variants, private: false };
+  const { data: mediaRows } = await supabase
+    .from("media").select("*").eq("roadbook_id", roadbook.id).order("created_at", { ascending: false });
+  const allMedia = mediaRows ?? [];
+
+  async function signedUrl(bucket, path) {
+    if (!path) return null;
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 86400);
+    return data?.signedUrl ?? null;
+  }
+
+  const images = [];
+  let gpxOfficial = null, gpxCustom = null;
+  const gpxByStage = {};
+  for (const m of allMedia) {
+    if (m.type === "image") {
+      images.push({ ...m, signedUrl: await signedUrl(m.bucket, m.path) });
+    } else if (m.type === "gpx") {
+      const url = await signedUrl(m.bucket, m.path);
+      const row = { ...m, signedUrl: url };
+      if (m.metadata?.scope === "stage" && m.stage_id) {
+        gpxByStage[m.stage_id] = row;
+      } else if (m.metadata?.gpx_role === "official") {
+        gpxOfficial = row;
+      } else if (m.metadata?.gpx_role === "custom") {
+        gpxCustom = row;
+      }
+    }
+  }
+
+  // Cover image
+  let coverSignedUrl = null;
+  if (roadbook.cover_image_url) {
+    coverSignedUrl = roadbook.cover_image_url;
+  } else if (roadbook.cover_media_id) {
+    const { data: coverMedia } = await supabase.from("media").select("bucket, path").eq("id", roadbook.cover_media_id).maybeSingle();
+    if (coverMedia) {
+      const { data: s } = await supabase.storage.from(coverMedia.bucket).createSignedUrl(coverMedia.path, 86400);
+      coverSignedUrl = s?.signedUrl ?? null;
+    }
+  }
+
+  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, private: false };
 }
 
 export default async function RoadbookViewPage({ params }) {
@@ -63,7 +104,7 @@ export default async function RoadbookViewPage({ params }) {
     );
   }
 
-  const { roadbook, stages, pois, variants } = result;
+  const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl } = result;
 
   const poisByStage = {};
   pois.forEach(p => { if (!poisByStage[p.stage_id]) poisByStage[p.stage_id] = []; poisByStage[p.stage_id].push(p); });
@@ -74,6 +115,7 @@ export default async function RoadbookViewPage({ params }) {
     <main>
       <article>
         <header>
+          {coverSignedUrl && <img src={coverSignedUrl} alt="" style={{ width: "100%", maxHeight: 300, objectFit: "cover", borderRadius: 8, marginBottom: "0.5rem" }} />}
           <h1>{roadbook.title}</h1>
           {roadbook.description && <p>{roadbook.description}</p>}
           <p>Visibilité : {roadbook.is_public ? "public" : "privé"}</p>
@@ -81,11 +123,15 @@ export default async function RoadbookViewPage({ params }) {
 
         {renderMetrics(roadbook)}
 
+        {images.length > 0 && renderImages(images)}
+
+        {(gpxOfficial || gpxCustom) && renderGpxSection(gpxOfficial, gpxCustom)}
+
         <section>
           <h2>Étapes ({stages.length})</h2>
           {stages.length === 0 && <p>Ce roadbook n&apos;a pas encore d&apos;étapes.</p>}
           <ol style={{ listStyle: "none", padding: 0 }}>
-            {stages.map(stage => <li key={stage.id}>{renderStageCard(stage, poisByStage[stage.id] ?? [], variantsByStage[stage.id] ?? [])}</li>)}
+            {stages.map(stage => <li key={stage.id}>{renderStageCard(stage, poisByStage[stage.id] ?? [], variantsByStage[stage.id] ?? [], gpxByStage[stage.id] ?? null)}</li>)}
           </ol>
         </section>
       </article>
@@ -119,7 +165,43 @@ function renderMetrics(roadbook) {
   );
 }
 
-function renderStageCard(stage, pois = [], variants = []) {
+function renderImages(images) {
+  return (
+    <section>
+      <h2>Images ({images.length})</h2>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+        {images.map(img => (
+          <div key={img.id} style={{ width: 180 }}>
+            {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 135, objectFit: "cover", borderRadius: 4 }} />}
+            <div style={{ fontSize: "0.75rem", marginTop: "0.2rem" }}>{img.file_name}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function renderGpxSection(gpxOfficial, gpxCustom) {
+  return (
+    <section>
+      <h2>GPX du roadbook</h2>
+      {gpxOfficial && (
+        <p>
+          <strong>GPX officiel :</strong> {gpxOfficial.file_name}{" "}
+          <a href={gpxOfficial.signedUrl} download={gpxOfficial.file_name}>Télécharger</a>
+        </p>
+      )}
+      {gpxCustom && (
+        <p>
+          <strong>GPX personnalisé :</strong> {gpxCustom.file_name}{" "}
+          <a href={gpxCustom.signedUrl} download={gpxCustom.file_name}>Télécharger</a>
+        </p>
+      )}
+    </section>
+  );
+}
+
+function renderStageCard(stage, pois = [], variants = [], stageGpx = null) {
   const meta = stage.metadata ?? {};
   return (
     <article style={{ border: "1px solid #ccc", borderRadius: 8, padding: "1rem", marginBottom: "1rem" }}>
@@ -184,6 +266,13 @@ function renderStageCard(stage, pois = [], variants = []) {
             ))}
           </ul>
         </details>
+      )}
+
+      {stageGpx && (
+        <p style={{ marginTop: "0.5rem" }}>
+          <strong>GPX d&apos;étape :</strong> {stageGpx.file_name}{" "}
+          <a href={stageGpx.signedUrl} download={stageGpx.file_name}>Télécharger</a>
+        </p>
       )}
     </article>
   );

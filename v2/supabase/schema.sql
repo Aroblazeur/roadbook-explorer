@@ -47,6 +47,7 @@ create table if not exists public.roadbooks (
   description     text,
   is_public       boolean not null default false,
   cover_image_url text,
+  cover_media_id  bigint references public.media(id) on delete set null,
   distance_km     numeric(8,2),
   elevation_gain_m integer,
   elevation_loss_m integer,
