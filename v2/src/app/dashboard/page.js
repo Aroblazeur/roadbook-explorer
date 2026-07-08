@@ -28,6 +28,9 @@ export default function DashboardPage() {
       <h1>Dashboard</h1>
       <p>Connecté en tant que : <strong>{user.email}</strong></p>
       <p>ID utilisateur : <code>{user.id}</code></p>
+      <nav>
+        <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
+      </nav>
       <button type="button" onClick={handleLogout}>
         Se déconnecter
       </button>
