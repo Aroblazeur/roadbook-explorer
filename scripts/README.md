@@ -27,7 +27,7 @@ roadbooks/<id>/photos/
 Les arguments peuvent également être passés directement en ligne de commande pour éviter les questions interactives :
 
 ```bash
-npm run create-roadbook -- --id=mon-voyage --title="Mon Voyage" --description="Roadbook vélo." --sheet-id=SHEET_ID
+npm run create-roadbook -- --id=mon-voyage --title="Mon Voyage" --description="Roadbook d'itinérance." --sheet-id=SHEET_ID
 ```
 
 | Option | Description |

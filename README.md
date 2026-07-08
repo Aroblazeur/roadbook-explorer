@@ -1,24 +1,21 @@
 # RoadBook Explorer
 
-Application web SPA/PWA réutilisable pour créer, publier et consulter des roadbooks d’itinérance.
+Application web SPA/PWA réutilisable pour créer, publier et consulter des roadbooks d'aventure et d'itinérance.
 
-RoadBook Explorer n’est plus limité au vélo : il peut servir pour préparer et partager des itinéraires de **bikepacking**, de **randonnée avec bivouac**, de **trek**, de **road trip** ou tout autre voyage découpé en étapes. Le principe reste le même : une bibliothèque de roadbooks, une fiche par voyage, des étapes détaillées, des traces GPX, des hébergements, des points d’intérêt, des notes voyageurs et des contributions publiques.
+RoadBook Explorer peut servir pour préparer et partager des itinéraires de **bikepacking**, de **randonnée avec bivouac**, de **trek**, de **road trip** ou tout autre voyage découpé en étapes. Le principe reste le même : une bibliothèque de roadbooks, une fiche par voyage, des étapes détaillées, des traces GPX, des hébergements, des points d'intérêt, des notes voyageurs et des contributions publiques.
 
-La cible d'architecture est **JSON-first** : chaque voyage possède son dossier et son fichier canonique `roadbooks/<id>/roadbook.json`.
+La cible d'architecture est **JSON-first** : chaque itinérance possède son dossier et son fichier canonique `roadbooks/<id>/roadbook.json`.
 
 Pendant la transition, les Google Sheets existants restent la source de vérité fonctionnelle. Les fichiers JSON sont synchronisés depuis les Sheets afin de préparer la bascule progressive du Studio et du site public.
 
 ## Usages couverts
 
-RoadBook Explorer peut documenter plusieurs types d’itinérances :
+RoadBook Explorer peut documenter plusieurs types d'itinérances :
 
-- **vélo / bikepacking** : étapes cyclables, variantes, traces GPX, campings, hébergements et points d’eau ;
-- **randonnée / trek / bivouac** : étapes à pied, zones de bivouac, refuges, points d’eau, passages délicats et notes terrain ;
-- **road trip** : journées de route, arrêts, hébergements, lieux à visiter et alternatives ;
+- **vélo / bikepacking** : étapes cyclables, variantes, traces GPX, campings, hébergements, points d'eau ;
+- **randonnée / trek / bivouac** : étapes à pied, zones de bivouac, refuges, points d'eau, passages délicats, notes terrain ;
+- **road trip** : journées de route, arrêts, hébergements, lieux à visiter, alternatives ;
 - **voyages mixtes** : combinaisons vélo, marche, train, voiture ou bateau selon les étapes.
-
-Le vocabulaire du projet conserve parfois des noms historiques liés au vélo, mais le moteur et le Studio doivent rester pensés comme un outil générique de roadbook d’aventure.
-
 ## Lancer le projet
 
 Depuis la racine :
@@ -39,7 +36,7 @@ Ou avec n’importe quel serveur statique local. Ouvrir ensuite :
 Le plus simple est d'utiliser le script de scaffolding :
 
 ```bash
-npm run create-roadbook -- --id=drava --title="Drava à vélo" --description="Roadbook d'itinérance." --sheet-id=ID_DU_GOOGLE_SHEET
+npm run create-roadbook -- --id=drava --title="Vallée de la Drava" --description="Roadbook d'itinérance." --sheet-id=ID_DU_GOOGLE_SHEET
 ```
 
 Exemples de titres possibles selon l’usage :
@@ -68,7 +65,7 @@ Puis adaptez au minimum `config.js`. Exemple :
     global.ROADBOOK_CONFIGS.drava = Object.freeze({
         id: "drava",
         shortId: "drava",
-        title: "Drava à vélo",
+        title: "Vallée de la Drava",
         googleSheetId: "ID_DU_GOOGLE_SHEET",
         sheets: Object.freeze({
             stages: Object.freeze({ name: "etapes principales" }),
@@ -169,4 +166,4 @@ roadbooks/
 
 ## Notes PWA
 
-Le service worker conserve un seul moteur, mais sépare les caches par identifiant de roadbook afin d’éviter les mélanges de données entre voyages.
+Le service worker conserve un seul moteur, mais sépare les caches par identifiant de roadbook afin d'éviter les mélanges de données entre itinérances.
