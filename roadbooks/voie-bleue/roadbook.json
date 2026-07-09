@@ -65,6 +65,13 @@
             "name": "Les chalets du centre",
             "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/696931618.jpg?k=6935351d4b6871a7bfc04e880c647f41ad7a93718faaab6871b83220b7798d44&o=",
             "price": ""
+          },
+          {
+            "url": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
+            "website": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
+            "name": "camping municipale thionville",
+            "photo": "",
+            "price": ""
           }
         ],
         "alternativeNames": [],
@@ -95,7 +102,7 @@
           "pointsOfInterest": [],
           "interest": [],
           "accommodation": {
-            "name": "",
+            "name": "Camping mailling",
             "website": "https://www.malling.fr/camping",
             "url": "https://www.malling.fr/camping",
             "photo": "",
@@ -147,7 +154,7 @@
           "pointsOfInterest": [],
           "interest": [],
           "accommodation": {
-            "name": "",
+            "name": "Camping mailling",
             "website": "https://www.malling.fr/camping",
             "url": "https://www.malling.fr/camping",
             "photo": "",
@@ -631,6 +638,13 @@
             "name": "Les chalets du centre",
             "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/696931618.jpg?k=6935351d4b6871a7bfc04e880c647f41ad7a93718faaab6871b83220b7798d44&o=",
             "price": ""
+          },
+          {
+            "url": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
+            "website": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
+            "name": "camping municipale thionville",
+            "photo": "",
+            "price": ""
           }
         ],
         "alternativeNames": [],
@@ -661,7 +675,7 @@
           "pointsOfInterest": [],
           "interest": [],
           "accommodation": {
-            "name": "",
+            "name": "Camping mailling",
             "website": "https://www.malling.fr/camping",
             "url": "https://www.malling.fr/camping",
             "photo": "",
@@ -713,7 +727,7 @@
           "pointsOfInterest": [],
           "interest": [],
           "accommodation": {
-            "name": "",
+            "name": "Camping mailling",
             "website": "https://www.malling.fr/camping",
             "url": "https://www.malling.fr/camping",
             "photo": "",
