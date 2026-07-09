@@ -58,7 +58,15 @@
         "website": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
         "url": "",
         "photo": "",
-        "alternatives": [],
+        "alternatives": [
+          {
+            "url": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
+            "website": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
+            "name": "Les chalets du centre",
+            "photo": "",
+            "price": ""
+          }
+        ],
         "alternativeNames": [],
         "alternativePhotos": [],
         "price": ""
@@ -540,7 +548,15 @@
         "website": "https://www.capfun.com/camping-france-lorraine-la_mirabelle-FR.html",
         "url": "",
         "photo": "",
-        "alternatives": [],
+        "alternatives": [
+          {
+            "url": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
+            "website": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
+            "name": "Les chalets du centre",
+            "photo": "",
+            "price": ""
+          }
+        ],
         "alternativeNames": [],
         "alternativePhotos": [],
         "price": ""
