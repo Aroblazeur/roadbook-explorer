@@ -288,12 +288,42 @@ create table if not exists public.stage_variants (
   gpx_url     text,
   description text,
   sort_order  smallint not null default 0,
+  departure   text,
+  arrival     text,
+  elevation_gain_m integer,
+  elevation_loss_m integer,
+  map_embed_url text,
+  notes       jsonb not null default '[]'::jsonb,
   metadata    jsonb not null default '{}'::jsonb,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
 
 create index if not exists idx_variants_stage on public.stage_variants(stage_id);
+
+-- Ajout des colonnes manquantes pour les variantes existantes (idempotent)
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'stage_variants' and column_name = 'departure') then
+    alter table public.stage_variants add column departure text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'stage_variants' and column_name = 'arrival') then
+    alter table public.stage_variants add column arrival text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'stage_variants' and column_name = 'elevation_gain_m') then
+    alter table public.stage_variants add column elevation_gain_m integer;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'stage_variants' and column_name = 'elevation_loss_m') then
+    alter table public.stage_variants add column elevation_loss_m integer;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'stage_variants' and column_name = 'map_embed_url') then
+    alter table public.stage_variants add column map_embed_url text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'stage_variants' and column_name = 'notes') then
+    alter table public.stage_variants add column notes jsonb not null default '[]'::jsonb;
+  end if;
+end;
+$$;
 
 alter table public.stage_variants enable row level security;
 

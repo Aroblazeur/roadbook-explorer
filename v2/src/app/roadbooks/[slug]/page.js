@@ -239,26 +239,49 @@ function ImagesSection({ images }) {
 
 function VariantCard({ v }) {
   const vmeta = v.metadata ?? {};
+  const vType = vmeta.type;
+  const vGain = v.elevation_gain_m ?? vmeta.elevation_gain_m;
+  const vLoss = v.elevation_loss_m ?? vmeta.elevation_loss_m;
+  const vDep = v.departure ?? vmeta.departure;
+  const vArr = v.arrival ?? vmeta.arrival;
   return (
-    <div style={{ borderLeft: "3px solid #999", paddingLeft: "0.75rem", marginBottom: "0.5rem", marginLeft: "1rem" }}>
+    <div style={{ border: "1px dashed #bbb", borderRadius: 12, padding: "0.75rem", marginBottom: "0.5rem", marginLeft: "1.5rem", background: "#fafafa" }}>
       <p style={{ margin: 0 }}>
         <span style={{ color: "#666" }}>↳ </span>
-        {vmeta.type && <strong style={{ fontSize: "0.85rem", color: "#555" }}>{vmeta.type}</strong>}{vmeta.type && <> — </>}
+        {vType && <span style={{ border: "1px solid #999", borderRadius: 999, padding: "0.1rem 0.5rem", fontSize: "0.8rem", marginRight: "0.3rem" }}>{vType}</span>}
         <strong>{v.label}</strong>
       </p>
-      {(vmeta.departure || vmeta.arrival) && (
+      {(vDep || vArr) && (
         <p style={{ margin: "0.25rem 0", fontSize: "0.9rem", color: "#444" }}>
-          {vmeta.departure && <span>{vmeta.departure}</span>}
-          {vmeta.departure && vmeta.arrival && <> → </>}
-          {vmeta.arrival && <span>{vmeta.arrival}</span>}
+          {vDep && <span>{vDep}</span>}
+          {vDep && vArr && <> → </>}
+          {vArr && <span>{vArr}</span>}
         </p>
       )}
-      <div style={{ display: "flex", gap: "1rem", fontSize: "0.85rem", color: "#555" }}>
-        {v.distance_km != null && <span><strong>{v.distance_km}</strong> km</span>}
-        {vmeta.elevation_gain_m != null && <span><strong>{vmeta.elevation_gain_m}</strong> m D+</span>}
-        {vmeta.elevation_loss_m != null && <span><strong>{vmeta.elevation_loss_m}</strong> m D−</span>}
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", fontSize: "0.85rem", color: "#555", marginTop: "0.25rem" }}>
+        {v.distance_km != null && <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.1rem 0.5rem", background: "#f1f8f2" }}><strong>{v.distance_km}</strong> km</span>}
+        {vGain != null && <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.1rem 0.5rem", background: "#f1f8f2" }}><strong>{vGain}</strong> m D+</span>}
+        {vLoss != null && <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.1rem 0.5rem", background: "#f1f8f2" }}><strong>{vLoss}</strong> m D−</span>}
       </div>
       {v.description && <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>{v.description}</p>}
+    </div>
+  );
+}
+
+function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
+  const items = [];
+  if (distanceKm != null) items.push({ label: "km", value: distanceKm });
+  if (elevationGain != null) items.push({ label: "D+", value: elevationGain, unit: "m" });
+  if (elevationLoss != null) items.push({ label: "D−", value: elevationLoss, unit: "m" });
+  if (duration) items.push({ label: "Durée", value: duration });
+  if (!items.length) return null;
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", margin: "0.5rem 0" }}>
+      {items.map((item, i) => (
+        <span key={i} style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.2rem 0.7rem", fontSize: "0.85rem", background: "#f1f8f2", whiteSpace: "nowrap" }}>
+          <strong>{item.value}</strong>{item.unit ? ` ${item.unit}` : ""} {item.label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -266,83 +289,95 @@ function VariantCard({ v }) {
 function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
   const meta = stage.metadata ?? {};
   return (
-    <article style={{ border: "1px solid #ccc", borderRadius: 8, padding: "1rem", marginBottom: "1rem" }}>
-      <h3>
-        {stage.stage_label || (stage.day ? `${stage.day} — ` : "Jour " + stage.stage_number)}
-        {stage.title && <> — {stage.title}</>}
-      </h3>
+    <article style={{ border: "1px solid #ddd", borderRadius: 16, padding: "1rem", marginBottom: "1rem", background: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+        <div style={{ minWidth: 42, width: 42, height: 42, borderRadius: "50%", background: "#2e7d32", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.1rem" }}>
+          {stage.stage_number}
+        </div>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: 0 }}>
+            {stage.stage_label || (stage.day ? `${stage.day}` : "")}
+            {stage.title && <span style={{ fontWeight: "normal", color: "#555" }}> — {stage.title}</span>}
+          </h3>
+        </div>
+        {stage.accommodation_name && (
+          <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.2rem 0.6rem", fontSize: "0.8rem", whiteSpace: "nowrap", background: "#f1f8f2" }}>
+            🏕 {stage.accommodation_name}
+          </span>
+        )}
+      </div>
 
       {stage.stage_photo_url && (
-        <img src={stage.stage_photo_url} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 4, marginBottom: "0.5rem" }} />
+        <img src={stage.stage_photo_url} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 12, margin: "0.75rem 0" }} />
       )}
 
       {(stage.departure || stage.arrival) && (
-        <p>
+        <p style={{ margin: "0.25rem 0" }}>
           {stage.departure && <span>Départ : {stage.departure}</span>}
           {stage.departure && stage.arrival && <> → </>}
           {stage.arrival && <span>Arrivée : {stage.arrival}</span>}
         </p>
       )}
 
-      <div style={{ display: "flex", gap: "1rem", fontSize: "0.9rem", marginBottom: "0.5rem" }}>
-        {stage.distance_km != null && <span><strong>{stage.distance_km}</strong> km</span>}
-        {stage.elevation_gain_m != null && <span><strong>{stage.elevation_gain_m}</strong> m D+</span>}
-        {stage.elevation_loss_m != null && <span><strong>{stage.elevation_loss_m}</strong> m D−</span>}
-        {stage.duration && <span>Durée : {stage.duration}</span>}
-      </div>
+      <Pills distanceKm={stage.distance_km} elevationGain={stage.elevation_gain_m} elevationLoss={stage.elevation_loss_m} duration={stage.duration} />
 
-      {meta.description && <p>{meta.description}</p>}
-      {meta.difficulty && <p>Difficulté : {meta.difficulty}</p>}
-      {meta.warning && <p style={{ color: "orange" }}>{meta.warning}</p>}
+      {meta.description && <p style={{ margin: "0.25rem 0" }}>{meta.description}</p>}
+      {meta.warning && <p style={{ color: "#e65100", margin: "0.25rem 0" }}>⚠ {meta.warning}</p>}
 
-      {stage.accommodation_name && (
-        <p>
-          Hébergement : <strong>{stage.accommodation_name}</strong>
-          {stage.accommodation_type && <> ({stage.accommodation_type})</>}
-          {stage.accommodation_url && <> — <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer">Site web</a></>}
+      {stage.accommodation_photo && (
+        <div style={{ margin: "0.5rem 0" }}>
+          <img src={stage.accommodation_photo} alt={stage.accommodation_name ?? ""} style={{ width: "100%", maxHeight: 150, objectFit: "cover", borderRadius: 12 }} />
+        </div>
+      )}
+
+      {stage.accommodation_url && (
+        <p style={{ margin: "0.25rem 0" }}>
+          <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer">🔗 Site web de l&apos;hébergement</a>
         </p>
       )}
 
       {showMap && stage.map_embed_url && (
-        <div style={{ marginBottom: "0.5rem" }}>
-          <iframe src={stage.map_embed_url} width="100%" height="300" style={{ border: "none", borderRadius: 4 }} allowFullScreen loading="lazy" />
+        <div style={{ margin: "0.5rem 0" }}>
+          <iframe src={stage.map_embed_url} width="100%" height="300" style={{ border: "none", borderRadius: 12 }} allowFullScreen loading="lazy" />
         </div>
       )}
 
       {showMap && !stage.map_embed_url && stageGpx && (
-        <div style={{ marginBottom: "0.5rem" }}>
+        <div style={{ margin: "0.5rem 0" }}>
           <MapViewerClient gpxUrl={stageGpx.signedUrl} height={300} />
         </div>
       )}
 
       {Array.isArray(stage.notes) && stage.notes.length > 0 && (
-        <details>
+        <details style={{ marginTop: "0.5rem" }}>
           <summary>Notes ({stage.notes.length})</summary>
-          <ul>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
             {stage.notes.map((note, i) => (
-              <li key={i}>
-                {note.text ?? note}
-                {note.photo && <> <img src={note.photo} alt="" style={{ maxWidth: 200, display: "block", marginTop: "0.25rem", borderRadius: 4 }} /></>}
-              </li>
+              <div key={i} style={{ border: "1px solid #ddd", borderRadius: 12, padding: "0.75rem", background: "#f8faf8" }}>
+                <p style={{ margin: 0 }}>{note.text ?? note}</p>
+                {note.photo && <img src={note.photo} alt="" style={{ maxWidth: 200, marginTop: "0.25rem", borderRadius: 8 }} />}
+              </div>
             ))}
-          </ul>
+          </div>
         </details>
       )}
 
       {pois.length > 0 && (
         <details style={{ marginTop: "0.5rem" }}>
           <summary>Points d&apos;intérêt ({pois.length})</summary>
-          <ul>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
             {pois.map(poi => (
-              <li key={poi.id}>
-                {poi.poi_type && <strong>[{poi.poi_type}]</strong>} {poi.name}
-                {poi.region && <> — <em>{poi.region}</em></>}
-                {poi.description && <> — {poi.description}</>}
-                {poi.photo_url && <> <img src={poi.photo_url} alt="" style={{ maxHeight: 100, borderRadius: 4, display: "block", marginTop: "0.25rem" }} /></>}
-                {poi.link_url && <> — <a href={poi.link_url} target="_blank" rel="noopener">lien</a></>}
-              </li>
+              <div key={poi.id} style={{ display: "grid", gridTemplateColumns: poi.photo_url ? "120px 1fr" : "1fr", gap: "0.75rem", border: "1px solid #ddd", borderRadius: 12, padding: "0.75rem", background: "#fff" }}>
+                {poi.photo_url && <img src={poi.photo_url} alt="" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 8 }} />}
+                <div>
+                  <p style={{ margin: 0, fontWeight: "bold" }}>{poi.poi_type && <span style={{ color: "#2e7d32" }}>[{poi.poi_type}] </span>}{poi.name}</p>
+                  {poi.region && <p style={{ margin: "0.2rem 0", fontSize: "0.85rem", color: "#666" }}>{poi.region}</p>}
+                  {poi.description && <p style={{ margin: "0.2rem 0", fontSize: "0.9rem" }}>{poi.description}</p>}
+                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" style={{ fontSize: "0.85rem" }}>Ouvrir le lien →</a>}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </details>
       )}
 

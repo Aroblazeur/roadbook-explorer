@@ -20,6 +20,9 @@ export default function RoadbookDetailPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [activity, setActivity] = useState("");
+  const [destination, setDestination] = useState("");
+  const [project, setProject] = useState("");
 
   const [stages, setStages] = useState([]);
   const [stageDayNumber, setStageDayNumber] = useState("");
@@ -47,7 +50,8 @@ export default function RoadbookDetailPage() {
   const [poisByStage, setPoisByStage] = useState({});
   const [variantsByStage, setVariantsByStage] = useState({});
   const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
-  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", editing: null });
+  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
+  const [expandedStages, setExpandedStages] = useState({});
 
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -89,6 +93,9 @@ export default function RoadbookDetailPage() {
           setTitle(data.title);
           setDescription(data.description ?? "");
           setIsPublic(data.is_public);
+          setActivity(data.metadata?.activity ?? "");
+          setDestination(data.metadata?.destination ?? "");
+          setProject(data.metadata?.project ?? "");
           setCoverUrl(data.cover_image_url ?? "");
           setCoverMediaId(data.cover_media_id ?? null);
           if (data.cover_image_url) { setCoverMode("url"); setCoverPreview(data.cover_image_url); }
@@ -143,10 +150,14 @@ export default function RoadbookDetailPage() {
   async function handleSave(e) {
     e.preventDefault();
     setError(null); setSuccess(null); setSaving(true);
+    const meta = { ...(roadbook?.metadata ?? {}) };
+    if (activity) meta.activity = activity; else delete meta.activity;
+    if (destination) meta.destination = destination; else delete meta.destination;
+    if (project) meta.project = project; else delete meta.project;
     const { error: updateError } = await supabase
-      .from("roadbooks").update({ title, description }).eq("id", id);
+      .from("roadbooks").update({ title, description, metadata: meta }).eq("id", id);
     if (updateError) setError(updateError.message);
-    else { setSuccess("Roadbook mis à jour."); setRoadbook(prev => ({ ...prev, title, description })); }
+    else { setSuccess("Roadbook mis à jour."); setRoadbook(prev => ({ ...prev, title, description, metadata: meta })); }
     setSaving(false);
   }
 
@@ -234,7 +245,7 @@ export default function RoadbookDetailPage() {
   }
 
   function clearPoiForm() { setPoiForm({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null }); }
-  function clearVariantForm() { setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", editing: null }); }
+  function clearVariantForm() { setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }); }
 
   function reloadPoisVariants(stageIds) {
     if (!stageIds?.length) return;
@@ -277,12 +288,9 @@ export default function RoadbookDetailPage() {
     e.preventDefault();
     setStageError(null); setStageSuccess(null);
     const meta = {};
-    if (variantForm.elevation_gain_m) meta.elevation_gain_m = Number(variantForm.elevation_gain_m);
-    if (variantForm.elevation_loss_m) meta.elevation_loss_m = Number(variantForm.elevation_loss_m);
     if (variantForm.type) meta.type = variantForm.type;
-    if (variantForm.departure) meta.departure = variantForm.departure;
-    if (variantForm.arrival) meta.arrival = variantForm.arrival;
-    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, metadata: Object.keys(meta).length ? meta : {} };
+    const notesArr = variantForm.notes ? variantForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text })) : [];
+    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, departure: variantForm.departure || null, arrival: variantForm.arrival || null, elevation_gain_m: variantForm.elevation_gain_m ? Number(variantForm.elevation_gain_m) : null, elevation_loss_m: variantForm.elevation_loss_m ? Number(variantForm.elevation_loss_m) : null, map_embed_url: variantForm.map_embed_url || null, notes: notesArr.length ? notesArr : [], metadata: Object.keys(meta).length ? meta : {} };
     if (variantForm.editing) {
       const { error: updateError } = await supabase.from("stage_variants").update(record).eq("id", variantForm.editing);
       if (updateError) { setStageError(updateError.message); return; }
@@ -972,6 +980,14 @@ export default function RoadbookDetailPage() {
       <form onSubmit={handleSave}>
         <label>Titre<input type="text" value={title} onChange={e => setTitle(e.target.value)} required /></label>
         <label>Description<textarea value={description} onChange={e => setDescription(e.target.value)} /></label>
+        <label>Activité<input type="text" value={activity} onChange={e => setActivity(e.target.value)} placeholder="ex: vélo, randonnée" /></label>
+        <label>Destination<input type="text" value={destination} onChange={e => setDestination(e.target.value)} placeholder="ex: Espagne, Alpes" /></label>
+        <label>Projet<select value={project} onChange={e => setProject(e.target.value)}>
+          <option value="">—</option>
+          <option value="En projet">En projet</option>
+          <option value="Voyage réalisé">Voyage réalisé</option>
+          <option value="À faire">À faire</option>
+        </select></label>
         {error && <p style={{ color: "red" }}>{error}</p>}
         {success && <p style={{ color: "green" }}>{success}</p>}
         <button type="submit" disabled={saving}>{saving ? "Enregistrement..." : "Enregistrer"}</button>
@@ -1087,29 +1103,33 @@ export default function RoadbookDetailPage() {
             const stageVariants = variantsByStage[stage.id] ?? [];
             const isFirst = index === 0;
             const isLast = index === stages.length - 1;
+            const expanded = expandedStages[stage.id] ?? false;
             return (
-              <li key={stage.id} style={{ marginBottom: "1.5rem", border: "1px solid #ccc", borderRadius: 8, padding: "1rem" }}>
-                <strong>Jour {stage.stage_number}</strong>{stage.title && <> — {stage.title}</>}
-                <br />
-                {stage.departure && <>Départ : {stage.departure}</>}
-                {stage.arrival && <> → Arrivée : {stage.arrival}</>}
-                {stage.distance_km != null && <> — {stage.distance_km} km</>}
-                {stage.elevation_gain_m != null && <> — D+ {stage.elevation_gain_m}m</>}
-                {stage.elevation_loss_m != null && <> — D- {stage.elevation_loss_m}m</>}
-                {meta.difficulty && <> — {meta.difficulty}</>}
-                {stage.accommodation_name && <> — {stage.accommodation_name}</>}
-                {accommodationIndex && stage.accommodation_name && (
-                  <button type="button" onClick={() => handleEnrichAccommodation(stage)} disabled={enrichingAccommodation === stage.id}>
-                    {enrichingAccommodation === stage.id ? "..." : "Enrichir hébergement"}
-                  </button>
-                )}
-                {meta.warning && <p style={{ color: "orange" }}>{meta.warning}</p>}
-                <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginTop: "0.3rem" }}>
-                  <button type="button" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id}>Modifier</button>
-                  <button type="button" onClick={() => handleDeleteStage(stage.id)} disabled={deleting === stage.id}>Supprimer</button>
-                  {!isFirst && <button type="button" onClick={() => handleMoveStage(stage, "up")} disabled={deleting === stage.id}>Monter</button>}
-                  {!isLast && <button type="button" onClick={() => handleMoveStage(stage, "down")} disabled={deleting === stage.id}>Descendre</button>}
+              <li key={stage.id} style={{ marginBottom: "1.5rem", border: "1px solid #ccc", borderRadius: 8, padding: "0.75rem 1rem" }}>
+                <div style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setExpandedStages(prev => ({ ...prev, [stage.id]: !prev[stage.id] }))}>
+                  <span style={{ fontWeight: "bold", fontSize: "1.05rem" }}>Jour {stage.stage_number}</span>{stage.title && <span style={{ color: "#555" }}> — {stage.title}</span>}
+                  <span style={{ float: "right", color: "#888" }}>{expanded ? "▴" : "▾"}</span>
+                  <br />
+                  <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                    {stage.departure && <>{stage.departure}</>}
+                    {stage.departure && stage.arrival && <> → </>}
+                    {stage.arrival && <>{stage.arrival}</>}
+                    {stage.distance_km != null && <> — {stage.distance_km} km</>}
+                    {stage.elevation_gain_m != null && <> — D+{stage.elevation_gain_m}</>}
+                    {stage.elevation_loss_m != null && <> — D-{stage.elevation_loss_m}</>}
+                    {meta.difficulty && <> — {meta.difficulty}</>}
+                    {stage.accommodation_name && <> — 🏕 {stage.accommodation_name}</>}
+                  </span>
                 </div>
+                {!expanded && (
+                  <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginTop: "0.3rem" }}>
+                    <button type="button" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id}>Modifier</button>
+                    <button type="button" onClick={() => handleDeleteStage(stage.id)} disabled={deleting === stage.id}>Supprimer</button>
+                    {!isFirst && <button type="button" onClick={() => handleMoveStage(stage, "up")} disabled={deleting === stage.id}>Monter</button>}
+                    {!isLast && <button type="button" onClick={() => handleMoveStage(stage, "down")} disabled={deleting === stage.id}>Descendre</button>}
+                  </div>
+                )}
+                {expanded && <>
 
                 <details style={{ marginTop: "0.5rem" }}>
                   <summary>POI ({stagePois.length})</summary>
@@ -1154,13 +1174,13 @@ export default function RoadbookDetailPage() {
                       <strong>{vmeta.type ? <>{vmeta.type} — </> : null}{v.label}</strong>
                       {v.description && <> — {v.description}</>}
                       {v.distance_km != null && <> — {v.distance_km} km</>}
-                      {vmeta.elevation_gain_m != null && <> — D+ {vmeta.elevation_gain_m}m</>}
-                      {vmeta.elevation_loss_m != null && <> — D- {vmeta.elevation_loss_m}m</>}
-                      {vmeta.departure && <> — {vmeta.departure}</>}
-                      {vmeta.arrival && <> → {vmeta.arrival}</>}
+                      {(v.elevation_gain_m ?? vmeta.elevation_gain_m) != null && <> — D+ {(v.elevation_gain_m ?? vmeta.elevation_gain_m)}m</>}
+                      {(v.elevation_loss_m ?? vmeta.elevation_loss_m) != null && <> — D- {(v.elevation_loss_m ?? vmeta.elevation_loss_m)}m</>}
+                      {(v.departure ?? vmeta.departure) && <> — {v.departure ?? vmeta.departure}</>}
+                      {(v.arrival ?? vmeta.arrival) && <> → {v.arrival ?? vmeta.arrival}</>}
                       {v.gpx_url && <> — GPX disponible</>}
                       <button type="button" onClick={() => {
-                        setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: vmeta.departure ?? "", arrival: vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: vmeta.elevation_gain_m != null ? String(vmeta.elevation_gain_m) : "", elevation_loss_m: vmeta.elevation_loss_m != null ? String(vmeta.elevation_loss_m) : "", editing: v.id });
+                        setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: v.departure ?? vmeta.departure ?? "", arrival: v.arrival ?? vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: (v.elevation_gain_m ?? vmeta.elevation_gain_m) != null ? String(v.elevation_gain_m ?? vmeta.elevation_gain_m) : "", elevation_loss_m: (v.elevation_loss_m ?? vmeta.elevation_loss_m) != null ? String(v.elevation_loss_m ?? vmeta.elevation_loss_m) : "", map_embed_url: v.map_embed_url ?? "", notes: Array.isArray(v.notes) && v.notes.length ? v.notes.map(n => n.text ?? n).join("\n") : "", editing: v.id });
                       }}>Modifier</button>
                       <button type="button" onClick={() => handleDeleteVariant(v.id)}>Supprimer</button>
                     </li>
@@ -1174,9 +1194,11 @@ export default function RoadbookDetailPage() {
                       <label>Arrivée<input type="text" value={variantForm.arrival} onChange={e => setVariantForm({ ...variantForm, arrival: e.target.value })} /></label>
                       <label>Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
                       <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
-                      <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
-                      <label>D- (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
-                      <button type="submit">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                        <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
+                        <label>D- (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
+                        <label>Carte intégrée<input type="url" value={variantForm.map_embed_url} onChange={e => setVariantForm({ ...variantForm, map_embed_url: e.target.value })} placeholder="https://mapy.com/..." /></label>
+                        <label>Notes (une par ligne)<textarea value={variantForm.notes} onChange={e => setVariantForm({ ...variantForm, notes: e.target.value })} placeholder="Note 1&#10;Note 2" /></label>
+                        <button type="submit">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
                       <button type="button" onClick={clearVariantForm}>Annuler</button>
                     </form>
                   )}
@@ -1191,7 +1213,7 @@ export default function RoadbookDetailPage() {
                     </button>
                   )}
                 </div>
-              </li>
+              </>}</li>
             );
           })}
         </ul>
