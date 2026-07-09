@@ -37,7 +37,39 @@ create policy "Users can update own profile"
   using (auth.uid() = id);
 
 -- -----------------------------------------------------------
--- 3. Roadbooks
+-- 3. Auto-profile trigger (insère une ligne dans public.profiles à chaque inscription)
+-- -----------------------------------------------------------
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, display_name, avatar_url)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', new.email),
+    new.raw_user_meta_data ->> 'avatar_url'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.triggers
+    where trigger_name = 'on_auth_user_created'
+      and event_object_schema = 'auth'
+      and event_object_table = 'users'
+  ) then
+    create trigger on_auth_user_created
+      after insert on auth.users
+      for each row execute function public.handle_new_user();
+  end if;
+end;
+$$;
+
+-- -----------------------------------------------------------
+-- 4. Roadbooks
 -- -----------------------------------------------------------
 create table if not exists public.roadbooks (
   id              bigint generated always as identity primary key,
@@ -86,7 +118,7 @@ create policy "Owner can delete roadbooks"
   using (auth.uid() = owner_id);
 
 -- -----------------------------------------------------------
--- 4. Stages
+-- 5. Stages
 -- -----------------------------------------------------------
 create table if not exists public.stages (
   id                   bigint generated always as identity primary key,
@@ -171,7 +203,7 @@ create policy "Owner can delete stages"
   );
 
 -- -----------------------------------------------------------
--- 5. Stage POIs
+-- 6. Stage POIs
 -- -----------------------------------------------------------
 create table if not exists public.stage_pois (
   id          bigint generated always as identity primary key,
@@ -246,7 +278,7 @@ create policy "Owner can delete pois"
   );
 
 -- -----------------------------------------------------------
--- 6. Stage variants (boucles, variantes — remplace parentStage)
+-- 7. Stage variants (boucles, variantes — remplace parentStage)
 -- -----------------------------------------------------------
 create table if not exists public.stage_variants (
   id          bigint generated always as identity primary key,
@@ -317,7 +349,7 @@ create policy "Owner can delete variants"
   );
 
 -- -----------------------------------------------------------
--- 7. Media
+-- 8. Media
 -- -----------------------------------------------------------
 create table if not exists public.media (
   id          bigint generated always as identity primary key,
@@ -414,7 +446,7 @@ end;
 $$;
 
 -- -----------------------------------------------------------
--- 8. Helper : trigger updated_at
+-- 9. Helper : trigger updated_at
 -- -----------------------------------------------------------
 create or replace function public.set_updated_at()
 returns trigger as $$
