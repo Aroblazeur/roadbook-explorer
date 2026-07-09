@@ -71,6 +71,8 @@ export default function RoadbookDetailPage() {
   const [enrichmentError, setEnrichmentError] = useState(null);
   const [enrichingPoi, setEnrichingPoi] = useState(null);
   const [enrichingAccommodation, setEnrichingAccommodation] = useState(null);
+  const [automationBusy, setAutomationBusy] = useState(null);
+  const [automationResult, setAutomationResult] = useState(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -611,6 +613,220 @@ export default function RoadbookDetailPage() {
     finally { setEnrichingAccommodation(null); }
   }
 
+  // --- Automations ---
+
+  async function handleRecalculateTotals() {
+    if (!stages.length) { setAutomationResult("Aucune étape à analyser."); return; }
+    setAutomationBusy("totals");
+    setAutomationResult(null);
+    try {
+      let totalDist = 0, totalGain = 0, totalLoss = 0;
+      let hasDist = false, hasGain = false, hasLoss = false;
+      stages.forEach(s => {
+        if (s.distance_km != null) { totalDist += Number(s.distance_km); hasDist = true; }
+        if (s.elevation_gain_m != null) { totalGain += Number(s.elevation_gain_m); hasGain = true; }
+        if (s.elevation_loss_m != null) { totalLoss += Number(s.elevation_loss_m); hasLoss = true; }
+      });
+      const summaryParts = [`${stages.length} étape(s)`];
+      if (hasDist) summaryParts.push(`distance totale : ${totalDist.toFixed(1)} km`);
+      else summaryParts.push("distance : aucune donnée");
+      if (hasGain) summaryParts.push(`D+ total : ${Math.round(totalGain)} m`);
+      if (hasLoss) summaryParts.push(`D− total : ${Math.round(totalLoss)} m`);
+
+      if (!hasDist && !hasGain && !hasLoss) {
+        setAutomationResult("Aucune métrique disponible dans les étapes pour calculer les totaux.");
+        setAutomationBusy(null); return;
+      }
+
+      const ok = window.confirm(
+        `Totaux calculés sur ${stages.length} étape(s) :\n\n`
+        + (hasDist ? `• Distance : ${totalDist.toFixed(1)} km\n` : "")
+        + (hasGain ? `• D+ : ${Math.round(totalGain)} m\n` : "")
+        + (hasLoss ? `• D− : ${Math.round(totalLoss)} m\n` : "")
+        + `\nAppliquer ces totaux au roadbook ?`
+      );
+      if (!ok) { setAutomationBusy(null); return; }
+
+      const updateFields = {};
+      if (hasDist) updateFields.distance_total_km = Math.round(totalDist * 100) / 100;
+      if (hasGain) updateFields.elevation_gain_total_m = Math.round(totalGain);
+      if (hasLoss) updateFields.elevation_loss_total_m = Math.round(totalLoss);
+
+      const { error } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
+      if (error) { setAutomationResult(`Erreur : ${error.message}`); return; }
+      setAutomationResult(`Totaux appliqués : ${summaryParts.join(", ")}.`);
+      setRoadbook(prev => ({ ...prev, ...updateFields }));
+    } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
+    finally { setAutomationBusy(null); }
+  }
+
+  async function handleAnalyzeStageGpx() {
+    setAutomationBusy("gpx");
+    setAutomationResult(null);
+    const report = { analyzed: 0, updated: 0, errors: [] };
+    try {
+      const stats = stages.map(s => ({ stage: s, gpx: gpxByStage[s.id] ?? null }));
+      const withGpx = stats.filter(s => s.gpx);
+      if (!withGpx.length) {
+        setAutomationResult("Aucune étape avec GPX. Importez un GPX d'étape d'abord.");
+        setAutomationBusy(null); return;
+      }
+
+      const previewLines = ["Étapes avec GPX détectées :"];
+      for (const { stage } of withGpx) {
+        const has = [];
+        if (stage.distance_km != null) has.push(`dist=${stage.distance_km}km`);
+        if (stage.elevation_gain_m != null) has.push(`D+=${stage.elevation_gain_m}m`);
+        if (stage.elevation_loss_m != null) has.push(`D−=${stage.elevation_loss_m}m`);
+        if (stage.duration) has.push(`durée=${stage.duration}`);
+        previewLines.push(`  • Jour ${stage.stage_number}${stage.title ? ` — ${stage.title}` : ""}${has.length ? ` [actuel : ${has.join(", ")}]` : ""}`);
+      }
+      previewLines.push(`\n${withGpx.length} étape(s) seront recalculées depuis leur GPX.`);
+      previewLines.push("Les valeurs existantes seront écrasées après confirmation individuelle.");
+      if (!window.confirm(previewLines.join("\n") + "\n\nContinuer ?")) { setAutomationBusy(null); return; }
+
+      for (const { stage, gpx } of withGpx) {
+        report.analyzed++;
+        try {
+          const { data } = await supabase.storage.from(GPX_BUCKET).createSignedUrl(gpx.path, 3600);
+          if (!data?.signedUrl) { report.errors.push(`Jour ${stage.stage_number} : URL signée indisponible`); continue; }
+          const metrics = await fetchAndComputeGpxMetrics(data.signedUrl);
+          const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
+          const durationStr = formatDuration(hours);
+
+          const existing = [];
+          if (stage.distance_km != null) existing.push(`distance (${stage.distance_km} km)`);
+          if (stage.elevation_gain_m != null) existing.push(`D+ (${stage.elevation_gain_m} m)`);
+          if (stage.elevation_loss_m != null) existing.push(`D− (${stage.elevation_loss_m} m)`);
+          if (stage.duration) existing.push(`durée (${stage.duration})`);
+
+          const msg = existing.length
+            ? `Jour ${stage.stage_number} — valeurs existantes : ${existing.join(", ")}.\n\nNouvelles valeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nÉcraser ?`
+            : `Jour ${stage.stage_number} — aucune valeur existante.\n\nValeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nAppliquer ?`;
+
+          if (!window.confirm(msg)) continue;
+
+          const update = {};
+          if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
+          if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
+          if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
+          if (durationStr) update.duration = durationStr;
+
+          const { error: updateError } = await supabase.from("stages").update(update).eq("id", stage.id);
+          if (updateError) { report.errors.push(`Jour ${stage.stage_number} : ${updateError.message}`); continue; }
+          report.updated++;
+        } catch (err) { report.errors.push(`Jour ${stage.stage_number} : ${err.message}`); }
+      }
+
+      let msg = `Analyse terminée : ${report.analyzed} analysée(s), ${report.updated} mise(s) à jour.`;
+      if (report.errors.length) msg += `\nErreurs :\n${report.errors.map(e => `  • ${e}`).join("\n")}`;
+      setAutomationResult(msg);
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
+    finally { setAutomationBusy(null); }
+  }
+
+  async function handleAutoEnrich() {
+    setAutomationBusy("enrich");
+    setAutomationResult(null);
+    const report = { poisFound: 0, poisUpdated: 0, accomsFound: 0, accomsUpdated: 0, errors: [] };
+    try {
+      if (!poiIndex && !accommodationIndex) {
+        setAutomationResult("Aucune donnée d'enrichissement disponible pour ce roadbook.");
+        setAutomationBusy(null); return;
+      }
+
+      const allPois = Object.values(poisByStage).flat();
+      const enrichablePois = poiIndex ? allPois.filter(p => findPoi(p.name, poiIndex)) : [];
+      const enrichableAccoms = accommodationIndex
+        ? stages.filter(s => {
+            if (!s.accommodation_name && !s.accommodation_url) return false;
+            const byUrl = s.accommodation_url ? findAccommodation(s.accommodation_url, accommodationIndex) : null;
+            if (byUrl) return true;
+            return s.accommodation_name ? !!findAccommodationByName(s.accommodation_name, accommodationIndex) : false;
+          })
+        : [];
+
+      if (!enrichablePois.length && !enrichableAccoms.length) {
+        setAutomationResult("Aucun POI ou hébergement enrichissable trouvé.");
+        setAutomationBusy(null); return;
+      }
+
+      const lines = [];
+      if (enrichablePois.length) lines.push(`POI enrichissables : ${enrichablePois.length}`);
+      if (enrichableAccoms.length) lines.push(`Hébergements enrichissables : ${enrichableAccoms.length}`);
+      lines.push("\nLes champs déjà renseignés seront proposés avec confirmation individuelle.");
+      if (!window.confirm(lines.join("\n") + "\n\nContinuer ?")) { setAutomationBusy(null); return; }
+
+      for (const poi of enrichablePois) {
+        try {
+          report.poisFound++;
+          const found = findPoi(poi.name, poiIndex);
+          if (!found) continue;
+          const existing = [];
+          if (poi.description) existing.push("description");
+          if (poi.lat != null) existing.push("coordonnées");
+          if (poi.link_url) existing.push("lien");
+          const promptLines = [`POI "${poi.name}"`];
+          if (existing.length) promptLines.push(`Valeurs existantes : ${existing.join(", ")}`);
+          promptLines.push(`\nNouvelles valeurs proposées :\n• Description : ${found.description || "N/A"}\n• Coordonnées : ${found.coordinates ? `${found.coordinates.lat}, ${found.coordinates.lng}` : "N/A"}\n• Image : ${found.image || "N/A"}\n• Lien : ${found.url || "N/A"}`);
+          promptLines.push(`\n${existing.length ? "Écraser ?" : "Appliquer ?"}`);
+          if (!window.confirm(promptLines.join("\n"))) continue;
+          const update = {};
+          if (found.description) update.description = found.description;
+          if (found.coordinates) { update.lat = found.coordinates.lat; update.lng = found.coordinates.lng; }
+          if (found.image) update.photo_url = found.image;
+          if (found.url) update.link_url = found.url;
+          if (!Object.keys(update).length) continue;
+          const { error: upErr } = await supabase.from("stage_pois").update(update).eq("id", poi.id);
+          if (upErr) { report.errors.push(`POI "${poi.name}" : ${upErr.message}`); continue; }
+          report.poisUpdated++;
+        } catch (err) { report.errors.push(`POI "${poi.name}" : ${err.message}`); }
+      }
+
+      for (const stage of enrichableAccoms) {
+        try {
+          report.accomsFound++;
+          const url = stage.accommodation_url;
+          const name = stage.accommodation_name;
+          let found = url ? findAccommodation(url, accommodationIndex) : null;
+          if (!found && name) found = findAccommodationByName(name, accommodationIndex);
+          if (!found) continue;
+          const existing = [];
+          if (stage.accommodation_name) existing.push("nom");
+          if (stage.accommodation_photo) existing.push("photo");
+          const promptLines = [`Hébergement "${name || url}"`];
+          if (existing.length) promptLines.push(`Valeurs existantes : ${existing.join(", ")}`);
+          promptLines.push(`\nNouvelles valeurs proposées :\n• Nom : ${found.name || "N/A"}\n• Image : ${found.image || "N/A"}`);
+          promptLines.push(`\n${existing.length ? "Écraser ?" : "Appliquer ?"}`);
+          if (!window.confirm(promptLines.join("\n"))) continue;
+          const update = {};
+          if (found.name) update.accommodation_name = found.name;
+          if (found.image) update.accommodation_photo = found.image;
+          if (!Object.keys(update).length) continue;
+          const { error: upAccErr } = await supabase.from("stages").update(update).eq("id", stage.id);
+          if (upAccErr) { report.errors.push(`Hébergement "${name}" : ${upAccErr.message}`); continue; }
+          report.accomsUpdated++;
+        } catch (err) { report.errors.push(`Hébergement "${name}" : ${err.message}`); }
+      }
+
+      let msg = `Enrichissement terminé : ${report.poisUpdated}/${report.poisFound} POI, ${report.accomsUpdated}/${report.accomsFound} hébergements mis à jour.`;
+      if (report.errors.length) msg += `\nErreurs :\n${report.errors.map(e => `  • ${e}`).join("\n")}`;
+      setAutomationResult(msg);
+      const stageIds = stages.map(s => s.id);
+      if (stageIds.length) {
+        supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
+          .then(({ data: pois }) => {
+            if (pois) { const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m); }
+          });
+        const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+        if (refreshed) setStages(refreshed);
+      }
+    } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
+    finally { setAutomationBusy(null); }
+  }
+
   async function handleGpxDelete(mediaRow) {
     if (!window.confirm("Supprimer ce GPX ?")) return;
     setUploadingGpx("delete");
@@ -979,6 +1195,22 @@ export default function RoadbookDetailPage() {
             );
           })}
         </ul>
+      </section>
+
+      <section>
+        <h2>Automatisations du roadbook</h2>
+        {automationResult && <p style={{ color: automationResult.startsWith("Erreur") ? "red" : automationResult.startsWith("Analyse") || automationResult.startsWith("Enrichissement") || automationResult.startsWith("Totaux") ? "green" : "#333", whiteSpace: "pre-wrap" }}>{automationResult}</p>}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.3rem" }}>
+          <button type="button" onClick={handleRecalculateTotals} disabled={!!automationBusy}>
+            {automationBusy === "totals" ? "Calcul..." : "Recalculer les totaux du roadbook"}
+          </button>
+          <button type="button" onClick={handleAnalyzeStageGpx} disabled={!!automationBusy}>
+            {automationBusy === "gpx" ? "Analyse..." : "Analyser les étapes avec GPX"}
+          </button>
+          <button type="button" onClick={handleAutoEnrich} disabled={!!automationBusy}>
+            {automationBusy === "enrich" ? "Enrichissement..." : "Enrichir automatiquement POI et hébergements"}
+          </button>
+        </div>
       </section>
 
       <section>
