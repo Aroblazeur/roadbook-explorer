@@ -1399,7 +1399,8 @@ function normalizeAccommodationAlternative(entry) {
             url,
             name: safeText(entry.name, ""),
             photo: safeText(entry.photo, ""),
-            displayName: safeText(entry.displayName, "")
+            displayName: safeText(entry.displayName, ""),
+            comment: safeText(entry.comment || entry.description || entry.note, "")
         }
         : null;
 }
@@ -2523,7 +2524,8 @@ function renderPrimaryAccommodation(accommodation, day) {
         mainMetadata,
         mainIconSource,
         mainPhoto,
-        [[mainName, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl]
+        [[mainName, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), accommodation?.name, accommodation?.displayName, mainMetadata?.name, mainUrl],
+        accommodation?.comment
     );
 }
 
@@ -2973,6 +2975,7 @@ function appendResourceList(container, title, values, showHeading = true, day = 
             : "";
         const rawName = typeof value === "object" ? safeText(value.rawName || value.name, "") : "";
         const photo = typeof value === "object" ? safeText(value.photo, "") : "";
+        const note = typeof value === "object" ? safeText(value.comment || value.description || value.note, "") : "";
         const metadata = findAccommodationEnrichment(url);
         const label = preferredLabel || metadata?.name || `${title} ${index + 1}`;
         appendAccommodationResource(
@@ -2982,7 +2985,8 @@ function appendResourceList(container, title, values, showHeading = true, day = 
             metadata,
             preferredLabel || metadata?.name || url,
             photo,
-            [[preferredLabel || rawName || metadata?.name, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), rawName, preferredLabel, metadata?.name, url]
+            [[preferredLabel || rawName || metadata?.name, resolveAccommodationContextCity(day)].filter(Boolean).join(" "), rawName, preferredLabel, metadata?.name, url],
+            note
         );
         list.appendChild(item);
     });
@@ -3068,7 +3072,7 @@ function createAccommodationMapIcon() {
     return svg;
 }
 
-function appendAccommodationResource(container, url, preferredLabel, metadata, iconSource = "", manualPhoto = "", mapQueryCandidates = []) {
+function appendAccommodationResource(container, url, preferredLabel, metadata, iconSource = "", manualPhoto = "", mapQueryCandidates = [], note = "") {
     if (!url && !metadata?.image && !manualPhoto && !metadata?.name && !preferredLabel) return null;
     const label = safeText(preferredLabel, "") || metadata?.name || "Hébergement";
     const icon = getAccommodationIcon(iconSource || label);
@@ -3124,6 +3128,12 @@ function appendAccommodationResource(container, url, preferredLabel, metadata, i
             wrapper.appendChild(directMapLink);
         }
         resource.appendChild(wrapper);
+    }
+    if (note) {
+        const noteEl = document.createElement("p");
+        noteEl.className = "accommodation-resource__note";
+        noteEl.textContent = note;
+        resource.appendChild(noteEl);
     }
     container.appendChild(resource);
     return resource;
