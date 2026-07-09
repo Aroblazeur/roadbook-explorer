@@ -2942,7 +2942,7 @@
         console.info(`[Studio] Publication ${id}: ${alternativesCount} hébergement(s) alternatif(s) dans le payload.`);
 
         if (sourceAlternativesCount > 0 && daysAlternativesCount === 0) {
-            const errorMsg = `Publication annulee : ${sourceAlternativesCount} hébergement(s) alternatif(s) présent(s) dans le roadbook édité mais aucun dans les jours exportés.`;
+            const errorMsg = `Publication annulée : ${sourceAlternativesCount} hébergement(s) alternatif(s) présent(s) dans le roadbook édité mais aucun dans les jours exportés. Vérifiez la synchronisation des étapes avant de republier.`;
             progress.setError(errorMsg);
             setStatus(errorMsg);
             return;
@@ -4347,7 +4347,7 @@
             });
         });
         // Reconstruire days depuis stages (le lecteur public consomme aussi roadbook.days)
-        roadbook.days = stages;
+        roadbook.days = [...stages];
     }
 
     function normalizeExportSubstep(variant, parentStageNumber, variantIndex) {
