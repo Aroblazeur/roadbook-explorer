@@ -2559,7 +2559,10 @@ function renderAlternativeAccommodation(accommodation, stageNumber, day) {
                             ? entry?.photo
                             : accommodation?.alternativePhotos?.[index],
                         ""
-                    )
+                    ),
+                    comment: typeof entry === "object"
+                        ? safeText(entry.comment || entry.description || entry.note, "")
+                        : ""
                 };
             })
             .filter(item => item.url || item.name || item.photo)
