@@ -122,50 +122,47 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const currentIdx = stageParam != null && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
 
   return (
-    <main>
-      <article>
-        <header>
-          {coverSignedUrl && <img src={coverSignedUrl} alt="" style={{ width: "100%", maxHeight: 300, objectFit: "cover", borderRadius: 8, marginBottom: "0.5rem" }} />}
-          <h1>{roadbook.title}</h1>
-          {roadbook.description && <p>{roadbook.description}</p>}
-          <p>Visibilité : {roadbook.is_public ? "public" : "privé"}</p>
-        </header>
+    <main className="container">
+      <header className="card">
+        {coverSignedUrl && <img src={coverSignedUrl} alt="" className="stage-photo__image" style={{ maxHeight: 300, marginBottom: "0.5rem" }} />}
+        <h1>{roadbook.title}</h1>
+        {roadbook.description && <p>{roadbook.description}</p>}
+      </header>
 
-        {!stageParam && (
-          <>
-            <GlobalSummary
-              distance={totals.distance}
-              elevationGain={totals.elevationGain}
-              elevationLoss={totals.elevationLoss}
-              stageCount={stages.length}
-            />
-            {gpxOfficial && <GpxOfficialSection gpx={gpxOfficial} />}
-          </>
-        )}
+      {!stageParam && (
+        <>
+          <GlobalSummary
+            distance={totals.distance}
+            elevationGain={totals.elevationGain}
+            elevationLoss={totals.elevationLoss}
+            stageCount={stages.length}
+          />
+          {gpxOfficial && <GpxOfficialSection gpx={gpxOfficial} />}
+        </>
+      )}
 
-        <section>
-          <h2>{stageParam != null ? `Étape ${stageParam + 1}` : `Étapes (${stages.length})`}</h2>
-          {stages.length === 0 && <p>Ce roadbook n&apos;a pas encore d&apos;étapes.</p>}
-          <ol style={{ listStyle: "none", padding: 0 }}>
-            {visibleStages.map(stage => (
-              <li key={stage.id}>
-                <StageCard
-                  stage={stage}
-                  pois={poisByStage[stage.id] ?? []}
-                  variants={variantsByStage[stage.id] ?? []}
-                  stageGpx={gpxByStage[stage.id] ?? null}
-                  showMap={stageParam != null}
-                />
-              </li>
-            ))}
-          </ol>
-        </section>
+      <section className="card">
+        <h2>{stageParam != null ? `Étape ${stageParam + 1}` : `Étapes (${stages.length})`}</h2>
+        {stages.length === 0 && <p className="empty">Ce roadbook n&apos;a pas encore d&apos;étapes.</p>}
+        <ol className="home-stage-list__items">
+          {visibleStages.map(stage => (
+            <li key={stage.id}>
+              <StageCard
+                stage={stage}
+                pois={poisByStage[stage.id] ?? []}
+                variants={variantsByStage[stage.id] ?? []}
+                stageGpx={gpxByStage[stage.id] ?? null}
+                showMap={stageParam != null}
+              />
+            </li>
+          ))}
+        </ol>
+      </section>
 
-        {!stageParam && gpxCustom && <GpxCustomSection gpx={gpxCustom} totals={totals} />}
-        {!stageParam && images.length > 0 && <ImagesSection images={images} />}
-      </article>
+      {!stageParam && gpxCustom && <GpxCustomSection gpx={gpxCustom} totals={totals} />}
+      {!stageParam && images.length > 0 && <ImagesSection images={images} />}
 
-      <nav style={{ marginTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+      <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
         {currentIdx != null && currentIdx > 0
           ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx - 1}`}>← Étape précédente</Link>
           : <span />}
@@ -180,13 +177,9 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   );
 }
 
-function Section({ children, ...props }) {
-  return <section style={{ marginBottom: "1.5rem" }} {...props}>{children}</section>;
-}
-
 function GpxOfficialSection({ gpx }) {
   return (
-    <Section>
+    <div className="card">
       <h2>Trace officielle</h2>
       <p>
         Télécharger le GPX officiel complet :{" "}
@@ -195,20 +188,20 @@ function GpxOfficialSection({ gpx }) {
         </a>
       </p>
       <MapViewerClient gpxUrl={gpx.signedUrl} height={350} />
-    </Section>
+    </div>
   );
 }
 
 function GpxCustomSection({ gpx, totals }) {
   return (
-    <Section>
+    <div className="card">
       <h2>GPX personnalisé</h2>
       {totals && (
-        <dl style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
-          <SummaryStat label="Distance cumulée" value={totals.distance} unit="km" />
-          <SummaryStat label="D+ cumulé" value={totals.elevationGain} unit="m" />
-          <SummaryStat label="D− cumulé" value={totals.elevationLoss} unit="m" />
-        </dl>
+        <div className="stats" style={{ marginBottom: "0.75rem" }}>
+          <span className="stat"><span className="stat__value"><strong>{totals.distance ?? "—"}</strong> km Distance cumulée</span></span>
+          <span className="stat"><span className="stat__value"><strong>{totals.elevationGain ?? "—"}</strong> m D+ cumulé</span></span>
+          <span className="stat"><span className="stat__value"><strong>{totals.elevationLoss ?? "—"}</strong> m D− cumulé</span></span>
+        </div>
       )}
       <p>
         Télécharger le GPX personnalisé :{" "}
@@ -217,23 +210,23 @@ function GpxCustomSection({ gpx, totals }) {
         </a>
       </p>
       <MapViewerClient gpxUrl={gpx.signedUrl} height={350} />
-    </Section>
+    </div>
   );
 }
 
 function ImagesSection({ images }) {
   return (
-    <Section>
+    <div className="card">
       <h2>Images ({images.length})</h2>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div className="flex flex-wrap gap-1">
         {images.map(img => (
           <div key={img.id} style={{ width: 180 }}>
-            {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 135, objectFit: "cover", borderRadius: 4 }} />}
-            <div style={{ fontSize: "0.75rem", marginTop: "0.2rem" }}>{img.file_name}</div>
+            {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 135, objectFit: "cover", borderRadius: 8 }} />}
+            <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.2rem" }}>{img.file_name}</div>
           </div>
         ))}
       </div>
-    </Section>
+    </div>
   );
 }
 
@@ -245,23 +238,23 @@ function VariantCard({ v }) {
   const vDep = v.departure ?? vmeta.departure;
   const vArr = v.arrival ?? vmeta.arrival;
   return (
-    <div style={{ border: "1px dashed #bbb", borderRadius: 12, padding: "0.75rem", marginBottom: "0.5rem", marginLeft: "1.5rem", background: "#fafafa" }}>
+    <div className="variant-card">
       <p style={{ margin: 0 }}>
         <span style={{ color: "#666" }}>↳ </span>
-        {vType && <span style={{ border: "1px solid #999", borderRadius: 999, padding: "0.1rem 0.5rem", fontSize: "0.8rem", marginRight: "0.3rem" }}>{vType}</span>}
+        {vType && <span className="variant-badge">{vType}</span>}
         <strong>{v.label}</strong>
       </p>
       {(vDep || vArr) && (
-        <p style={{ margin: "0.25rem 0", fontSize: "0.9rem", color: "#444" }}>
+        <p className="text-muted" style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
           {vDep && <span>{vDep}</span>}
           {vDep && vArr && <> → </>}
           {vArr && <span>{vArr}</span>}
         </p>
       )}
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", fontSize: "0.85rem", color: "#555", marginTop: "0.25rem" }}>
-        {v.distance_km != null && <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.1rem 0.5rem", background: "#f1f8f2" }}><strong>{v.distance_km}</strong> km</span>}
-        {vGain != null && <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.1rem 0.5rem", background: "#f1f8f2" }}><strong>{vGain}</strong> m D+</span>}
-        {vLoss != null && <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.1rem 0.5rem", background: "#f1f8f2" }}><strong>{vLoss}</strong> m D−</span>}
+      <div className="stats" style={{ gap: "0.3rem", margin: "0.25rem 0 0" }}>
+        {v.distance_km != null && <span className="variant-pill"><strong>{v.distance_km}</strong> km</span>}
+        {vGain != null && <span className="variant-pill"><strong>{vGain}</strong> m D+</span>}
+        {vLoss != null && <span className="variant-pill"><strong>{vLoss}</strong> m D−</span>}
       </div>
       {v.description && <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>{v.description}</p>}
     </div>
@@ -276,11 +269,9 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   if (duration) items.push({ label: "Durée", value: duration });
   if (!items.length) return null;
   return (
-    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", margin: "0.5rem 0" }}>
+    <div className="stats" style={{ margin: "0.5rem 0" }}>
       {items.map((item, i) => (
-        <span key={i} style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.2rem 0.7rem", fontSize: "0.85rem", background: "#f1f8f2", whiteSpace: "nowrap" }}>
-          <strong>{item.value}</strong>{item.unit ? ` ${item.unit}` : ""} {item.label}
-        </span>
+        <span key={i} className="stat"><span className="stat__value"><strong>{item.value}</strong>{item.unit ? ` ${item.unit}` : ""} {item.label}</span></span>
       ))}
     </div>
   );
@@ -289,101 +280,101 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
 function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
   const meta = stage.metadata ?? {};
   return (
-    <article style={{ border: "1px solid #ddd", borderRadius: 16, padding: "1rem", marginBottom: "1rem", background: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-        <div style={{ minWidth: 42, width: 42, height: 42, borderRadius: "50%", background: "#2e7d32", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "1.1rem" }}>
+    <div className="card" style={{ margin: "14px 0" }}>
+      <div className="home-stage-card__content" style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+        <span className="stage-number-circle" style={{ minWidth: 42, width: 42, height: 42, fontSize: "1.1rem" }}>
           {stage.stage_number}
-        </div>
+        </span>
         <div style={{ flex: 1 }}>
           <h3 style={{ margin: 0 }}>
             {stage.stage_label || (stage.day ? `${stage.day}` : "")}
-            {stage.title && <span style={{ fontWeight: "normal", color: "#555" }}> — {stage.title}</span>}
+            {stage.title && <span className="text-muted" style={{ fontWeight: "normal" }}> — {stage.title}</span>}
           </h3>
+          {(stage.departure || stage.arrival) && (
+            <p className="stage-route-links" style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
+              {stage.departure && <span className="stage-city-link">Départ : {stage.departure}</span>}
+              {stage.departure && stage.arrival && <> → </>}
+              {stage.arrival && <span className="stage-city-link">Arrivée : {stage.arrival}</span>}
+            </p>
+          )}
         </div>
-        {stage.accommodation_name && (
-          <span style={{ border: "1px solid #4caf50", borderRadius: 999, padding: "0.2rem 0.6rem", fontSize: "0.8rem", whiteSpace: "nowrap", background: "#f1f8f2" }}>
-            🏕 {stage.accommodation_name}
-          </span>
-        )}
       </div>
-
-      {stage.stage_photo_url && (
-        <img src={stage.stage_photo_url} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 12, margin: "0.75rem 0" }} />
-      )}
-
-      {(stage.departure || stage.arrival) && (
-        <p style={{ margin: "0.25rem 0" }}>
-          {stage.departure && <span>Départ : {stage.departure}</span>}
-          {stage.departure && stage.arrival && <> → </>}
-          {stage.arrival && <span>Arrivée : {stage.arrival}</span>}
-        </p>
-      )}
 
       <Pills distanceKm={stage.distance_km} elevationGain={stage.elevation_gain_m} elevationLoss={stage.elevation_loss_m} duration={stage.duration} />
 
-      {meta.description && <p style={{ margin: "0.25rem 0" }}>{meta.description}</p>}
-      {meta.warning && <p style={{ color: "#e65100", margin: "0.25rem 0" }}>⚠ {meta.warning}</p>}
+      {stage.stage_photo_url && (
+        <figure className="stage-photo">
+          <img src={stage.stage_photo_url} alt="" className="stage-photo__image" />
+        </figure>
+      )}
 
-      {stage.accommodation_photo && (
-        <div style={{ margin: "0.5rem 0" }}>
-          <img src={stage.accommodation_photo} alt={stage.accommodation_name ?? ""} style={{ width: "100%", maxHeight: 150, objectFit: "cover", borderRadius: 12 }} />
+      {meta.description && <p className="stage-description">{meta.description}</p>}
+      {meta.warning && <p style={{ color: "#e65100", margin: "0.5rem 0" }}>⚠ {meta.warning}</p>}
+
+      {/* Accommodation */}
+      {stage.accommodation_name && (
+        <div className="accommodation-resource">
+          {stage.accommodation_photo && <img src={stage.accommodation_photo} alt={stage.accommodation_name} className="accommodation-resource__image" />}
+          <p><strong>{stage.accommodation_name}</strong></p>
+          {stage.accommodation_url && (
+            <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer" className="terrain-button terrain-button--secondary" style={{ textDecoration: "none" }}>
+              🔗 Site web de l&apos;hébergement
+            </a>
+          )}
         </div>
       )}
 
-      {stage.accommodation_url && (
-        <p style={{ margin: "0.25rem 0" }}>
-          <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer">🔗 Site web de l&apos;hébergement</a>
-        </p>
-      )}
-
+      {/* Map */}
       {showMap && stage.map_embed_url && (
-        <div style={{ margin: "0.5rem 0" }}>
-          <iframe src={stage.map_embed_url} width="100%" height="300" style={{ border: "none", borderRadius: 12 }} allowFullScreen loading="lazy" />
+        <div id="stage-map-embed" className="map-embed">
+          <iframe src={stage.map_embed_url} width="100%" height="100%" allowFullScreen loading="lazy" />
         </div>
       )}
-
       {showMap && !stage.map_embed_url && stageGpx && (
-        <div style={{ margin: "0.5rem 0" }}>
+        <div id="stage-map-embed" className="map-embed">
           <MapViewerClient gpxUrl={stageGpx.signedUrl} height={300} />
         </div>
       )}
 
+      {/* Notes */}
       {Array.isArray(stage.notes) && stage.notes.length > 0 && (
         <details style={{ marginTop: "0.5rem" }}>
           <summary>Notes ({stage.notes.length})</summary>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+          <ul id="notes" style={{ marginTop: "0.5rem" }}>
             {stage.notes.map((note, i) => (
-              <div key={i} style={{ border: "1px solid #ddd", borderRadius: 12, padding: "0.75rem", background: "#f8faf8" }}>
-                <p style={{ margin: 0 }}>{note.text ?? note}</p>
-                {note.photo && <img src={note.photo} alt="" style={{ maxWidth: 200, marginTop: "0.25rem", borderRadius: 8 }} />}
-              </div>
+              <li key={i} className="note-item">
+                <p className="note-item__text">{note.text ?? note}</p>
+                {note.photo && <img src={note.photo} alt="" className="note-item__photo" />}
+              </li>
             ))}
-          </div>
+          </ul>
         </details>
       )}
 
+      {/* POI */}
       {pois.length > 0 && (
         <details style={{ marginTop: "0.5rem" }}>
           <summary>Points d&apos;intérêt ({pois.length})</summary>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+          <ul className="poi-list poi-list--enriched" style={{ marginTop: "0.5rem" }}>
             {pois.map(poi => (
-              <div key={poi.id} style={{ display: "grid", gridTemplateColumns: poi.photo_url ? "120px 1fr" : "1fr", gap: "0.75rem", border: "1px solid #ddd", borderRadius: 12, padding: "0.75rem", background: "#fff" }}>
-                {poi.photo_url && <img src={poi.photo_url} alt="" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 8 }} />}
+              <li key={poi.id} className="poi-card">
+                {poi.photo_url && <img src={poi.photo_url} alt="" className="poi-card__image" />}
                 <div>
-                  <p style={{ margin: 0, fontWeight: "bold" }}>{poi.poi_type && <span style={{ color: "#2e7d32" }}>[{poi.poi_type}] </span>}{poi.name}</p>
-                  {poi.region && <p style={{ margin: "0.2rem 0", fontSize: "0.85rem", color: "#666" }}>{poi.region}</p>}
-                  {poi.description && <p style={{ margin: "0.2rem 0", fontSize: "0.9rem" }}>{poi.description}</p>}
-                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" style={{ fontSize: "0.85rem" }}>Ouvrir le lien →</a>}
+                  <strong className="poi-card__name">{poi.poi_type && <span style={{ color: "#2e7d32" }}>[{poi.poi_type}] </span>}{poi.name}</strong>
+                  {poi.region && <p className="poi-card__region">{poi.region}</p>}
+                  {poi.description && <p className="poi-card__description">{poi.description}</p>}
+                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" className="terrain-button terrain-button--discreet poi-card__map-link" style={{ display: "inline-flex" }}>Ouvrir le lien →</a>}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </details>
       )}
 
+      {/* Variants */}
       {variants.length > 0 && (
         <div style={{ marginTop: "0.5rem" }}>
-          <p style={{ fontWeight: "bold", fontSize: "0.9rem", color: "#555", marginBottom: "0.3rem" }}>Variantes ({variants.length})</p>
+          <p className="text-muted" style={{ fontWeight: "bold", fontSize: "0.9rem", marginBottom: "0.3rem" }}>Variantes ({variants.length})</p>
           {variants.map(v => <VariantCard key={v.id} v={v} />)}
         </div>
       )}
@@ -396,21 +387,8 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
           </a>
         </p>
       )}
-    </article>
-  );
-}
-
-function SummaryStat({ label, value, unit }) {
-  return (
-    <div>
-      <dt style={{ fontWeight: "bold" }}>{label}</dt>
-      <dd style={{ margin: 0, fontSize: "1.1rem" }}>{value != null ? value + (unit ? " " + unit : "") : "—"}</dd>
     </div>
   );
-}
-
-function SectionTitle({ children }) {
-  return <h2 style={{ marginBottom: "0.75rem" }}>{children}</h2>;
 }
 
 function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
@@ -418,14 +396,14 @@ function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
   if (!hasTotal) return null;
 
   return (
-    <Section>
-      <SectionTitle>Résumé du parcours</SectionTitle>
-      <dl style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-        <SummaryStat label="Distance totale" value={distance} unit="km" />
-        <SummaryStat label="Dénivelé +" value={elevationGain} unit="m" />
-        <SummaryStat label="Dénivelé −" value={elevationLoss} unit="m" />
-        <SummaryStat label="Étapes" value={stageCount} />
-      </dl>
-    </Section>
+    <div className="card">
+      <h2>Résumé du parcours</h2>
+      <div className="stats" style={{ marginBottom: "0.5rem" }}>
+        <span className="stat"><span className="stat__value"><strong>{distance ?? "—"}</strong> km Distance totale</span></span>
+        <span className="stat"><span className="stat__value"><strong>{elevationGain ?? "—"}</strong> m Dénivelé +</span></span>
+        <span className="stat"><span className="stat__value"><strong>{elevationLoss ?? "—"}</strong> m Dénivelé −</span></span>
+        <span className="stat"><span className="stat__value"><strong>{stageCount}</strong> Étapes</span></span>
+      </div>
+    </div>
   );
 }
