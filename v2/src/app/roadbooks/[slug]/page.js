@@ -154,13 +154,14 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
                   pois={poisByStage[stage.id] ?? []}
                   variants={variantsByStage[stage.id] ?? []}
                   stageGpx={gpxByStage[stage.id] ?? null}
+                  showMap={stageParam != null}
                 />
               </li>
             ))}
           </ol>
         </section>
 
-        {!stageParam && gpxCustom && <GpxCustomSection gpx={gpxCustom} />}
+        {!stageParam && gpxCustom && <GpxCustomSection gpx={gpxCustom} totals={totals} />}
         {!stageParam && images.length > 0 && <ImagesSection images={images} />}
       </article>
 
@@ -198,15 +199,24 @@ function GpxOfficialSection({ gpx }) {
   );
 }
 
-function GpxCustomSection({ gpx }) {
+function GpxCustomSection({ gpx, totals }) {
   return (
     <Section>
       <h2>GPX personnalisé</h2>
+      {totals && (
+        <dl style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+          <SummaryStat label="Distance cumulée" value={totals.distance} unit="km" />
+          <SummaryStat label="D+ cumulé" value={totals.elevationGain} unit="m" />
+          <SummaryStat label="D− cumulé" value={totals.elevationLoss} unit="m" />
+        </dl>
+      )}
       <p>
+        Télécharger le GPX personnalisé :{" "}
         <a href={gpx.signedUrl} download={gpx.file_name ?? "personnalise.gpx"}>
-          {gpx.file_name ?? "Télécharger le GPX personnalisé"}
+          {gpx.file_name ?? "personnalise.gpx"}
         </a>
       </p>
+      <MapViewerClient gpxUrl={gpx.signedUrl} height={350} />
     </Section>
   );
 }
@@ -253,7 +263,7 @@ function VariantCard({ v }) {
   );
 }
 
-function StageCard({ stage, pois, variants, stageGpx }) {
+function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
   const meta = stage.metadata ?? {};
   return (
     <article style={{ border: "1px solid #ccc", borderRadius: 8, padding: "1rem", marginBottom: "1rem" }}>
@@ -293,9 +303,15 @@ function StageCard({ stage, pois, variants, stageGpx }) {
         </p>
       )}
 
-      {stage.map_embed_url && (
+      {showMap && stage.map_embed_url && (
         <div style={{ marginBottom: "0.5rem" }}>
           <iframe src={stage.map_embed_url} width="100%" height="300" style={{ border: "none", borderRadius: 4 }} allowFullScreen loading="lazy" />
+        </div>
+      )}
+
+      {showMap && !stage.map_embed_url && stageGpx && (
+        <div style={{ marginBottom: "0.5rem" }}>
+          <MapViewerClient gpxUrl={stageGpx.signedUrl} height={300} />
         </div>
       )}
 
