@@ -563,6 +563,7 @@
         STAGE_ACCOMMODATION_FIELDS.forEach(field => {
             normalized[field] = safeText(normalized[field], "");
         });
+        normalized.comment = safeText(normalized.comment || normalized.description || normalized.note, "");
         normalized.alternatives = normalizeStageAccommodationAlternatives(normalized.alternatives);
         return normalized;
     }
@@ -576,7 +577,8 @@
                 website: link,
                 name: safeText(alternative?.name, ""),
                 photo: safeText(alternative?.photo, ""),
-                price: safeText(alternative?.price, "")
+                price: safeText(alternative?.price, ""),
+                comment: safeText(alternative?.comment || alternative?.description || alternative?.note, "")
             };
         });
     }
@@ -1295,6 +1297,7 @@
             createVariantNotesEditor(stageIndex, variantIndex, variant.noteItems || [])
         ]));
         fragment.querySelector('[data-action="delete-variant"]').addEventListener("click", () => deleteVariant(stageIndex, variantIndex));
+        fragment.querySelector('[data-action="promote-variant"]')?.addEventListener("click", () => promoteVariantToStage(stageIndex, variantIndex));
         return fragment;
     }
 
@@ -1507,6 +1510,13 @@
                 }
             }
         ));
+        grid.appendChild(createBoundField({
+            label: "Note / description",
+            value: stage.accommodation?.comment ?? "",
+            isTextarea: true,
+            fullWidth: true,
+            onChange: value => updateStageAccommodationField(stageIndex, "comment", value.trim())
+        }));
         zone.appendChild(grid);
         return zone;
     }
@@ -1566,6 +1576,13 @@
                 updateVariantAccommodationField(stageIndex, variantIndex, "url", value);
             }
         ));
+        grid.appendChild(createBoundField({
+            label: "Note / description",
+            value: variant.accommodation?.comment ?? "",
+            isTextarea: true,
+            fullWidth: true,
+            onChange: value => updateVariantAccommodationField(stageIndex, variantIndex, "comment", value.trim())
+        }));
         zone.appendChild(grid);
         return zone;
     }
@@ -1811,6 +1828,13 @@
                 onChange: value => updateStageAccommodationAlternative(stageIndex, alternativeIndex, field, value.trim())
             }));
         });
+        grid.appendChild(createBoundField({
+            label: "Note / description",
+            value: alternative.comment ?? "",
+            isTextarea: true,
+            fullWidth: true,
+            onChange: value => updateStageAccommodationAlternative(stageIndex, alternativeIndex, "comment", value.trim())
+        }));
         card.appendChild(grid);
         return card;
     }
@@ -1847,6 +1871,13 @@
                 onChange: value => updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value.trim())
             }));
         });
+        grid.appendChild(createBoundField({
+            label: "Note / description",
+            value: alternative.comment ?? "",
+            isTextarea: true,
+            fullWidth: true,
+            onChange: value => updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, "comment", value.trim())
+        }));
         card.appendChild(grid);
         return card;
     }
@@ -2406,7 +2437,8 @@
             website: "",
             name: "",
             photo: "",
-            price: ""
+            price: "",
+            comment: ""
         });
         rerenderEditorPreservingScroll();
     }
@@ -2447,7 +2479,8 @@
             website: "",
             name: "",
             photo: "",
-            price: ""
+            price: "",
+            comment: ""
         });
         rerenderEditorPreservingScroll();
     }
@@ -4394,7 +4427,8 @@
                     url: safeText(item.url || item.website, ""),
                     website: safeText(item.url || item.website, ""),
                     photo: safeText(item.photo, ""),
-                    price: safeText(item.price, "")
+                    price: safeText(item.price, ""),
+                    comment: safeText(item.comment || item.description || item.note, "")
                 }));
 
             // Alternatives déjà présentes sur l'étape (ajoutées dans le Studio editor)
@@ -4417,6 +4451,7 @@
                 website: primaryWebsite || primaryUrl,
                 url: primaryUrl,
                 photo: safeText(primary.photo, ""),
+                comment: safeText(primary.comment || primary.description || primary.note, "") || safeText(stage.accommodation?.comment, ""),
                 alternatives: [...collectionAlternatives, ...stageOnlyAlternatives]
             });
         });
