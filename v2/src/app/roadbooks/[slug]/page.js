@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import MapViewerClient from "@/components/MapViewerClient";
 
 async function getRoadbook(slug) {
   const cookieStore = await cookies();
@@ -192,6 +193,7 @@ function GpxOfficialSection({ gpx }) {
           {gpx.file_name ?? "trace.gpx"}
         </a>
       </p>
+      <MapViewerClient gpxUrl={gpx.signedUrl} height={350} />
     </Section>
   );
 }
