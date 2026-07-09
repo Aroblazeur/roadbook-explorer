@@ -389,6 +389,7 @@ function normalizeAlternativeAccommodationEntry(value, { name = "", photo = "" }
             url,
             name: normalizeValue(value.name) || normalizeValue(name) || "",
             photo: sanitizeImageUrl(value.photo || photo),
+            comment: normalizeValue(value.comment || value.description || value.note) || "",
             createdAt: normalizeValue(value.createdAt) || "",
             source: normalizeValue(value.source) || ""
         };
@@ -694,6 +695,7 @@ function buildAccommodation(record) {
         website: website || "",
         url: website || "",
         photo: sanitizeImageUrl(firstValue(record, ["photo hebergement principal", "photo hébergement principal"])),
+        comment: firstValue(record, ["note hebergement", "note hébergement", "note"]) || "",
         alternatives: alternativeEntries,
         alternativeNames: alternativeEntries.map(entry => entry.name || ""),
         alternativePhotos: alternativeEntries.map(entry => entry.photo || "")
@@ -1028,6 +1030,7 @@ function normalizeAccommodationJson(value = {}) {
         website: normalizeValue(source.website || source.url) || "",
         url: normalizeValue(source.url || source.website) || "",
         photo: sanitizeImageUrl(source.photo),
+        comment: normalizeValue(source.comment || source.description || source.note) || "",
         alternatives,
         alternativeNames: alternatives.map(entry => entry.name || ""),
         alternativePhotos: alternatives.map(entry => entry.photo || "")

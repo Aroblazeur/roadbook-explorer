@@ -1015,6 +1015,13 @@ li{
     font-size:1.35rem;
 }
 
+.accommodation-resource__note{
+    margin:0;
+    font-size:.875rem;
+    color:var(--text-light);
+    line-height:1.5;
+}
+
 .accommodation-resource .terrain-button{
     width:100%;
 }
