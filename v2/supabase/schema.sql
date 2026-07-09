@@ -47,7 +47,7 @@ create table if not exists public.roadbooks (
   description     text,
   is_public       boolean not null default false,
   cover_image_url text,
-  cover_media_id  bigint references public.media(id) on delete set null,
+  cover_media_id  bigint,
   distance_km     numeric(8,2),
   elevation_gain_m integer,
   elevation_loss_m integer,
@@ -394,6 +394,24 @@ create policy "Owner can delete media of own roadbooks"
       where r.id = roadbook_id and r.owner_id = auth.uid()
     )
   );
+
+-- Add FK constraint for roadbooks.cover_media_id -> media.id
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.table_constraints
+    where constraint_name = 'roadbooks_cover_media_id_fkey'
+      and table_schema = 'public'
+      and table_name = 'roadbooks'
+  ) then
+    alter table public.roadbooks
+      add constraint roadbooks_cover_media_id_fkey
+      foreign key (cover_media_id)
+      references public.media(id)
+      on delete set null;
+  end if;
+end;
+$$;
 
 -- -----------------------------------------------------------
 -- 8. Helper : trigger updated_at
