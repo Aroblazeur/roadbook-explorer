@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
+import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, loadEnrichmentData } from "@/lib/enrichment";
 
 export default function RoadbookDetailPage() {
   const { user, loading: authLoading, supabase } = useAuth();
@@ -65,6 +66,11 @@ export default function RoadbookDetailPage() {
   const [coverMediaId, setCoverMediaId] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
   const [duplicating, setDuplicating] = useState(false);
+  const [poiIndex, setPoiIndex] = useState(null);
+  const [accommodationIndex, setAccommodationIndex] = useState(null);
+  const [enrichmentError, setEnrichmentError] = useState(null);
+  const [enrichingPoi, setEnrichingPoi] = useState(null);
+  const [enrichingAccommodation, setEnrichingAccommodation] = useState(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
@@ -90,9 +96,13 @@ export default function RoadbookDetailPage() {
               .then(({ data: m }) => {
                 if (m) supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400).then(({ data: s }) => setCoverPreview(s?.signedUrl ?? null));
               });
-          } else { setCoverMode(null); setCoverPreview(null); }
+          } else {           setCoverMode(null); setCoverPreview(null); }
         }
         setLoading(false);
+        if (data?.slug) {
+          loadEnrichmentData(data.slug, "poi").then(json => { if (json?.items) setPoiIndex(createPoiIndex(json.items)); }).catch(() => {});
+          loadEnrichmentData(data.slug, "accommodation").then(json => { if (json?.items) setAccommodationIndex(createAccommodationIndex(json.items)); }).catch(() => {});
+        }
       });
 
     loadImages();
@@ -510,6 +520,97 @@ export default function RoadbookDetailPage() {
     }
   }
 
+  async function handleEnrichPoi(poi, stageId) {
+    if (!poi || !poiIndex) { setEnrichmentError("Aucune donnée d'enrichissement disponible pour ce roadbook."); return; }
+    const found = findPoi(poi.name, poiIndex);
+    if (!found) { setEnrichmentError(`Aucun enrichissement trouvé pour "${poi.name}".`); return; }
+    setEnrichingPoi(poi.id);
+    setEnrichmentError(null);
+    setStageError(null);
+    try {
+      const existingDesc = poi.description != null && poi.description !== "";
+      const existingLat = poi.lat != null;
+      const existingLng = poi.lng != null;
+      const existingLink = poi.link_url != null && poi.link_url !== "";
+      const anyExisting = existingDesc || existingLat || existingLng || existingLink;
+      if (anyExisting) {
+        const parts = [];
+        if (existingDesc) parts.push("description");
+        if (existingLat) parts.push("coordonnées");
+        if (existingLink) parts.push("lien");
+        const ok = window.confirm(
+          `Ce POI a déjà des valeurs (${parts.join(", ")}).\n\n`
+          + `Nouvelles valeurs proposées :\n`
+          + `• Description : ${found.description || "N/A"}\n`
+          + `• Coordonnées : ${found.coordinates ? `${found.coordinates.lat}, ${found.coordinates.lng}` : "N/A"}\n`
+          + `• Image : ${found.image || "N/A"}\n`
+          + `• Lien : ${found.url || "N/A"}\n\n`
+          + `Écraser les valeurs existantes ?`
+        );
+        if (!ok) { setEnrichingPoi(null); return; }
+      }
+      const update = {};
+      if (found.description) update.description = found.description;
+      if (found.coordinates) { update.lat = found.coordinates.lat; update.lng = found.coordinates.lng; }
+      if (found.image) update.photo_url = found.image;
+      if (found.url) update.link_url = found.url;
+      if (!Object.keys(update).length) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
+      const { error: updateError } = await supabase.from("stage_pois").update(update).eq("id", poi.id);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess(`POI "${poi.name}" enrichi.`);
+      const stageIds = stages.map(s => s.id);
+      if (stageIds.length) {
+        supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
+          .then(({ data: pois }) => {
+            if (pois) { const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m); }
+          });
+      }
+    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
+    finally { setEnrichingPoi(null); }
+  }
+
+  async function handleEnrichAccommodation(stage) {
+    if (!accommodationIndex) { setEnrichmentError("Aucune donnée d'enrichissement disponible pour ce roadbook."); return; }
+    const url = stage.accommodation_url;
+    const name = stage.accommodation_name;
+    let found = url ? findAccommodation(url, accommodationIndex) : null;
+    if (!found && name) {
+      found = findAccommodationByName(name, accommodationIndex);
+    }
+    if (!found) { setEnrichmentError(`Aucun enrichissement trouvé pour l'hébergement${url ? ` (${url})` : ""}${name ? ` "${name}"` : ""}.`); return; }
+    setEnrichingAccommodation(stage.id);
+    setEnrichmentError(null);
+    setStageError(null);
+    try {
+      const existingName = stage.accommodation_name != null && stage.accommodation_name !== "";
+      const existingPhoto = stage.accommodation_photo != null && stage.accommodation_photo !== "";
+      const anyExisting = existingName || existingPhoto;
+      if (anyExisting) {
+        const parts = [];
+        if (existingName) parts.push("nom");
+        if (existingPhoto) parts.push("photo");
+        const ok = window.confirm(
+          `Cet hébergement a déjà des valeurs (${parts.join(", ")}).\n\n`
+          + `Nouvelles valeurs proposées :\n`
+          + `• Nom : ${found.name || "N/A"}\n`
+          + `• Image : ${found.image || "N/A"}\n\n`
+          + `Écraser les valeurs existantes ?`
+        );
+        if (!ok) { setEnrichingAccommodation(null); return; }
+      }
+      const update = {};
+      if (found.name) update.accommodation_name = found.name;
+      if (found.image) update.accommodation_photo = found.image;
+      if (!Object.keys(update).length) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
+      const { error: updateError } = await supabase.from("stages").update(update).eq("id", stage.id);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess(`Hébergement enrichi : ${found.name || "nom mis à jour"}.`);
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
+    finally { setEnrichingAccommodation(null); }
+  }
+
   async function handleGpxDelete(mediaRow) {
     if (!window.confirm("Supprimer ce GPX ?")) return;
     setUploadingGpx("delete");
@@ -730,8 +831,12 @@ export default function RoadbookDetailPage() {
 
       <section>
         <h2>Étapes ({stages.length})</h2>
+        {enrichmentError && <p style={{ color: "red" }}>{enrichmentError}</p>}
         {stageSuccess && <p style={{ color: "green" }}>{stageSuccess}</p>}
         {stageError && <p style={{ color: "red" }}>{stageError}</p>}
+        {poiIndex === null && accommodationIndex === null && stages.length > 0 && (
+          <p style={{ color: "#888", fontStyle: "italic" }}>Aucune donnée d'enrichissement disponible pour ce roadbook.</p>
+        )}
 
         <form onSubmit={handleStageSubmit}>
           <fieldset>
@@ -777,6 +882,11 @@ export default function RoadbookDetailPage() {
                 {stage.elevation_loss_m != null && <> — D- {stage.elevation_loss_m}m</>}
                 {meta.difficulty && <> — {meta.difficulty}</>}
                 {stage.accommodation_name && <> — {stage.accommodation_name}</>}
+                {accommodationIndex && stage.accommodation_name && (
+                  <button type="button" onClick={() => handleEnrichAccommodation(stage)} disabled={enrichingAccommodation === stage.id}>
+                    {enrichingAccommodation === stage.id ? "..." : "Enrichir hébergement"}
+                  </button>
+                )}
                 {meta.warning && <p style={{ color: "orange" }}>{meta.warning}</p>}
                 <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginTop: "0.3rem" }}>
                   <button type="button" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id}>Modifier</button>
@@ -797,6 +907,11 @@ export default function RoadbookDetailPage() {
                         setPoiForm({ stage_id: stage.id, type: poi.poi_type ?? "", name: poi.name, description: poi.description ?? "", lat: poi.lat != null ? String(poi.lat) : "", lng: poi.lng != null ? String(poi.lng) : "", url: poi.link_url ?? "", editing: poi.id });
                       }}>Modifier</button>
                       <button type="button" onClick={() => handleDeletePoi(poi.id)}>Supprimer</button>
+                      {poiIndex && (
+                        <button type="button" onClick={() => handleEnrichPoi(poi, stage.id)} disabled={enrichingPoi === poi.id}>
+                          {enrichingPoi === poi.id ? "..." : "Enrichir"}
+                        </button>
+                      )}
                     </li>
                   ))}</ul>}
                   {poiForm.stage_id === stage.id && (
