@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 
 export default function RoadbookDetailPage() {
   const { user, loading: authLoading, supabase } = useAuth();
@@ -57,6 +58,7 @@ export default function RoadbookDetailPage() {
   const [gpxOfficial, setGpxOfficial] = useState(null);
   const [gpxCustom, setGpxCustom] = useState(null);
   const [gpxByStage, setGpxByStage] = useState({});
+  const [computingGpx, setComputingGpx] = useState(null);
 
   const [coverMode, setCoverMode] = useState(null); // "url" | "media"
   const [coverUrl, setCoverUrl] = useState("");
@@ -446,6 +448,68 @@ export default function RoadbookDetailPage() {
     input.click();
   }
 
+  async function handleComputeFromGpx(mediaRow, stage) {
+    if (!mediaRow || !stage) return;
+    setComputingGpx(stage.id);
+    setGpxError(null);
+    setStageError(null);
+    try {
+      const { data } = await supabase.storage.from(GPX_BUCKET).createSignedUrl(mediaRow.path, 3600);
+      if (!data?.signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
+
+      const metrics = await fetchAndComputeGpxMetrics(data.signedUrl);
+      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
+      const durationStr = formatDuration(hours);
+
+      const existingDist = stage.distance_km != null;
+      const existingGain = stage.elevation_gain_m != null;
+      const existingLoss = stage.elevation_loss_m != null;
+      const existingDuration = stage.duration != null;
+
+      const anyExisting = existingDist || existingGain || existingLoss || existingDuration;
+      if (anyExisting) {
+        const msgParts = [];
+        if (existingDist) msgParts.push(`distance (${stage.distance_km} km)`);
+        if (existingGain) msgParts.push(`D+ (${stage.elevation_gain_m} m)`);
+        if (existingLoss) msgParts.push(`D− (${stage.elevation_loss_m} m)`);
+        if (existingDuration) msgParts.push(`durée (${stage.duration})`);
+
+        const ok = window.confirm(
+          `Cette étape a déjà des valeurs de ${msgParts.join(", ")}.\n\n`
+          + `Nouvelles valeurs calculées :\n`
+          + `• Distance : ${metrics.distanceKm.toFixed(1)} km\n`
+          + `• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n`
+          + `• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n`
+          + `• Durée : ${durationStr || "N/A"}\n\n`
+          + `Écraser les valeurs existantes ?`
+        );
+        if (!ok) { setComputingGpx(null); return; }
+      }
+
+      const update = {};
+      if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
+      if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
+      if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
+      if (durationStr) update.duration = durationStr;
+
+      const { error: updateError } = await supabase.from("stages").update(update).eq("id", stage.id);
+      if (updateError) { setStageError(updateError.message); setComputingGpx(null); return; }
+
+      setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km`
+        + (metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : "")
+        + (metrics.elevationLossM != null ? `, D− ${Math.round(metrics.elevationLossM)} m` : "")
+        + (durationStr ? `, ${durationStr}` : "")
+      );
+
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) {
+      setGpxError(err.message ?? String(err));
+    } finally {
+      setComputingGpx(null);
+    }
+  }
+
   async function handleGpxDelete(mediaRow) {
     if (!window.confirm("Supprimer ce GPX ?")) return;
     setUploadingGpx("delete");
@@ -790,6 +854,11 @@ export default function RoadbookDetailPage() {
 
                 <div style={{ marginTop: "0.5rem", padding: "0.3rem 0", borderTop: "1px solid #eee" }}>
                   {renderGpxBlock("GPX d'étape", gpxByStage[stage.id] ?? null, "stage", null, stage.id)}
+                  {gpxByStage[stage.id] && (
+                    <button type="button" onClick={() => handleComputeFromGpx(gpxByStage[stage.id], stage)} disabled={computingGpx === stage.id} style={{ marginTop: "0.3rem" }}>
+                      {computingGpx === stage.id ? "Calcul en cours..." : "Calculer depuis le GPX"}
+                    </button>
+                  )}
                 </div>
               </li>
             );
