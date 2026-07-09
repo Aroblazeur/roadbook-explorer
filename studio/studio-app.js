@@ -2935,8 +2935,18 @@
             : "Aucun enrichissement POI supplementaire.");
 
         const roadbook = { ...exportPayload, id };
+        const sourceAlternativesCount = countExportAccommodationAlternatives(state.selectedRoadbook);
         const alternativesCount = countExportAccommodationAlternatives(roadbook);
+        const daysAlternativesCount = (Array.isArray(roadbook.days) ? roadbook.days : [])
+            .reduce((total, day) => total + countAccommodationAlternativeEntries(day?.accommodation), 0);
         console.info(`[Studio] Publication ${id}: ${alternativesCount} hébergement(s) alternatif(s) dans le payload.`);
+
+        if (sourceAlternativesCount > 0 && daysAlternativesCount === 0) {
+            const errorMsg = `Publication annulée : ${sourceAlternativesCount} hébergement(s) alternatif(s) présent(s) dans le roadbook édité mais aucun dans les jours exportés. Vérifiez la synchronisation des étapes avant de republier.`;
+            progress.setError(errorMsg);
+            setStatus(errorMsg);
+            return;
+        }
 
         const gpxFileEntries = await buildPublicationFileEntries(state.gpxFiles, "GPX");
         progress.setStep("images", "active");
@@ -3901,6 +3911,8 @@
         await completeMainStageMetricsFromGpx(clone);
         refreshStagesTotalSummary(clone);
         const enrichedPoiCount = await enrichRoadbookPois(clone);
+        syncExportRoadbookStagesAndDays(clone);
+        console.info("[Studio] Alternatives hébergement publiées", countExportAccommodationAlternatives(clone));
         return { roadbook: clone, enrichedPoiCount };
     }
 
@@ -4313,6 +4325,31 @@
         return Array.isArray(accommodation?.alternatives) ? accommodation.alternatives.length : 0;
     }
 
+    /**
+     * Synchronise stages et days dans le payload d'export :
+     * - normalise les alternatives de chaque étape (champs name/url/website/photo/price)
+     * - reconstruit roadbook.days depuis roadbook.stages (le lecteur public consomme les deux)
+     */
+    function syncExportRoadbookStagesAndDays(roadbook) {
+        const stages = Array.isArray(roadbook.stages) ? roadbook.stages : [];
+        stages.forEach(stage => {
+            if (stage.accommodation && typeof stage.accommodation === "object") {
+                stage.accommodation.alternatives = normalizeStageAccommodationAlternatives(
+                    Array.isArray(stage.accommodation.alternatives) ? stage.accommodation.alternatives : []
+                );
+            }
+            (Array.isArray(stage.variants) ? stage.variants : []).forEach(variant => {
+                if (variant.accommodation && typeof variant.accommodation === "object") {
+                    variant.accommodation.alternatives = normalizeStageAccommodationAlternatives(
+                        Array.isArray(variant.accommodation.alternatives) ? variant.accommodation.alternatives : []
+                    );
+                }
+            });
+        });
+        // Reconstruire days depuis stages (le lecteur public consomme aussi roadbook.days)
+        roadbook.days = [...stages];
+    }
+
     function normalizeExportSubstep(variant, parentStageNumber, variantIndex) {
         const parentStage = toFiniteNumber(parentStageNumber);
         const name = safeText(variant?.name || variant?.title, `Variante ${variantIndex + 1}`);
@@ -4348,19 +4385,39 @@
             const primary = linked.find(item => safeText(item.role, "").toLowerCase() === "primary") || linked[0];
             const primaryWebsite = safeText(primary.website, "");
             const primaryUrl = safeText(primary.url, "");
+
+            // Alternatives issues de la collection (roadbook.accommodation)
+            const collectionAlternatives = linked
+                .filter(item => item !== primary)
+                .map(item => ({
+                    name: safeText(item.name, ""),
+                    url: safeText(item.url || item.website, ""),
+                    website: safeText(item.url || item.website, ""),
+                    photo: safeText(item.photo, ""),
+                    price: safeText(item.price, "")
+                }));
+
+            // Alternatives déjà présentes sur l'étape (ajoutées dans le Studio editor)
+            const existingAlternatives = Array.isArray(stage.accommodation?.alternatives)
+                ? stage.accommodation.alternatives
+                : [];
+
+            // Fusion : alternatives de la collection en premier, puis alternatives de l'étape
+            // non dupliquées (comparaison par URL)
+            const collectionUrls = new Set(
+                collectionAlternatives.map(a => a.url).filter(Boolean)
+            );
+            const stageOnlyAlternatives = existingAlternatives.filter(
+                alt => !alt.url || !collectionUrls.has(alt.url)
+            );
+
             stage.accommodation = normalizeStageAccommodation({
                 ...(stage.accommodation || {}),
                 name: safeText(primary.name, ""),
                 website: primaryWebsite || primaryUrl,
                 url: primaryUrl,
                 photo: safeText(primary.photo, ""),
-                alternatives: linked
-                    .filter(item => item !== primary)
-                    .map(item => ({
-                        name: safeText(item.name, ""),
-                        url: safeText(item.url || item.website, ""),
-                        photo: safeText(item.photo, "")
-                    }))
+                alternatives: [...collectionAlternatives, ...stageOnlyAlternatives]
             });
         });
     }
