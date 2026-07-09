@@ -64,19 +64,22 @@
             "website": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
             "name": "Les chalets du centre",
             "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/696931618.jpg?k=6935351d4b6871a7bfc04e880c647f41ad7a93718faaab6871b83220b7798d44&o=",
-            "price": ""
+            "price": "",
+            "comment": ""
           },
           {
             "url": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
             "website": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
             "name": "camping municipale thionville",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": "camping moins loin raccourci etape 1"
           }
         ],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -107,7 +110,8 @@
             "url": "https://www.malling.fr/camping",
             "photo": "",
             "price": "",
-            "alternatives": []
+            "alternatives": [],
+            "comment": ""
           },
           "accommodationType": "",
           "noteItems": [],
@@ -159,7 +163,8 @@
             "url": "https://www.malling.fr/camping",
             "photo": "",
             "price": "",
-            "alternatives": []
+            "alternatives": [],
+            "comment": ""
           },
           "accommodationType": "",
           "noteItems": [],
@@ -204,7 +209,8 @@
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -256,7 +262,8 @@
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -311,7 +318,8 @@
             "website": "https://www.lile-aux-mille-charmes.fr/le-camping",
             "name": "",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           }
         ],
         "alternativeNames": [
@@ -320,7 +328,8 @@
         "alternativePhotos": [
           ""
         ],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "https://www.lile-aux-mille-charmes.fr/le-camping",
@@ -375,21 +384,24 @@
             "website": "https://www.airbnb.fr/rooms/2893566?check_in=2026-07-30&check_out=2026-07-31&guests=3&adults=2&children=1&s=67&unique_share_id=dc8ed550-6dae-486f-8835-25bf0aa40a72",
             "name": "Gite airbnb",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           },
           {
             "url": "https://lesnidsdulac.com/",
             "website": "https://lesnidsdulac.com/",
             "name": "Camping les nids du lac",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           },
           {
             "url": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
             "website": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
             "name": "",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           }
         ],
         "alternativeNames": [
@@ -402,7 +414,8 @@
           "",
           ""
         ],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "Gite airbnb",
@@ -454,7 +467,8 @@
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -637,19 +651,22 @@
             "website": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
             "name": "Les chalets du centre",
             "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/696931618.jpg?k=6935351d4b6871a7bfc04e880c647f41ad7a93718faaab6871b83220b7798d44&o=",
-            "price": ""
+            "price": "",
+            "comment": ""
           },
           {
             "url": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
             "website": "https://www.thionville.fr/ma-ville/equipements/camping-du-parc-napoleon",
             "name": "camping municipale thionville",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": "camping moins loin raccourci etape 1"
           }
         ],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -680,7 +697,8 @@
             "url": "https://www.malling.fr/camping",
             "photo": "",
             "price": "",
-            "alternatives": []
+            "alternatives": [],
+            "comment": ""
           },
           "accommodationType": "",
           "noteItems": [],
@@ -732,7 +750,8 @@
             "url": "https://www.malling.fr/camping",
             "photo": "",
             "price": "",
-            "alternatives": []
+            "alternatives": [],
+            "comment": ""
           },
           "accommodationType": "",
           "noteItems": [],
@@ -777,7 +796,8 @@
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -829,7 +849,8 @@
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
@@ -884,7 +905,8 @@
             "website": "https://www.lile-aux-mille-charmes.fr/le-camping",
             "name": "",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           }
         ],
         "alternativeNames": [
@@ -893,7 +915,8 @@
         "alternativePhotos": [
           ""
         ],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "https://www.lile-aux-mille-charmes.fr/le-camping",
@@ -948,21 +971,24 @@
             "website": "https://www.airbnb.fr/rooms/2893566?check_in=2026-07-30&check_out=2026-07-31&guests=3&adults=2&children=1&s=67&unique_share_id=dc8ed550-6dae-486f-8835-25bf0aa40a72",
             "name": "Gite airbnb",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           },
           {
             "url": "https://lesnidsdulac.com/",
             "website": "https://lesnidsdulac.com/",
             "name": "Camping les nids du lac",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           },
           {
             "url": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
             "website": "https://www.tourisme-epinal.com/sejourner/ou-dormir/campings/camping-de-la-ferme-du-champ-miguet-1824062",
             "name": "",
             "photo": "",
-            "price": ""
+            "price": "",
+            "comment": ""
           }
         ],
         "alternativeNames": [
@@ -975,7 +1001,8 @@
           "",
           ""
         ],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "Gite airbnb",
@@ -1027,7 +1054,8 @@
         "alternatives": [],
         "alternativeNames": [],
         "alternativePhotos": [],
-        "price": ""
+        "price": "",
+        "comment": ""
       },
       "alternativeAccommodation": {
         "name": "",
