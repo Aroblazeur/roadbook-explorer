@@ -63,7 +63,7 @@
             "url": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
             "website": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
             "name": "Les chalets du centre",
-            "photo": "",
+            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/696931618.jpg?k=6935351d4b6871a7bfc04e880c647f41ad7a93718faaab6871b83220b7798d44&o=",
             "price": ""
           }
         ],
@@ -76,7 +76,45 @@
         "photo": ""
       },
       "accommodationType": "",
-      "substeps": [],
+      "substeps": [
+        {
+          "name": "etape 1 plus courte",
+          "distance": 14,
+          "description": "",
+          "type": "option",
+          "title": "Variante 1",
+          "departure": "schengen",
+          "arrival": "Mailling",
+          "elevationGain": 66,
+          "elevationLoss": 66,
+          "gpx": "gpx/variante-etape-01-1.gpx",
+          "mapEmbedUrl": "",
+          "stagePhoto": "",
+          "warning": [],
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "accommodation": {
+            "name": "",
+            "website": "https://www.malling.fr/camping",
+            "url": "https://www.malling.fr/camping",
+            "photo": "",
+            "price": "",
+            "alternatives": []
+          },
+          "accommodationType": "",
+          "noteItems": [],
+          "id": "substep-1-etape-1-plus-courte",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 1,
+          "parentStageReference": 1,
+          "stage": 1,
+          "stageReference": 1,
+          "substeps": []
+        }
+      ],
       "title": "Étape 1 - schengen → Volstroff",
       "elevation": 0,
       "duration": "",
@@ -90,7 +128,45 @@
       "water": [],
       "warning": [],
       "legacyAccommodation": "Camping CapFun  Mirabelle",
-      "variants": []
+      "variants": [
+        {
+          "name": "etape 1 plus courte",
+          "distance": 14,
+          "description": "",
+          "type": "option",
+          "title": "Variante 1",
+          "departure": "schengen",
+          "arrival": "Mailling",
+          "elevationGain": 66,
+          "elevationLoss": 66,
+          "gpx": "gpx/variante-etape-01-1.gpx",
+          "mapEmbedUrl": "",
+          "stagePhoto": "",
+          "warning": [],
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "accommodation": {
+            "name": "",
+            "website": "https://www.malling.fr/camping",
+            "url": "https://www.malling.fr/camping",
+            "photo": "",
+            "price": "",
+            "alternatives": []
+          },
+          "accommodationType": "",
+          "noteItems": [],
+          "id": "substep-1-etape-1-plus-courte",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 1,
+          "parentStageReference": 1,
+          "stage": 1,
+          "stageReference": 1,
+          "substeps": []
+        }
+      ]
     },
     {
       "id": "stage-2",
@@ -553,7 +629,7 @@
             "url": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
             "website": "https://www.booking.com/hotel/fr/les-chalets-du-centre.fr.html?aid=1311119&app_hotel_id=14195966&checkin=2026-07-30&checkout=2026-07-31&from_sn=android&group_adults=2&group_children=0&label=ZeCMIHaVNc9uzZaG-mOZJicf%401783543401&no_rooms=1&req_adults=2&req_children=0&room1=A%2CA&chal_t=1783543405425&force_referer=",
             "name": "Les chalets du centre",
-            "photo": "",
+            "photo": "https://cf.bstatic.com/xdata/images/hotel/max1024x768/696931618.jpg?k=6935351d4b6871a7bfc04e880c647f41ad7a93718faaab6871b83220b7798d44&o=",
             "price": ""
           }
         ],
@@ -566,7 +642,45 @@
         "photo": ""
       },
       "accommodationType": "",
-      "substeps": [],
+      "substeps": [
+        {
+          "name": "etape 1 plus courte",
+          "distance": 14,
+          "description": "",
+          "type": "option",
+          "title": "Variante 1",
+          "departure": "schengen",
+          "arrival": "Mailling",
+          "elevationGain": 66,
+          "elevationLoss": 66,
+          "gpx": "gpx/variante-etape-01-1.gpx",
+          "mapEmbedUrl": "",
+          "stagePhoto": "",
+          "warning": [],
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "accommodation": {
+            "name": "",
+            "website": "https://www.malling.fr/camping",
+            "url": "https://www.malling.fr/camping",
+            "photo": "",
+            "price": "",
+            "alternatives": []
+          },
+          "accommodationType": "",
+          "noteItems": [],
+          "id": "substep-1-etape-1-plus-courte",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 1,
+          "parentStageReference": 1,
+          "stage": 1,
+          "stageReference": 1,
+          "substeps": []
+        }
+      ],
       "title": "Étape 1 - schengen → Volstroff",
       "elevation": 0,
       "duration": "",
@@ -580,7 +694,45 @@
       "water": [],
       "warning": [],
       "legacyAccommodation": "Camping CapFun  Mirabelle",
-      "variants": []
+      "variants": [
+        {
+          "name": "etape 1 plus courte",
+          "distance": 14,
+          "description": "",
+          "type": "option",
+          "title": "Variante 1",
+          "departure": "schengen",
+          "arrival": "Mailling",
+          "elevationGain": 66,
+          "elevationLoss": 66,
+          "gpx": "gpx/variante-etape-01-1.gpx",
+          "mapEmbedUrl": "",
+          "stagePhoto": "",
+          "warning": [],
+          "pois": [],
+          "pointsOfInterest": [],
+          "interest": [],
+          "accommodation": {
+            "name": "",
+            "website": "https://www.malling.fr/camping",
+            "url": "https://www.malling.fr/camping",
+            "photo": "",
+            "price": "",
+            "alternatives": []
+          },
+          "accommodationType": "",
+          "noteItems": [],
+          "id": "substep-1-etape-1-plus-courte",
+          "itemType": "substep",
+          "isSubstep": true,
+          "hierarchyLevel": 1,
+          "parentStage": 1,
+          "parentStageReference": 1,
+          "stage": 1,
+          "stageReference": 1,
+          "substeps": []
+        }
+      ]
     },
     {
       "id": "stage-2",
