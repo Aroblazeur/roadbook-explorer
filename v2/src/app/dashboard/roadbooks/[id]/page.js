@@ -32,6 +32,11 @@ export default function RoadbookDetailPage() {
   const [stageDescription, setStageDescription] = useState("");
   const [stageNotes, setStageNotes] = useState("");
   const [stageWarning, setStageWarning] = useState("");
+  const [stageMapEmbed, setStageMapEmbed] = useState("");
+  const [stagePhotoUrl, setStagePhotoUrl] = useState("");
+  const [stageDay, setStageDay] = useState("");
+  const [stageLabel, setStageLabel] = useState("");
+  const [stageDuration, setStageDuration] = useState("");
   const [stageError, setStageError] = useState(null);
   const [stageSuccess, setStageSuccess] = useState(null);
   const [editingStage, setEditingStage] = useState(null);
@@ -40,7 +45,7 @@ export default function RoadbookDetailPage() {
   const [poisByStage, setPoisByStage] = useState({});
   const [variantsByStage, setVariantsByStage] = useState({});
   const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
-  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", description: "", distance_km: "", elevation_gain_m: "", editing: null });
+  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", editing: null });
 
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -142,6 +147,7 @@ export default function RoadbookDetailPage() {
     setStageDayNumber(""); setStageTitle(""); setStageStart(""); setStageEnd("");
     setStageDist(""); setStageGain(""); setStageLoss(""); setStageDifficulty("");
     setStageAccommodation(""); setStageDescription(""); setStageNotes(""); setStageWarning("");
+    setStageMapEmbed(""); setStagePhotoUrl(""); setStageDay(""); setStageLabel(""); setStageDuration("");
     setEditingStage(null);
   }
 
@@ -157,6 +163,11 @@ export default function RoadbookDetailPage() {
     setStageDescription(meta.description ?? "");
     setStageNotes(stage.notes?.length ? stage.notes.map(n => n.text ?? n).join("\n") : "");
     setStageWarning(meta.warning ?? "");
+    setStageMapEmbed(stage.map_embed_url ?? "");
+    setStagePhotoUrl(stage.stage_photo_url ?? "");
+    setStageDay(stage.day ?? "");
+    setStageLabel(stage.stage_label ?? "");
+    setStageDuration(stage.duration ?? "");
     setEditingStage(stage);
   }
 
@@ -177,6 +188,11 @@ export default function RoadbookDetailPage() {
       elevation_gain_m: stageGain ? Number(stageGain) : null,
       elevation_loss_m: stageLoss ? Number(stageLoss) : null,
       accommodation_name: stageAccommodation || null,
+      map_embed_url: stageMapEmbed || null,
+      stage_photo_url: stagePhotoUrl || null,
+      day: stageDay || null,
+      stage_label: stageLabel || null,
+      duration: stageDuration || null,
       notes: notes.length ? notes : [], metadata,
     };
 
@@ -204,7 +220,7 @@ export default function RoadbookDetailPage() {
   }
 
   function clearPoiForm() { setPoiForm({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null }); }
-  function clearVariantForm() { setVariantForm({ stage_id: null, title: "", description: "", distance_km: "", elevation_gain_m: "", editing: null }); }
+  function clearVariantForm() { setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", editing: null }); }
 
   function reloadPoisVariants(stageIds) {
     if (!stageIds?.length) return;
@@ -246,7 +262,13 @@ export default function RoadbookDetailPage() {
   async function handleVariantSubmit(e) {
     e.preventDefault();
     setStageError(null); setStageSuccess(null);
-    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, metadata: { elevation_gain_m: variantForm.elevation_gain_m ? Number(variantForm.elevation_gain_m) : null } };
+    const meta = {};
+    if (variantForm.elevation_gain_m) meta.elevation_gain_m = Number(variantForm.elevation_gain_m);
+    if (variantForm.elevation_loss_m) meta.elevation_loss_m = Number(variantForm.elevation_loss_m);
+    if (variantForm.type) meta.type = variantForm.type;
+    if (variantForm.departure) meta.departure = variantForm.departure;
+    if (variantForm.arrival) meta.arrival = variantForm.arrival;
+    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, metadata: Object.keys(meta).length ? meta : {} };
     if (variantForm.editing) {
       const { error: updateError } = await supabase.from("stage_variants").update(record).eq("id", variantForm.editing);
       if (updateError) { setStageError(updateError.message); return; }
@@ -520,7 +542,10 @@ export default function RoadbookDetailPage() {
           roadbook_id: newRb.id, stage_number: stage.stage_number, title: stage.title,
           departure: stage.departure, arrival: stage.arrival, distance_km: stage.distance_km,
           elevation_gain_m: stage.elevation_gain_m, elevation_loss_m: stage.elevation_loss_m,
-          gpx_url: null, accommodation_name: stage.accommodation_name, accommodation_url: stage.accommodation_url,
+          gpx_url: null, map_embed_url: stage.map_embed_url,
+          stage_photo_url: null, day: stage.day, stage_label: stage.stage_label,
+          duration: stage.duration,
+          accommodation_name: stage.accommodation_name, accommodation_url: stage.accommodation_url,
           accommodation_photo: null, accommodation_type: stage.accommodation_type,
           notes: stage.notes, alternatives: stage.alternatives,
           is_substep: stage.is_substep, parent_stage_number: stage.parent_stage_number,
@@ -533,7 +558,8 @@ export default function RoadbookDetailPage() {
           const { error: pError } = await supabase.from("stage_pois").insert({
             stage_id: newStage.id, name: poi.name, lat: poi.lat, lng: poi.lng,
             poi_type: poi.poi_type, description: poi.description, photo_url: null,
-            link_url: poi.link_url, sort_order: poi.sort_order, metadata: poi.metadata,
+            link_url: poi.link_url, region: poi.region,
+            sort_order: poi.sort_order, metadata: poi.metadata,
           });
           if (pError) { setError(pError.message); return; }
         }
@@ -658,6 +684,11 @@ export default function RoadbookDetailPage() {
             <label>Description<textarea value={stageDescription} onChange={e => setStageDescription(e.target.value)} /></label>
             <label>Notes (une par ligne)<textarea value={stageNotes} onChange={e => setStageNotes(e.target.value)} placeholder="Note 1&#10;Note 2" /></label>
             <label>Avertissement<input type="text" value={stageWarning} onChange={e => setStageWarning(e.target.value)} /></label>
+            <label>Jour<textarea value={stageDay} onChange={e => setStageDay(e.target.value)} placeholder="ex: Jour 1" /></label>
+            <label>Libellé étape<input type="text" value={stageLabel} onChange={e => setStageLabel(e.target.value)} placeholder="ex: De X à Y" /></label>
+            <label>Durée<input type="text" value={stageDuration} onChange={e => setStageDuration(e.target.value)} placeholder="ex: 4h30" /></label>
+            <label>Photo URL<input type="url" value={stagePhotoUrl} onChange={e => setStagePhotoUrl(e.target.value)} placeholder="https://..." /></label>
+            <label>Carte intégrée (iframe)<input type="url" value={stageMapEmbed} onChange={e => setStageMapEmbed(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></label>
             <button type="submit">{editingStage ? "Mettre à jour" : "Créer l'étape"}</button>
             {editingStage && <button type="button" onClick={clearStageForm}>Annuler</button>}
           </fieldset>
@@ -721,24 +752,35 @@ export default function RoadbookDetailPage() {
 
                 <details style={{ marginTop: "0.5rem" }}>
                   <summary>Variantes ({stageVariants.length})</summary>
-                  {stageVariants.length > 0 && <ul>{stageVariants.map(v => (
+                  {stageVariants.length > 0 && <ul>{stageVariants.map(v => {
+                  const vmeta = v.metadata ?? {};
+                  return (
                     <li key={v.id}>
-                      <strong>{v.label}</strong>
+                      <strong>{vmeta.type ? <>{vmeta.type} — </> : null}{v.label}</strong>
                       {v.description && <> — {v.description}</>}
                       {v.distance_km != null && <> — {v.distance_km} km</>}
-                      {v.metadata?.elevation_gain_m != null && <> — D+ {v.metadata.elevation_gain_m}m</>}
+                      {vmeta.elevation_gain_m != null && <> — D+ {vmeta.elevation_gain_m}m</>}
+                      {vmeta.elevation_loss_m != null && <> — D- {vmeta.elevation_loss_m}m</>}
+                      {vmeta.departure && <> — {vmeta.departure}</>}
+                      {vmeta.arrival && <> → {vmeta.arrival}</>}
+                      {v.gpx_url && <> — GPX disponible</>}
                       <button type="button" onClick={() => {
-                        setVariantForm({ stage_id: stage.id, title: v.label, description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: v.metadata?.elevation_gain_m != null ? String(v.metadata.elevation_gain_m) : "", editing: v.id });
+                        setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: vmeta.departure ?? "", arrival: vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: vmeta.elevation_gain_m != null ? String(vmeta.elevation_gain_m) : "", elevation_loss_m: vmeta.elevation_loss_m != null ? String(vmeta.elevation_loss_m) : "", editing: v.id });
                       }}>Modifier</button>
                       <button type="button" onClick={() => handleDeleteVariant(v.id)}>Supprimer</button>
                     </li>
-                  ))}</ul>}
+                  );
+                })}</ul>}
                   {variantForm.stage_id === stage.id && (
                     <form onSubmit={handleVariantSubmit} style={{ marginTop: "0.5rem", padding: "0.5rem", background: "#f5f5f5", borderRadius: 4 }}>
                       <label>Titre<input type="text" value={variantForm.title} onChange={e => setVariantForm({ ...variantForm, title: e.target.value })} required /></label>
+                      <label>Type<input type="text" value={variantForm.type} onChange={e => setVariantForm({ ...variantForm, type: e.target.value })} placeholder="ex: Variante, Option, Raccourci" /></label>
+                      <label>Départ<input type="text" value={variantForm.departure} onChange={e => setVariantForm({ ...variantForm, departure: e.target.value })} /></label>
+                      <label>Arrivée<input type="text" value={variantForm.arrival} onChange={e => setVariantForm({ ...variantForm, arrival: e.target.value })} /></label>
                       <label>Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
                       <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
                       <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
+                      <label>D- (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
                       <button type="submit">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
                       <button type="button" onClick={clearVariantForm}>Annuler</button>
                     </form>

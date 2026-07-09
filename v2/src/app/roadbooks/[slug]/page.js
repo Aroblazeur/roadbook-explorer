@@ -73,7 +73,6 @@ async function getRoadbook(slug) {
     }
   }
 
-  // Cover image
   let coverSignedUrl = null;
   if (roadbook.cover_image_url) {
     coverSignedUrl = roadbook.cover_image_url;
@@ -85,11 +84,16 @@ async function getRoadbook(slug) {
     }
   }
 
-  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, private: false };
+  const totalDistance = (stages ?? []).reduce((sum, s) => sum + (s.distance_km ?? 0), 0);
+  const totalElevationGain = (stages ?? []).reduce((sum, s) => sum + (s.elevation_gain_m ?? 0), 0);
+  const totalElevationLoss = (stages ?? []).reduce((sum, s) => sum + (s.elevation_loss_m ?? 0), 0);
+
+  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false };
 }
 
-export default async function RoadbookViewPage({ params }) {
+export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const { slug } = await params;
+  const searchParams = await sp;
   const result = await getRoadbook(slug);
 
   if (!result) return notFound();
@@ -104,12 +108,17 @@ export default async function RoadbookViewPage({ params }) {
     );
   }
 
-  const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl } = result;
+  const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, totals } = result;
+  const stageParam = searchParams?.stage ? Number(searchParams.stage) : null;
 
   const poisByStage = {};
   pois.forEach(p => { if (!poisByStage[p.stage_id]) poisByStage[p.stage_id] = []; poisByStage[p.stage_id].push(p); });
   const variantsByStage = {};
   variants.forEach(v => { if (!variantsByStage[v.stage_id]) variantsByStage[v.stage_id] = []; variantsByStage[v.stage_id].push(v); });
+
+  const visibleStages = stageParam != null && stageParam >= 0 && stageParam < stages.length
+    ? [stages[stageParam]] : stages;
+  const currentIdx = stageParam != null && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
 
   return (
     <main>
@@ -121,53 +130,88 @@ export default async function RoadbookViewPage({ params }) {
           <p>Visibilité : {roadbook.is_public ? "public" : "privé"}</p>
         </header>
 
-        {renderMetrics(roadbook)}
-
-        {images.length > 0 && renderImages(images)}
-
-        {(gpxOfficial || gpxCustom) && renderGpxSection(gpxOfficial, gpxCustom)}
+        {!stageParam && (
+          <>
+            <GlobalSummary
+              distance={totals.distance}
+              elevationGain={totals.elevationGain}
+              elevationLoss={totals.elevationLoss}
+              stageCount={stages.length}
+            />
+            {gpxOfficial && <GpxOfficialSection gpx={gpxOfficial} />}
+          </>
+        )}
 
         <section>
-          <h2>Étapes ({stages.length})</h2>
+          <h2>{stageParam != null ? `Étape ${stageParam + 1}` : `Étapes (${stages.length})`}</h2>
           {stages.length === 0 && <p>Ce roadbook n&apos;a pas encore d&apos;étapes.</p>}
           <ol style={{ listStyle: "none", padding: 0 }}>
-            {stages.map(stage => <li key={stage.id}>{renderStageCard(stage, poisByStage[stage.id] ?? [], variantsByStage[stage.id] ?? [], gpxByStage[stage.id] ?? null)}</li>)}
+            {visibleStages.map(stage => (
+              <li key={stage.id}>
+                <StageCard
+                  stage={stage}
+                  pois={poisByStage[stage.id] ?? []}
+                  variants={variantsByStage[stage.id] ?? []}
+                  stageGpx={gpxByStage[stage.id] ?? null}
+                />
+              </li>
+            ))}
           </ol>
         </section>
+
+        {!stageParam && gpxCustom && <GpxCustomSection gpx={gpxCustom} />}
+        {!stageParam && images.length > 0 && <ImagesSection images={images} />}
       </article>
 
-      <p><Link href="/">Retour à l&apos;accueil</Link></p>
+      <nav style={{ marginTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+        {currentIdx != null && currentIdx > 0
+          ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx - 1}`}>← Étape précédente</Link>
+          : <span />}
+        <Link href={currentIdx != null ? `/roadbooks/${roadbook.slug}` : "/"}>
+          {currentIdx != null ? "Vue d'ensemble" : "Retour à l'accueil"}
+        </Link>
+        {currentIdx != null && currentIdx < stages.length - 1
+          ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx + 1}`}>Étape suivante →</Link>
+          : <span />}
+      </nav>
     </main>
   );
 }
 
-function renderMetrics(roadbook) {
-  const metrics = [
-    { label: "Distance", value: roadbook.distance_km, unit: "km" },
-    { label: "D+", value: roadbook.elevation_gain_m, unit: "m" },
-    { label: "D−", value: roadbook.elevation_loss_m, unit: "m" },
-  ].filter(m => m.value != null);
+function Section({ children, ...props }) {
+  return <section style={{ marginBottom: "1.5rem" }} {...props}>{children}</section>;
+}
 
-  if (!metrics.length) return null;
-
+function GpxOfficialSection({ gpx }) {
   return (
-    <section>
-      <h2>Métriques</h2>
-      <dl style={{ display: "flex", gap: "1.5rem" }}>
-        {metrics.map(m => (
-          <div key={m.label}>
-            <dt>{m.label}</dt>
-            <dd><strong>{m.value}</strong> {m.unit}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
+    <Section>
+      <h2>Trace officielle</h2>
+      <p>
+        Télécharger le GPX officiel complet :{" "}
+        <a href={gpx.signedUrl} download={gpx.file_name ?? "trace.gpx"}>
+          {gpx.file_name ?? "trace.gpx"}
+        </a>
+      </p>
+    </Section>
   );
 }
 
-function renderImages(images) {
+function GpxCustomSection({ gpx }) {
   return (
-    <section>
+    <Section>
+      <h2>GPX personnalisé</h2>
+      <p>
+        <a href={gpx.signedUrl} download={gpx.file_name ?? "personnalise.gpx"}>
+          {gpx.file_name ?? "Télécharger le GPX personnalisé"}
+        </a>
+      </p>
+    </Section>
+  );
+}
+
+function ImagesSection({ images }) {
+  return (
+    <Section>
       <h2>Images ({images.length})</h2>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
         {images.map(img => (
@@ -177,35 +221,48 @@ function renderImages(images) {
           </div>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }
 
-function renderGpxSection(gpxOfficial, gpxCustom) {
+function VariantCard({ v }) {
+  const vmeta = v.metadata ?? {};
   return (
-    <section>
-      <h2>GPX du roadbook</h2>
-      {gpxOfficial && (
-        <p>
-          <strong>GPX officiel :</strong> {gpxOfficial.file_name}{" "}
-          <a href={gpxOfficial.signedUrl} download={gpxOfficial.file_name}>Télécharger</a>
+    <div style={{ borderLeft: "3px solid #999", paddingLeft: "0.75rem", marginBottom: "0.5rem", marginLeft: "1rem" }}>
+      <p style={{ margin: 0 }}>
+        <span style={{ color: "#666" }}>↳ </span>
+        {vmeta.type && <strong style={{ fontSize: "0.85rem", color: "#555" }}>{vmeta.type}</strong>}{vmeta.type && <> — </>}
+        <strong>{v.label}</strong>
+      </p>
+      {(vmeta.departure || vmeta.arrival) && (
+        <p style={{ margin: "0.25rem 0", fontSize: "0.9rem", color: "#444" }}>
+          {vmeta.departure && <span>{vmeta.departure}</span>}
+          {vmeta.departure && vmeta.arrival && <> → </>}
+          {vmeta.arrival && <span>{vmeta.arrival}</span>}
         </p>
       )}
-      {gpxCustom && (
-        <p>
-          <strong>GPX personnalisé :</strong> {gpxCustom.file_name}{" "}
-          <a href={gpxCustom.signedUrl} download={gpxCustom.file_name}>Télécharger</a>
-        </p>
-      )}
-    </section>
+      <div style={{ display: "flex", gap: "1rem", fontSize: "0.85rem", color: "#555" }}>
+        {v.distance_km != null && <span><strong>{v.distance_km}</strong> km</span>}
+        {vmeta.elevation_gain_m != null && <span><strong>{vmeta.elevation_gain_m}</strong> m D+</span>}
+        {vmeta.elevation_loss_m != null && <span><strong>{vmeta.elevation_loss_m}</strong> m D−</span>}
+      </div>
+      {v.description && <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>{v.description}</p>}
+    </div>
   );
 }
 
-function renderStageCard(stage, pois = [], variants = [], stageGpx = null) {
+function StageCard({ stage, pois, variants, stageGpx }) {
   const meta = stage.metadata ?? {};
   return (
     <article style={{ border: "1px solid #ccc", borderRadius: 8, padding: "1rem", marginBottom: "1rem" }}>
-      <h3>Jour {stage.stage_number}{stage.title ? <> — {stage.title}</> : null}</h3>
+      <h3>
+        {stage.stage_label || (stage.day ? `${stage.day} — ` : "Jour " + stage.stage_number)}
+        {stage.title && <> — {stage.title}</>}
+      </h3>
+
+      {stage.stage_photo_url && (
+        <img src={stage.stage_photo_url} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 4, marginBottom: "0.5rem" }} />
+      )}
 
       {(stage.departure || stage.arrival) && (
         <p>
@@ -215,23 +272,40 @@ function renderStageCard(stage, pois = [], variants = [], stageGpx = null) {
         </p>
       )}
 
-      {stage.distance_km != null && <p>Distance : {stage.distance_km} km</p>}
-      {stage.elevation_gain_m != null && <p>D+ : {stage.elevation_gain_m} m</p>}
-      {stage.elevation_loss_m != null && <p>D− : {stage.elevation_loss_m} m</p>}
-      {meta.difficulty && <p>Difficulté : {meta.difficulty}</p>}
-
-      {stage.accommodation_name && <p>Hébergement : {stage.accommodation_name}</p>}
+      <div style={{ display: "flex", gap: "1rem", fontSize: "0.9rem", marginBottom: "0.5rem" }}>
+        {stage.distance_km != null && <span><strong>{stage.distance_km}</strong> km</span>}
+        {stage.elevation_gain_m != null && <span><strong>{stage.elevation_gain_m}</strong> m D+</span>}
+        {stage.elevation_loss_m != null && <span><strong>{stage.elevation_loss_m}</strong> m D−</span>}
+        {stage.duration && <span>Durée : {stage.duration}</span>}
+      </div>
 
       {meta.description && <p>{meta.description}</p>}
-
+      {meta.difficulty && <p>Difficulté : {meta.difficulty}</p>}
       {meta.warning && <p style={{ color: "orange" }}>{meta.warning}</p>}
+
+      {stage.accommodation_name && (
+        <p>
+          Hébergement : <strong>{stage.accommodation_name}</strong>
+          {stage.accommodation_type && <> ({stage.accommodation_type})</>}
+          {stage.accommodation_url && <> — <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer">Site web</a></>}
+        </p>
+      )}
+
+      {stage.map_embed_url && (
+        <div style={{ marginBottom: "0.5rem" }}>
+          <iframe src={stage.map_embed_url} width="100%" height="300" style={{ border: "none", borderRadius: 4 }} allowFullScreen loading="lazy" />
+        </div>
+      )}
 
       {Array.isArray(stage.notes) && stage.notes.length > 0 && (
         <details>
           <summary>Notes ({stage.notes.length})</summary>
           <ul>
             {stage.notes.map((note, i) => (
-              <li key={i}>{note.text ?? note}</li>
+              <li key={i}>
+                {note.text ?? note}
+                {note.photo && <> <img src={note.photo} alt="" style={{ maxWidth: 200, display: "block", marginTop: "0.25rem", borderRadius: 4 }} /></>}
+              </li>
             ))}
           </ul>
         </details>
@@ -244,8 +318,9 @@ function renderStageCard(stage, pois = [], variants = [], stageGpx = null) {
             {pois.map(poi => (
               <li key={poi.id}>
                 {poi.poi_type && <strong>[{poi.poi_type}]</strong>} {poi.name}
+                {poi.region && <> — <em>{poi.region}</em></>}
                 {poi.description && <> — {poi.description}</>}
-                {poi.lat != null && poi.lng != null && <span> ({poi.lat}, {poi.lng})</span>}
+                {poi.photo_url && <> <img src={poi.photo_url} alt="" style={{ maxHeight: 100, borderRadius: 4, display: "block", marginTop: "0.25rem" }} /></>}
                 {poi.link_url && <> — <a href={poi.link_url} target="_blank" rel="noopener">lien</a></>}
               </li>
             ))}
@@ -254,26 +329,50 @@ function renderStageCard(stage, pois = [], variants = [], stageGpx = null) {
       )}
 
       {variants.length > 0 && (
-        <details style={{ marginTop: "0.5rem" }}>
-          <summary>Variantes ({variants.length})</summary>
-          <ul>
-            {variants.map(v => (
-              <li key={v.id}>
-                <strong>{v.label}</strong>
-                {v.description && <> — {v.description}</>}
-                {v.distance_km != null && <> — {v.distance_km} km</>}
-              </li>
-            ))}
-          </ul>
-        </details>
+        <div style={{ marginTop: "0.5rem" }}>
+          <p style={{ fontWeight: "bold", fontSize: "0.9rem", color: "#555", marginBottom: "0.3rem" }}>Variantes ({variants.length})</p>
+          {variants.map(v => <VariantCard key={v.id} v={v} />)}
+        </div>
       )}
 
       {stageGpx && (
         <p style={{ marginTop: "0.5rem" }}>
-          <strong>GPX d&apos;étape :</strong> {stageGpx.file_name}{" "}
-          <a href={stageGpx.signedUrl} download={stageGpx.file_name}>Télécharger</a>
+          <strong>GPX d&apos;étape :</strong>{" "}
+          <a href={stageGpx.signedUrl} download={stageGpx.file_name ?? "etape.gpx"}>
+            {stageGpx.file_name ?? "Télécharger"}
+          </a>
         </p>
       )}
     </article>
+  );
+}
+
+function SummaryStat({ label, value, unit }) {
+  return (
+    <div>
+      <dt style={{ fontWeight: "bold" }}>{label}</dt>
+      <dd style={{ margin: 0, fontSize: "1.1rem" }}>{value != null ? value + (unit ? " " + unit : "") : "—"}</dd>
+    </div>
+  );
+}
+
+function SectionTitle({ children }) {
+  return <h2 style={{ marginBottom: "0.75rem" }}>{children}</h2>;
+}
+
+function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
+  const hasTotal = stageCount > 0 && (distance > 0 || elevationGain > 0 || elevationLoss > 0);
+  if (!hasTotal) return null;
+
+  return (
+    <Section>
+      <SectionTitle>Résumé du parcours</SectionTitle>
+      <dl style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+        <SummaryStat label="Distance totale" value={distance} unit="km" />
+        <SummaryStat label="Dénivelé +" value={elevationGain} unit="m" />
+        <SummaryStat label="Dénivelé −" value={elevationLoss} unit="m" />
+        <SummaryStat label="Étapes" value={stageCount} />
+      </dl>
+    </Section>
   );
 }
