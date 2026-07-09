@@ -569,12 +569,16 @@
 
     function normalizeStageAccommodationAlternatives(alternatives) {
         if (!Array.isArray(alternatives)) return [];
-        return alternatives.map(alternative => ({
-            url: safeText(alternative?.url, ""),
-            name: safeText(alternative?.name, ""),
-            photo: safeText(alternative?.photo, ""),
-            price: safeText(alternative?.price, "")
-        }));
+        return alternatives.map(alternative => {
+            const link = safeText(alternative?.url || alternative?.website, "");
+            return {
+                url: link,
+                website: link,
+                name: safeText(alternative?.name, ""),
+                photo: safeText(alternative?.photo, ""),
+                price: safeText(alternative?.price, "")
+            };
+        });
     }
 
     function normalizeRoadbookAccommodations(accommodations) {
@@ -1802,7 +1806,7 @@
         ].forEach(({ field, label }) => {
             grid.appendChild(createBoundField({
                 label,
-                value: alternative[field] ?? "",
+                value: field === "url" ? (alternative.url ?? alternative.website ?? "") : (alternative[field] ?? ""),
                 mediaContext: field === "photo" ? { type: "stage-alternative-accommodation-photo", stageIndex, itemIndex: alternativeIndex } : null,
                 onChange: value => updateStageAccommodationAlternative(stageIndex, alternativeIndex, field, value.trim())
             }));
@@ -1838,7 +1842,7 @@
         ].forEach(({ field, label }) => {
             grid.appendChild(createBoundField({
                 label,
-                value: alternative[field] ?? "",
+                value: field === "url" ? (alternative.url ?? alternative.website ?? "") : (alternative[field] ?? ""),
                 mediaContext: field === "photo" ? { type: "variant-alternative-accommodation-photo", stageIndex, variantIndex, itemIndex: alternativeIndex } : null,
                 onChange: value => updateVariantAccommodationAlternative(stageIndex, variantIndex, alternativeIndex, field, value.trim())
             }));
@@ -2399,6 +2403,7 @@
         stage.accommodation = normalizeStageAccommodation(stage.accommodation);
         stage.accommodation.alternatives.push({
             url: "",
+            website: "",
             name: "",
             photo: "",
             price: ""
@@ -2410,6 +2415,7 @@
         const alternative = state.selectedRoadbook?.stages?.[stageIndex]?.accommodation?.alternatives?.[alternativeIndex];
         if (!alternative) return;
         alternative[field] = value;
+        if (field === "url") alternative.website = value;
         if (field === "name") {
             const card = elements.detail.querySelector(`.studio-stage-card[data-stage-index="${stageIndex}"] .studio-subitem-card[data-alternative-index="${alternativeIndex}"] strong`);
             if (card) card.textContent = safeText(value, `Hébergement alternatif ${alternativeIndex + 1}`);
@@ -2438,6 +2444,7 @@
         variant.accommodation = normalizeStageAccommodation(variant.accommodation);
         variant.accommodation.alternatives.push({
             url: "",
+            website: "",
             name: "",
             photo: "",
             price: ""
@@ -2449,6 +2456,7 @@
         const alternative = state.selectedRoadbook?.stages?.[stageIndex]?.variants?.[variantIndex]?.accommodation?.alternatives?.[alternativeIndex];
         if (!alternative) return;
         alternative[field] = value;
+        if (field === "url") alternative.website = value;
         if (field === "name") {
             const heading = elements.detail.querySelector(`.studio-variant-card[data-parent-stage-index="${stageIndex}"][data-variant-index="${variantIndex}"] .studio-subitem-card[data-alternative-index="${alternativeIndex}"] strong`);
             if (heading) heading.textContent = safeText(value, `Hébergement alternatif ${alternativeIndex + 1}`);
@@ -2927,6 +2935,8 @@
             : "Aucun enrichissement POI supplementaire.");
 
         const roadbook = { ...exportPayload, id };
+        const alternativesCount = countExportAccommodationAlternatives(roadbook);
+        console.info(`[Studio] Publication ${id}: ${alternativesCount} hébergement(s) alternatif(s) dans le payload.`);
 
         const gpxFileEntries = await buildPublicationFileEntries(state.gpxFiles, "GPX");
         progress.setStep("images", "active");
@@ -4284,7 +4294,23 @@
                 ...computedStagesTotal
             }
         };
+        // Export alias: le lecteur public consomme aussi roadbook.days.
+        clone.days = clone.stages;
         return clone;
+    }
+
+    function countExportAccommodationAlternatives(roadbook) {
+        const stages = Array.isArray(roadbook?.stages) ? roadbook.stages : [];
+        return stages.reduce((total, stage) => {
+            const stageAlternatives = countAccommodationAlternativeEntries(stage?.accommodation);
+            const variantAlternatives = (Array.isArray(stage?.variants) ? stage.variants : [])
+                .reduce((variantTotal, variant) => variantTotal + countAccommodationAlternativeEntries(variant?.accommodation), 0);
+            return total + stageAlternatives + variantAlternatives;
+        }, 0);
+    }
+
+    function countAccommodationAlternativeEntries(accommodation) {
+        return Array.isArray(accommodation?.alternatives) ? accommodation.alternatives.length : 0;
     }
 
     function normalizeExportSubstep(variant, parentStageNumber, variantIndex) {
