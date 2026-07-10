@@ -1006,7 +1006,7 @@ export default function RoadbookDetailPage() {
         <div className="studio-panel">
 
           {/* CARD 1 — Informations générales */}
-          <div className="studio-card">
+          <div className="studio-card studio-card--accent">
             <div className="studio-card__header">
               <h3>Informations générales</h3>
             </div>
@@ -1138,19 +1138,14 @@ export default function RoadbookDetailPage() {
             </div>
           </div>
 
-          {/* CARD 6 — Informations */}
-          <div className="studio-card">
-            <div className="studio-card__header">
-              <h3>Informations</h3>
-            </div>
-            <div className="studio-card__body">
+          {/* CARD 6 — Informations (discrète) */}
+          <div className="studio-card studio-card--muted">
               <dl className="studio-info-grid">
                 <dt>Slug</dt><dd><code>{roadbook?.slug}</code></dd>
                 <dt>ID</dt><dd><code>{roadbook?.id}</code></dd>
                 <dt>Créé le</dt><dd>{roadbook?.created_at ? new Date(roadbook.created_at).toLocaleDateString() : ""}</dd>
               </dl>
             </div>
-          </div>
 
         </div>
 
@@ -1159,9 +1154,6 @@ export default function RoadbookDetailPage() {
           <div className="studio-card">
             <div className="studio-card__header">
               <h2>Étapes ({stages.length})</h2>
-              <button type="button" onClick={() => setShowStageForm(s => !s)} className="terrain-button--secondary studio-action-button--compact">
-                {showStageForm ? "Fermer" : "Nouvelle étape"}
-              </button>
             </div>
             <div className="studio-card__body">
               {enrichmentError && <p className="page-error">{enrichmentError}</p>}
@@ -1171,8 +1163,12 @@ export default function RoadbookDetailPage() {
                 <p className="text-muted" style={{ fontStyle: "italic" }}>Aucune donnée d'enrichissement.</p>
               )}
 
-              {/* Formulaire nouvelle étape (repliable) */}
-              {showStageForm && (
+              {/* Bandeau + Nouvelle étape (si aucun formulaire ouvert) */}
+              {!showStageForm && !editingStage ? (
+                <button type="button" onClick={() => setShowStageForm(true)} className="studio-stage-create-bandeau">
+                  + Nouvelle étape
+                </button>
+              ) : (
                 <div className="studio-create-form">
                   <h3>{editingStage ? "Modifier l'étape" : "Nouvelle étape"}</h3>
                   <form onSubmit={handleStageSubmit}>
@@ -1197,7 +1193,7 @@ export default function RoadbookDetailPage() {
                     </div>
                     <div className="studio-create-form__actions">
                       <button type="submit">{editingStage ? "Mettre à jour" : "Créer l'étape"}</button>
-                      {editingStage && <button type="button" className="terrain-button--secondary" onClick={clearStageForm}>Annuler</button>}
+                      <button type="button" className="terrain-button--secondary" onClick={() => { clearStageForm(); setShowStageForm(false); }}>Annuler</button>
                     </div>
                   </form>
                 </div>
@@ -1217,23 +1213,33 @@ export default function RoadbookDetailPage() {
                   <div key={stage.id} className="studio-stage-card" data-expanded={expanded ? "true" : "false"}>
                     <div className="studio-stage-card__header">
                       <div className="studio-stage-card__header-info" onClick={() => setExpandedStages(prev => ({ ...prev, [stage.id]: !prev[stage.id] }))}>
-                        <p className="studio-stage-card__title">Jour {stage.stage_number}{stage.title && <> — {stage.title}</>}</p>
-                        <p className="studio-stage-card__summary">
-                          {stage.departure && <>{stage.departure}</>}
-                          {stage.departure && stage.arrival && <> → </>}
-                          {stage.arrival && <>{stage.arrival}</>}
-                          {stage.distance_km != null && <> — {stage.distance_km} km</>}
-                          {stage.elevation_gain_m != null && <> — D+{stage.elevation_gain_m}</>}
-                          {stage.elevation_loss_m != null && <> — D-{stage.elevation_loss_m}</>}
-                          {meta.difficulty && <> — {meta.difficulty}</>}
-                          {stage.accommodation_name && <> — 🏕 {stage.accommodation_name}</>}
-                        </p>
+                        <div className="studio-stage-card__header-row">
+                          <span className="studio-stage-card__number">{stage.stage_number}</span>
+                          <div className="studio-stage-card__route">
+                            <span className="studio-stage-card__route-text">
+                              {stage.departure}{stage.departure && stage.arrival && <> → </>}{stage.arrival}
+                            </span>
+                            {stage.title && <span className="studio-stage-card__route-title"> – {stage.title}</span>}
+                          </div>
+                          <div className="studio-stage-card__stats">
+                            {stage.distance_km != null && <span className="stat-pill">{stage.distance_km} km</span>}
+                            {stage.elevation_gain_m != null && <span className="stat-pill">D+{stage.elevation_gain_m}</span>}
+                            {stage.elevation_loss_m != null && <span className="stat-pill">D-{stage.elevation_loss_m}</span>}
+                            {meta.difficulty && <span className="stat-pill stat-pill--outline">{meta.difficulty}</span>}
+                          </div>
+                        </div>
+                        {(stage.accommodation_name || stage.duration) && (
+                          <div className="studio-stage-card__header-sub">
+                            {stage.duration && <span className="studio-stage-card__meta">{stage.duration}</span>}
+                            {stage.accommodation_name && <span className="studio-stage-card__meta">🏕 {stage.accommodation_name}</span>}
+                          </div>
+                        )}
                       </div>
                       <div className="studio-stage-card__actions">
-                        <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id}>Modifier</button>
-                        <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteStage(stage.id)} disabled={deleting === stage.id}>Supprimer</button>
-                        {!isFirst && <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleMoveStage(stage, "up")} disabled={deleting === stage.id}>↑</button>}
-                        {!isLast && <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleMoveStage(stage, "down")} disabled={deleting === stage.id}>↓</button>}
+                        <button type="button" className="studio-stage-card__action" onClick={() => fillStageForm(stage)} disabled={deleting === stage.id} title="Modifier">✎</button>
+                        <button type="button" className="studio-stage-card__action studio-stage-card__action--danger" onClick={() => handleDeleteStage(stage.id)} disabled={deleting === stage.id} title="Supprimer">✕</button>
+                        {!isFirst && <button type="button" className="studio-stage-card__action" onClick={() => handleMoveStage(stage, "up")} disabled={deleting === stage.id} title="Monter">↑</button>}
+                        {!isLast && <button type="button" className="studio-stage-card__action" onClick={() => handleMoveStage(stage, "down")} disabled={deleting === stage.id} title="Descendre">↓</button>}
                       </div>
                     </div>
                     {expanded && <div className="studio-stage-card__body">
