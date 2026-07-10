@@ -86,6 +86,86 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .header h1 { font-size: 2.2rem; margin-bottom: 10px; }
 .header p { opacity: .9; }
 
+.header-logo { width: 80px; height: auto; flex-shrink: 0; }
+
+/* ===== Auth Nav in Header ===== */
+.header-nav { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.header-nav a, .header-nav button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 36px; padding: 6px 14px; border-radius: 999px;
+  color: white; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.42);
+  font-size: .9rem; font-weight: 700; text-decoration: none;
+}
+.header-nav a:hover, .header-nav button:hover, .header-nav a:focus-visible, .header-nav button:focus-visible {
+  color: white; background: rgba(255,255,255,.28); outline: 2px solid rgba(255,255,255,.55); outline-offset: 2px;
+}
+.header-nav .header-nav__email { font-weight: 400; font-size: .85rem; opacity: .85; }
+
+/* ===== Roadbook Library Catalog (V1) ===== */
+.roadbook-library-grid { display: grid; gap: 14px; }
+
+.roadbook-library-group { display: grid; gap: 12px; }
+.roadbook-library-group__title { margin: 8px 0 0; color: var(--primary-dark); font-size: 1.15rem; }
+.roadbook-library-group__items { display: grid; gap: 14px; }
+
+.roadbook-library-card {
+  display: grid;
+  grid-template-columns: minmax(180px,260px) minmax(0,1fr);
+  gap: 18px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(46,125,50,.14);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+}
+.roadbook-library-card:hover,
+.roadbook-library-card:focus-visible {
+  border-color: rgba(46,125,50,.42);
+  background: #fbfefb;
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.roadbook-library-card__cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e7eee8;
+  border: 1px solid rgba(46,125,50,.14);
+}
+.roadbook-library-card__cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.roadbook-library-card__cover--placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+}
+
+.roadbook-library-card__content { display: grid; gap: 8px; min-width: 0; }
+.roadbook-library-card__title { margin: 0; }
+.roadbook-library-card__meta {
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: .95rem;
+  font-weight: 700;
+}
+.roadbook-library-card__description {
+  margin: 0;
+  color: var(--text-light);
+  line-height: 1.5;
+}
+
 /* ===== Cards ===== */
 .card {
   background: var(--surface);
@@ -985,6 +1065,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .stats { gap: 8px; }
   .stat { min-height: 40px; padding: 8px 11px; }
   .header { padding: 24px 16px; }
+  .roadbook-library-card { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+  .header-logo { width: 48px; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1004,5 +1086,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .stat__value { color: #e0e0e0; }
   .poi-card, .note-item, .variant-card, .automation-result { background: #1a1a1a; }
   .studio-roadbook-card, .studio-stage-card, .studio-variant-card { background: var(--studio-surface); }
+  .roadbook-library-card { background: var(--surface); border-color: rgba(76, 175, 80, 0.2); }
+  .roadbook-library-card:hover,
+  .roadbook-library-card:focus-visible { background: #1a2a1a; border-color: rgba(76, 175, 80, 0.4); }
   label { color: var(--text-light); }
 }
