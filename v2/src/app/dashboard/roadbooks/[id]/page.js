@@ -79,6 +79,19 @@ export default function RoadbookDetailPage() {
   const [automationResult, setAutomationResult] = useState(null);
   const [showStageForm, setShowStageForm] = useState(false);
 
+  // Official route
+  const [officialDist, setOfficialDist] = useState("");
+  const [officialGain, setOfficialGain] = useState("");
+  const [officialLoss, setOfficialLoss] = useState("");
+  const [officialGpx, setOfficialGpx] = useState("");
+  const [officialMap, setOfficialMap] = useState("");
+  // Current trace
+  const [traceDist, setTraceDist] = useState("");
+  const [traceGain, setTraceGain] = useState("");
+  const [traceLoss, setTraceLoss] = useState("");
+  const [traceGpx, setTraceGpx] = useState("");
+  const [traceMap, setTraceMap] = useState("");
+
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading]);
@@ -97,6 +110,19 @@ export default function RoadbookDetailPage() {
           setActivity(data.metadata?.activity ?? "");
           setDestination(data.metadata?.destination ?? "");
           setProject(data.metadata?.project ?? "");
+          const meta = data.metadata ?? {};
+          const official = meta.official ?? {};
+          setOfficialDist(official.distance != null ? String(official.distance) : "");
+          setOfficialGain(official.elevationGain != null ? String(official.elevationGain) : "");
+          setOfficialLoss(official.elevationLoss != null ? String(official.elevationLoss) : "");
+          setOfficialGpx(official.gpx ?? "");
+          setOfficialMap(official.mapEmbedUrl ?? "");
+          const stagesTotal = meta.stagesTotal ?? {};
+          setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_total_km != null ? String(data.distance_total_km) : ""));
+          setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_total_m != null ? String(data.elevation_gain_total_m) : ""));
+          setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_total_m != null ? String(data.elevation_loss_total_m) : ""));
+          setTraceGpx(stagesTotal.gpx ?? "");
+          setTraceMap(stagesTotal.mapEmbedUrl ?? "");
           setCoverUrl(data.cover_image_url ?? "");
           setCoverMediaId(data.cover_media_id ?? null);
           if (data.cover_image_url) { setCoverMode("url"); setCoverPreview(data.cover_image_url); }
@@ -159,6 +185,36 @@ export default function RoadbookDetailPage() {
       .from("roadbooks").update({ title, description, metadata: meta }).eq("id", id);
     if (updateError) setError(updateError.message);
     else { setSuccess("Roadbook mis à jour."); setRoadbook(prev => ({ ...prev, title, description, metadata: meta })); }
+    setSaving(false);
+  }
+
+  async function handleSaveRoute(e) {
+    e.preventDefault();
+    setError(null); setSuccess(null); setSaving(true);
+    const meta = { ...(roadbook?.metadata ?? {}) };
+    meta.official = {
+      distance: officialDist ? Number(officialDist) : null,
+      elevationGain: officialGain ? Number(officialGain) : null,
+      elevationLoss: officialLoss ? Number(officialLoss) : null,
+      gpx: officialGpx || null,
+      mapEmbedUrl: officialMap || null,
+    };
+    meta.stagesTotal = {
+      distance: traceDist ? Number(traceDist) : null,
+      elevationGain: traceGain ? Number(traceGain) : null,
+      elevationLoss: traceLoss ? Number(traceLoss) : null,
+      gpx: traceGpx || null,
+      mapEmbedUrl: traceMap || null,
+    };
+    const updateFields = {
+      metadata: meta,
+      distance_total_km: traceDist ? Number(traceDist) : null,
+      elevation_gain_total_m: traceGain ? Number(traceGain) : null,
+      elevation_loss_total_m: traceLoss ? Number(traceLoss) : null,
+    };
+    const { error: updateError } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
+    if (updateError) setError(updateError.message);
+    else { setSuccess("Itinéraire et tracé mis à jour."); setRoadbook(prev => ({ ...prev, metadata: meta, ...updateFields })); }
     setSaving(false);
   }
 
@@ -1029,12 +1085,36 @@ export default function RoadbookDetailPage() {
             </div>
           </div>
 
-          {/* CARD 2 — Publication */}
+          {/* CARD 2 — Image de couverture + Visibilité */}
           <div className="studio-card">
             <div className="studio-card__header">
-              <h3>Publication</h3>
+              <h3>Image de couverture</h3>
             </div>
             <div className="studio-card__body">
+              <div className="cover-selector">
+                {coverPreview
+                  ? <img src={coverPreview} alt="Couverture" className="cover-preview" />
+                  : <div className="cover-placeholder">Aucune image de couverture</div>}
+                <label>URL externe :
+                  <input type="url" value={coverUrl} onChange={e => setCoverUrl(e.target.value)} placeholder="https://..." />
+                </label>
+                <div className="studio-actions">
+                  <button type="button" onClick={() => handleSetCoverFromUrl(coverUrl)} className="studio-action-button--compact">Définir</button>
+                  <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={handleRemoveCover}>Retirer</button>
+                </div>
+                {images.length > 0 && (
+                  <div className="page-section">
+                    <p className="text-muted">Ou depuis les images uploadées :</p>
+                    <div className="studio-media-thumbs">
+                      {images.map(img => (
+                        <div key={img.id} className="studio-media-thumb" data-active={(coverMode === "media" && coverMediaId === img.id) || undefined} onClick={() => handleSetCoverFromMedia(img.id)}>
+                          {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? ""} />}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="studio-stage-extra">
                 <div className="studio-stage-extra__header">
                   <h5>Visibilité</h5>
@@ -1044,37 +1124,48 @@ export default function RoadbookDetailPage() {
                 </div>
                 <p className="text-muted">Actuellement : {isPublic ? "public" : "privé"}</p>
               </div>
-              <div className="studio-stage-extra">
-                <h5>Image de couverture</h5>
-                <div className="cover-selector" style={{ marginTop: "0.5rem" }}>
-                  {coverPreview
-                    ? <img src={coverPreview} alt="Couverture" className="cover-preview" />
-                    : <div className="cover-placeholder">Aucune image de couverture</div>}
-                  <label>URL externe :
-                    <input type="url" value={coverUrl} onChange={e => setCoverUrl(e.target.value)} placeholder="https://..." />
-                  </label>
-                  <div className="studio-actions">
-                    <button type="button" onClick={() => handleSetCoverFromUrl(coverUrl)} className="studio-action-button--compact">Définir</button>
-                    <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={handleRemoveCover}>Retirer</button>
-                  </div>
-                  {images.length > 0 && (
-                    <div className="page-section">
-                      <p className="text-muted">Ou depuis les images uploadées :</p>
-                      <div className="studio-media-thumbs">
-                        {images.map(img => (
-                          <div key={img.id} className="studio-media-thumb" data-active={(coverMode === "media" && coverMediaId === img.id) || undefined} onClick={() => handleSetCoverFromMedia(img.id)}>
-                            {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? ""} />}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* CARD 3 — Médias */}
+          {/* CARD 3 — Itinéraire officiel */}
+          <div className="studio-card">
+            <div className="studio-card__header">
+              <h3>Itinéraire officiel</h3>
+            </div>
+            <div className="studio-card__body">
+              <form onSubmit={handleSaveRoute} className="studio-form-grid studio-form-grid--compact">
+                <label>Distance (km)<input type="number" step="0.1" value={officialDist} onChange={e => setOfficialDist(e.target.value)} /></label>
+                <label>D+ (m)<input type="number" value={officialGain} onChange={e => setOfficialGain(e.target.value)} /></label>
+                <label>D− (m)<input type="number" value={officialLoss} onChange={e => setOfficialLoss(e.target.value)} /></label>
+                <label className="studio-form-grid__full">GPX<input type="text" value={officialGpx} onChange={e => setOfficialGpx(e.target.value)} placeholder="URL du fichier GPX" /></label>
+                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={officialMap} onChange={e => setOfficialMap(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></label>
+                <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
+                  {saving ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* CARD 4 — Tracé actuel */}
+          <div className="studio-card">
+            <div className="studio-card__header">
+              <h3>Tracé actuel</h3>
+            </div>
+            <div className="studio-card__body">
+              <form onSubmit={handleSaveRoute} className="studio-form-grid studio-form-grid--compact">
+                <label>Distance (km)<input type="number" step="0.1" value={traceDist} onChange={e => setTraceDist(e.target.value)} /></label>
+                <label>D+ (m)<input type="number" value={traceGain} onChange={e => setTraceGain(e.target.value)} /></label>
+                <label>D− (m)<input type="number" value={traceLoss} onChange={e => setTraceLoss(e.target.value)} /></label>
+                <label className="studio-form-grid__full">GPX<input type="text" value={traceGpx} onChange={e => setTraceGpx(e.target.value)} placeholder="URL du fichier GPX" /></label>
+                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={traceMap} onChange={e => setTraceMap(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></label>
+                <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
+                  {saving ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* CARD 5 — Médias */}
           <div className="studio-card">
             <div className="studio-card__header">
               <h3>Médias</h3>
@@ -1105,7 +1196,7 @@ export default function RoadbookDetailPage() {
             </div>
           </div>
 
-          {/* CARD 4 — GPX */}
+          {/* CARD 6 — GPX */}
           <div className="studio-card">
             <div className="studio-card__header">
               <h3>GPX</h3>
@@ -1117,7 +1208,7 @@ export default function RoadbookDetailPage() {
             </div>
           </div>
 
-          {/* CARD 5 — Automatisations */}
+          {/* CARD 7 — Automatisations */}
           <div className="studio-card">
             <div className="studio-card__header">
               <h3>Automatisations</h3>
@@ -1138,14 +1229,14 @@ export default function RoadbookDetailPage() {
             </div>
           </div>
 
-          {/* CARD 6 — Informations (discrète) */}
+          {/* CARD 8 — Informations (discrète) */}
           <div className="studio-card studio-card--muted">
-              <dl className="studio-info-grid">
-                <dt>Slug</dt><dd><code>{roadbook?.slug}</code></dd>
-                <dt>ID</dt><dd><code>{roadbook?.id}</code></dd>
-                <dt>Créé le</dt><dd>{roadbook?.created_at ? new Date(roadbook.created_at).toLocaleDateString() : ""}</dd>
-              </dl>
-            </div>
+            <dl className="studio-info-grid">
+              <dt>Slug</dt><dd><code>{roadbook?.slug}</code></dd>
+              <dt>ID</dt><dd><code>{roadbook?.id}</code></dd>
+              <dt>Créé le</dt><dd>{roadbook?.created_at ? new Date(roadbook.created_at).toLocaleDateString() : ""}</dd>
+            </dl>
+          </div>
 
         </div>
 
@@ -1244,124 +1335,152 @@ export default function RoadbookDetailPage() {
                     </div>
                     {expanded && <div className="studio-stage-card__body">
 
-                    {/* POI */}
-                    <div className="studio-stage-extra">
-                      <div className="studio-stage-extra__header">
-                        <h5>POI ({stagePois.length})</h5>
-                        <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setPoiForm({ ...poiForm, stage_id: stage.id })}>+ Ajouter</button>
-                      </div>
-                      <div className="studio-sublist">
-                        {stagePois.length === 0 && <p className="studio-detail--empty">Aucun POI.</p>}
-                        {stagePois.map(poi => (
-                          <div key={poi.id} className="studio-subitem-card">
-                            <div className="studio-subitem-card__header">
-                              <div>
-                                <strong>{poi.poi_type && <span style={{ color: "var(--primary-dark)" }}>[{poi.poi_type}] </span>}{poi.name}</strong>
-                                {poi.description && <p className="text-muted" style={{ fontSize: "0.9rem", margin: "0.2rem 0 0" }}>{poi.description}</p>}
-                                {poi.lat != null && poi.lng != null && <p className="text-muted" style={{ fontSize: "0.8rem" }}>({poi.lat}, {poi.lng})</p>}
-                                {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" style={{ fontSize: "0.85rem" }}>Ouvrir le lien →</a>}
-                              </div>
-                              <div className="studio-actions">
-                                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
-                                  setPoiForm({ stage_id: stage.id, type: poi.poi_type ?? "", name: poi.name, description: poi.description ?? "", lat: poi.lat != null ? String(poi.lat) : "", lng: poi.lng != null ? String(poi.lng) : "", url: poi.link_url ?? "", editing: poi.id });
-                                }}>✎</button>
-                                <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeletePoi(poi.id)}>✕</button>
-                                {poiIndex && (
-                                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleEnrichPoi(poi, stage.id)} disabled={enrichingPoi === poi.id}>
-                                    {enrichingPoi === poi.id ? "..." : "Enrichir"}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {poiForm.stage_id === stage.id && (
-                        <form onSubmit={handlePoiSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
-                          <h3>POI</h3>
-                          <div className="studio-form-grid studio-form-grid--compact">
-                            <label>Type<input type="text" value={poiForm.type} onChange={e => setPoiForm({ ...poiForm, type: e.target.value })} placeholder="ex: eau, vue" /></label>
-                            <label>Nom<input type="text" value={poiForm.name} onChange={e => setPoiForm({ ...poiForm, name: e.target.value })} required /></label>
-                            <label>Description<textarea value={poiForm.description} onChange={e => setPoiForm({ ...poiForm, description: e.target.value })} /></label>
-                            <label>Latitude<input type="number" step="any" value={poiForm.lat} onChange={e => setPoiForm({ ...poiForm, lat: e.target.value })} /></label>
-                            <label>Longitude<input type="number" step="any" value={poiForm.lng} onChange={e => setPoiForm({ ...poiForm, lng: e.target.value })} /></label>
-                            <label>URL<input type="url" value={poiForm.url} onChange={e => setPoiForm({ ...poiForm, url: e.target.value })} /></label>
-                          </div>
-                          <div className="studio-create-form__actions">
-                            <button type="submit">{poiForm.editing ? "Mettre à jour" : "Ajouter"}</button>
-                            <button type="button" className="terrain-button--secondary" onClick={clearPoiForm}>Annuler</button>
-                          </div>
-                        </form>
-                      )}
-                    </div>
-
-                    {/* Variantes */}
-                    <div className="studio-stage-extra">
-                      <div className="studio-stage-extra__header">
-                        <h5>Variantes ({stageVariants.length})</h5>
-                        <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setVariantForm({ ...variantForm, stage_id: stage.id })}>+ Ajouter</button>
-                      </div>
-                      <div className="studio-sublist">
-                        {stageVariants.length === 0 && <p className="studio-detail--empty">Aucune variante.</p>}
-                        {stageVariants.map(v => {
-                        const vmeta = v.metadata ?? {};
-                        return (
-                          <div key={v.id} className="studio-subitem-card">
-                            <div className="studio-subitem-card__header">
-                              <div>
-                                <strong>{vmeta.type ? <span className="variant-badge">{vmeta.type}</span> : null}{v.label}</strong>
-                                {v.description && <p className="text-muted" style={{ fontSize: "0.9rem", margin: "0.2rem 0 0" }}>{v.description}</p>}
-                                <div className="stats" style={{ margin: "0.2rem 0 0", gap: "0.3rem" }}>
-                                  {v.distance_km != null && <span className="variant-pill"><strong>{v.distance_km}</strong> km</span>}
-                                  {(v.elevation_gain_m ?? vmeta.elevation_gain_m) != null && <span className="variant-pill"><strong>D+ {(v.elevation_gain_m ?? vmeta.elevation_gain_m)}m</strong></span>}
-                                  {(v.elevation_loss_m ?? vmeta.elevation_loss_m) != null && <span className="variant-pill"><strong>D- {(v.elevation_loss_m ?? vmeta.elevation_loss_m)}m</strong></span>}
+                    {/* Zone Trace — POI + GPX */}
+                    <div className="studio-zone studio-zone--trace">
+                      <h4 className="studio-zone__title">Points d'intérêt &amp; Tracé</h4>
+                      <div className="studio-stage-extra">
+                        <div className="studio-stage-extra__header">
+                          <h5>POI ({stagePois.length})</h5>
+                          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setPoiForm({ ...poiForm, stage_id: stage.id })}>+ Ajouter</button>
+                        </div>
+                        <div className="studio-sublist">
+                          {stagePois.length === 0 && <p className="studio-detail--empty">Aucun POI.</p>}
+                          {stagePois.map(poi => (
+                            <div key={poi.id} className="studio-subitem-card">
+                              <div className="studio-subitem-card__header">
+                                <div>
+                                  <strong>{poi.poi_type && <span style={{ color: "var(--primary-dark)" }}>[{poi.poi_type}] </span>}{poi.name}</strong>
+                                  {poi.description && <p className="text-muted" style={{ fontSize: "0.9rem", margin: "0.2rem 0 0" }}>{poi.description}</p>}
+                                  {poi.lat != null && poi.lng != null && <p className="text-muted" style={{ fontSize: "0.8rem" }}>({poi.lat}, {poi.lng})</p>}
+                                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" style={{ fontSize: "0.85rem" }}>Ouvrir le lien →</a>}
                                 </div>
-                                {(v.departure ?? vmeta.departure) && <p className="text-muted" style={{ fontSize: "0.85rem" }}>{(v.departure ?? vmeta.departure)}{(v.arrival ?? vmeta.arrival) && <> → {v.arrival ?? vmeta.arrival}</>}</p>}
-                              </div>
-                              <div className="studio-actions">
-                                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
-                                  setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: v.departure ?? vmeta.departure ?? "", arrival: v.arrival ?? vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: (v.elevation_gain_m ?? vmeta.elevation_gain_m) != null ? String(v.elevation_gain_m ?? vmeta.elevation_gain_m) : "", elevation_loss_m: (v.elevation_loss_m ?? vmeta.elevation_loss_m) != null ? String(v.elevation_loss_m ?? vmeta.elevation_loss_m) : "", map_embed_url: v.map_embed_url ?? "", notes: Array.isArray(v.notes) && v.notes.length ? v.notes.map(n => n.text ?? n).join("\n") : "", editing: v.id });
-                                }}>✎</button>
-                                <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteVariant(v.id)}>✕</button>
+                                <div className="studio-actions">
+                                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
+                                    setPoiForm({ stage_id: stage.id, type: poi.poi_type ?? "", name: poi.name, description: poi.description ?? "", lat: poi.lat != null ? String(poi.lat) : "", lng: poi.lng != null ? String(poi.lng) : "", url: poi.link_url ?? "", editing: poi.id });
+                                  }}>✎</button>
+                                  <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeletePoi(poi.id)}>✕</button>
+                                  {poiIndex && (
+                                    <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleEnrichPoi(poi, stage.id)} disabled={enrichingPoi === poi.id}>
+                                      {enrichingPoi === poi.id ? "..." : "Enrichir"}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          ))}
+                        </div>
+                        {poiForm.stage_id === stage.id && (
+                          <form onSubmit={handlePoiSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+                            <h3>POI</h3>
+                            <div className="studio-form-grid studio-form-grid--compact">
+                              <label>Type<input type="text" value={poiForm.type} onChange={e => setPoiForm({ ...poiForm, type: e.target.value })} placeholder="ex: eau, vue" /></label>
+                              <label>Nom<input type="text" value={poiForm.name} onChange={e => setPoiForm({ ...poiForm, name: e.target.value })} required /></label>
+                              <label>Description<textarea value={poiForm.description} onChange={e => setPoiForm({ ...poiForm, description: e.target.value })} /></label>
+                              <label>Latitude<input type="number" step="any" value={poiForm.lat} onChange={e => setPoiForm({ ...poiForm, lat: e.target.value })} /></label>
+                              <label>Longitude<input type="number" step="any" value={poiForm.lng} onChange={e => setPoiForm({ ...poiForm, lng: e.target.value })} /></label>
+                              <label>URL<input type="url" value={poiForm.url} onChange={e => setPoiForm({ ...poiForm, url: e.target.value })} /></label>
+                            </div>
+                            <div className="studio-create-form__actions">
+                              <button type="submit">{poiForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                              <button type="button" className="terrain-button--secondary" onClick={clearPoiForm}>Annuler</button>
+                            </div>
+                          </form>
+                        )}
                       </div>
-                      {variantForm.stage_id === stage.id && (
-                        <form onSubmit={handleVariantSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
-                          <h3>Variante</h3>
-                          <div className="studio-form-grid studio-form-grid--compact">
-                            <label>Titre<input type="text" value={variantForm.title} onChange={e => setVariantForm({ ...variantForm, title: e.target.value })} required /></label>
-                            <label>Type<input type="text" value={variantForm.type} onChange={e => setVariantForm({ ...variantForm, type: e.target.value })} placeholder="ex: Variante, Option, Raccourci" /></label>
-                            <label>Départ<input type="text" value={variantForm.departure} onChange={e => setVariantForm({ ...variantForm, departure: e.target.value })} /></label>
-                            <label>Arrivée<input type="text" value={variantForm.arrival} onChange={e => setVariantForm({ ...variantForm, arrival: e.target.value })} /></label>
-                            <label>Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
-                            <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
-                            <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
-                            <label>D- (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
-                            <label>Carte intégrée<input type="url" value={variantForm.map_embed_url} onChange={e => setVariantForm({ ...variantForm, map_embed_url: e.target.value })} placeholder="https://mapy.com/..." /></label>
-                            <label className="studio-form-grid__full">Notes (une par ligne)<textarea value={variantForm.notes} onChange={e => setVariantForm({ ...variantForm, notes: e.target.value })} placeholder="Note 1&#10;Note 2" /></label>
-                          </div>
-                          <div className="studio-create-form__actions">
-                            <button type="submit">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
-                            <button type="button" className="terrain-button--secondary" onClick={clearVariantForm}>Annuler</button>
-                          </div>
-                        </form>
-                      )}
+
+                      {/* GPX d'étape */}
+                      <div className="studio-stage-extra">
+                        <h5>GPX d'étape</h5>
+                        {renderGpxBlock("GPX", gpxByStage[stage.id] ?? null, "stage", null, stage.id)}
+                        {gpxByStage[stage.id] && (
+                          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleComputeFromGpx(gpxByStage[stage.id], stage)} disabled={computingGpx === stage.id} style={{ marginTop: "0.3rem" }}>
+                            {computingGpx === stage.id ? "Calcul..." : "Calculer depuis le GPX"}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* GPX étape */}
-                    <div className="studio-stage-extra">
-                      <h5>GPX d'étape</h5>
-                      {renderGpxBlock("GPX", gpxByStage[stage.id] ?? null, "stage", null, stage.id)}
-                      {gpxByStage[stage.id] && (
-                        <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleComputeFromGpx(gpxByStage[stage.id], stage)} disabled={computingGpx === stage.id} style={{ marginTop: "0.3rem" }}>
-                          {computingGpx === stage.id ? "Calcul..." : "Calculer depuis le GPX"}
-                        </button>
-                      )}
+                    {/* Zone Accommodation */}
+                    {stage.accommodation_name && (
+                      <div className="studio-zone studio-zone--accommodation">
+                        <h4 className="studio-zone__title">Hébergement</h4>
+                        <p style={{ fontWeight: 600 }}>{stage.accommodation_name}</p>
+                      </div>
+                    )}
+
+                    {/* Zone Alternatives — Variantes */}
+                    <div className="studio-zone studio-zone--alternatives">
+                      <h4 className="studio-zone__title">Variantes</h4>
+                      <div className="studio-stage-extra">
+                        <div className="studio-stage-extra__header">
+                          <h5>Liste ({stageVariants.length})</h5>
+                          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setVariantForm({ ...variantForm, stage_id: stage.id })}>+ Ajouter</button>
+                        </div>
+                        <div className="studio-sublist">
+                          {stageVariants.length === 0 && <p className="studio-detail--empty">Aucune variante.</p>}
+                          {stageVariants.map(v => {
+                          const vmeta = v.metadata ?? {};
+                          return (
+                            <div key={v.id} className="studio-subitem-card">
+                              <div className="studio-subitem-card__header">
+                                <div>
+                                  <strong>{vmeta.type ? <span className="variant-badge">{vmeta.type}</span> : null}{v.label}</strong>
+                                  {v.description && <p className="text-muted" style={{ fontSize: "0.9rem", margin: "0.2rem 0 0" }}>{v.description}</p>}
+                                  <div className="stats" style={{ margin: "0.2rem 0 0", gap: "0.3rem" }}>
+                                    {v.distance_km != null && <span className="variant-pill"><strong>{v.distance_km}</strong> km</span>}
+                                    {(v.elevation_gain_m ?? vmeta.elevation_gain_m) != null && <span className="variant-pill"><strong>D+ {(v.elevation_gain_m ?? vmeta.elevation_gain_m)}m</strong></span>}
+                                    {(v.elevation_loss_m ?? vmeta.elevation_loss_m) != null && <span className="variant-pill"><strong>D- {(v.elevation_loss_m ?? vmeta.elevation_loss_m)}m</strong></span>}
+                                  </div>
+                                  {(v.departure ?? vmeta.departure) && <p className="text-muted" style={{ fontSize: "0.85rem" }}>{(v.departure ?? vmeta.departure)}{(v.arrival ?? vmeta.arrival) && <> → {v.arrival ?? vmeta.arrival}</>}</p>}
+                                </div>
+                                <div className="studio-actions">
+                                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
+                                    setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: v.departure ?? vmeta.departure ?? "", arrival: v.arrival ?? vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: (v.elevation_gain_m ?? vmeta.elevation_gain_m) != null ? String(v.elevation_gain_m ?? vmeta.elevation_gain_m) : "", elevation_loss_m: (v.elevation_loss_m ?? vmeta.elevation_loss_m) != null ? String(v.elevation_loss_m ?? vmeta.elevation_loss_m) : "", map_embed_url: v.map_embed_url ?? "", notes: Array.isArray(v.notes) && v.notes.length ? v.notes.map(n => n.text ?? n).join("\n") : "", editing: v.id });
+                                  }}>✎</button>
+                                  <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteVariant(v.id)}>✕</button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        </div>
+                        {variantForm.stage_id === stage.id && (
+                          <form onSubmit={handleVariantSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+                            <h3>Variante</h3>
+                            <div className="studio-form-grid studio-form-grid--compact">
+                              <label>Titre<input type="text" value={variantForm.title} onChange={e => setVariantForm({ ...variantForm, title: e.target.value })} required /></label>
+                              <label>Type<input type="text" value={variantForm.type} onChange={e => setVariantForm({ ...variantForm, type: e.target.value })} placeholder="ex: Variante, Option, Raccourci" /></label>
+                              <label>Départ<input type="text" value={variantForm.departure} onChange={e => setVariantForm({ ...variantForm, departure: e.target.value })} /></label>
+                              <label>Arrivée<input type="text" value={variantForm.arrival} onChange={e => setVariantForm({ ...variantForm, arrival: e.target.value })} /></label>
+                              <label>Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
+                              <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
+                              <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
+                              <label>D- (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
+                              <label>Carte intégrée<input type="url" value={variantForm.map_embed_url} onChange={e => setVariantForm({ ...variantForm, map_embed_url: e.target.value })} placeholder="https://mapy.com/..." /></label>
+                              <label className="studio-form-grid__full">Notes (une par ligne)<textarea value={variantForm.notes} onChange={e => setVariantForm({ ...variantForm, notes: e.target.value })} placeholder="Note 1&#10;Note 2" /></label>
+                            </div>
+                            <div className="studio-create-form__actions">
+                              <button type="submit">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                              <button type="button" className="terrain-button--secondary" onClick={clearVariantForm}>Annuler</button>
+                            </div>
+                          </form>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Zone Notes */}
+                    {Array.isArray(stage.notes) && stage.notes.length > 0 && (
+                      <div className="studio-zone studio-zone--notes">
+                        <h4 className="studio-zone__title">Notes</h4>
+                        <ul className="note-list">
+                          {stage.notes.map((note, ni) => (
+                            <li key={ni} className="note-item">
+                              <p className="note-item__text">{note.text ?? note}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                   </div>}</div>
                 );
