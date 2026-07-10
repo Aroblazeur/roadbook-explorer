@@ -633,6 +633,191 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .w-full { width: 100%; }
 .grid { display: grid; }
 
+/* ===== Studio Card (dashboard editor) ===== */
+.studio-card {
+  border: 1px solid var(--studio-border);
+  border-radius: 0.9rem;
+  background: var(--studio-surface);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.studio-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--studio-border);
+  gap: 0.5rem;
+}
+.studio-card__header h2,
+.studio-card__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.studio-card__header h2 { font-size: 1.15rem; }
+.studio-card__body { padding: 0 1rem 1rem; }
+
+/* ===== Hero Header ===== */
+.studio-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary, #4caf50));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.studio-hero__info { min-width: 0; }
+.studio-hero__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.studio-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.studio-hero__tag {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.studio-hero__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.studio-hero__actions .terrain-button--secondary,
+.studio-hero__actions a {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border-color: rgba(255,255,255,0.3);
+  text-decoration: none;
+}
+.studio-hero__actions .terrain-button--secondary:hover,
+.studio-hero__actions a:hover {
+  background: rgba(255,255,255,0.28);
+}
+
+/* ===== Studio Badge ===== */
+.studio-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+.studio-badge--public {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+}
+.studio-badge--private {
+  background: rgba(0,0,0,0.15);
+  color: rgba(255,255,255,0.85);
+}
+
+/* ===== Media Thumbnails (cover selector) ===== */
+.studio-media-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.studio-media-thumb {
+  width: 100px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.studio-media-thumb:hover { border-color: var(--primary); }
+.studio-media-thumb[data-active] { border-color: var(--primary); }
+.studio-media-thumb img {
+  width: 100%;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 2px;
+  display: block;
+}
+
+/* ===== Media Grid ===== */
+.studio-media-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.studio-media-item {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 0.5rem;
+  align-items: start;
+  padding: 0.5rem;
+  border: 1px solid var(--studio-border);
+  border-radius: 0.65rem;
+  background: var(--studio-surface-strong);
+}
+.studio-media-item__image {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+.studio-media-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.studio-media-item__name {
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== Studio Automation ===== */
+.studio-automation-result {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: #f1f8f2;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+.studio-automation-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ===== Studio Info Grid ===== */
+.studio-info-grid {
+  font-size: 0.9rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+}
+.studio-info-grid dt { color: var(--studio-muted); }
+.studio-info-grid dd { margin: 0; }
+.studio-info-grid code { font-size: 0.85rem; }
+
 /* ===== Responsive ===== */
 @media (max-width: 960px) {
   .studio-layout { grid-template-columns: 1fr; }
