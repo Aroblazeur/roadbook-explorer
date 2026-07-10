@@ -60,7 +60,8 @@ Ouvrir [http://localhost:3000](http://localhost:3000).
 - [x] Row Level Security (public / owner)
 - [x] Détection et contournement des slugs en double
 - [ ] Médias / photos (GPX, upload)
-- [ ] POI et variantes d'étape
+- [x] POI et variantes d'étape
+- [ ] Upload GPX vers Storage
 - [ ] Recherche avancée
 
 ## Structure du projet
@@ -105,11 +106,63 @@ v2/
 8. Voir le roadbook sur `/roadbooks/[slug]`
 9. Cliquer **Se déconnecter** dans le dashboard
 
+## Import V1 → V2
+
+Un script d'import permet de migrer un roadbook V1 (format `roadbooks/<slug>/roadbook.json`) vers Supabase.
+
+### Utilisation
+
+```bash
+cd v2
+node scripts/import-v1-roadbook.js --slug perinexus --dry-run
+node scripts/import-v1-roadbook.js --slug perinexus --owner-email user@example.com
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--slug <id>` | Slug du roadbook V1 (dossier dans `roadbooks/`) |
+| `--dry-run` | Mode lecture seule : affiche les compteurs et champs non mappés |
+| `--owner-email <email>` | Email du propriétaire Supabase (obligatoire pour l'import réel) |
+| `--upsert` | Met à jour les enregistrements existants au lieu de les ignorer |
+
+### Prérequis
+
+- `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` dans `.env.local`
+- `SUPABASE_SERVICE_ROLE_KEY` dans `.env.local` (clé service_role depuis Supabase → Settings → API)
+- La clé service_role ne doit **jamais** être committée
+
+### Mapping V1 → V2
+
+| Entité V1 | Table V2 | Notes |
+|-----------|----------|-------|
+| `roadbook.json` racine | `roadbooks` | `id` → `slug`, `metadata.*` → `metadata` JSONB |
+| `stages[]` | `stages` | `stage` → `stage_number`, `noteItems`/`notes`/`warning` → `notes` JSONB |
+| `stages[].substeps[]` | `stage_variants` | Champs spécifiques stockés dans `metadata` JSONB si colonnes absentes |
+| `stages[].pois[]` / `pointsOfInterest[]` / `interest[]` | `stage_pois` | Dédupliqués par nom + enrichis via `poi-enrichment.json` |
+| `stages[].accommodation.*` | `stages.accommodation_*` | Nom, URL, photo, type |
+| `stages[].accommodation.alternatives[]` | `stages.alternatives` JSONB | |
+
+## État actuel
+
+- [x] POI et variantes d'étape (import et dashboard)
+- [ ] Médias / photos (GPX upload, Supabase Storage)
+
+### Non migré (pour une future itération)
+
+- Upload des fichiers GPX vers Supabase Storage (chemins conservés dans `gpx_url`)
+- Upload des images vers Supabase Storage (URLs existantes conservées)
+- Création d'enregistrements dans la table `media`
+- Top-level `variants[]` (données redondantes avec `stages[].substeps[]`)
+- Top-level `accommodation[]` (données redondantes avec les étapes individuelles)
+
 ## Déploiements Vercel
 
 | Commit | Sprint | Description | Déploiement |
 |--------|--------|-------------|-------------|
+| `d63a6df` | Sprint 15C | Dashboard Studio : refonte UI + JSX + build fix | (à confirmer) |
 | `f6b6c90` | — | trigger Sprint 15B | (à confirmer) |
-| `d130077` | Sprint 15B | UI Studio/Explorer complète (globals.css design system, classes CSS, layout studio) | (à confirmer) |
+| `d130077` | Sprint 15B | UI Studio/Explorer complète | (à confirmer) |
 | `517ee84` | Sprint 15A | Reprise champs variantes + présentation publique | (à confirmer) |
 | `b6576ca` | Sprint 14C | Section automatisations | en ligne |
