@@ -5,7 +5,7 @@ export async function getPublicRoadbooks() {
 
   const { data } = await supabase
     .from("roadbooks")
-    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id")
+    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id, metadata")
     .eq("is_public", true)
     .order("created_at", { ascending: false });
 
@@ -34,9 +34,17 @@ export async function getPublicRoadbooks() {
 
   const countMap = Object.fromEntries(stagesCount.map(s => [s.id, s.count]));
 
-  return roadbooks.map(rb => ({
-    ...rb,
-    stage_count: countMap[rb.id] ?? 0,
-    coverSignedUrl: rb.cover_image_url || signedUrls[rb.id] || null,
-  }));
+  return roadbooks.map(rb => {
+    const meta = rb.metadata || {};
+    return {
+      ...rb,
+      metadata: undefined,
+      activity: meta.activity || null,
+      destination: meta.destination || null,
+      project: meta.project || null,
+      projectStatus: meta.projectStatus || null,
+      stage_count: countMap[rb.id] ?? 0,
+      coverSignedUrl: rb.cover_image_url || signedUrls[rb.id] || null,
+    };
+  });
 }

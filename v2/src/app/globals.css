@@ -1059,7 +1059,6 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 }
 
 @media (max-width: 700px) {
-  button { width: 100%; }
   .header h1 { font-size: 1.7rem; }
   .card { margin: 16px 0; padding: 18px; }
   .stats { gap: 8px; }

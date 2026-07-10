@@ -2,12 +2,16 @@
 
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function CatalogHeader() {
   const { user, supabase } = useAuth();
+  const router = useRouter();
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
   }
 
   return (
@@ -48,8 +52,7 @@ export default function CatalogHeader() {
           {user ? (
             <>
               <span className="header-nav__email">{user.email}</span>
-              <Link href="/dashboard">Mes roadbooks</Link>
-              <Link href="/studio">Studio</Link>
+              <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
               <button onClick={handleLogout}>Déconnexion</button>
             </>
           ) : (
