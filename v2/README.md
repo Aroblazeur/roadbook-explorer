@@ -104,3 +104,12 @@ v2/
 7. Basculer en public si souhaité
 8. Voir le roadbook sur `/roadbooks/[slug]`
 9. Cliquer **Se déconnecter** dans le dashboard
+
+## Déploiements Vercel
+
+| Commit | Sprint | Description | Déploiement |
+|--------|--------|-------------|-------------|
+| `f6b6c90` | — | trigger Sprint 15B | (à confirmer) |
+| `d130077` | Sprint 15B | UI Studio/Explorer complète (globals.css design system, classes CSS, layout studio) | (à confirmer) |
+| `517ee84` | Sprint 15A | Reprise champs variantes + présentation publique | (à confirmer) |
+| `b6576ca` | Sprint 14C | Section automatisations | en ligne |
