@@ -417,6 +417,15 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 
 .studio-stage-card[data-expanded="false"] + .studio-variant-card { display: none; }
 
+.terrain-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+}
 .terrain-button--secondary {
   background: rgba(46, 125, 50, 0.12);
   color: #1d4f21;
@@ -719,109 +728,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .w-full { width: 100%; }
 .grid { display: grid; }
 
-/* ===== Studio Stage Card — redesigned header ===== */
-.studio-stage-card__header-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-.studio-stage-card__number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
-  font-weight: 800;
-  font-size: 0.9rem;
-  flex-shrink: 0;
-}
-.studio-stage-card__route {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.2rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.studio-stage-card__route-text {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.studio-stage-card__route-title {
-  color: var(--studio-muted);
-  font-size: 0.9rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.studio-stage-card__stats {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-}
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
-  background: #f1f8f2;
-  border: 1px solid rgba(46, 125, 50, 0.18);
-  font-size: 0.76rem;
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
-  color: var(--primary-dark);
-}
-.stat-pill--outline {
-  background: transparent;
-  border-color: rgba(46, 125, 50, 0.25);
-  color: var(--studio-muted);
-}
-.studio-stage-card__header-sub {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.15rem;
-  padding-left: calc(34px + 0.6rem);
-}
-.studio-stage-card__meta {
-  font-size: 0.82rem;
-  color: var(--studio-muted);
-}
-.studio-stage-card__action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--studio-muted);
-  font-size: 0.85rem;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition: background 0.12s, color 0.12s;
-}
-.studio-stage-card__action:hover {
-  background: rgba(46, 125, 50, 0.1);
-  color: var(--primary-dark);
-}
-.studio-stage-card__action--danger:hover {
-  background: rgba(180, 43, 43, 0.1);
-  color: #8b1e1e;
-}
-.studio-stage-card__action:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
+
 
 /* ===== Stage create bandeau ===== */
 .studio-stage-create-bandeau {
