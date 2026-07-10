@@ -108,23 +108,45 @@ v2/
 
 ## Import V1 → V2
 
-Un script d'import permet de migrer un roadbook V1 (format `roadbooks/<slug>/roadbook.json`) vers Supabase.
+Deux scripts permettent de migrer les roadbooks et médias V1 vers Supabase.
 
-### Utilisation
+### import-v1-roadbook.js
+
+Importe la structure (roadbook, étapes, POIs, variantes) depuis `roadbooks/<slug>/roadbook.json`.
 
 ```bash
 cd v2
+# Dry-run
 node scripts/import-v1-roadbook.js --slug perinexus --dry-run
+node scripts/import-v1-roadbook.js --all --dry-run
+
+# Import réel
 node scripts/import-v1-roadbook.js --slug perinexus --owner-email user@example.com
+node scripts/import-v1-roadbook.js --all --owner-email user@example.com --upsert
 ```
 
-### Options
+### import-v1-media.js
+
+Importe les fichiers locaux (images, GPX) vers Supabase Storage + table `media`.
+
+```bash
+cd v2
+# Dry-run
+node scripts/import-v1-media.js --slug perinexus --dry-run
+node scripts/import-v1-media.js --all --dry-run
+
+# Import réel
+node scripts/import-v1-media.js --slug perinexus
+node scripts/import-v1-media.js --all --upsert
+```
+
+### Options communes
 
 | Option | Description |
 |--------|-------------|
 | `--slug <id>` | Slug du roadbook V1 (dossier dans `roadbooks/`) |
-| `--dry-run` | Mode lecture seule : affiche les compteurs et champs non mappés |
-| `--owner-email <email>` | Email du propriétaire Supabase (obligatoire pour l'import réel) |
+| `--all` | Parcourt automatiquement tous les roadbooks détectés |
+| `--dry-run` | Mode lecture seule : affiche les compteurs et fichiers trouvés |
 | `--upsert` | Met à jour les enregistrements existants au lieu de les ignorer |
 
 ### Prérequis
@@ -139,28 +161,42 @@ node scripts/import-v1-roadbook.js --slug perinexus --owner-email user@example.c
 |-----------|----------|-------|
 | `roadbook.json` racine | `roadbooks` | `id` → `slug`, `metadata.*` → `metadata` JSONB |
 | `stages[]` | `stages` | `stage` → `stage_number`, `noteItems`/`notes`/`warning` → `notes` JSONB |
-| `stages[].substeps[]` | `stage_variants` | Champs spécifiques stockés dans `metadata` JSONB si colonnes absentes |
+| `stages[].substeps[]` | `stage_variants` | Champs spécifiques stockés dans `metadata` JSONB |
 | `stages[].pois[]` / `pointsOfInterest[]` / `interest[]` | `stage_pois` | Dédupliqués par nom + enrichis via `poi-enrichment.json` |
 | `stages[].accommodation.*` | `stages.accommodation_*` | Nom, URL, photo, type |
 | `stages[].accommodation.alternatives[]` | `stages.alternatives` JSONB | |
+| Fichiers locaux (GPX, images) | `media` + Supabase Storage | Buckets : `roadbook-images` (privé), `roadbook-gpx` (privé) |
+| `metadata.coverImage` | `roadbooks.cover_media_id` + `cover_image_url` | Lien vers le record `media` |
 
-## État actuel
+### Arborescence Storage
 
-- [x] POI et variantes d'étape (import et dashboard)
-- [ ] Médias / photos (GPX upload, Supabase Storage)
+```
+roadbook-images/roadbooks/<slug>/
+    cover/
+    stages/
+    poi/
+    accommodation/
+    gallery/
+roadbook-gpx/roadbooks/<slug>/
+    gpx/
+```
 
-### Non migré (pour une future itération)
+## Sprint 15F — Migration complète (terminée)
 
-- Upload des fichiers GPX vers Supabase Storage (chemins conservés dans `gpx_url`)
-- Upload des images vers Supabase Storage (URLs existantes conservées)
-- Création d'enregistrements dans la table `media`
-- Top-level `variants[]` (données redondantes avec `stages[].substeps[]`)
-- Top-level `accommodation[]` (données redondantes avec les étapes individuelles)
+- [x] 3 roadbooks V1 détectés : `perinexus`, `voie-bleue`, `alsace-canal-marne-rhin`
+- [x] 3 roadbooks importés dans Supabase (stages, POIs, variantes)
+- [x] 25 médias migrés vers Supabase Storage (11 GPX + 14 images)
+- [x] Scripts génériques avec `--slug` / `--all` / `--dry-run` / `--upsert`
+- [x] Création automatique des buckets Storage
+- [x] Relançable sans doublons
+- [x] Build OK (npm run build)
 
 ## Déploiements Vercel
 
 | Commit | Sprint | Description | Déploiement |
 |--------|--------|-------------|-------------|
+| `3c8892d` | Sprint 15F | Migration complète médias V1→V2 + scripts --all | (ce commit) |
+| `607d893` | Sprint 15D | Import contrôle V1 vers V2 (perinexus) + documentation | (à confirmer) |
 | `d63a6df` | Sprint 15C | Dashboard Studio : refonte UI + JSX + build fix | (à confirmer) |
 | `f6b6c90` | — | trigger Sprint 15B | (à confirmer) |
 | `d130077` | Sprint 15B | UI Studio/Explorer complète | (à confirmer) |

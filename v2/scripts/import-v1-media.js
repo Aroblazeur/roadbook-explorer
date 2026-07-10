@@ -14,18 +14,33 @@ const GPX_BUCKET = "roadbook-gpx";
 const args = parseArgs({
   options: {
     slug: { type: "string", short: "s" },
+    all: { type: "boolean", short: "a" },
     "dry-run": { type: "boolean", short: "d" },
     upsert: { type: "boolean", short: "u" },
   },
 });
 
 const slug = args.values.slug;
+const importAll = args.values.all ?? false;
 const dryRun = args.values["dry-run"] ?? false;
 const upsert = args.values.upsert ?? false;
 
-if (!slug) {
+if (!slug && !importAll) {
   console.error("Usage: node scripts/import-v1-media.js --slug <slug> [--dry-run] [--upsert]");
+  console.error("       node scripts/import-v1-media.js --all [--dry-run] [--upsert]");
   process.exit(1);
+}
+
+function detectRoadbooks() {
+  if (!fs.existsSync(ROADBOOKS_DIR)) return [];
+  const entries = fs.readdirSync(ROADBOOKS_DIR, { withFileTypes: true });
+  const slugs = [];
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name !== "_template") {
+      if (fs.existsSync(path.join(ROADBOOKS_DIR, entry.name, "roadbook.json"))) slugs.push(entry.name);
+    }
+  }
+  return slugs.sort();
 }
 
 // ── Load .env.local ──────────────────────────────────────────
@@ -139,49 +154,110 @@ function isGpxFile(ext) {
   return ext === ".gpx";
 }
 
-// ── Report ───────────────────────────────────────────────────
-const report = {
+// ── Create buckets if needed ──────────────────────────────────
+async function ensureBuckets(supabase) {
+  const required = [IMAGE_BUCKET, GPX_BUCKET];
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const existing = new Set((buckets || []).map(b => b.name));
+  for (const name of required) {
+    if (!existing.has(name)) {
+      const isPublic = name === "roadbook-gpx" ? false : false;
+      const { error } = await supabase.storage.createBucket(name, { public: isPublic });
+      if (error) console.warn(`Warning creating bucket "${name}": ${error.message}`);
+      else console.log(`Created bucket: ${name}`);
+    }
+  }
+}
+
+// ── Determine slugs to process ────────────────────────────
+const slugsToProcess = importAll ? detectRoadbooks() : [slug];
+
+if (importAll) {
+  console.log(`\nDetected roadbooks: ${slugsToProcess.join(", ")}\n`);
+}
+
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+if (!dryRun) await ensureBuckets(supabase);
+
+// ── Overall report ────────────────────────────────────────────
+const overallReport = {
   slug,
-  found: 0,
-  uploaded: 0,
-  skipped: 0,
+  roadbooksDetected: slugsToProcess.length,
+  mediaFound: 0,
+  mediaUploaded: 0,
+  mediaSkipped: 0,
+  gpxUploaded: 0,
+  imagesUploaded: 0,
   errors: [],
-  media: [],
-  buckets: [],
   remainingUrls: [],
 };
 
-// ── Read V1 data ────────────────────────────────────────────
-const roadbookDir = path.join(ROADBOOKS_DIR, slug);
-const jsonPath = path.join(roadbookDir, "roadbook.json");
-
-if (!fs.existsSync(jsonPath)) {
-  console.error(`Error: roadbook.json not found at ${jsonPath}`);
-  process.exit(1);
+for (const currentSlug of slugsToProcess) {
+  await importMedia(currentSlug);
 }
 
-const v1 = readJson(jsonPath);
-if (!v1) {
-  console.error("Error: failed to parse roadbook.json");
-  process.exit(1);
+// ── Final overall report ──────────────────────────────────────
+console.log("\n\n========== OVERALL MEDIA IMPORT REPORT ==========\n");
+console.log(`Roadbooks detected:   ${overallReport.roadbooksDetected}`);
+console.log(`Media found:          ${overallReport.mediaFound}`);
+console.log(`Media uploaded:       ${overallReport.mediaUploaded}`);
+console.log(`   - GPX files:       ${overallReport.gpxUploaded}`);
+console.log(`   - Images:          ${overallReport.imagesUploaded}`);
+console.log(`Media skipped (exist): ${overallReport.mediaSkipped}`);
+console.log(`Errors:               ${overallReport.errors.length}`);
+console.log(`Remaining URLs:       ${overallReport.remainingUrls.length}`);
+if (overallReport.errors.length) {
+  console.log("\nErrors:");
+  for (const e of overallReport.errors) console.log(`  - ${e}`);
 }
+if (overallReport.remainingUrls.length) {
+  console.log("\nRemaining external URLs (not migrated):");
+  for (const u of overallReport.remainingUrls) console.log(`  - ${u}`);
+}
+console.log("\n=== Done ===\n");
+process.exit(overallReport.errors.length ? 1 : 0);
 
-// ── Dry-run display ──────────────────────────────────────────
-if (dryRun) {
-  console.log(`\n=== DRY RUN: ${slug} ===\n`);
+async function importMedia(slug) {
+  const report = {
+    slug,
+    found: 0, uploaded: 0, skipped: 0,
+    gpxCount: 0, imageCount: 0,
+    errors: [], media: [], buckets: [IMAGE_BUCKET, GPX_BUCKET],
+    remainingUrls: [],
+  };
 
-  // Collect all media references from roadbook.json
-  const refs = [];
+  const roadbookDir = path.join(ROADBOOKS_DIR, slug);
+  const jsonPath = path.join(roadbookDir, "roadbook.json");
 
-  // Cover image
-  const coverRef = v1.metadata?.coverImage;
-  if (coverRef) refs.push({ role: "cover", ref: coverRef, source: "metadata.coverImage" });
+  if (!fs.existsSync(jsonPath)) {
+    const msg = `roadbook.json not found at ${jsonPath}`;
+    console.error(msg);
+    overallReport.errors.push(`${slug}: ${msg}`);
+    return;
+  }
 
-  // Summary GPX
-  const officialGpx = v1.summary?.official?.gpx;
-  if (officialGpx) refs.push({ role: "gpx-official", ref: officialGpx, source: "summary.official.gpx" });
-  const stagesTotalGpx = v1.summary?.stagesTotal?.gpx;
-  if (stagesTotalGpx) refs.push({ role: "gpx-total", ref: stagesTotalGpx, source: "summary.stagesTotal.gpx" });
+  const v1 = readJson(jsonPath);
+  if (!v1) {
+    const msg = `Failed to parse roadbook.json for ${slug}`;
+    console.error(msg);
+    overallReport.errors.push(`${slug}: ${msg}`);
+    return;
+  }
+
+  // ── Dry-run display ──────────────────────────────────────────
+  if (dryRun) {
+    console.log(`\n=== DRY RUN: ${slug} ===\n`);
+    const refs = [];
+
+    const coverRef = v1.metadata?.coverImage;
+    if (coverRef) refs.push({ role: "cover", ref: coverRef, source: "metadata.coverImage" });
+    const officialGpx = v1.summary?.official?.gpx;
+    if (officialGpx) refs.push({ role: "gpx-official", ref: officialGpx, source: "summary.official.gpx" });
+    const stagesTotalGpx = v1.summary?.stagesTotal?.gpx;
+    if (stagesTotalGpx) refs.push({ role: "gpx-total", ref: stagesTotalGpx, source: "summary.stagesTotal.gpx" });
 
   // Stages
   for (const s of (v1.stages || [])) {
@@ -298,15 +374,11 @@ if (dryRun) {
   }
 
   console.log("=== Dry-run complete. No data written. ===\n");
-  process.exit(0);
+  return;
 }
 
 // ── Import mode ──────────────────────────────────────────────
 console.log(`\n=== IMPORT MEDIA: ${slug} ===\n`);
-
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
 
 report.buckets = [IMAGE_BUCKET, GPX_BUCKET];
 
@@ -320,11 +392,14 @@ const { data: roadbook, error: rbError } = await supabase
 
 if (rbError) {
   console.error("Error looking up roadbook:", rbError.message);
-  process.exit(1);
+  overallReport.errors.push(`${slug}: ${rbError.message}`);
+  return;
 }
 if (!roadbook) {
-  console.error(`Roadbook "${slug}" not found in database. Run import-v1-roadbook.js first.`);
-  process.exit(1);
+  const msg = `Roadbook "${slug}" not found in database. Run import-v1-roadbook.js first.`;
+  console.error(msg);
+  overallReport.errors.push(msg);
+  return;
 }
 console.log(`Roadbook found: id=${roadbook.id}, owner=${roadbook.owner_id}\n`);
 
@@ -650,10 +725,8 @@ console.log("");
 
 if (mediaOps.length === 0) {
   console.log("No local media files to import. All media references are external URLs or missing files.");
-  console.log("=== Done ===\n");
-  report.skipped = 0;
-  console.log(JSON.stringify(report, null, 2));
-  process.exit(0);
+  overallReport.mediaSkipped += 0;
+  return;
 }
 
 // ── Step 3: Upload to Storage & create media records ────────
@@ -769,6 +842,7 @@ for (const op of mediaOps) {
         uploadedMedia.push({ op, mediaId: existing.id, publicUrl: publicUrl });
         uploadedCount++;
         report.uploaded++;
+        if (op.role.startsWith("gpx-")) report.gpxCount++; else report.imageCount++;
         console.log(`    Media record exists (id=${existing.id})`);
         continue;
       }
@@ -781,6 +855,7 @@ for (const op of mediaOps) {
   uploadedMedia.push({ op, mediaId: mediaRecord.id, publicUrl });
   uploadedCount++;
   report.uploaded++;
+  if (op.role.startsWith("gpx-")) report.gpxCount++; else report.imageCount++;
   console.log(`    OK (media id=${mediaRecord.id})`);
 }
 
@@ -897,49 +972,30 @@ for (const { op, mediaId, publicUrl } of uploadedMedia) {
   }
 }
 
-// ── Final report ─────────────────────────────────────────────
-console.log("\n=== IMPORT MEDIA REPORT ===\n");
-console.log(`Slug:              ${slug}`);
+// ── Per-roadbook report ─────────────────────────────────────
+console.log(`\n--- ${slug} MEDIA REPORT ---`);
 console.log(`Media found:       ${report.found}`);
 console.log(`Uploaded:          ${report.uploaded}`);
 console.log(`Skipped (exist):   ${report.skipped}`);
 console.log(`Errors:            ${report.errors.length}`);
-console.log(`Buckets used:      ${report.buckets.join(", ")}`);
-console.log("\nStorage tree:");
-console.log(`  ${IMAGE_BUCKET}/roadbooks/${slug}/`);
-console.log(`    cover/`);
-console.log(`    stages/`);
-console.log(`    poi/`);
-console.log(`    accommodation/`);
-console.log(`    gallery/`);
-console.log(`  ${GPX_BUCKET}/roadbooks/${slug}/`);
-console.log(`    gpx/`);
 
-if (report.errors.length > 0) {
-  console.log("\nErrors:");
-  for (const e of report.errors) console.log(`  - ${e}`);
-}
+// Accumulate into overall report
+overallReport.mediaFound += report.found;
+overallReport.mediaUploaded += report.uploaded;
+overallReport.mediaSkipped += report.skipped;
+overallReport.gpxUploaded += report.gpxCount;
+overallReport.imagesUploaded += report.imageCount;
+overallReport.errors.push(...report.errors.map(e => `${slug}: ${e}`));
 
-// List remaining external URLs that were not migrated
-console.log("\nRemaining external URLs (not migrated, kept as-is):");
-const externalUrls = [];
-if (v1.metadata?.coverImage && !isLocalFile(v1.metadata.coverImage)) externalUrls.push(`cover: ${v1.metadata.coverImage}`);
+// Collect remaining URLs
 for (const s of (v1.stages || [])) {
-  if (s.stagePhoto && !isLocalFile(s.stagePhoto)) externalUrls.push(`stage ${s.stage} photo: ${s.stagePhoto}`);
-  if (s.accommodation?.photo && !isLocalFile(s.accommodation.photo)) externalUrls.push(`stage ${s.stage} accommodation: ${s.accommodation.photo}`);
+  if (s.stagePhoto && !isLocalFile(s.stagePhoto)) overallReport.remainingUrls.push(`${slug}: stage ${s.stage} photo: ${s.stagePhoto}`);
+  if (s.accommodation?.photo && !isLocalFile(s.accommodation.photo)) overallReport.remainingUrls.push(`${slug}: stage ${s.stage} accommodation: ${s.accommodation.photo}`);
   for (const list of [s.pois, s.pointsOfInterest, s.interest]) {
     if (Array.isArray(list)) list.forEach(p => {
       const img = p.image || p.photo_url;
-      if (img && !isLocalFile(img)) externalUrls.push(`stage ${s.stage} POI "${p.name}": ${img.substring(0, 100)}`);
+      if (img && !isLocalFile(img)) overallReport.remainingUrls.push(`${slug}: stage ${s.stage} POI "${p.name}": ${img.substring(0, 100)}`);
     });
   }
 }
-if (externalUrls.length === 0) {
-  console.log("  (none)");
-} else {
-  for (const u of externalUrls) console.log(`  ${u}`);
 }
-report.remainingUrls = externalUrls;
-
-console.log("\n=== Done ===\n");
-console.log(JSON.stringify(report, null, 2));
