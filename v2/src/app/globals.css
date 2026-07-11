@@ -606,7 +606,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .poi-card__map-link { display: inline-flex; margin-top: 8px; border: 1px solid rgba(46,125,50,.24); border-radius: 999px; padding: 5px 12px; background: transparent; color: var(--primary); font-size: .82rem; font-weight: 700; text-decoration: none; }
 
 /* ===== Stage Route Links ===== */
-.stage-route-links { margin: 0.25rem 0; font-size: .9rem; color: var(--text-light); }
+.stage-route-links { margin: 0.25rem 0; font-size: .9rem; color: var(--text-light); overflow-wrap: break-word; word-break: break-word; }
 .stage-city-link { font-weight: 600; color: var(--primary); }
 
 /* ===== Stage Warning ===== */
@@ -1065,10 +1065,36 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .header h1 { font-size: 1.7rem; }
   .card { margin: 16px 0; padding: 18px; }
   .stats { gap: 8px; }
-  .stat { min-height: 40px; padding: 8px 11px; }
+  .stat { min-height: 40px; padding: 8px 11px; font-size: .88rem; }
+  .stat__icon { width: 20px; height: 20px; }
   .header { padding: 24px 16px; }
   .roadbook-library-card { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
   .header-logo { width: 48px; }
+  .stage-card { margin: 12px 0; padding: 16px; }
+  #stage-map-embed { height: clamp(200px, 50vw, 300px); }
+}
+
+@media (max-width: 400px) {
+  .header h1 { font-size: 1.3rem; }
+  .header-logo { width: 36px; }
+  .header { padding: 18px 12px; }
+  .header-title-wrapper { gap: 10px; }
+  .card { margin: 12px 0; padding: 14px; }
+  .stage-card { margin: 10px 0; padding: 12px; }
+  .stage-number-circle { width: 34px; height: 34px; font-size: .9rem; min-width: 34px; }
+  .stat { min-height: 34px; padding: 5px 9px; font-size: .82rem; white-space: normal; }
+  .stat__icon { width: 18px; height: 18px; }
+  .stats--compact { gap: 4px; }
+  .stats--compact .stat { min-height: 30px; padding: 4px 8px; gap: 4px; }
+  .poi-card { padding: 10px; gap: 10px; }
+  .note-item { padding: 10px; }
+  .variant-card { margin-left: 0.5rem; padding: 0.5rem; }
+  .accommodation-resource { width: 100%; }
+  .home-stage-card { padding: 10px; }
+  .stage-photo { border-radius: 10px; }
+  .stage-photo__image { max-height: 200px; }
+  #stage-map-embed { height: clamp(180px, 55vw, 260px); border-radius: 8px; }
+  .gpx-actions { gap: 8px; font-size: .88rem; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1086,7 +1112,29 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   }
   .stat { background: #1a2a1a; color: #a5d6a7; }
   .stat__value { color: #e0e0e0; }
+  .stat__icon { color: #81c784; }
   .poi-card, .note-item, .variant-card, .automation-result, .home-stage-card { background: #1a1a1a; }
+  .poi-card { border-color: #333; }
+  .poi-card__map-link { border-color: rgba(129, 199, 132, .35); color: #81c784; }
+  .poi-card__map-link:hover { background: rgba(129, 199, 132, .12); }
+  .stage-warning { background: #2a1f0a; border-color: #664d00; color: #ffb74d; }
+  .stage-photo { border-color: rgba(76, 175, 80, .2); background: #1a2a1a; }
+  .variant-card { border-color: #555; }
+  .variant-badge { border-color: #777; }
+  .variant-pill { border-color: #388e3c; background: #1a2a1a; }
+  .home-stage-card--substep { background: #141414; border-color: rgba(76, 175, 80, .15); }
+  .home-stage-card__accommodation { background: #1a2a1a; color: #81c784; }
+  #stage-map-embed { background: #1a2a1a; }
+  .map-embed .leaflet-container { background: #1a2a1a; }
+  .accommodation-resource__image { background: #1a2a1a; }
+  .accommodation-resource__placeholder {
+    background: linear-gradient(135deg, #1a2a1a, #141414);
+    border-color: rgba(129, 199, 132, .2);
+    color: #8a9a8e;
+  }
+  .accommodation-resource__placeholder-icon { background: rgba(129, 199, 132, .12); color: #81c784; }
+  .accommodation-map-link--in-button:hover,
+  .accommodation-map-link--in-button:focus-visible { background: rgba(255,255,255,.08); }
   .studio-roadbook-card, .studio-stage-card, .studio-variant-card { background: var(--studio-surface); }
   .roadbook-library-card { background: var(--surface); border-color: rgba(76, 175, 80, 0.2); }
   .roadbook-library-card:hover,
