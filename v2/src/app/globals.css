@@ -480,6 +480,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .studio-zone--alternatives .studio-zone__title { color: #bf360c; }
 .studio-zone--notes { background: rgba(78, 52, 46, 0.10); border-color: rgba(78, 52, 46, 0.40); }
 .studio-zone--notes .studio-zone__title { color: #3e2723; }
+.studio-zone--variants { background: rgba(0, 0, 0, 0.02); border-color: rgba(0, 0, 0, 0.08); }
+.studio-zone--variants .studio-zone__title { color: #555; }
 
 /* ===== Explorer Page Styles ===== */
 .stage-card {

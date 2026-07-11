@@ -678,6 +678,17 @@ export default function RoadbookDetailPage() {
     finally { setEnrichingAccommodation(null); }
   }
 
+  async function handleClearAccommodation(stageId) {
+    if (!window.confirm("Vider les informations d'hébergement de cette étape ?")) return;
+    try {
+      const { error: updateError } = await supabase.from("stages").update({ accommodation_name: null, accommodation_url: null, accommodation_photo: null }).eq("id", stageId);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess("Hébergement supprimé.");
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
+  }
+
   // --- Automations ---
 
   async function handleRecalculateTotals() {
@@ -1382,8 +1393,9 @@ export default function RoadbookDetailPage() {
                               </div>
                               <div className="studio-form-grid studio-form-grid--compact">
                                 {poi.description && <label className="studio-form-grid__full">Description<span>{poi.description}</span></label>}
+                                {poi.link_url && <label>Lien<span>{poi.link_url}</span></label>}
+                                {poi.image_url && <label>Image<span style={{ fontSize: "0.78rem", color: "var(--studio-muted)" }}>✓</span></label>}
                                 {poi.lat != null && poi.lng != null && <label className="studio-form-grid__full">Coordonnées<span>({poi.lat}, {poi.lng})</span></label>}
-                                {poi.link_url && <label className="studio-form-grid__full">Lien<a href={poi.link_url} target="_blank" rel="noopener">Ouvrir →</a></label>}
                               </div>
                               <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
                                 <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
@@ -1400,10 +1412,10 @@ export default function RoadbookDetailPage() {
                         </div>
                         {poiForm.stage_id === stage.id && (
                           <form onSubmit={handlePoiSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
-                            <h4>POI</h4>
+                            <h4>{poiForm.editing ? "Modifier le POI" : "Ajouter un POI"}</h4>
                             <div className="studio-form-grid studio-form-grid--compact">
-                              <label>Type<input type="text" value={poiForm.type} onChange={e => setPoiForm({ ...poiForm, type: e.target.value })} placeholder="ex: eau, vue" /></label>
                               <label>Nom<input type="text" value={poiForm.name} onChange={e => setPoiForm({ ...poiForm, name: e.target.value })} required /></label>
+                              <label>Type<input type="text" value={poiForm.type} onChange={e => setPoiForm({ ...poiForm, type: e.target.value })} placeholder="ex: eau, vue" /></label>
                               <label className="studio-form-grid__full">Description<textarea value={poiForm.description} onChange={e => setPoiForm({ ...poiForm, description: e.target.value })} /></label>
                               <label>Latitude<input type="number" step="any" value={poiForm.lat} onChange={e => setPoiForm({ ...poiForm, lat: e.target.value })} /></label>
                               <label>Longitude<input type="number" step="any" value={poiForm.lng} onChange={e => setPoiForm({ ...poiForm, lng: e.target.value })} /></label>
@@ -1418,9 +1430,9 @@ export default function RoadbookDetailPage() {
                       </div>
                     </div>
 
-                    {/* ZONE 3 — Hébergement */}
+                    {/* ZONE 3 — Hébergement principal */}
                     <div className="studio-zone studio-zone--accommodation">
-                      <h4 className="studio-zone__title">Hébergement</h4>
+                      <h4 className="studio-zone__title">Hébergement principal</h4>
                       {stage.accommodation_name ? (
                         <div className="studio-form-grid studio-form-grid--compact">
                           <label>Nom<span className="studio-input--readonly">{stage.accommodation_name}</span></label>
@@ -1428,11 +1440,17 @@ export default function RoadbookDetailPage() {
                           {stage.accommodation_photo && <label className="studio-form-grid__full">Photo<span className="studio-input--readonly">✓</span></label>}
                         </div>
                       ) : (
-                        <p className="studio-detail--empty">Aucun hébergement renseigné.</p>
+                        <p className="studio-detail--empty">Aucun hébergement.</p>
                       )}
                     </div>
 
-                    {/* ZONE 4 — Notes */}
+                    {/* ZONE 4 — Hébergements alternatifs */}
+                    <div className="studio-zone studio-zone--alternatives">
+                      <h4 className="studio-zone__title">Hébergements alternatifs</h4>
+                      <p className="studio-detail--empty">Aucun hébergement alternatif.</p>
+                    </div>
+
+                    {/* ZONE 5 — Notes */}
                     <div className="studio-zone studio-zone--notes">
                       <h4 className="studio-zone__title">Notes</h4>
                       <div className="studio-stage-extra">
@@ -1452,8 +1470,8 @@ export default function RoadbookDetailPage() {
                       </div>
                     </div>
 
-                    {/* ZONE 5 — Variantes */}
-                    <div className="studio-zone studio-zone--alternatives">
+                    {/* ZONE 6 — Variantes */}
+                    <div className="studio-zone studio-zone--variants">
                       <h4 className="studio-zone__title">Variantes</h4>
                       <div className="studio-stage-extra">
                         <div className="studio-stage-extra__header">
