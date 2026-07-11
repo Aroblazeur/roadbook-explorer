@@ -2,8 +2,17 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  generateLocalDraftId,
+  getNewDraftKey,
+  loadNewDraft,
+  removeNewDraft,
+  saveNewDraft,
+  migrateNewDraftKey,
+  buildNewDraftPayload,
+} from "@/lib/studio-drafts";
 
 export default function RoadbooksPage() {
   const { user, loading, supabase } = useAuth();
@@ -15,6 +24,12 @@ export default function RoadbooksPage() {
   const [isPublic, setIsPublic] = useState(false);
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
+  const localDraftIdRef = useRef(null);
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const tabIdRef = useRef(null);
+
+  if (!localDraftIdRef.current) localDraftIdRef.current = generateLocalDraftId();
+  if (!tabIdRef.current) tabIdRef.current = crypto.randomUUID?.() ?? `tab-${Date.now()}`;
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login");
@@ -31,7 +46,28 @@ export default function RoadbooksPage() {
         else setRoadbooks(data ?? []);
         setFetching(false);
       });
+    const restored = loadNewDraft(user.id, localDraftIdRef.current);
+    if (restored) {
+      const p = restored.payload;
+      setPendingDraft(restored);
+      if (p.title) setTitle(p.title);
+      if (p.description) setDescription(p.description);
+      if (p.isPublic != null) setIsPublic(p.isPublic);
+    }
   }, [user]);
+
+  function saveNewFormDraft() {
+    if (!user?.id || !localDraftIdRef.current) return;
+    const payload = buildNewDraftPayload({
+      userId: user.id,
+      localDraftId: localDraftIdRef.current,
+      tabId: tabIdRef.current,
+      title,
+      description,
+      isPublic,
+    });
+    saveNewDraft(user.id, localDraftIdRef.current, payload);
+  }
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -53,17 +89,20 @@ export default function RoadbooksPage() {
       slug = `${slug}-${Date.now()}`;
     }
 
-    const { error: insertError } = await supabase.from("roadbooks").insert({
+    const { data: newRb, error: insertError } = await supabase.from("roadbooks").insert({
       slug,
       owner_id: user.id,
       title,
       description,
       is_public: isPublic,
-    });
+    }).select("id").single();
 
     if (insertError) {
       setError(insertError.message);
     } else {
+      migrateNewDraftKey(user.id, localDraftIdRef.current, newRb.id);
+      localDraftIdRef.current = generateLocalDraftId();
+      setPendingDraft(null);
       setTitle("");
       setDescription("");
       setIsPublic(false);
@@ -72,9 +111,28 @@ export default function RoadbooksPage() {
         .select("id, slug, title, description, is_public, created_at")
         .order("created_at", { ascending: false });
       setRoadbooks(data ?? []);
-      setCreating(false);
+      router.push(`/dashboard/roadbooks/${newRb.id}`);
     }
+    setCreating(false);
   }
+
+  function discardNewDraft() {
+    if (!user?.id) return;
+    removeNewDraft(user.id, localDraftIdRef.current);
+    localDraftIdRef.current = generateLocalDraftId();
+    setPendingDraft(null);
+    setTitle("");
+    setDescription("");
+    setIsPublic(false);
+  }
+
+  useEffect(() => {
+    function handlePageHide() {
+      if (user?.id && title) saveNewFormDraft();
+    }
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [user?.id, title, description, isPublic]);
 
   if (loading) return <main className="page-dashboard"><p>Chargement…</p></main>;
   if (!user) return null;
@@ -98,14 +156,21 @@ export default function RoadbooksPage() {
           </div>
         </div>
 
+        {pendingDraft && (
+          <div style={{ fontSize: "0.85rem", padding: "4px 12px", marginBottom: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#fef3e2", borderRadius: 4 }}>
+            <span style={{ color: "#e67e22" }}>Un brouillon de nouveau roadbook a été restauré.</span>
+            <button type="button" onClick={discardNewDraft} style={{ cursor: "pointer", background: "none", border: "1px solid #e67e22", borderRadius: 4, padding: "2px 8px", fontSize: "0.8rem" }}>Ignorer</button>
+          </div>
+        )}
+
         <div className="studio-create-form">
           <h3>Créer un roadbook</h3>
           <form onSubmit={handleCreate}>
             <div className="studio-form-grid">
-              <label>Titre<input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required /></label>
-              <label>Description<textarea value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+              <label>Titre<input type="text" value={title} onChange={(e) => { setTitle(e.target.value); saveNewFormDraft(); }} required /></label>
+              <label>Description<textarea value={description} onChange={(e) => { setDescription(e.target.value); saveNewFormDraft(); }} /></label>
               <label className="studio-form-grid__full" style={{ flexDirection: "row", alignItems: "center", gap: "0.3rem", fontWeight: 400, cursor: "pointer" }}>
-                <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} style={{ width: "auto" }} />
+                <input type="checkbox" checked={isPublic} onChange={(e) => { setIsPublic(e.target.checked); saveNewFormDraft(); }} style={{ width: "auto" }} />
                 Public
               </label>
             </div>

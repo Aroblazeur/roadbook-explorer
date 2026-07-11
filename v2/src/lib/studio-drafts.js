@@ -203,3 +203,108 @@ export function cleanupSyncedDrafts(userId) {
     }
   });
 }
+
+export function generateLocalDraftId() {
+  return crypto.randomUUID?.() ?? `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function saveNewDraft(userId, localDraftId, payload) {
+  const key = getNewDraftKey(userId, localDraftId);
+  if (!key) return { ok: false, error: "no_key" };
+  try {
+    const estimated = estimateSize(payload);
+    if (estimated > MAX_DRAFT_SIZE) {
+      return { ok: false, error: "quota_exceeded" };
+    }
+    localStorage.setItem(key, JSON.stringify(payload));
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "QuotaExceededError") {
+      return { ok: false, error: "quota_exceeded" };
+    }
+    return { ok: false, error: "write_failed" };
+  }
+}
+
+export function migrateNewDraftKey(userId, localDraftId, newRoadbookId) {
+  const newKey = getNewDraftKey(userId, localDraftId);
+  const targetKey = getDraftKey(userId, newRoadbookId);
+  if (!newKey || !targetKey) return;
+  try {
+    const raw = localStorage.getItem(newKey);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!validateDraft(parsed)) return;
+    parsed.roadbookId = newRoadbookId;
+    localStorage.setItem(targetKey, JSON.stringify(parsed));
+    localStorage.removeItem(newKey);
+  } catch {}
+}
+
+export function exportDraftToJSON(userId, roadbookId) {
+  const draft = loadDraft(userId, roadbookId);
+  if (!draft) return null;
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    formatVersion: CURRENT_VERSION,
+    userId: draft.userId,
+    roadbookId: draft.roadbookId,
+    savedAt: draft.savedAt,
+    payload: draft.payload,
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+  return blob;
+}
+
+export function downloadDraftExport(userId, roadbookId, fileName) {
+  const blob = exportDraftToJSON(userId, roadbookId);
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName ?? `draft-roadbook-${roadbookId}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function cleanupOrphanDrafts(supabase, userId) {
+  if (!supabase || !userId) return { removed: 0 };
+  let removed = 0;
+  const drafts = listUserDrafts(userId);
+  for (const draft of drafts) {
+    if (typeof draft.roadbookId !== "number" && !Number.isInteger(Number(draft.roadbookId))) continue;
+    const rbId = Number(draft.roadbookId);
+    if (!rbId) continue;
+    try {
+      supabase
+        .from("roadbooks")
+        .select("id", { count: "exact", head: true })
+        .eq("id", rbId)
+        .eq("owner_id", userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data) {
+            removeDraft(userId, rbId);
+            removed++;
+          }
+        });
+    } catch {}
+  }
+  return { removed };
+}
+
+export function buildNewDraftPayload(formState) {
+  return {
+    version: CURRENT_VERSION,
+    userId: formState.userId,
+    roadbookId: `new:${formState.localDraftId}`,
+    baseRemoteUpdatedAt: null,
+    savedAt: new Date().toISOString(),
+    tabId: formState.tabId,
+    payload: {
+      title: formState.title ?? "",
+      description: formState.description ?? "",
+      isPublic: formState.isPublic ?? false,
+    },
+  };
+}

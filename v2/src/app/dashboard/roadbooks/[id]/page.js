@@ -8,6 +8,14 @@ import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/l
 import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, loadEnrichmentData } from "@/lib/enrichment";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
+import {
+  conditionalUpdateRoadbook,
+  takeSnapshot,
+  acquireSyncLockWithTabId,
+  releaseSyncLock,
+  verifyAfterSync,
+} from "@/lib/sync-helpers";
+import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
 
 export default function RoadbookDetailPage() {
   const { user, loading: authLoading, supabase } = useAuth();
@@ -107,6 +115,7 @@ export default function RoadbookDetailPage() {
     dismissConflict,
     clearDraft,
     resetRestoredInfo,
+    tabId,
   } = useStudioDraft({
     user,
     roadbookId: id,
@@ -257,20 +266,33 @@ export default function RoadbookDetailPage() {
   async function handleSave(e) {
     e.preventDefault();
     setError(null); setSuccess(null); setSaving(true);
+    const lock = acquireSyncLockWithTabId(id, tabId);
+    if (!lock.ok) { setError("Synchronisation verrouillée par un autre onglet."); setSaving(false); return; }
+    const snapshot = takeSnapshot({ roadbook, stages, poisByStage, variantsByStage, roadbookId: id });
     const meta = { ...(roadbook?.metadata ?? {}) };
     if (activity) meta.activity = activity; else delete meta.activity;
     if (destination) meta.destination = destination; else delete meta.destination;
     if (project) meta.project = project; else delete meta.project;
-    const { error: updateError } = await supabase
-      .from("roadbooks").update({ title, description, metadata: meta }).eq("id", id);
-    if (updateError) setError(updateError.message);
-    else { setSuccess("Roadbook mis à jour."); setRoadbook(prev => ({ ...prev, title, description, metadata: meta })); markSynced(); }
-    setSaving(false);
+    const result = await conditionalUpdateRoadbook(supabase, id, { title, description, metadata: meta }, roadbook?.updated_at);
+    if (!result.ok) {
+      if (result.error === "conflict") { saveImmediate(); markRemoteConflict(); setError("Conflit de version. Sauvegarde locale conservée."); }
+      else setError(result.error);
+      releaseSyncLock(id, tabId); setSaving(false); return;
+    }
+    const verify = await verifyAfterSync(supabase, id, snapshot);
+    if (!verify.ok) { saveImmediate(); markRemoteConflict(); setError("Conflit après synchronisation. Version locale sauvegardée."); releaseSyncLock(id, tabId); setSaving(false); return; }
+    setRoadbook(prev => ({ ...prev, title, description, metadata: meta, updated_at: result.data.updated_at }));
+    markSynced(); releaseSyncLock(id, tabId);
+    try { await fetch("/api/revalidate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roadbookId: id }) }); } catch {}
+    setSuccess("Roadbook mis à jour."); setSaving(false);
   }
 
   async function handleSaveRoute(e) {
     e.preventDefault();
     setError(null); setSuccess(null); setSaving(true);
+    const lock = acquireSyncLockWithTabId(id, tabId);
+    if (!lock.ok) { setError("Synchronisation verrouillée par un autre onglet."); setSaving(false); return; }
+    const snapshot = takeSnapshot({ roadbook, stages, poisByStage, variantsByStage, roadbookId: id });
     const meta = { ...(roadbook?.metadata ?? {}) };
     meta.official = {
       distance: officialDist ? Number(officialDist) : null,
@@ -292,17 +314,31 @@ export default function RoadbookDetailPage() {
       elevation_gain_m: traceGain ? Number(traceGain) : null,
       elevation_loss_m: traceLoss ? Number(traceLoss) : null,
     };
-    const { error: updateError } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
-    if (updateError) setError(updateError.message);
-    else { setSuccess("Itinéraire et tracé mis à jour."); setRoadbook(prev => ({ ...prev, metadata: meta, ...updateFields })); markSynced(); }
-    setSaving(false);
+    const result = await conditionalUpdateRoadbook(supabase, id, updateFields, roadbook?.updated_at);
+    if (!result.ok) {
+      if (result.error === "conflict") { saveImmediate(); markRemoteConflict(); setError("Conflit de version. Sauvegarde locale conservée."); }
+      else setError(result.error);
+      releaseSyncLock(id, tabId); setSaving(false); return;
+    }
+    const verify = await verifyAfterSync(supabase, id, snapshot);
+    if (!verify.ok) { saveImmediate(); markRemoteConflict(); setError("Conflit après synchronisation. Version locale sauvegardée."); releaseSyncLock(id, tabId); setSaving(false); return; }
+    setRoadbook(prev => ({ ...prev, metadata: meta, ...updateFields, updated_at: result.data.updated_at }));
+    markSynced(); releaseSyncLock(id, tabId);
+    try { await fetch("/api/revalidate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roadbookId: id }) }); } catch {}
+    setSuccess("Itinéraire et tracé mis à jour."); setSaving(false);
   }
 
   async function handleToggleVisibility() {
-    const { error: updateError } = await supabase
-      .from("roadbooks").update({ is_public: !isPublic }).eq("id", id);
-    if (updateError) setError(updateError.message);
-    else { setIsPublic(!isPublic); setSuccess(isPublic ? "Roadbook passé en privé." : "Roadbook passé en public."); }
+    const result = await conditionalUpdateRoadbook(supabase, id, { is_public: !isPublic }, roadbook?.updated_at);
+    if (!result.ok) {
+      if (result.error === "conflict") { markRemoteConflict(); setError("Conflit de version. Rechargez et réessayez."); }
+      else setError(result.error);
+      return;
+    }
+    setIsPublic(!isPublic);
+    setRoadbook(prev => ({ ...prev, is_public: !isPublic, updated_at: result.data.updated_at }));
+    setSuccess(isPublic ? "Roadbook passé en privé." : "Roadbook passé en public.");
+    try { await fetch("/api/revalidate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roadbookId: id }) }); } catch {}
   }
 
   function clearStageForm() {
@@ -862,10 +898,10 @@ export default function RoadbookDetailPage() {
       if (hasGain) updateFields.elevation_gain_m = Math.round(totalGain);
       if (hasLoss) updateFields.elevation_loss_m = Math.round(totalLoss);
 
-      const { error } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
-      if (error) { setAutomationResult(`Erreur : ${error.message}`); return; }
+      const calcResult = await conditionalUpdateRoadbook(supabase, id, updateFields, roadbook?.updated_at);
+      if (!calcResult.ok) { setAutomationResult(`Erreur : ${calcResult.error === "conflict" ? "Conflit de version. Rechargez et réessayez." : calcResult.error}`); return; }
       setAutomationResult(`Totaux appliqués : ${summaryParts.join(", ")}.`);
-      setRoadbook(prev => ({ ...prev, ...updateFields }));
+      setRoadbook(prev => ({ ...prev, ...updateFields, updated_at: calcResult.data.updated_at }));
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
     finally { setAutomationBusy(null); }
   }
@@ -1072,9 +1108,10 @@ export default function RoadbookDetailPage() {
 
   // --- Cover image ---
   async function handleSetCoverFromMedia(mediaId) {
-    const { error } = await supabase.from("roadbooks").update({ cover_media_id: mediaId, cover_image_url: null }).eq("id", id);
-    if (error) { setUploadError(error.message); return; }
+    const result = await conditionalUpdateRoadbook(supabase, id, { cover_media_id: mediaId, cover_image_url: null }, roadbook?.updated_at);
+    if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
     setCoverMediaId(mediaId); setCoverUrl(""); setCoverMode("media"); setCoverPreview(null);
+    setRoadbook(prev => ({ ...prev, cover_media_id: mediaId, cover_image_url: null, updated_at: result.data.updated_at }));
     supabase.from("media").select("bucket, path").eq("id", mediaId).maybeSingle()
       .then(({ data: m }) => {
         if (m) supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400).then(({ data: s }) => setCoverPreview(s?.signedUrl ?? null));
@@ -1084,16 +1121,18 @@ export default function RoadbookDetailPage() {
 
   async function handleSetCoverFromUrl(url) {
     const cleanUrl = url || null;
-    const { error } = await supabase.from("roadbooks").update({ cover_image_url: cleanUrl, cover_media_id: null }).eq("id", id);
-    if (error) { setUploadError(error.message); return; }
+    const result = await conditionalUpdateRoadbook(supabase, id, { cover_image_url: cleanUrl, cover_media_id: null }, roadbook?.updated_at);
+    if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
     setCoverUrl(url); setCoverMediaId(null); setCoverMode(cleanUrl ? "url" : null); setCoverPreview(cleanUrl);
+    setRoadbook(prev => ({ ...prev, cover_image_url: cleanUrl, cover_media_id: null, updated_at: result.data.updated_at }));
     setSuccess(cleanUrl ? "Image de couverture mise à jour." : "Image de couverture retirée.");
   }
 
   async function handleRemoveCover() {
-    const { error } = await supabase.from("roadbooks").update({ cover_image_url: null, cover_media_id: null }).eq("id", id);
-    if (error) { setUploadError(error.message); return; }
+    const result = await conditionalUpdateRoadbook(supabase, id, { cover_image_url: null, cover_media_id: null }, roadbook?.updated_at);
+    if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
     setCoverUrl(""); setCoverMediaId(null); setCoverMode(null); setCoverPreview(null);
+    setRoadbook(prev => ({ ...prev, cover_image_url: null, cover_media_id: null, updated_at: result.data.updated_at }));
     setSuccess("Image de couverture retirée.");
   }
 
@@ -1222,6 +1261,9 @@ export default function RoadbookDetailPage() {
           <Link href={`/roadbooks/${roadbook?.slug}`} className="terrain-button--secondary studio-action-button--compact">Voir</Link>
           <button type="button" onClick={handleDuplicate} disabled={duplicating} className="terrain-button--secondary studio-action-button--compact">
             {duplicating ? "..." : "Dupliquer"}
+          </button>
+          <button type="button" onClick={() => downloadDraftExport(user?.id, id, `${roadbook?.slug ?? "roadbook"}-brouillon.json`)} className="terrain-button--secondary studio-action-button--compact">
+            Export brouillon
           </button>
         </div>
       </div>
