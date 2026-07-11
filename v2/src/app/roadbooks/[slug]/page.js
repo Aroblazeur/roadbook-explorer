@@ -122,12 +122,37 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const currentIdx = stageParam != null && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
 
   return (
-    <main className="container">
-      <header className="card">
-        {coverSignedUrl && <img src={coverSignedUrl} alt="" className="stage-photo__image" style={{ maxHeight: 300, marginBottom: "0.5rem" }} />}
-        <h1>{roadbook.title}</h1>
-        {roadbook.description && <p>{roadbook.description}</p>}
+    <>
+      <header className="header">
+        <div className="container">
+          <div className="header-title-wrapper">
+            <svg className="header-logo" viewBox="0 0 80 40" fill="none" aria-hidden="true">
+              <circle cx="32" cy="26" r="9" stroke="white" strokeWidth="2" fill="none" />
+              <path d="M38 17 L42 13 L46 17" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <circle cx="55" cy="26" r="4" stroke="white" strokeWidth="1.5" fill="none" />
+              <rect x="22" y="18" width="12" height="2" rx="1" fill="white" opacity="0.7" />
+              <rect x="22" y="22" width="8" height="2" rx="1" fill="white" opacity="0.7" />
+              <rect x="22" y="26" width="10" height="2" rx="1" fill="white" opacity="0.7" />
+              <rect x="22" y="30" width="6" height="2" rx="1" fill="white" opacity="0.7" />
+              <path d="M14 34 L14 8 C14 6 15 5 17 5 L38 5" stroke="white" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+              <path d="M24 34 L24 12 C24 11 25 10 26 10 L38 10" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.6" />
+              <circle cx="42" cy="14" r="3" fill="white" opacity="0.9" />
+            </svg>
+            <h1>{roadbook.title}</h1>
+            <svg className="header-logo header-logo--outdoor" viewBox="0 0 80 40" fill="none" aria-hidden="true">
+              <path d="M20 35 L36 8 L52 35" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              <path d="M12 35 L68 35" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M36 18 L44 35" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+              <circle cx="52" cy="22" r="4" stroke="white" strokeWidth="1.5" fill="none" />
+              <circle cx="52" cy="22" r="1.5" fill="white" />
+              <circle cx="20" cy="26" r="3" stroke="white" strokeWidth="1.5" fill="none" />
+              <path d="M56 35 L60 28 L64 35" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+            </svg>
+          </div>
+          {roadbook.description && <p>{roadbook.description}</p>}
+        </div>
       </header>
+      <main className="container">
 
       {!stageParam && (
         <>
@@ -174,6 +199,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           : <span />}
       </nav>
     </main>
+    </>
   );
 }
 
@@ -198,9 +224,9 @@ function GpxCustomSection({ gpx, totals }) {
       <h2>GPX personnalisé</h2>
       {totals && (
         <div className="stats" style={{ marginBottom: "0.75rem" }}>
-          <span className="stat"><span className="stat__value"><strong>{totals.distance ?? "—"}</strong> km Distance cumulée</span></span>
-          <span className="stat"><span className="stat__value"><strong>{totals.elevationGain ?? "—"}</strong> m D+ cumulé</span></span>
-          <span className="stat"><span className="stat__value"><strong>{totals.elevationLoss ?? "—"}</strong> m D− cumulé</span></span>
+          <span className="stat"><StatIconDistance /><span className="stat__value"><strong>{totals.distance ?? "—"}</strong> km</span> <span className="stat__label">Distance</span></span>
+          <span className="stat"><StatIconElevationGain /><span className="stat__value"><strong>{totals.elevationGain ?? "—"}</strong> m</span> <span className="stat__label">D+</span></span>
+          <span className="stat"><StatIconElevationLoss /><span className="stat__value"><strong>{totals.elevationLoss ?? "—"}</strong> m</span> <span className="stat__label">D−</span></span>
         </div>
       )}
       <p>
@@ -240,7 +266,7 @@ function VariantCard({ v }) {
   return (
     <div className="variant-card">
       <p style={{ margin: 0 }}>
-        <span style={{ color: "#666" }}>↳ </span>
+        <span style={{ color: "#888", marginRight: "4px" }}>↳</span>
         {vType && <span className="variant-badge">{vType}</span>}
         <strong>{v.label}</strong>
       </p>
@@ -251,37 +277,45 @@ function VariantCard({ v }) {
           {vArr && <span>{vArr}</span>}
         </p>
       )}
-      <div className="stats" style={{ gap: "0.3rem", margin: "0.25rem 0 0" }}>
+      <div className="stats stats--compact" style={{ gap: "0.3rem", margin: "0.25rem 0 0" }}>
         {v.distance_km != null && <span className="variant-pill"><strong>{v.distance_km}</strong> km</span>}
         {vGain != null && <span className="variant-pill"><strong>{vGain}</strong> m D+</span>}
         {vLoss != null && <span className="variant-pill"><strong>{vLoss}</strong> m D−</span>}
       </div>
-      {v.description && <p style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>{v.description}</p>}
+      {v.description && <p className="text-muted" style={{ margin: "0.25rem 0", fontSize: "0.88rem", lineHeight: "1.45" }}>{v.description}</p>}
     </div>
   );
 }
 
 function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   const items = [];
-  if (distanceKm != null) items.push({ label: "km", value: distanceKm });
-  if (elevationGain != null) items.push({ label: "D+", value: elevationGain, unit: "m" });
-  if (elevationLoss != null) items.push({ label: "D−", value: elevationLoss, unit: "m" });
-  if (duration) items.push({ label: "Durée", value: duration });
+  if (distanceKm != null) items.push({ label: "Distance", value: distanceKm, unit: "km", icon: StatIconDistance });
+  if (elevationGain != null) items.push({ label: "D+", value: elevationGain, unit: "m", icon: StatIconElevationGain });
+  if (elevationLoss != null) items.push({ label: "D−", value: elevationLoss, unit: "m", icon: StatIconElevationLoss });
+  if (duration) items.push({ label: "Durée", value: duration, icon: StatIconDuration });
   if (!items.length) return null;
   return (
-    <div className="stats" style={{ margin: "0.5rem 0" }}>
-      {items.map((item, i) => (
-        <span key={i} className="stat"><span className="stat__value"><strong>{item.value}</strong>{item.unit ? ` ${item.unit}` : ""} {item.label}</span></span>
-      ))}
+    <div className="stats stats--compact" style={{ margin: "0.5rem 0" }}>
+      {items.map((item, i) => {
+        const Icon = item.icon;
+        return (
+          <span key={i} className="stat">
+            {Icon && <Icon />}
+            <span className="stat__value"><strong>{item.value}</strong> {item.unit}</span>
+            <span className="stat__label">{item.label}</span>
+          </span>
+        );
+      })}
     </div>
   );
 }
 
 function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
   const meta = stage.metadata ?? {};
+  const accommodationTypeIcon = stage.accommodation_type === "hotel" ? "🏨" : stage.accommodation_type === "camping" ? "⛺" : stage.accommodation_type === "gite" ? "🏡" : stage.accommodation_type === "hostel" ? "🛏️" : "🏠";
   return (
-    <div className="card" style={{ margin: "14px 0" }}>
-      <div className="home-stage-card__content" style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+    <div className="stage-card" style={{ margin: "14px 0" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
         <span className="stage-number-circle" style={{ minWidth: 42, width: 42, height: 42, fontSize: "1.1rem" }}>
           {stage.stage_number}
         </span>
@@ -291,7 +325,7 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
             {stage.title && <span className="text-muted" style={{ fontWeight: "normal" }}> — {stage.title}</span>}
           </h3>
           {(stage.departure || stage.arrival) && (
-            <p className="stage-route-links" style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
+            <p className="stage-route-links">
               {stage.departure && <span className="stage-city-link">Départ : {stage.departure}</span>}
               {stage.departure && stage.arrival && <> → </>}
               {stage.arrival && <span className="stage-city-link">Arrivée : {stage.arrival}</span>}
@@ -300,26 +334,27 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
         </div>
       </div>
 
-      <Pills distanceKm={stage.distance_km} elevationGain={stage.elevation_gain_m} elevationLoss={stage.elevation_loss_m} duration={stage.duration} />
-
       {stage.stage_photo_url && (
         <figure className="stage-photo">
           <img src={stage.stage_photo_url} alt="" className="stage-photo__image" />
         </figure>
       )}
 
+      <Pills distanceKm={stage.distance_km} elevationGain={stage.elevation_gain_m} elevationLoss={stage.elevation_loss_m} duration={stage.duration} />
+
       {meta.description && <p className="stage-description">{meta.description}</p>}
-      {meta.warning && <p style={{ color: "#e65100", margin: "0.5rem 0" }}>⚠ {meta.warning}</p>}
+      {meta.warning && <p className="stage-warning">⚠ {meta.warning}</p>}
 
       {/* Accommodation */}
       {stage.accommodation_name && (
         <div className="accommodation-resource">
-          {stage.accommodation_photo && <img src={stage.accommodation_photo} alt={stage.accommodation_name} className="accommodation-resource__image" />}
-          <p><strong>{stage.accommodation_name}</strong></p>
-          {stage.accommodation_url && (
-            <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer" className="terrain-button terrain-button--secondary" style={{ textDecoration: "none" }}>
-              🔗 Site web de l&apos;hébergement
+          {stage.accommodation_photo && <img src={stage.accommodation_photo} alt={stage.accommodation_name} className="accommodation-resource__image" loading="lazy" />}
+          {stage.accommodation_url ? (
+            <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer" className="terrain-button terrain-button--secondary accommodation-resource__website-link" style={{ textDecoration: "none" }}>
+              <span className="accommodation-type-icon">{accommodationTypeIcon}</span> {stage.accommodation_name}
             </a>
+          ) : (
+            <p><strong>{stage.accommodation_name}</strong></p>
           )}
         </div>
       )}
@@ -339,8 +374,8 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
       {/* Notes */}
       {Array.isArray(stage.notes) && stage.notes.length > 0 && (
         <details style={{ marginTop: "0.5rem" }}>
-          <summary>Notes ({stage.notes.length})</summary>
-          <ul id="notes" style={{ marginTop: "0.5rem" }}>
+          <summary><strong>Notes ({stage.notes.length})</strong></summary>
+          <ul className="note-list" style={{ marginTop: "0.5rem" }}>
             {stage.notes.map((note, i) => (
               <li key={i} className="note-item">
                 <p className="note-item__text">{note.text ?? note}</p>
@@ -354,16 +389,16 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
       {/* POI */}
       {pois.length > 0 && (
         <details style={{ marginTop: "0.5rem" }}>
-          <summary>Points d&apos;intérêt ({pois.length})</summary>
+          <summary><strong>Points d&apos;intérêt ({pois.length})</strong></summary>
           <ul className="poi-list poi-list--enriched" style={{ marginTop: "0.5rem" }}>
             {pois.map(poi => (
               <li key={poi.id} className="poi-card">
-                {poi.photo_url && <img src={poi.photo_url} alt="" className="poi-card__image" />}
-                <div>
+                {poi.photo_url && <img src={poi.photo_url} alt="" className="poi-card__image" loading="lazy" />}
+                <div className="poi-card__content">
                   <strong className="poi-card__name">{poi.poi_type && <span style={{ color: "#2e7d32" }}>[{poi.poi_type}] </span>}{poi.name}</strong>
                   {poi.region && <p className="poi-card__region">{poi.region}</p>}
                   {poi.description && <p className="poi-card__description">{poi.description}</p>}
-                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" className="terrain-button terrain-button--discreet poi-card__map-link" style={{ display: "inline-flex" }}>Ouvrir le lien →</a>}
+                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" className="poi-card__map-link">Ouvrir le lien →</a>}
                 </div>
               </li>
             ))}
@@ -373,14 +408,14 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
 
       {/* Variants */}
       {variants.length > 0 && (
-        <div style={{ marginTop: "0.5rem" }}>
+        <div style={{ marginTop: "0.75rem" }}>
           <p className="text-muted" style={{ fontWeight: "bold", fontSize: "0.9rem", marginBottom: "0.3rem" }}>Variantes ({variants.length})</p>
           {variants.map(v => <VariantCard key={v.id} v={v} />)}
         </div>
       )}
 
       {stageGpx && (
-        <p style={{ marginTop: "0.5rem" }}>
+        <p className="gpx-actions" style={{ marginTop: "0.5rem" }}>
           <strong>GPX d&apos;étape :</strong>{" "}
           <a href={stageGpx.signedUrl} download={stageGpx.file_name ?? "etape.gpx"}>
             {stageGpx.file_name ?? "Télécharger"}
@@ -391,6 +426,19 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
   );
 }
 
+function StatIconDistance() {
+  return <svg className="stat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 17 17 4l3 3L7 20 4 17Z" /><path d="M8 13 11 16" /><path d="M11 10 14 13" /><path d="M14 7 17 10" /></svg>;
+}
+function StatIconElevationGain() {
+  return <svg className="stat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 18 6.5-11 4.5 7 2-3 5 7H3Z" /><path d="M16 4v6" /><path d="m13.5 6.5 2.5-2.5 2.5 2.5" /></svg>;
+}
+function StatIconElevationLoss() {
+  return <svg className="stat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 18 6.5-11 4.5 7 2-3 5 7H3Z" /><path d="M16 4v6" /><path d="m13.5 7.5 2.5 2.5 2.5-2.5" /></svg>;
+}
+function StatIconDuration() {
+  return <svg className="stat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>;
+}
+
 function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
   const hasTotal = stageCount > 0 && (distance > 0 || elevationGain > 0 || elevationLoss > 0);
   if (!hasTotal) return null;
@@ -399,10 +447,10 @@ function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
     <div className="card">
       <h2>Résumé du parcours</h2>
       <div className="stats" style={{ marginBottom: "0.5rem" }}>
-        <span className="stat"><span className="stat__value"><strong>{distance ?? "—"}</strong> km Distance totale</span></span>
-        <span className="stat"><span className="stat__value"><strong>{elevationGain ?? "—"}</strong> m Dénivelé +</span></span>
-        <span className="stat"><span className="stat__value"><strong>{elevationLoss ?? "—"}</strong> m Dénivelé −</span></span>
-        <span className="stat"><span className="stat__value"><strong>{stageCount}</strong> Étapes</span></span>
+        <span className="stat"><StatIconDistance /><span className="stat__value"><strong>{distance ?? "—"}</strong> km</span> <span className="stat__label">Distance</span></span>
+        <span className="stat"><StatIconElevationGain /><span className="stat__value"><strong>{elevationGain ?? "—"}</strong> m</span> <span className="stat__label">D+</span></span>
+        <span className="stat"><StatIconElevationLoss /><span className="stat__value"><strong>{elevationLoss ?? "—"}</strong> m</span> <span className="stat__label">D−</span></span>
+        <span className="stat"><span className="stat__value"><strong>{stageCount}</strong></span> <span className="stat__label">Étapes</span></span>
       </div>
     </div>
   );
