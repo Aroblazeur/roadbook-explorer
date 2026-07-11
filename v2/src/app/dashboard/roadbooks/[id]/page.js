@@ -120,7 +120,7 @@ export default function RoadbookDetailPage() {
           setOfficialGpx(official.gpx ?? "");
           setOfficialMap(official.mapEmbedUrl ?? "");
           const stagesTotal = meta.stagesTotal ?? {};
-          setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_total_km != null ? String(data.distance_total_km) : ""));
+          setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_km != null ? String(data.distance_km) : ""));
           setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_total_m != null ? String(data.elevation_gain_total_m) : ""));
           setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_total_m != null ? String(data.elevation_loss_total_m) : ""));
           setTraceGpx(stagesTotal.gpx ?? "");
@@ -210,7 +210,7 @@ export default function RoadbookDetailPage() {
     };
     const updateFields = {
       metadata: meta,
-      distance_total_km: traceDist ? Number(traceDist) : null,
+      distance_km: traceDist ? Number(traceDist) : null,
       elevation_gain_total_m: traceGain ? Number(traceGain) : null,
       elevation_loss_total_m: traceLoss ? Number(traceLoss) : null,
     };
@@ -780,7 +780,7 @@ export default function RoadbookDetailPage() {
       if (!ok) { setAutomationBusy(null); return; }
 
       const updateFields = {};
-      if (hasDist) updateFields.distance_total_km = Math.round(totalDist * 100) / 100;
+      if (hasDist) updateFields.distance_km = Math.round(totalDist * 100) / 100;
       if (hasGain) updateFields.elevation_gain_total_m = Math.round(totalGain);
       if (hasLoss) updateFields.elevation_loss_total_m = Math.round(totalLoss);
 
