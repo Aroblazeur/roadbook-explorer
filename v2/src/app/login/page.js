@@ -1,19 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { sanitizeNextPath } from "@/lib/sanitize-next";
 
-export default function LoginPage() {
+function LoginForm() {
   const { user, supabase } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = sanitizeNextPath(searchParams.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
 
   if (user) {
-    router.push("/dashboard");
+    router.push(next);
     return null;
   }
 
@@ -30,7 +33,7 @@ export default function LoginPage() {
     if (signInError) {
       setError(signInError.message);
     } else {
-      router.push("/dashboard");
+      router.push(next);
     }
   }
 
@@ -89,5 +92,13 @@ export default function LoginPage() {
         <a href="/">Retour à l&apos;accueil</a>
       </p>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -1,21 +1,10 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MapViewerClient from "@/components/MapViewerClient";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 async function getRoadbook(slug) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll() {},
-      },
-    }
-  );
+  const supabase = await createServerSupabase();
 
   const { data: { user } } = await supabase.auth.getUser();
 

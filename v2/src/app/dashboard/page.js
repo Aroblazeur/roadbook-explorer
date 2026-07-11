@@ -2,30 +2,22 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 
 export default function DashboardPage() {
-  const { user, loading, supabase } = useAuth();
+  const { user, supabase } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [user, loading]);
-
-  if (loading) return <main><p>Chargement…</p></main>;
-
-  if (!user) return null;
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
   }
 
   return (
     <main>
       <h1>Dashboard</h1>
-      <p>Connecté en tant que : <strong>{user.email}</strong></p>
-      <p>ID utilisateur : <code>{user.id}</code></p>
+      <p>Connecté en tant que : <strong>{user?.email}</strong></p>
       <nav>
         <Link href="/explore">Explorer</Link>
         {" | "}

@@ -18,8 +18,8 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUser(user);
       setLoading(false);
     });
 
