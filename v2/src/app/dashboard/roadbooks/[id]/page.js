@@ -1368,7 +1368,8 @@ export default function RoadbookDetailPage() {
                 const isLast = index === stages.length - 1;
                 const expanded = expandedStages[stage.id] ?? false;
                 return (
-                  <div key={stage.id} className="studio-stage-card" data-expanded={expanded ? "true" : "false"}>
+                  <>
+                  <div className="studio-stage-card" data-expanded={expanded ? "true" : "false"}>
                     <div className="studio-stage-card__header">
                       <div className="studio-stage-card__header-info" onClick={() => setExpandedStages(prev => ({ ...prev, [stage.id]: !prev[stage.id] }))}>
                         <p className="studio-stage-card__eyebrow">Étape</p>
@@ -1391,19 +1392,20 @@ export default function RoadbookDetailPage() {
                     <div className="studio-zone studio-zone--info">
                       <h4 className="studio-zone__title">Informations d'étape</h4>
                       <div className="studio-form-grid studio-form-grid--compact">
-                        <label>N° étape<span className="studio-input--readonly">{stage.stage_number}</span></label>
+                        <label>Numéro d'étape<span className="studio-input--readonly">{stage.stage_number}</span></label>
                         <label>Jour<span className="studio-input--readonly">{stage.day || "—"}</span></label>
                         <label>Titre<span className="studio-input--readonly">{stage.title || "—"}</span></label>
                         <label>Départ<span className="studio-input--readonly">{stage.departure || "—"}</span></label>
                         <label>Arrivée<span className="studio-input--readonly">{stage.arrival || "—"}</span></label>
-                        <label>Libellé<span className="studio-input--readonly">{stage.stage_label || "—"}</span></label>
                         <label>Distance (km)<span className="studio-input--readonly">{stage.distance_km != null ? stage.distance_km : "—"}</span></label>
                         <label>D+ (m)<span className="studio-input--readonly">{stage.elevation_gain_m != null ? stage.elevation_gain_m : "—"}</span></label>
                         <label>D− (m)<span className="studio-input--readonly">{stage.elevation_loss_m != null ? stage.elevation_loss_m : "—"}</span></label>
+                        <label>Photo de l'étape<span className="studio-input--readonly">{stage.stage_photo_url ? "✓" : "—"}</span></label>
+                        <label>Type d'hébergement<span className="studio-input--readonly">{stage.accommodation_type || stage.accommodation_name || "—"}</span></label>
+                        <label className="studio-form-grid__full">Description<span className="studio-input--readonly">{meta.description || "—"}</span></label>
+                        <label>Libellé<span className="studio-input--readonly">{stage.stage_label || "—"}</span></label>
                         <label>Durée<span className="studio-input--readonly">{stage.duration || "—"}</span></label>
                         <label>Difficulté<span className="studio-input--readonly">{meta.difficulty || "—"}</span></label>
-                        <label>Hébergement<span className="studio-input--readonly">{stage.accommodation_name || "—"}</span></label>
-                        <label className="studio-form-grid__full">Description<span className="studio-input--readonly">{meta.description || "—"}</span></label>
                         <label className="studio-form-grid__full">Avertissement<span className="studio-input--readonly">{meta.warning || "—"}</span></label>
                       </div>
                     </div>
@@ -1418,7 +1420,6 @@ export default function RoadbookDetailPage() {
                         </div>
                         <div className="studio-form-grid studio-form-grid--compact">
                           <label className="studio-form-grid__full">Carte intégrée<span className="studio-input--readonly">{stage.map_embed_url || "—"}</span></label>
-                          <label className="studio-form-grid__full">Photo de l'étape<span className="studio-input--readonly">{stage.stage_photo_url ? "✓" : "—"}</span></label>
                         </div>
                       </div>
 
@@ -1489,50 +1490,44 @@ export default function RoadbookDetailPage() {
                     {/* ZONE 3 — Hébergement principal */}
                     <div className="studio-zone studio-zone--accommodation">
                       <h4 className="studio-zone__title">Hébergement principal</h4>
-                      <div className="studio-stage-extra">
-                        <div className="studio-stage-extra__header">
-                          <h5>Hébergement</h5>
-                          {stage.accommodation_name ? (
-                            <div style={{ display: "flex", gap: "0.3rem" }}>
-                              <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
-                                clearAccommodationForm();
-                                setAccommodationForm({ stage_id: stage.id, name: stage.accommodation_name, url: stage.accommodation_url ?? "", photo: stage.accommodation_photo ?? "", editing: true });
-                              }}>✎</button>
-                              <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleClearAccommodation(stage.id)}>Vider</button>
-                            </div>
-                          ) : (
-                            <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setAccommodationForm({ ...accommodationForm, stage_id: stage.id })}>Ajouter un hébergement</button>
-                          )}
-                        </div>
-                        {stage.accommodation_name ? (
-                          <div className="studio-form-grid studio-form-grid--compact">
-                            <label className="studio-form-grid__full">Nom<span className="studio-input--readonly">{stage.accommodation_name}</span></label>
-                            {stage.accommodation_url && <label className="studio-form-grid__full">URL<span className="studio-input--readonly">{stage.accommodation_url}</span></label>}
-                            {stage.accommodation_photo && (
-                              <label className="studio-form-grid__full">
-                                Photo
-                                <img src={stage.accommodation_photo} alt="" style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px", marginTop: "0.3rem" }} />
-                              </label>
-                            )}
+                      {stage.accommodation_name ? (
+                        <div className="studio-form-grid studio-form-grid--compact">
+                          <label>Nom<span className="studio-input--readonly">{stage.accommodation_name}</span></label>
+                          <label>Lien<span className="studio-input--readonly">{stage.accommodation_url || "—"}</span></label>
+                          <label className="studio-form-grid__full">
+                            Photo
+                            {stage.accommodation_photo
+                              ? <img src={stage.accommodation_photo} alt="" style={{ maxWidth: "100%", maxHeight: "160px", borderRadius: "4px", marginTop: "0.3rem" }} />
+                              : <span className="studio-input--readonly">—</span>}
+                          </label>
+                          <div className="studio-actions">
+                            <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
+                              clearAccommodationForm();
+                              setAccommodationForm({ stage_id: stage.id, name: stage.accommodation_name, url: stage.accommodation_url ?? "", photo: stage.accommodation_photo ?? "", editing: true });
+                            }}>✎</button>
+                            <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleClearAccommodation(stage.id)}>Vider</button>
                           </div>
-                        ) : (
+                        </div>
+                      ) : (
+                        <div>
                           <p className="studio-detail--empty">Aucun hébergement.</p>
-                        )}
-                        {accommodationForm.stage_id === stage.id && (
-                          <form onSubmit={handleAccommodationSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
-                            <h4>{accommodationForm.editing ? "Modifier l'hébergement" : "Ajouter un hébergement"}</h4>
-                            <div className="studio-form-grid studio-form-grid--compact">
-                              <label className="studio-form-grid__full">Nom<input type="text" value={accommodationForm.name} onChange={e => setAccommodationForm({ ...accommodationForm, name: e.target.value })} required /></label>
-                              <label className="studio-form-grid__full">URL<input type="url" value={accommodationForm.url} onChange={e => setAccommodationForm({ ...accommodationForm, url: e.target.value })} /></label>
-                              <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} placeholder="URL de l'image" /></label>
-                            </div>
-                            <div className="studio-create-form__actions">
-                              <button type="submit" className="terrain-button">Enregistrer</button>
-                              <button type="button" className="terrain-button terrain-button--secondary" onClick={clearAccommodationForm}>Annuler</button>
-                            </div>
-                          </form>
-                        )}
-                      </div>
+                          <button type="button" className="terrain-button terrain-button--secondary" style={{ marginTop: "0.4rem" }} onClick={() => setAccommodationForm({ ...accommodationForm, stage_id: stage.id })}>Ajouter un hébergement</button>
+                        </div>
+                      )}
+                      {accommodationForm.stage_id === stage.id && (
+                        <form onSubmit={handleAccommodationSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+                          <h4>{accommodationForm.editing ? "Modifier l'hébergement" : "Ajouter un hébergement"}</h4>
+                          <div className="studio-form-grid studio-form-grid--compact">
+                            <label>Nom<input type="text" value={accommodationForm.name} onChange={e => setAccommodationForm({ ...accommodationForm, name: e.target.value })} required /></label>
+                            <label>URL<input type="url" value={accommodationForm.url} onChange={e => setAccommodationForm({ ...accommodationForm, url: e.target.value })} /></label>
+                            <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} placeholder="URL de l'image" /></label>
+                          </div>
+                          <div className="studio-create-form__actions">
+                            <button type="submit" className="terrain-button">Enregistrer</button>
+                            <button type="button" className="terrain-button terrain-button--secondary" onClick={clearAccommodationForm}>Annuler</button>
+                          </div>
+                        </form>
+                      )}
                     </div>
 
                     {/* ZONE 4 — Hébergements alternatifs */}
@@ -1581,70 +1576,54 @@ export default function RoadbookDetailPage() {
                       </div>
                     </div>
 
-                    {/* ZONE 6 — Variantes */}
-                    <div className="studio-zone studio-zone--variants">
-                      <h4 className="studio-zone__title">Variantes</h4>
-                      <div className="studio-stage-extra">
-                        <div className="studio-stage-extra__header">
-                          <h5>Liste ({stageVariants.length})</h5>
-                          <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setVariantForm({ ...variantForm, stage_id: stage.id })}>Ajouter une variante</button>
-                        </div>
-                        {stageVariants.length === 0 ? (
-                          <p className="studio-detail--empty">Aucune variante.</p>
-                        ) : (
-                          <div className="studio-sublist__list">
-                            {stageVariants.map(v => {
-                            const vmeta = v.metadata ?? {};
-                            return (
-                              <article key={v.id} className="studio-subitem-card">
-                                <div className="studio-subitem-card__header">
-                                  <div>
-                                    <strong>{vmeta.type ? <span className="variant-badge">{vmeta.type}</span> : null}{v.label}</strong>
-                                    {v.description && <p className="text-muted" style={{ fontSize: "0.9rem", margin: "0.2rem 0 0" }}>{v.description}</p>}
-                                    <div className="stats" style={{ margin: "0.2rem 0 0", gap: "0.3rem" }}>
-                                      {v.distance_km != null && <span className="variant-pill"><strong>{v.distance_km}</strong> km</span>}
-                                      {(v.elevation_gain_m ?? vmeta.elevation_gain_m) != null && <span className="variant-pill"><strong>D+ {(v.elevation_gain_m ?? vmeta.elevation_gain_m)}m</strong></span>}
-                                      {(v.elevation_loss_m ?? vmeta.elevation_loss_m) != null && <span className="variant-pill"><strong>D- {(v.elevation_loss_m ?? vmeta.elevation_loss_m)}m</strong></span>}
-                                    </div>
-                                    {(v.departure ?? vmeta.departure) && <p className="text-muted" style={{ fontSize: "0.85rem" }}>{(v.departure ?? vmeta.departure)}{(v.arrival ?? vmeta.arrival) && <> → {v.arrival ?? vmeta.arrival}</>}</p>}
-                                  </div>
-                                  <div className="studio-actions">
-                                    <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
-                                      setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: v.departure ?? vmeta.departure ?? "", arrival: v.arrival ?? vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: (v.elevation_gain_m ?? vmeta.elevation_gain_m) != null ? String(v.elevation_gain_m ?? vmeta.elevation_gain_m) : "", elevation_loss_m: (v.elevation_loss_m ?? vmeta.elevation_loss_m) != null ? String(v.elevation_loss_m ?? vmeta.elevation_loss_m) : "", map_embed_url: v.map_embed_url ?? "", notes: Array.isArray(v.notes) && v.notes.length ? v.notes.map(n => n.text ?? n).join("\n") : "", editing: v.id });
-                                    }}>✎</button>
-                                    <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteVariant(v.id)}>✕</button>
-                                  </div>
-                                </div>
-                              </article>
-                            );
-                          })}
-                          </div>
-                        )}
-                        {variantForm.stage_id === stage.id && (
-                          <form onSubmit={handleVariantSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
-                            <h4>Variante</h4>
-                            <div className="studio-form-grid studio-form-grid--compact">
-                              <label>Titre<input type="text" value={variantForm.title} onChange={e => setVariantForm({ ...variantForm, title: e.target.value })} required /></label>
-                              <label>Type<input type="text" value={variantForm.type} onChange={e => setVariantForm({ ...variantForm, type: e.target.value })} placeholder="ex: Variante, Option, Raccourci" /></label>
-                              <label>Départ<input type="text" value={variantForm.departure} onChange={e => setVariantForm({ ...variantForm, departure: e.target.value })} /></label>
-                              <label>Arrivée<input type="text" value={variantForm.arrival} onChange={e => setVariantForm({ ...variantForm, arrival: e.target.value })} /></label>
-                              <label className="studio-form-grid__full">Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
-                              <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
-                              <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
-                              <label>D− (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
-                              <label className="studio-form-grid__full">Carte intégrée<input type="url" value={variantForm.map_embed_url} onChange={e => setVariantForm({ ...variantForm, map_embed_url: e.target.value })} placeholder="https://mapy.com/..." /></label>
-                              <label className="studio-form-grid__full">Notes (une par ligne)<textarea value={variantForm.notes} onChange={e => setVariantForm({ ...variantForm, notes: e.target.value })} placeholder="Note 1&#10;Note 2" /></label>
-                            </div>
-                            <div className="studio-create-form__actions">
-                              <button type="submit" className="terrain-button">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
-                              <button type="button" className="terrain-button terrain-button--secondary" onClick={clearVariantForm}>Annuler</button>
-                            </div>
-                          </form>
-                        )}
-                      </div>
-                    </div>
 
                   </div>}</div>
+
+                  {/* Variantes — cartes séparées V1 */}
+                  {stageVariants.map(v => {
+                  const vmeta = v.metadata ?? {};
+                  return (
+                    <article key={v.id} className="studio-variant-card" data-expanded="true">
+                      <div className="studio-variant-card__header">
+                        <div className="studio-variant-card__header-info">
+                          <p className="studio-stage-card__eyebrow">Variante</p>
+                          <h3 className="studio-variant-card__title">{v.label}</h3>
+                          <p className="studio-stage-card__summary">
+                            {[v.description, v.distance_km != null ? `${v.distance_km} km` : null].filter(Boolean).join(" · ") || `Variante`}
+                          </p>
+                        </div>
+                        <div className="studio-stage-card__actions">
+                          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
+                            setVariantForm({ stage_id: stage.id, title: v.label, type: vmeta.type ?? "", departure: v.departure ?? vmeta.departure ?? "", arrival: v.arrival ?? vmeta.arrival ?? "", description: v.description ?? "", distance_km: v.distance_km != null ? String(v.distance_km) : "", elevation_gain_m: (v.elevation_gain_m ?? vmeta.elevation_gain_m) != null ? String(v.elevation_gain_m ?? vmeta.elevation_gain_m) : "", elevation_loss_m: (v.elevation_loss_m ?? vmeta.elevation_loss_m) != null ? String(v.elevation_loss_m ?? vmeta.elevation_loss_m) : "", map_embed_url: v.map_embed_url ?? "", notes: Array.isArray(v.notes) && v.notes.length ? v.notes.map(n => n.text ?? n).join("\n") : "", editing: v.id });
+                          }}>✎</button>
+                          <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteVariant(v.id)}>✕</button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                  })}
+                  {variantForm.stage_id === stage.id && (
+                    <form onSubmit={handleVariantSubmit} className="studio-create-form" style={{ marginLeft: "1.5rem", marginBottom: "0.75rem" }}>
+                      <h4>Variante</h4>
+                      <div className="studio-form-grid studio-form-grid--compact">
+                        <label>Titre<input type="text" value={variantForm.title} onChange={e => setVariantForm({ ...variantForm, title: e.target.value })} required /></label>
+                        <label>Type<input type="text" value={variantForm.type} onChange={e => setVariantForm({ ...variantForm, type: e.target.value })} placeholder="ex: Variante, Option, Raccourci" /></label>
+                        <label>Départ<input type="text" value={variantForm.departure} onChange={e => setVariantForm({ ...variantForm, departure: e.target.value })} /></label>
+                        <label>Arrivée<input type="text" value={variantForm.arrival} onChange={e => setVariantForm({ ...variantForm, arrival: e.target.value })} /></label>
+                        <label className="studio-form-grid__full">Description<textarea value={variantForm.description} onChange={e => setVariantForm({ ...variantForm, description: e.target.value })} /></label>
+                        <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={e => setVariantForm({ ...variantForm, distance_km: e.target.value })} /></label>
+                        <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={e => setVariantForm({ ...variantForm, elevation_gain_m: e.target.value })} /></label>
+                        <label>D− (m)<input type="number" value={variantForm.elevation_loss_m} onChange={e => setVariantForm({ ...variantForm, elevation_loss_m: e.target.value })} /></label>
+                        <label className="studio-form-grid__full">Carte intégrée<input type="url" value={variantForm.map_embed_url} onChange={e => setVariantForm({ ...variantForm, map_embed_url: e.target.value })} placeholder="https://mapy.com/..." /></label>
+                        <label className="studio-form-grid__full">Notes (une par ligne)<textarea value={variantForm.notes} onChange={e => setVariantForm({ ...variantForm, notes: e.target.value })} placeholder="Note 1&#10;Note 2" /></label>
+                      </div>
+                      <div className="studio-create-form__actions">
+                        <button type="submit" className="terrain-button">{variantForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                        <button type="button" className="terrain-button terrain-button--secondary" onClick={clearVariantForm}>Annuler</button>
+                      </div>
+                    </form>
+                  )}
+                  </>
                 );
               })}
               </div>
