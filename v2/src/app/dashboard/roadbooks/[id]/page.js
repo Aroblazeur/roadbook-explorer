@@ -1081,7 +1081,14 @@ export default function RoadbookDetailPage() {
         for (const v of stageVariants) {
           const { error: vError } = await supabase.from("stage_variants").insert({
             stage_id: newStage.id, label: v.label, distance_km: v.distance_km,
-            gpx_url: null, description: v.description, sort_order: v.sort_order, metadata: v.metadata,
+            gpx_url: null, description: v.description, sort_order: v.sort_order,
+            departure: v.departure ?? v.metadata?.departure ?? null,
+            arrival: v.arrival ?? v.metadata?.arrival ?? null,
+            elevation_gain_m: v.elevation_gain_m ?? v.metadata?.elevation_gain_m ?? null,
+            elevation_loss_m: v.elevation_loss_m ?? v.metadata?.elevation_loss_m ?? null,
+            map_embed_url: v.map_embed_url ?? v.metadata?.map_embed_url ?? null,
+            notes: v.notes ?? v.metadata?.notes ?? [],
+            metadata: v.metadata,
           });
           if (vError) { setError(vError.message); return; }
         }
