@@ -17,17 +17,19 @@ async function getRoadbook(slug) {
     }
   );
 
-  const { data: roadbook } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: roadbook, error } = await supabase
     .from("roadbooks")
     .select("*")
     .eq("slug", slug)
     .maybeSingle();
 
-  if (!roadbook) return null;
+  if (error) return { error: error.message };
 
-  if (!roadbook.is_public) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || user.id !== roadbook.owner_id) return { private: true };
+  if (!roadbook) {
+    if (user) return { private: true };
+    return null;
   }
 
   const { data: stages } = await supabase
@@ -99,14 +101,10 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
 
   if (!result) return notFound();
   if (result.private) {
-    return (
-      <main>
-        <h1>Roadbook privé</h1>
-        <p>Ce roadbook est privé. Connectez-vous avec le compte propriétaire pour le consulter.</p>
-        <p><Link href="/login">Se connecter</Link></p>
-        <p><Link href="/">Retour à l&apos;accueil</Link></p>
-      </main>
-    );
+    return <PrivateRoadbook />;
+  }
+  if (result.error) {
+    return <TechnicalError message={result.error} />;
   }
 
   const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, totals } = result;
@@ -453,5 +451,39 @@ function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
         <span className="stat"><span className="stat__value"><strong>{stageCount}</strong></span> <span className="stat__label">Étapes</span></span>
       </div>
     </div>
+  );
+}
+
+function PrivateRoadbook() {
+  return (
+    <main className="container" style={{ paddingTop: "4rem", textAlign: "center" }}>
+      <div className="card" style={{ maxWidth: 480, margin: "0 auto" }}>
+        <h1>Roadbook privé</h1>
+        <p>Ce roadbook n&apos;est pas accessible avec votre compte.</p>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.5rem", flexWrap: "wrap" }}>
+          <Link href="/" className="terrain-button" style={{ display: "inline-flex", padding: "0.6rem 1.2rem", borderRadius: 8, background: "var(--primary)", color: "#fff", textDecoration: "none", fontWeight: 700 }}>
+            Explorer
+          </Link>
+          <Link href="/login" className="terrain-button terrain-button--secondary" style={{ display: "inline-flex", padding: "0.6rem 1.2rem", borderRadius: 8, textDecoration: "none", fontWeight: 700 }}>
+            Se connecter
+          </Link>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function TechnicalError({ message }) {
+  return (
+    <main className="container" style={{ paddingTop: "4rem", textAlign: "center" }}>
+      <div className="card" style={{ maxWidth: 480, margin: "0 auto" }}>
+        <h1>Erreur technique</h1>
+        <p>Impossible de charger ce roadbook pour le moment.</p>
+        {message && <p style={{ fontSize: "0.85rem", color: "var(--text-light)" }}>{message}</p>}
+        <p style={{ marginTop: "1.5rem" }}>
+          <Link href="/">Retour à l&apos;accueil</Link>
+        </p>
+      </div>
+    </main>
   );
 }
