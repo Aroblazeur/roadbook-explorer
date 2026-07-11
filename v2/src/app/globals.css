@@ -171,8 +171,9 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   background: var(--surface);
   margin: 25px 0;
   padding: 25px;
+  border: 1px solid rgba(46,125,50,.14);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
 }
 .card h2 { margin-bottom: 20px; }
 .card h3 { margin: 20px 0 10px; }
@@ -541,8 +542,9 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   background: var(--surface);
   margin: 25px 0;
   padding: 25px;
+  border: 1px solid rgba(46,125,50,.14);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
 }
 .stage-card h2 { margin-bottom: 20px; }
 .stage-card h3 { margin: 20px 0 10px; }

@@ -314,7 +314,7 @@ function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
   const meta = stage.metadata ?? {};
   const accommodationTypeIcon = stage.accommodation_type === "hotel" ? "🏨" : stage.accommodation_type === "camping" ? "⛺" : stage.accommodation_type === "gite" ? "🏡" : stage.accommodation_type === "hostel" ? "🛏️" : "🏠";
   return (
-    <div className="stage-card" style={{ margin: "14px 0" }}>
+    <div className="stage-card" style={{ margin: "12px 0" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
         <span className="stage-number-circle" style={{ minWidth: 42, width: 42, height: 42, fontSize: "1.1rem" }}>
           {stage.stage_number}
