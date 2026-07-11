@@ -39,7 +39,7 @@
 
 ## Anomalies connexes documentées (hors scope 18B.2)
 
-Les mêmes blocs `updateFields` contiennent aussi `elevation_gain_total_m` (lignes 214, 784) et `elevation_loss_total_m` (lignes 215, 785) qui sont également des colonnes inexistantes (les vrais noms sont `elevation_gain_m`, `elevation_loss_m`). Ces corrections sont reportées à un sprint ultérieur.
+Les mêmes blocs `updateFields` contenaient aussi `elevation_gain_total_m` (lignes 214, 784) et `elevation_loss_total_m` (lignes 215, 785) qui étaient également des colonnes inexistantes. Ces corrections ont été traitées dans le **Sprint 18B.2.1** (voir `sprint-18b2-1-elevation-fields.md`).
 
 ## Schéma
 

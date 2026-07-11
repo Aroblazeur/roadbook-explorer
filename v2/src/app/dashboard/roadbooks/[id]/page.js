@@ -121,8 +121,8 @@ export default function RoadbookDetailPage() {
           setOfficialMap(official.mapEmbedUrl ?? "");
           const stagesTotal = meta.stagesTotal ?? {};
           setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_km != null ? String(data.distance_km) : ""));
-          setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_total_m != null ? String(data.elevation_gain_total_m) : ""));
-          setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_total_m != null ? String(data.elevation_loss_total_m) : ""));
+          setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_m != null ? String(data.elevation_gain_m) : ""));
+          setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_m != null ? String(data.elevation_loss_m) : ""));
           setTraceGpx(stagesTotal.gpx ?? "");
           setTraceMap(stagesTotal.mapEmbedUrl ?? "");
           setCoverUrl(data.cover_image_url ?? "");
@@ -211,8 +211,8 @@ export default function RoadbookDetailPage() {
     const updateFields = {
       metadata: meta,
       distance_km: traceDist ? Number(traceDist) : null,
-      elevation_gain_total_m: traceGain ? Number(traceGain) : null,
-      elevation_loss_total_m: traceLoss ? Number(traceLoss) : null,
+      elevation_gain_m: traceGain ? Number(traceGain) : null,
+      elevation_loss_m: traceLoss ? Number(traceLoss) : null,
     };
     const { error: updateError } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
     if (updateError) setError(updateError.message);
@@ -781,8 +781,8 @@ export default function RoadbookDetailPage() {
 
       const updateFields = {};
       if (hasDist) updateFields.distance_km = Math.round(totalDist * 100) / 100;
-      if (hasGain) updateFields.elevation_gain_total_m = Math.round(totalGain);
-      if (hasLoss) updateFields.elevation_loss_total_m = Math.round(totalLoss);
+      if (hasGain) updateFields.elevation_gain_m = Math.round(totalGain);
+      if (hasLoss) updateFields.elevation_loss_m = Math.round(totalLoss);
 
       const { error } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
       if (error) { setAutomationResult(`Erreur : ${error.message}`); return; }
