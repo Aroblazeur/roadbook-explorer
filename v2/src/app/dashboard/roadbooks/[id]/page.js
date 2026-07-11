@@ -51,6 +51,8 @@ export default function RoadbookDetailPage() {
   const [variantsByStage, setVariantsByStage] = useState({});
   const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
   const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
+  const [noteForm, setNoteForm] = useState({ stage_id: null, text: "", editing: null });
+  const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", editing: null });
   const [expandedStages, setExpandedStages] = useState({});
 
   const [images, setImages] = useState([]);
@@ -303,6 +305,8 @@ export default function RoadbookDetailPage() {
 
   function clearPoiForm() { setPoiForm({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null }); }
   function clearVariantForm() { setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }); }
+  function clearNoteForm() { setNoteForm({ stage_id: null, text: "", editing: null }); }
+  function clearAccommodationForm() { setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }); }
 
   function reloadPoisVariants(stageIds) {
     if (!stageIds?.length) return;
@@ -684,6 +688,58 @@ export default function RoadbookDetailPage() {
       const { error: updateError } = await supabase.from("stages").update({ accommodation_name: null, accommodation_url: null, accommodation_photo: null }).eq("id", stageId);
       if (updateError) { setStageError(updateError.message); return; }
       setStageSuccess("Hébergement supprimé.");
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
+  }
+
+  async function handleAccommodationSubmit(e) {
+    e.preventDefault();
+    const { stage_id, name, url, photo, editing } = accommodationForm;
+    if (!stage_id || !name.trim()) { setStageError("Le nom de l'hébergement est requis."); return; }
+    try {
+      const payload = { accommodation_name: name.trim(), accommodation_url: url.trim() || null, accommodation_photo: photo.trim() || null };
+      const { error: updateError } = await supabase.from("stages").update(payload).eq("id", stage_id);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess(editing ? "Hébergement modifié." : "Hébergement ajouté.");
+      clearAccommodationForm();
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
+  }
+
+  async function handleNoteSubmit(e) {
+    e.preventDefault();
+    const { stage_id, text, editing } = noteForm;
+    if (!stage_id) return;
+    const stage = stages.find(s => s.id === stage_id);
+    if (!stage) return;
+    const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
+    if (editing != null && notes[editing]) {
+      notes[editing] = { ...notes[editing], text: text.trim() };
+    } else {
+      notes.push({ text: text.trim() });
+    }
+    try {
+      const { error: updateError } = await supabase.from("stages").update({ notes }).eq("id", stage_id);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess(editing != null ? "Note modifiée." : "Note ajoutée.");
+      clearNoteForm();
+      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
+  }
+
+  async function handleDeleteNote(stageId, noteIndex) {
+    if (!window.confirm("Supprimer cette note ?")) return;
+    const stage = stages.find(s => s.id === stageId);
+    if (!stage) return;
+    const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
+    notes.splice(noteIndex, 1);
+    try {
+      const { error: updateError } = await supabase.from("stages").update({ notes }).eq("id", stageId);
+      if (updateError) { setStageError(updateError.message); return; }
+      setStageSuccess("Note supprimée.");
       const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
       if (refreshed) setStages(refreshed);
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
@@ -1394,7 +1450,7 @@ export default function RoadbookDetailPage() {
                               <div className="studio-form-grid studio-form-grid--compact">
                                 {poi.description && <label className="studio-form-grid__full">Description<span>{poi.description}</span></label>}
                                 {poi.link_url && <label>Lien<span>{poi.link_url}</span></label>}
-                                {poi.image_url && <label>Image<span style={{ fontSize: "0.78rem", color: "var(--studio-muted)" }}>✓</span></label>}
+                                {poi.image_url && <label className="studio-form-grid__full">Image<img src={poi.image_url} alt="" style={{ maxWidth: "100%", maxHeight: "160px", borderRadius: "4px", marginTop: "0.3rem" }} /></label>}
                                 {poi.lat != null && poi.lng != null && <label className="studio-form-grid__full">Coordonnées<span>({poi.lat}, {poi.lng})</span></label>}
                               </div>
                               <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
@@ -1422,7 +1478,7 @@ export default function RoadbookDetailPage() {
                               <label className="studio-form-grid__full">URL<input type="url" value={poiForm.url} onChange={e => setPoiForm({ ...poiForm, url: e.target.value })} /></label>
                             </div>
                             <div className="studio-create-form__actions">
-                              <button type="submit" className="terrain-button">{poiForm.editing ? "Mettre à jour" : "Ajouter"}</button>
+                              <button type="submit" className="terrain-button">Enregistrer</button>
                               <button type="button" className="terrain-button terrain-button--secondary" onClick={clearPoiForm}>Annuler</button>
                             </div>
                           </form>
@@ -1433,15 +1489,50 @@ export default function RoadbookDetailPage() {
                     {/* ZONE 3 — Hébergement principal */}
                     <div className="studio-zone studio-zone--accommodation">
                       <h4 className="studio-zone__title">Hébergement principal</h4>
-                      {stage.accommodation_name ? (
-                        <div className="studio-form-grid studio-form-grid--compact">
-                          <label>Nom<span className="studio-input--readonly">{stage.accommodation_name}</span></label>
-                          <label>URL<span className="studio-input--readonly">{stage.accommodation_url || "—"}</span></label>
-                          {stage.accommodation_photo && <label className="studio-form-grid__full">Photo<span className="studio-input--readonly">✓</span></label>}
+                      <div className="studio-stage-extra">
+                        <div className="studio-stage-extra__header">
+                          <h5>Hébergement</h5>
+                          {stage.accommodation_name ? (
+                            <div style={{ display: "flex", gap: "0.3rem" }}>
+                              <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
+                                clearAccommodationForm();
+                                setAccommodationForm({ stage_id: stage.id, name: stage.accommodation_name, url: stage.accommodation_url ?? "", photo: stage.accommodation_photo ?? "", editing: true });
+                              }}>✎</button>
+                              <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleClearAccommodation(stage.id)}>Vider</button>
+                            </div>
+                          ) : (
+                            <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setAccommodationForm({ ...accommodationForm, stage_id: stage.id })}>Ajouter un hébergement</button>
+                          )}
                         </div>
-                      ) : (
-                        <p className="studio-detail--empty">Aucun hébergement.</p>
-                      )}
+                        {stage.accommodation_name ? (
+                          <div className="studio-form-grid studio-form-grid--compact">
+                            <label className="studio-form-grid__full">Nom<span className="studio-input--readonly">{stage.accommodation_name}</span></label>
+                            {stage.accommodation_url && <label className="studio-form-grid__full">URL<span className="studio-input--readonly">{stage.accommodation_url}</span></label>}
+                            {stage.accommodation_photo && (
+                              <label className="studio-form-grid__full">
+                                Photo
+                                <img src={stage.accommodation_photo} alt="" style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px", marginTop: "0.3rem" }} />
+                              </label>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="studio-detail--empty">Aucun hébergement.</p>
+                        )}
+                        {accommodationForm.stage_id === stage.id && (
+                          <form onSubmit={handleAccommodationSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+                            <h4>{accommodationForm.editing ? "Modifier l'hébergement" : "Ajouter un hébergement"}</h4>
+                            <div className="studio-form-grid studio-form-grid--compact">
+                              <label className="studio-form-grid__full">Nom<input type="text" value={accommodationForm.name} onChange={e => setAccommodationForm({ ...accommodationForm, name: e.target.value })} required /></label>
+                              <label className="studio-form-grid__full">URL<input type="url" value={accommodationForm.url} onChange={e => setAccommodationForm({ ...accommodationForm, url: e.target.value })} /></label>
+                              <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} placeholder="URL de l'image" /></label>
+                            </div>
+                            <div className="studio-create-form__actions">
+                              <button type="submit" className="terrain-button">Enregistrer</button>
+                              <button type="button" className="terrain-button terrain-button--secondary" onClick={clearAccommodationForm}>Annuler</button>
+                            </div>
+                          </form>
+                        )}
+                      </div>
                     </div>
 
                     {/* ZONE 4 — Hébergements alternatifs */}
@@ -1456,17 +1547,37 @@ export default function RoadbookDetailPage() {
                       <div className="studio-stage-extra">
                         <div className="studio-stage-extra__header">
                           <h5>Notes ({(Array.isArray(stage.notes) ? stage.notes.length : 0)})</h5>
+                          <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setNoteForm({ ...noteForm, stage_id: stage.id })}>Ajouter une note</button>
                         </div>
                         <div className="studio-sublist__list">
                           {Array.isArray(stage.notes) && stage.notes.length > 0 ? stage.notes.map((note, ni) => (
                             <article key={ni} className="studio-subitem-card">
                               <div className="studio-subitem-card__header">
                                 <strong>Note {ni + 1}</strong>
+                                <div style={{ display: "flex", gap: "0.3rem" }}>
+                                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setNoteForm({ stage_id: stage.id, text: note.text ?? "", editing: ni })}>✎</button>
+                                  <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleDeleteNote(stage.id, ni)}>Supprimer</button>
+                                </div>
                               </div>
-                              <p style={{ margin: "0.3rem 0 0", whiteSpace: "pre-wrap" }}>{note.text ?? note}</p>
+                              <div className="studio-form-grid studio-form-grid--compact" style={{ marginTop: "0.3rem" }}>
+                                {(note.text ?? note) && <label className="studio-form-grid__full" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{(note.text ?? note)}</label>}
+                                {note.photo && <label className="studio-form-grid__full" style={{ margin: 0 }}><img src={note.photo} alt="" style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px" }} /></label>}
+                              </div>
                             </article>
                           )) : <p className="studio-detail--empty">Aucune note.</p>}
                         </div>
+                        {noteForm.stage_id === stage.id && (
+                          <form onSubmit={handleNoteSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+                            <h4>{noteForm.editing != null ? "Modifier la note" : "Ajouter une note"}</h4>
+                            <div className="studio-form-grid studio-form-grid--compact">
+                              <label className="studio-form-grid__full">Texte<textarea value={noteForm.text} onChange={e => setNoteForm({ ...noteForm, text: e.target.value })} required /></label>
+                            </div>
+                            <div className="studio-create-form__actions">
+                              <button type="submit" className="terrain-button">Enregistrer</button>
+                              <button type="button" className="terrain-button terrain-button--secondary" onClick={clearNoteForm}>Annuler</button>
+                            </div>
+                          </form>
+                        )}
                       </div>
                     </div>
 
