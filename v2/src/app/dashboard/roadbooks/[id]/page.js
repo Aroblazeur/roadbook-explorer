@@ -2,10 +2,12 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, loadEnrichmentData } from "@/lib/enrichment";
+import { useStudioDraft } from "@/hooks/useStudioDraft";
+import DraftStatus from "@/components/DraftStatus";
 
 export default function RoadbookDetailPage() {
   const { user, loading: authLoading, supabase } = useAuth();
@@ -94,6 +96,50 @@ export default function RoadbookDetailPage() {
   const [traceGpx, setTraceGpx] = useState("");
   const [traceMap, setTraceMap] = useState("");
 
+  const {
+    draftStatus,
+    draftError,
+    restoredInfo,
+    restoredDraft,
+    saveImmediate,
+    markSynced,
+    markRemoteConflict,
+    dismissConflict,
+    clearDraft,
+    resetRestoredInfo,
+  } = useStudioDraft({
+    user,
+    roadbookId: id,
+    roadbook,
+    stages,
+    poisByStage,
+    variantsByStage,
+    images,
+    gpxOfficial,
+    gpxCustom,
+    gpxByStage,
+    title,
+    description,
+    isPublic,
+    activity,
+    destination,
+    project,
+    officialDist,
+    officialGain,
+    officialLoss,
+    officialGpx,
+    officialMap,
+    traceDist,
+    traceGain,
+    traceLoss,
+    traceGpx,
+    traceMap,
+    coverMode,
+    coverUrl,
+    coverMediaId,
+    loaded: !loading && !!roadbook,
+  });
+
   useEffect(() => {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading]);
@@ -176,6 +222,38 @@ export default function RoadbookDetailPage() {
 
   useEffect(() => { loadData(); }, [user, id]);
 
+  useEffect(() => {
+    if (!restoredDraft) return;
+    const p = restoredDraft;
+    if (p.title != null) setTitle(p.title);
+    if (p.description != null) setDescription(p.description);
+    if (p.isPublic != null) setIsPublic(p.isPublic);
+    if (p.activity != null) setActivity(p.activity);
+    if (p.destination != null) setDestination(p.destination);
+    if (p.project != null) setProject(p.project);
+    if (p.roadbook) setRoadbook(p.roadbook);
+    if (p.stages) setStages(p.stages);
+    if (p.poisByStage) setPoisByStage(p.poisByStage);
+    if (p.variantsByStage) setVariantsByStage(p.variantsByStage);
+    if (p.images) setImages(p.images);
+    if (p.gpxOfficial !== undefined) setGpxOfficial(p.gpxOfficial);
+    if (p.gpxCustom !== undefined) setGpxCustom(p.gpxCustom);
+    if (p.gpxByStage) setGpxByStage(p.gpxByStage);
+    if (p.officialDist != null) setOfficialDist(p.officialDist);
+    if (p.officialGain != null) setOfficialGain(p.officialGain);
+    if (p.officialLoss != null) setOfficialLoss(p.officialLoss);
+    if (p.officialGpx != null) setOfficialGpx(p.officialGpx);
+    if (p.officialMap != null) setOfficialMap(p.officialMap);
+    if (p.traceDist != null) setTraceDist(p.traceDist);
+    if (p.traceGain != null) setTraceGain(p.traceGain);
+    if (p.traceLoss != null) setTraceLoss(p.traceLoss);
+    if (p.traceGpx != null) setTraceGpx(p.traceGpx);
+    if (p.traceMap != null) setTraceMap(p.traceMap);
+    if (p.coverMode !== undefined) setCoverMode(p.coverMode);
+    if (p.coverUrl != null) setCoverUrl(p.coverUrl);
+    if (p.coverMediaId !== undefined) setCoverMediaId(p.coverMediaId);
+  }, [restoredDraft]);
+
   async function handleSave(e) {
     e.preventDefault();
     setError(null); setSuccess(null); setSaving(true);
@@ -186,7 +264,7 @@ export default function RoadbookDetailPage() {
     const { error: updateError } = await supabase
       .from("roadbooks").update({ title, description, metadata: meta }).eq("id", id);
     if (updateError) setError(updateError.message);
-    else { setSuccess("Roadbook mis à jour."); setRoadbook(prev => ({ ...prev, title, description, metadata: meta })); }
+    else { setSuccess("Roadbook mis à jour."); setRoadbook(prev => ({ ...prev, title, description, metadata: meta })); markSynced(); }
     setSaving(false);
   }
 
@@ -216,7 +294,7 @@ export default function RoadbookDetailPage() {
     };
     const { error: updateError } = await supabase.from("roadbooks").update(updateFields).eq("id", id);
     if (updateError) setError(updateError.message);
-    else { setSuccess("Itinéraire et tracé mis à jour."); setRoadbook(prev => ({ ...prev, metadata: meta, ...updateFields })); }
+    else { setSuccess("Itinéraire et tracé mis à jour."); setRoadbook(prev => ({ ...prev, metadata: meta, ...updateFields })); markSynced(); }
     setSaving(false);
   }
 
@@ -1100,12 +1178,32 @@ export default function RoadbookDetailPage() {
     finally { setDuplicating(false); }
   }
 
+  useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (draftStatus === "unsaved") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [draftStatus]);
+
   if (authLoading || loading) return <main className="page-dashboard"><p>Chargement du roadbook...</p></main>;
   if (!user) return null;
   if (fetchError && !roadbook) return <main className="page-dashboard"><h1>Erreur</h1><p className="page-error">{fetchError}</p><Link href="/dashboard/roadbooks">Retour à la liste</Link></main>;
 
   return (
     <main className="page-dashboard">
+      {/* Draft status bar */}
+      <DraftStatus
+        status={draftStatus}
+        error={draftError}
+        restoredInfo={restoredInfo}
+        onResetInfo={resetRestoredInfo}
+        onDismissConflict={dismissConflict}
+        onClearDraft={clearDraft}
+      />
       {/* Hero header */}
       <div className="studio-hero">
         <div className="studio-hero__info">
