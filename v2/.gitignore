@@ -13,6 +13,18 @@
 # testing
 /coverage
 
+# audit / test scripts (may contain secrets)
+/scripts/audit-*
+/scripts/test-pup*
+
+# logs
+dev-server.log
+/dev-server.log
+
+# validation files
+/validation/
+
+
 # next.js
 /.next/
 /out/

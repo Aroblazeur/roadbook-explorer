@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { sanitizeNextPath } from "@/lib/sanitize-next";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = sanitizeNextPath(searchParams.get("next")) ?? "/dashboard";
 
   if (code) {
     const cookieStore = await cookies();
