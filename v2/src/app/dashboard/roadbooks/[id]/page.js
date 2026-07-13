@@ -12,14 +12,11 @@ import { useMediaManager } from "@/hooks/studio/useMediaManager";
 import { useGpxManager } from "@/hooks/studio/useGpxManager";
 import { useCoverManager } from "@/hooks/studio/useCoverManager";
 import { useEnrichment } from "@/hooks/studio/useEnrichment";
+import { useSaveWithLock } from "@/hooks/studio/useSaveWithLock";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
   conditionalUpdateRoadbook,
-  takeSnapshot,
-  acquireSyncLockWithTabId,
-  releaseSyncLock,
-  verifyAfterSync,
 } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
 import {
@@ -55,8 +52,15 @@ export default function RoadbookDetailPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
-  const [saving, setSaving] = useState(false);
   const { error, setError, success, setSuccess } = useNotifications();
+
+  const { saveWithLock, saving } = useSaveWithLock({
+    supabase, id, tabId,
+    roadbook, stages, poisByStage, variantsByStage,
+    setRoadbook,
+    onError: setError, onSuccess: setSuccess,
+    markRemoteConflict, markSynced, saveImmediate,
+  });
   const [activity, setActivity] = useState("");
   const [destination, setDestination] = useState("");
   const [project, setProject] = useState("");
@@ -286,34 +290,19 @@ export default function RoadbookDetailPage() {
 
   async function handleSave(e) {
     e.preventDefault();
-    setError(null); setSuccess(null); setSaving(true);
-    const lock = acquireSyncLockWithTabId(id, tabId);
-    if (!lock.ok) { setError("Synchronisation verrouillée par un autre onglet."); setSaving(false); return; }
-    const snapshot = takeSnapshot({ roadbook, stages, poisByStage, variantsByStage, roadbookId: id });
     const meta = { ...(roadbook?.metadata ?? {}) };
     if (activity) meta.activity = activity; else delete meta.activity;
     if (destination) meta.destination = destination; else delete meta.destination;
     if (project) meta.project = project; else delete meta.project;
-    const result = await conditionalUpdateRoadbook(supabase, id, { title, description, metadata: meta }, roadbook?.updated_at);
-    if (!result.ok) {
-      if (result.error === "conflict") { saveImmediate(); markRemoteConflict(); setError("Conflit de version. Sauvegarde locale conservée."); }
-      else setError(result.error);
-      releaseSyncLock(id, tabId); setSaving(false); return;
-    }
-    const verify = await verifyAfterSync(supabase, id, snapshot);
-    if (!verify.ok) { saveImmediate(); markRemoteConflict(); setError("Conflit après synchronisation. Version locale sauvegardée."); releaseSyncLock(id, tabId); setSaving(false); return; }
-    setRoadbook(prev => ({ ...prev, title, description, metadata: meta, updated_at: result.data.updated_at }));
-    markSynced(); releaseSyncLock(id, tabId);
-    try { await fetch("/api/revalidate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roadbookId: id }) }); } catch {}
-    setSuccess("Roadbook mis à jour."); setSaving(false);
+    await saveWithLock({
+      getUpdateFields: () => ({ title, description, metadata: meta }),
+      getUpdatedRoadbook: (prev, data) => ({ ...prev, title, description, metadata: meta, updated_at: data.updated_at }),
+      successMessage: "Roadbook mis à jour.",
+    });
   }
 
   async function handleSaveRoute(e) {
     e.preventDefault();
-    setError(null); setSuccess(null); setSaving(true);
-    const lock = acquireSyncLockWithTabId(id, tabId);
-    if (!lock.ok) { setError("Synchronisation verrouillée par un autre onglet."); setSaving(false); return; }
-    const snapshot = takeSnapshot({ roadbook, stages, poisByStage, variantsByStage, roadbookId: id });
     const meta = { ...(roadbook?.metadata ?? {}) };
     meta.official = {
       distance: officialDist ? Number(officialDist) : null,
@@ -330,23 +319,15 @@ export default function RoadbookDetailPage() {
       mapEmbedUrl: traceMap || null,
     };
     const updateFields = {
-      metadata: meta,
       distance_km: traceDist ? Number(traceDist) : null,
       elevation_gain_m: traceGain ? Number(traceGain) : null,
       elevation_loss_m: traceLoss ? Number(traceLoss) : null,
     };
-    const result = await conditionalUpdateRoadbook(supabase, id, updateFields, roadbook?.updated_at);
-    if (!result.ok) {
-      if (result.error === "conflict") { saveImmediate(); markRemoteConflict(); setError("Conflit de version. Sauvegarde locale conservée."); }
-      else setError(result.error);
-      releaseSyncLock(id, tabId); setSaving(false); return;
-    }
-    const verify = await verifyAfterSync(supabase, id, snapshot);
-    if (!verify.ok) { saveImmediate(); markRemoteConflict(); setError("Conflit après synchronisation. Version locale sauvegardée."); releaseSyncLock(id, tabId); setSaving(false); return; }
-    setRoadbook(prev => ({ ...prev, metadata: meta, ...updateFields, updated_at: result.data.updated_at }));
-    markSynced(); releaseSyncLock(id, tabId);
-    try { await fetch("/api/revalidate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roadbookId: id }) }); } catch {}
-    setSuccess("Itinéraire et tracé mis à jour."); setSaving(false);
+    await saveWithLock({
+      getUpdateFields: () => ({ metadata: meta, ...updateFields }),
+      getUpdatedRoadbook: (prev, data) => ({ ...prev, metadata: meta, ...updateFields, updated_at: data.updated_at }),
+      successMessage: "Itinéraire et tracé mis à jour.",
+    });
   }
 
   async function handleToggleVisibility() {
