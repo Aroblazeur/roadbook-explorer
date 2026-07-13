@@ -50,6 +50,15 @@ page.js (< 400 lignes)
 
 **Critères** : `page.js` n'appelle plus `supabase` directement. Pattern de reload stages/pois/variants centralisé.
 
+**Statut : ✅ Terminé (Sprint 20C)**
+- 63 appels Supabase directs remplacés par 22 fonctions de data layer
+- `supabase.from` direct dans `page.js` : 0
+- `supabase.storage` direct dans `page.js` : 0
+- `supabase.rpc` direct dans `page.js` : 0
+- Tous les tests verts : 20C (48/48), 20B (42/42), 18D (35/35), migration (10/10)
+- Build : 0 erreur
+- Voir `docs/audits/sprint-20c-data-layer.md`
+
 ---
 
 ### Sprint 20D — Hooks de domaine

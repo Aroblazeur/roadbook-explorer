@@ -16,6 +16,21 @@ import {
   verifyAfterSync,
 } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
+import {
+  loadRoadbook, loadRoadbookSafe, loadStages, loadPois, loadVariants,
+  loadMedia, loadCoverMedia, loadMediaWithUrls, loadGpxRows,
+  getSignedUrl,
+} from "@/lib/roadbooks/loaders";
+import {
+  insertStage, updateStage, deleteStage,
+  insertPoi, updatePoi, deletePoi,
+  insertVariant, updateVariant, deleteVariant,
+  updateStageNotes, updateStageAccommodation, clearStageAccommodation,
+  uploadImage, insertMediaRecord, deleteMedia, deleteMediaRecordOnly,
+  uploadGpx, removeStorageFile, insertGpxRecord, updateGpxRecord, deleteGpx,
+  swapStageNumbers, insertRoadbook, duplicateRoadbook,
+} from "@/lib/roadbooks/writers";
+import { applyPoiEnrichment, applyAccommodationEnrichment } from "@/lib/roadbooks/enrich";
 
 export default function RoadbookDetailPage() {
   const { user, loading: authLoading, supabase } = useAuth();
@@ -153,80 +168,71 @@ export default function RoadbookDetailPage() {
     if (!authLoading && !user) router.replace("/login");
   }, [user, authLoading]);
 
-  function loadData() {
+  async function loadData() {
     if (!user || !id) return;
-    supabase.from("roadbooks").select("*").eq("id", id).single()
-      .then(({ data, error: err }) => {
-        if (err) { setFetchError(err.message); }
-        else if (!data) { setFetchError("Roadbook introuvable."); }
-        else {
-          setRoadbook(data);
-          setTitle(data.title);
-          setDescription(data.description ?? "");
-          setIsPublic(data.is_public);
-          setActivity(data.metadata?.activity ?? "");
-          setDestination(data.metadata?.destination ?? "");
-          setProject(data.metadata?.project ?? "");
-          const meta = data.metadata ?? {};
-          const official = meta.official ?? {};
-          setOfficialDist(official.distance != null ? String(official.distance) : "");
-          setOfficialGain(official.elevationGain != null ? String(official.elevationGain) : "");
-          setOfficialLoss(official.elevationLoss != null ? String(official.elevationLoss) : "");
-          setOfficialGpx(official.gpx ?? "");
-          setOfficialMap(official.mapEmbedUrl ?? "");
-          const stagesTotal = meta.stagesTotal ?? {};
-          setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_km != null ? String(data.distance_km) : ""));
-          setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_m != null ? String(data.elevation_gain_m) : ""));
-          setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_m != null ? String(data.elevation_loss_m) : ""));
-          setTraceGpx(stagesTotal.gpx ?? "");
-          setTraceMap(stagesTotal.mapEmbedUrl ?? "");
-          setCoverUrl(data.cover_image_url ?? "");
-          setCoverMediaId(data.cover_media_id ?? null);
-          if (data.cover_image_url) { setCoverMode("url"); setCoverPreview(data.cover_image_url); }
-          else if (data.cover_media_id) {
-            setCoverMode("media"); setCoverPreview(null);
-            supabase.from("media").select("bucket, path").eq("id", data.cover_media_id).maybeSingle()
-              .then(({ data: m }) => {
-                if (m) supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400).then(({ data: s }) => setCoverPreview(s?.signedUrl ?? null));
-              });
-          } else {           setCoverMode(null); setCoverPreview(null); }
-        }
-        setLoading(false);
-        if (data?.slug) {
-          loadEnrichmentData(data.slug, "poi").then(json => { if (json?.items) setPoiIndex(createPoiIndex(json.items)); }).catch(() => {});
-          loadEnrichmentData(data.slug, "accommodation").then(json => { if (json?.items) setAccommodationIndex(createAccommodationIndex(json.items)); }).catch(() => {});
-        }
-      });
+    try {
+      const data = await loadRoadbookSafe(supabase, id);
+      if (!data) { setFetchError("Roadbook introuvable."); setLoading(false); return; }
+      setRoadbook(data);
+      setTitle(data.title);
+      setDescription(data.description ?? "");
+      setIsPublic(data.is_public);
+      setActivity(data.metadata?.activity ?? "");
+      setDestination(data.metadata?.destination ?? "");
+      setProject(data.metadata?.project ?? "");
+      const meta = data.metadata ?? {};
+      const official = meta.official ?? {};
+      setOfficialDist(official.distance != null ? String(official.distance) : "");
+      setOfficialGain(official.elevationGain != null ? String(official.elevationGain) : "");
+      setOfficialLoss(official.elevationLoss != null ? String(official.elevationLoss) : "");
+      setOfficialGpx(official.gpx ?? "");
+      setOfficialMap(official.mapEmbedUrl ?? "");
+      const stagesTotal = meta.stagesTotal ?? {};
+      setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_km != null ? String(data.distance_km) : ""));
+      setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_m != null ? String(data.elevation_gain_m) : ""));
+      setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_m != null ? String(data.elevation_loss_m) : ""));
+      setTraceGpx(stagesTotal.gpx ?? "");
+      setTraceMap(stagesTotal.mapEmbedUrl ?? "");
+      setCoverUrl(data.cover_image_url ?? "");
+      setCoverMediaId(data.cover_media_id ?? null);
+      if (data.cover_image_url) { setCoverMode("url"); setCoverPreview(data.cover_image_url); }
+      else if (data.cover_media_id) {
+        setCoverMode("media"); setCoverPreview(null);
+        try {
+          const m = await loadCoverMedia(supabase, data.cover_media_id);
+          if (m) {
+            const signedUrl = await getSignedUrl(supabase, m.bucket, m.path, 86400);
+            if (signedUrl) setCoverPreview(signedUrl);
+          }
+        } catch {}
+      } else { setCoverMode(null); setCoverPreview(null); }
 
+      if (data?.slug) {
+        loadEnrichmentData(data.slug, "poi").then(json => { if (json?.items) setPoiIndex(createPoiIndex(json.items)); }).catch(() => {});
+        loadEnrichmentData(data.slug, "accommodation").then(json => { if (json?.items) setAccommodationIndex(createAccommodationIndex(json.items)); }).catch(() => {});
+      }
+
+      const stagesData = await loadStages(supabase, id);
+      setStages(stagesData);
+      const stageIds = stagesData.map(s => s.id);
+      if (stageIds.length) {
+        const [pois, variants] = await Promise.all([
+          loadPois(supabase, stageIds),
+          loadVariants(supabase, stageIds),
+        ]);
+        const poiMap = {};
+        pois.forEach(p => { if (!poiMap[p.stage_id]) poiMap[p.stage_id] = []; poiMap[p.stage_id].push(p); });
+        setPoisByStage(poiMap);
+        const variantMap = {};
+        variants.forEach(v => { if (!variantMap[v.stage_id]) variantMap[v.stage_id] = []; variantMap[v.stage_id].push(v); });
+        setVariantsByStage(variantMap);
+      }
+    } catch (err) {
+      setFetchError(err.message);
+    }
+    setLoading(false);
     loadImages();
     loadGpx();
-
-    supabase.from("stages").select("*").eq("roadbook_id", Number(id))
-      .order("stage_number", { ascending: true })
-      .then(({ data, error: err }) => {
-        if (err) { console.error(err); return; }
-        if (!data) return;
-        setStages(data);
-        const stageIds = data.map(s => s.id);
-        if (stageIds.length) {
-          supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
-            .then(({ data: pois }) => {
-              if (pois) {
-                const map = {};
-                pois.forEach(p => { if (!map[p.stage_id]) map[p.stage_id] = []; map[p.stage_id].push(p); });
-                setPoisByStage(map);
-              }
-            });
-          supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
-            .then(({ data: variants }) => {
-              if (variants) {
-                const map = {};
-                variants.forEach(v => { if (!map[v.stage_id]) map[v.stage_id] = []; map[v.stage_id].push(v); });
-                setVariantsByStage(map);
-              }
-            });
-        }
-      });
   }
 
   useEffect(() => { loadData(); }, [user, id]);
@@ -395,25 +401,25 @@ export default function RoadbookDetailPage() {
     };
 
     if (editingStage) {
-      const { error: updateError } = await supabase.from("stages").update(record).eq("id", editingStage.id);
-      if (updateError) { setStageError(updateError.message); return; }
+      await updateStage(supabase, editingStage.id, record);
       setStageSuccess("Étape mise à jour.");
     } else {
-      const { error: insertError } = await supabase.from("stages").insert(record);
-      if (insertError) { setStageError(insertError.message); return; }
+      await insertStage(supabase, record);
       setStageSuccess("Étape créée.");
     }
     clearStageForm();
-    const { data } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
-    if (data) setStages(data);
+    const stagesData = await loadStages(supabase, id);
+    setStages(stagesData);
   }
 
   async function handleDeleteStage(stageId) {
     if (!window.confirm("Supprimer cette étape ?")) return;
     setDeleting(stageId);
-    const { error: deleteError } = await supabase.from("stages").delete().eq("id", stageId);
-    if (deleteError) { setStageError(deleteError.message); }
-    else { setStages(prev => prev.filter(s => s.id !== stageId)); setStageSuccess("Étape supprimée."); }
+    try {
+      await deleteStage(supabase, stageId);
+      setStages(prev => prev.filter(s => s.id !== stageId));
+      setStageSuccess("Étape supprimée.");
+    } catch (err) { setStageError(err.message); }
     setDeleting(null);
   }
 
@@ -422,16 +428,14 @@ export default function RoadbookDetailPage() {
   function clearNoteForm() { setNoteForm({ stage_id: null, text: "", editing: null }); }
   function clearAccommodationForm() { setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }); }
 
-  function reloadPoisVariants(stageIds) {
+  async function reloadPoisVariants(stageIds) {
     if (!stageIds?.length) return;
-    supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
-      .then(({ data: pois }) => {
-        if (pois) { const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m); }
-      });
-    supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
-      .then(({ data: variants }) => {
-        if (variants) { const m = {}; variants.forEach(v => { if (!m[v.stage_id]) m[v.stage_id] = []; m[v.stage_id].push(v); }); setVariantsByStage(m); }
-      });
+    const [pois, variants] = await Promise.all([
+      loadPois(supabase, stageIds),
+      loadVariants(supabase, stageIds),
+    ]);
+    const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m);
+    const vm = {}; variants.forEach(v => { if (!vm[v.stage_id]) vm[v.stage_id] = []; vm[v.stage_id].push(v); }); setVariantsByStage(vm);
   }
 
   async function handlePoiSubmit(e) {
@@ -439,12 +443,10 @@ export default function RoadbookDetailPage() {
     setStageError(null); setStageSuccess(null);
     const record = { stage_id: poiForm.stage_id, name: poiForm.name, poi_type: poiForm.type || null, description: poiForm.description || null, lat: poiForm.lat ? Number(poiForm.lat) : null, lng: poiForm.lng ? Number(poiForm.lng) : null, link_url: poiForm.url || null };
     if (poiForm.editing) {
-      const { error: updateError } = await supabase.from("stage_pois").update(record).eq("id", poiForm.editing);
-      if (updateError) { setStageError(updateError.message); return; }
+      await updatePoi(supabase, poiForm.editing, record);
       setStageSuccess("POI mis à jour.");
     } else {
-      const { error: insertError } = await supabase.from("stage_pois").insert(record);
-      if (insertError) { setStageError(insertError.message); return; }
+      await insertPoi(supabase, record);
       setStageSuccess("POI créé.");
     }
     clearPoiForm();
@@ -453,9 +455,10 @@ export default function RoadbookDetailPage() {
 
   async function handleDeletePoi(poiId) {
     if (!window.confirm("Supprimer ce POI ?")) return;
-    const { error: deleteError } = await supabase.from("stage_pois").delete().eq("id", poiId);
-    if (deleteError) { setStageError(deleteError.message); return; }
-    setStageSuccess("POI supprimé.");
+    try {
+      await deletePoi(supabase, poiId);
+      setStageSuccess("POI supprimé.");
+    } catch (err) { setStageError(err.message); return; }
     reloadPoisVariants(stages.map(s => s.id));
   }
 
@@ -467,12 +470,10 @@ export default function RoadbookDetailPage() {
     const notesArr = variantForm.notes ? variantForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text })) : [];
     const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, departure: variantForm.departure || null, arrival: variantForm.arrival || null, elevation_gain_m: variantForm.elevation_gain_m ? Number(variantForm.elevation_gain_m) : null, elevation_loss_m: variantForm.elevation_loss_m ? Number(variantForm.elevation_loss_m) : null, map_embed_url: variantForm.map_embed_url || null, notes: notesArr.length ? notesArr : [], metadata: Object.keys(meta).length ? meta : {} };
     if (variantForm.editing) {
-      const { error: updateError } = await supabase.from("stage_variants").update(record).eq("id", variantForm.editing);
-      if (updateError) { setStageError(updateError.message); return; }
+      await updateVariant(supabase, variantForm.editing, record);
       setStageSuccess("Variante mise à jour.");
     } else {
-      const { error: insertError } = await supabase.from("stage_variants").insert(record);
-      if (insertError) { setStageError(insertError.message); return; }
+      await insertVariant(supabase, record);
       setStageSuccess("Variante créée.");
     }
     clearVariantForm();
@@ -481,9 +482,10 @@ export default function RoadbookDetailPage() {
 
   async function handleDeleteVariant(variantId) {
     if (!window.confirm("Supprimer cette variante ?")) return;
-    const { error: deleteError } = await supabase.from("stage_variants").delete().eq("id", variantId);
-    if (deleteError) { setStageError(deleteError.message); return; }
-    setStageSuccess("Variante supprimée.");
+    try {
+      await deleteVariant(supabase, variantId);
+      setStageSuccess("Variante supprimée.");
+    } catch (err) { setStageError(err.message); return; }
     reloadPoisVariants(stages.map(s => s.id));
   }
 
@@ -510,20 +512,15 @@ export default function RoadbookDetailPage() {
   }
 
   async function handleSignedUrl(path) {
-    const { data } = await supabase.storage.from("roadbook-images").createSignedUrl(path, 3600);
-    return data?.signedUrl;
+    return getSignedUrl(supabase, "roadbook-images", path, 3600);
   }
 
   async function loadImages() {
     if (!user || !id) return;
-    const { data: mediaRows } = await supabase
-      .from("media").select("*").eq("roadbook_id", Number(id)).eq("type", "image").order("created_at", { ascending: false });
-    if (!mediaRows) return;
-    const rowsWithUrls = await Promise.all(mediaRows.map(async row => {
-      const signedUrl = await handleSignedUrl(row.path);
-      return { ...row, signedUrl };
-    }));
-    setImages(rowsWithUrls);
+    try {
+      const rows = await loadMediaWithUrls(supabase, id);
+      setImages(rows);
+    } catch {}
   }
 
   async function handleUploadImage(e) {
@@ -532,18 +529,14 @@ export default function RoadbookDetailPage() {
     setUploadError(null); setUploading(true);
     try {
       const { blob, width, height, size } = await resizeImage(file);
-      const uuid = crypto.randomUUID();
-      const path = `${user.id}/${id}/${uuid}-${file.name}`;
-      const { error: storageError } = await supabase.storage.from("roadbook-images").upload(path, blob, { contentType: "image/jpeg", upsert: false });
-      if (storageError) { setUploadError(storageError.message); return; }
-      const { error: dbError } = await supabase.from("media").insert({
+      const path = await uploadImage(supabase, user.id, id, file, blob);
+      await insertMediaRecord(supabase, {
         roadbook_id: Number(id), stage_id: null, type: "image",
         bucket: "roadbook-images", path, file_name: file.name,
         mime_type: "image/jpeg",
         uploaded_by: user.id,
         metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg" },
       });
-      if (dbError) { setUploadError(dbError.message); return; }
       await loadImages();
     } catch (err) { setUploadError(err.message); }
     finally { setUploading(false); e.target.value = ""; }
@@ -553,10 +546,7 @@ export default function RoadbookDetailPage() {
     if (!window.confirm("Supprimer cette image ?")) return;
     setDeletingImage(mediaRow.id);
     try {
-      const { error: storageError } = await supabase.storage.from("roadbook-images").remove([mediaRow.path]);
-      if (storageError) { setUploadError(storageError.message); return; }
-      const { error: dbError } = await supabase.from("media").delete().eq("id", mediaRow.id);
-      if (dbError) { setUploadError(dbError.message); return; }
+      await deleteMedia(supabase, mediaRow);
       setImages(prev => prev.filter(i => i.id !== mediaRow.id));
     } catch (err) { setUploadError(err.message); }
     finally { setDeletingImage(null); }
@@ -579,22 +569,24 @@ export default function RoadbookDetailPage() {
 
   async function loadGpx() {
     if (!user || !id) return;
-    const { data: rows } = await supabase
-      .from("media").select("*").eq("roadbook_id", Number(id)).eq("type", "gpx");
-    if (!rows) return;
-    const official = rows.find(r => r.metadata?.gpx_role === "official");
-    const custom = rows.find(r => r.metadata?.gpx_role === "custom");
-    setGpxOfficial(official ?? null);
-    setGpxCustom(custom ?? null);
-    const byStage = {};
-    rows.filter(r => r.metadata?.scope === "stage" && r.stage_id).forEach(r => { byStage[r.stage_id] = r; });
-    setGpxByStage(byStage);
+    try {
+      const rows = await loadGpxRows(supabase, id);
+      const official = rows.find(r => r.metadata?.gpx_role === "official");
+      const custom = rows.find(r => r.metadata?.gpx_role === "custom");
+      setGpxOfficial(official ?? null);
+      setGpxCustom(custom ?? null);
+      const byStage = {};
+      rows.filter(r => r.metadata?.scope === "stage" && r.stage_id).forEach(r => { byStage[r.stage_id] = r; });
+      setGpxByStage(byStage);
+    } catch {}
   }
 
   async function handleGpxDownload(mediaRow) {
-    const { data } = await supabase.storage.from(GPX_BUCKET).createSignedUrl(mediaRow.path, 3600);
-    if (!data?.signedUrl) return;
-    const a = document.createElement("a"); a.href = data.signedUrl; a.download = mediaRow.file_name; a.click();
+    try {
+      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
+      if (!signedUrl) return;
+      const a = document.createElement("a"); a.href = signedUrl; a.download = mediaRow.file_name; a.click();
+    } catch {}
   }
 
   async function handleGpxReplace(mediaRow, scope, role, stageId) {
@@ -604,13 +596,10 @@ export default function RoadbookDetailPage() {
       const valErr = validateGpx(file); if (valErr) { setGpxError(valErr); return; }
       setGpxError(null); setUploadingGpx(role ?? stageId);
       try {
-        await supabase.storage.from(GPX_BUCKET).remove([mediaRow.path]);
         const path = buildGpxPath(scope, role, stageId) + `-${file.name}`;
-        const { error: storageError } = await supabase.storage.from(GPX_BUCKET).upload(path, file, { contentType: "application/gpx+xml", upsert: false });
-        if (storageError) { setGpxError(storageError.message); return; }
+        await uploadGpx(supabase, GPX_BUCKET, path, file);
         const meta = { ...mediaRow.metadata, original_name: file.name, original_size: file.size };
-        const { error: dbError } = await supabase.from("media").update({ path, file_name: file.name, metadata: meta }).eq("id", mediaRow.id);
-        if (dbError) { setGpxError(dbError.message); return; }
+        await updateGpxRecord(supabase, mediaRow.id, { path, file_name: file.name, metadata: meta });
         await loadGpx();
       } catch (err) { setGpxError(err.message); }
       finally { setUploadingGpx(null); }
@@ -626,16 +615,14 @@ export default function RoadbookDetailPage() {
       setGpxError(null); setUploadingGpx(role ?? stageId);
       try {
         const path = buildGpxPath(scope, role, stageId) + `-${file.name}`;
-        const { error: storageError } = await supabase.storage.from(GPX_BUCKET).upload(path, file, { contentType: "application/gpx+xml", upsert: false });
-        if (storageError) { setGpxError(storageError.message); return; }
+        await uploadGpx(supabase, GPX_BUCKET, path, file);
         const meta = { scope, original_name: file.name, original_size: file.size };
         if (role) meta.gpx_role = role;
-        const { error: dbError } = await supabase.from("media").insert({
+        await insertGpxRecord(supabase, {
           roadbook_id: Number(id), stage_id: scope === "stage" ? stageId : null, type: "gpx",
           bucket: GPX_BUCKET, path, file_name: file.name, mime_type: "application/gpx+xml",
           uploaded_by: user.id, metadata: meta,
         });
-        if (dbError) { setGpxError(dbError.message); return; }
         await loadGpx();
       } catch (err) { setGpxError(err.message); }
       finally { setUploadingGpx(null); }
@@ -649,8 +636,8 @@ export default function RoadbookDetailPage() {
     setGpxError(null);
     setStageError(null);
     try {
-      const { data } = await supabase.storage.from(GPX_BUCKET).createSignedUrl(mediaRow.path, 3600);
-      if (!data?.signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
+      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
+      if (!signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
 
       const metrics = await fetchAndComputeGpxMetrics(data.signedUrl);
       const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
@@ -687,8 +674,7 @@ export default function RoadbookDetailPage() {
       if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
       if (durationStr) update.duration = durationStr;
 
-      const { error: updateError } = await supabase.from("stages").update(update).eq("id", stage.id);
-      if (updateError) { setStageError(updateError.message); setComputingGpx(null); return; }
+      await updateStage(supabase, stage.id, update);
 
       setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km`
         + (metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : "")
@@ -696,7 +682,7 @@ export default function RoadbookDetailPage() {
         + (durationStr ? `, ${durationStr}` : "")
       );
 
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) {
       setGpxError(err.message ?? String(err));
@@ -734,21 +720,13 @@ export default function RoadbookDetailPage() {
         );
         if (!ok) { setEnrichingPoi(null); return; }
       }
-      const update = {};
-      if (found.description) update.description = found.description;
-      if (found.coordinates) { update.lat = found.coordinates.lat; update.lng = found.coordinates.lng; }
-      if (found.image) update.photo_url = found.image;
-      if (found.url) update.link_url = found.url;
-      if (!Object.keys(update).length) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
-      const { error: updateError } = await supabase.from("stage_pois").update(update).eq("id", poi.id);
-      if (updateError) { setStageError(updateError.message); return; }
+      const result = await applyPoiEnrichment(supabase, poi.id, found);
+      if (!result.updated) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
       setStageSuccess(`POI "${poi.name}" enrichi.`);
       const stageIds = stages.map(s => s.id);
       if (stageIds.length) {
-        supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
-          .then(({ data: pois }) => {
-            if (pois) { const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m); }
-          });
+        const pois = await loadPois(supabase, stageIds);
+        const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m);
       }
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
     finally { setEnrichingPoi(null); }
@@ -783,14 +761,10 @@ export default function RoadbookDetailPage() {
         );
         if (!ok) { setEnrichingAccommodation(null); return; }
       }
-      const update = {};
-      if (found.name) update.accommodation_name = found.name;
-      if (found.image) update.accommodation_photo = found.image;
-      if (!Object.keys(update).length) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
-      const { error: updateError } = await supabase.from("stages").update(update).eq("id", stage.id);
-      if (updateError) { setStageError(updateError.message); return; }
+      const result = await applyAccommodationEnrichment(supabase, stage.id, found);
+      if (!result.updated) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
       setStageSuccess(`Hébergement enrichi : ${found.name || "nom mis à jour"}.`);
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
     finally { setEnrichingAccommodation(null); }
@@ -799,10 +773,9 @@ export default function RoadbookDetailPage() {
   async function handleClearAccommodation(stageId) {
     if (!window.confirm("Vider les informations d'hébergement de cette étape ?")) return;
     try {
-      const { error: updateError } = await supabase.from("stages").update({ accommodation_name: null, accommodation_url: null, accommodation_photo: null }).eq("id", stageId);
-      if (updateError) { setStageError(updateError.message); return; }
+      await clearStageAccommodation(supabase, stageId);
       setStageSuccess("Hébergement supprimé.");
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
   }
@@ -813,11 +786,10 @@ export default function RoadbookDetailPage() {
     if (!stage_id || !name.trim()) { setStageError("Le nom de l'hébergement est requis."); return; }
     try {
       const payload = { accommodation_name: name.trim(), accommodation_url: url.trim() || null, accommodation_photo: photo.trim() || null };
-      const { error: updateError } = await supabase.from("stages").update(payload).eq("id", stage_id);
-      if (updateError) { setStageError(updateError.message); return; }
+      await updateStageAccommodation(supabase, stage_id, payload);
       setStageSuccess(editing ? "Hébergement modifié." : "Hébergement ajouté.");
       clearAccommodationForm();
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
   }
@@ -835,11 +807,10 @@ export default function RoadbookDetailPage() {
       notes.push({ text: text.trim() });
     }
     try {
-      const { error: updateError } = await supabase.from("stages").update({ notes }).eq("id", stage_id);
-      if (updateError) { setStageError(updateError.message); return; }
+      await updateStageNotes(supabase, stage_id, notes);
       setStageSuccess(editing != null ? "Note modifiée." : "Note ajoutée.");
       clearNoteForm();
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
   }
@@ -851,10 +822,9 @@ export default function RoadbookDetailPage() {
     const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
     notes.splice(noteIndex, 1);
     try {
-      const { error: updateError } = await supabase.from("stages").update({ notes }).eq("id", stageId);
-      if (updateError) { setStageError(updateError.message); return; }
+      await updateStageNotes(supabase, stageId, notes);
       setStageSuccess("Note supprimée.");
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) { setEnrichmentError(err.message ?? String(err)); }
   }
@@ -934,9 +904,9 @@ export default function RoadbookDetailPage() {
       for (const { stage, gpx } of withGpx) {
         report.analyzed++;
         try {
-          const { data } = await supabase.storage.from(GPX_BUCKET).createSignedUrl(gpx.path, 3600);
-          if (!data?.signedUrl) { report.errors.push(`Jour ${stage.stage_number} : URL signée indisponible`); continue; }
-          const metrics = await fetchAndComputeGpxMetrics(data.signedUrl);
+          const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, gpx.path, 3600);
+          if (!signedUrl) { report.errors.push(`Jour ${stage.stage_number} : URL signée indisponible`); continue; }
+          const metrics = await fetchAndComputeGpxMetrics(signedUrl);
           const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
           const durationStr = formatDuration(hours);
 
@@ -958,8 +928,7 @@ export default function RoadbookDetailPage() {
           if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
           if (durationStr) update.duration = durationStr;
 
-          const { error: updateError } = await supabase.from("stages").update(update).eq("id", stage.id);
-          if (updateError) { report.errors.push(`Jour ${stage.stage_number} : ${updateError.message}`); continue; }
+          await updateStage(supabase, stage.id, update);
           report.updated++;
         } catch (err) { report.errors.push(`Jour ${stage.stage_number} : ${err.message}`); }
       }
@@ -967,7 +936,7 @@ export default function RoadbookDetailPage() {
       let msg = `Analyse terminée : ${report.analyzed} analysée(s), ${report.updated} mise(s) à jour.`;
       if (report.errors.length) msg += `\nErreurs :\n${report.errors.map(e => `  • ${e}`).join("\n")}`;
       setAutomationResult(msg);
-      const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+      const refreshed = await loadStages(supabase, id);
       if (refreshed) setStages(refreshed);
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
     finally { setAutomationBusy(null); }
@@ -1019,15 +988,8 @@ export default function RoadbookDetailPage() {
           promptLines.push(`\nNouvelles valeurs proposées :\n• Description : ${found.description || "N/A"}\n• Coordonnées : ${found.coordinates ? `${found.coordinates.lat}, ${found.coordinates.lng}` : "N/A"}\n• Image : ${found.image || "N/A"}\n• Lien : ${found.url || "N/A"}`);
           promptLines.push(`\n${existing.length ? "Écraser ?" : "Appliquer ?"}`);
           if (!window.confirm(promptLines.join("\n"))) continue;
-          const update = {};
-          if (found.description) update.description = found.description;
-          if (found.coordinates) { update.lat = found.coordinates.lat; update.lng = found.coordinates.lng; }
-          if (found.image) update.photo_url = found.image;
-          if (found.url) update.link_url = found.url;
-          if (!Object.keys(update).length) continue;
-          const { error: upErr } = await supabase.from("stage_pois").update(update).eq("id", poi.id);
-          if (upErr) { report.errors.push(`POI "${poi.name}" : ${upErr.message}`); continue; }
-          report.poisUpdated++;
+          const result = await applyPoiEnrichment(supabase, poi.id, found);
+          if (result.updated) report.poisUpdated++;
         } catch (err) { report.errors.push(`POI "${poi.name}" : ${err.message}`); }
       }
 
@@ -1047,13 +1009,8 @@ export default function RoadbookDetailPage() {
           promptLines.push(`\nNouvelles valeurs proposées :\n• Nom : ${found.name || "N/A"}\n• Image : ${found.image || "N/A"}`);
           promptLines.push(`\n${existing.length ? "Écraser ?" : "Appliquer ?"}`);
           if (!window.confirm(promptLines.join("\n"))) continue;
-          const update = {};
-          if (found.name) update.accommodation_name = found.name;
-          if (found.image) update.accommodation_photo = found.image;
-          if (!Object.keys(update).length) continue;
-          const { error: upAccErr } = await supabase.from("stages").update(update).eq("id", stage.id);
-          if (upAccErr) { report.errors.push(`Hébergement "${name}" : ${upAccErr.message}`); continue; }
-          report.accomsUpdated++;
+          const result = await applyAccommodationEnrichment(supabase, stage.id, found);
+          if (result.updated) report.accomsUpdated++;
         } catch (err) { report.errors.push(`Hébergement "${name}" : ${err.message}`); }
       }
 
@@ -1062,11 +1019,9 @@ export default function RoadbookDetailPage() {
       setAutomationResult(msg);
       const stageIds = stages.map(s => s.id);
       if (stageIds.length) {
-        supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true })
-          .then(({ data: pois }) => {
-            if (pois) { const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m); }
-          });
-        const { data: refreshed } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+        const pois = await loadPois(supabase, stageIds);
+        const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m);
+        const refreshed = await loadStages(supabase, id);
         if (refreshed) setStages(refreshed);
       }
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
@@ -1077,8 +1032,7 @@ export default function RoadbookDetailPage() {
     if (!window.confirm("Supprimer ce GPX ?")) return;
     setUploadingGpx("delete");
     try {
-      await supabase.storage.from(GPX_BUCKET).remove([mediaRow.path]);
-      await supabase.from("media").delete().eq("id", mediaRow.id);
+      await deleteGpx(supabase, mediaRow, GPX_BUCKET);
       await loadGpx();
     } catch (err) { setGpxError(err.message); }
     finally { setUploadingGpx(null); }
@@ -1112,10 +1066,13 @@ export default function RoadbookDetailPage() {
     if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
     setCoverMediaId(mediaId); setCoverUrl(""); setCoverMode("media"); setCoverPreview(null);
     setRoadbook(prev => ({ ...prev, cover_media_id: mediaId, cover_image_url: null, updated_at: result.data.updated_at }));
-    supabase.from("media").select("bucket, path").eq("id", mediaId).maybeSingle()
-      .then(({ data: m }) => {
-        if (m) supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400).then(({ data: s }) => setCoverPreview(s?.signedUrl ?? null));
-      });
+    try {
+      const m = await loadCoverMedia(supabase, mediaId);
+      if (m) {
+        const signedUrl = await getSignedUrl(supabase, m.bucket, m.path, 86400);
+        if (signedUrl) setCoverPreview(signedUrl);
+      }
+    } catch {}
     setSuccess("Image de couverture mise à jour.");
   }
 
@@ -1144,14 +1101,8 @@ export default function RoadbookDetailPage() {
     if (target < 0 || target >= sorted.length) return;
     const a = sorted[idx];
     const b = sorted[target];
-    const { error } = await supabase.rpc("swap_stage_numbers", { id_a: a.id, id_b: b.id });
-    if (error) {
-      // fallback: manual swap
-      const tmp = a.stage_number;
-      await supabase.from("stages").update({ stage_number: b.stage_number }).eq("id", a.id);
-      await supabase.from("stages").update({ stage_number: tmp }).eq("id", b.id);
-    }
-    const { data } = await supabase.from("stages").select("*").eq("roadbook_id", Number(id)).order("stage_number", { ascending: true });
+    await swapStageNumbers(supabase, a.id, b.id);
+    const data = await loadStages(supabase, id);
     if (data) setStages(data);
   }
 
@@ -1162,57 +1113,9 @@ export default function RoadbookDetailPage() {
     setError(null);
     try {
       const slug = `${roadbook.slug}-copie-${Date.now()}`;
-      const { data: newRb, error: rbError } = await supabase.from("roadbooks").insert({
-        slug, owner_id: user.id, title: `${roadbook.title} (copie)`, description: roadbook.description, is_public: false,
-      }).select("id").single();
-      if (rbError) { setError(rbError.message); return; }
-
-      for (const stage of stages) {
-        const { data: newStage, error: sError } = await supabase.from("stages").insert({
-          roadbook_id: newRb.id, stage_number: stage.stage_number, title: stage.title,
-          departure: stage.departure, arrival: stage.arrival, distance_km: stage.distance_km,
-          elevation_gain_m: stage.elevation_gain_m, elevation_loss_m: stage.elevation_loss_m,
-          gpx_url: null, map_embed_url: stage.map_embed_url,
-          stage_photo_url: null, day: stage.day, stage_label: stage.stage_label,
-          duration: stage.duration,
-          accommodation_name: stage.accommodation_name, accommodation_url: stage.accommodation_url,
-          accommodation_photo: null, accommodation_type: stage.accommodation_type,
-          notes: stage.notes, alternatives: stage.alternatives,
-          is_substep: stage.is_substep, parent_stage_number: stage.parent_stage_number,
-          metadata: stage.metadata,
-        }).select("id").single();
-        if (sError) { setError(sError.message); return; }
-
-        const stagePois = poisByStage[stage.id] ?? [];
-        for (const poi of stagePois) {
-          const { error: pError } = await supabase.from("stage_pois").insert({
-            stage_id: newStage.id, name: poi.name, lat: poi.lat, lng: poi.lng,
-            poi_type: poi.poi_type, description: poi.description, photo_url: null,
-            link_url: poi.link_url, region: poi.region,
-            sort_order: poi.sort_order, metadata: poi.metadata,
-          });
-          if (pError) { setError(pError.message); return; }
-        }
-
-        const stageVariants = variantsByStage[stage.id] ?? [];
-        for (const v of stageVariants) {
-          const { error: vError } = await supabase.from("stage_variants").insert({
-            stage_id: newStage.id, label: v.label, distance_km: v.distance_km,
-            gpx_url: null, description: v.description, sort_order: v.sort_order,
-            departure: v.departure ?? v.metadata?.departure ?? null,
-            arrival: v.arrival ?? v.metadata?.arrival ?? null,
-            elevation_gain_m: v.elevation_gain_m ?? v.metadata?.elevation_gain_m ?? null,
-            elevation_loss_m: v.elevation_loss_m ?? v.metadata?.elevation_loss_m ?? null,
-            map_embed_url: v.map_embed_url ?? v.metadata?.map_embed_url ?? null,
-            notes: v.notes ?? v.metadata?.notes ?? [],
-            metadata: v.metadata,
-          });
-          if (vError) { setError(vError.message); return; }
-        }
-      }
-
+      const newId = await duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, slug, user.id);
       setSuccess("Roadbook dupliqué ! Redirection...");
-      setTimeout(() => router.push(`/dashboard/roadbooks/${newRb.id}`), 1000);
+      setTimeout(() => router.push(`/dashboard/roadbooks/${newId}`), 1000);
     } catch (err) { setError(err.message); }
     finally { setDuplicating(false); }
   }
