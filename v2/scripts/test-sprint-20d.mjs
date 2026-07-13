@@ -85,17 +85,17 @@ test("page.js n'importe plus les anciens useState d'étape", () => {
   for (const name of forbidden) {
     // Allow only if it appears inside the useStageCrud destructuring or in a comment
     const inBlock = block.includes(name);
-    const elsewhere = pageSrc.split("useStageCrud")[1]?.includes(name);
+    const elsewhere = pageSrc.split("useStageCrud")[1]?.includes(name) && !pageSrc.split("useStageCrud")[1]?.startsWith("//");
     if (inBlock && elsewhere) {
       throw new Error(`${name} appears both in useStageCrud destructuring and elsewhere`);
     }
   }
 });
 
-test("useState count < 20 dans page.js", () => {
+test("useState count <= 15 dans page.js", () => {
   const matches = pageSrc.match(/\buseState\b/g);
   assert.ok(matches, "No useState found at all");
-  assert.ok(matches.length <= 20, `Expected <= 20 useState, got ${matches.length}`);
+  assert.ok(matches.length <= 15, `Expected <= 15 useState, got ${matches.length}`);
 });
 
 test("page.js importe useStageCrud et useSaveWithLock", () => {

@@ -144,18 +144,8 @@ export default function RoadbookDetailPage() {
   const [duplicating, setDuplicating] = useState(false);
   const [showStageForm, setShowStageForm] = useState(false);
 
-  // Official route
-  const [officialDist, setOfficialDist] = useState("");
-  const [officialGain, setOfficialGain] = useState("");
-  const [officialLoss, setOfficialLoss] = useState("");
-  const [officialGpx, setOfficialGpx] = useState("");
-  const [officialMap, setOfficialMap] = useState("");
-  // Current trace
-  const [traceDist, setTraceDist] = useState("");
-  const [traceGain, setTraceGain] = useState("");
-  const [traceLoss, setTraceLoss] = useState("");
-  const [traceGpx, setTraceGpx] = useState("");
-  const [traceMap, setTraceMap] = useState("");
+  const [officialRoute, setOfficialRoute] = useState({ officialDist: "", officialGain: "", officialLoss: "", officialGpx: "", officialMap: "" });
+  const [traceRoute, setTraceRoute] = useState({ traceDist: "", traceGain: "", traceLoss: "", traceGpx: "", traceMap: "" });
 
   const {
     draftStatus,
@@ -186,16 +176,8 @@ export default function RoadbookDetailPage() {
     activity,
     destination,
     project,
-    officialDist,
-    officialGain,
-    officialLoss,
-    officialGpx,
-    officialMap,
-    traceDist,
-    traceGain,
-    traceLoss,
-    traceGpx,
-    traceMap,
+    ...officialRoute,
+    ...traceRoute,
     coverMode,
     coverUrl,
     coverMediaId,
@@ -219,17 +201,21 @@ export default function RoadbookDetailPage() {
       setProject(data.metadata?.project ?? "");
       const meta = data.metadata ?? {};
       const official = meta.official ?? {};
-      setOfficialDist(official.distance != null ? String(official.distance) : "");
-      setOfficialGain(official.elevationGain != null ? String(official.elevationGain) : "");
-      setOfficialLoss(official.elevationLoss != null ? String(official.elevationLoss) : "");
-      setOfficialGpx(official.gpx ?? "");
-      setOfficialMap(official.mapEmbedUrl ?? "");
+      setOfficialRoute({
+        officialDist: official.distance != null ? String(official.distance) : "",
+        officialGain: official.elevationGain != null ? String(official.elevationGain) : "",
+        officialLoss: official.elevationLoss != null ? String(official.elevationLoss) : "",
+        officialGpx: official.gpx ?? "",
+        officialMap: official.mapEmbedUrl ?? "",
+      });
       const stagesTotal = meta.stagesTotal ?? {};
-      setTraceDist(stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_km != null ? String(data.distance_km) : ""));
-      setTraceGain(stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_m != null ? String(data.elevation_gain_m) : ""));
-      setTraceLoss(stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_m != null ? String(data.elevation_loss_m) : ""));
-      setTraceGpx(stagesTotal.gpx ?? "");
-      setTraceMap(stagesTotal.mapEmbedUrl ?? "");
+      setTraceRoute({
+        traceDist: stagesTotal.distance != null ? String(stagesTotal.distance) : (data.distance_km != null ? String(data.distance_km) : ""),
+        traceGain: stagesTotal.elevationGain != null ? String(stagesTotal.elevationGain) : (data.elevation_gain_m != null ? String(data.elevation_gain_m) : ""),
+        traceLoss: stagesTotal.elevationLoss != null ? String(stagesTotal.elevationLoss) : (data.elevation_loss_m != null ? String(data.elevation_loss_m) : ""),
+        traceGpx: stagesTotal.gpx ?? "",
+        traceMap: stagesTotal.mapEmbedUrl ?? "",
+      });
       setCoverUrl(data.cover_image_url ?? "");
       setCoverMediaId(data.cover_media_id ?? null);
       if (data.cover_image_url) { setCoverMode("url"); setCoverPreview(data.cover_image_url); }
@@ -272,16 +258,26 @@ export default function RoadbookDetailPage() {
     if (p.gpxOfficial !== undefined) setGpxOfficial(p.gpxOfficial);
     if (p.gpxCustom !== undefined) setGpxCustom(p.gpxCustom);
     if (p.gpxByStage) setGpxByStage(p.gpxByStage);
-    if (p.officialDist != null) setOfficialDist(p.officialDist);
-    if (p.officialGain != null) setOfficialGain(p.officialGain);
-    if (p.officialLoss != null) setOfficialLoss(p.officialLoss);
-    if (p.officialGpx != null) setOfficialGpx(p.officialGpx);
-    if (p.officialMap != null) setOfficialMap(p.officialMap);
-    if (p.traceDist != null) setTraceDist(p.traceDist);
-    if (p.traceGain != null) setTraceGain(p.traceGain);
-    if (p.traceLoss != null) setTraceLoss(p.traceLoss);
-    if (p.traceGpx != null) setTraceGpx(p.traceGpx);
-    if (p.traceMap != null) setTraceMap(p.traceMap);
+    if (p.officialDist != null || p.officialGain != null || p.officialLoss != null || p.officialGpx != null || p.officialMap != null) {
+      setOfficialRoute(prev => ({
+        ...prev,
+        ...(p.officialDist != null ? { officialDist: p.officialDist } : {}),
+        ...(p.officialGain != null ? { officialGain: p.officialGain } : {}),
+        ...(p.officialLoss != null ? { officialLoss: p.officialLoss } : {}),
+        ...(p.officialGpx != null ? { officialGpx: p.officialGpx } : {}),
+        ...(p.officialMap != null ? { officialMap: p.officialMap } : {}),
+      }));
+    }
+    if (p.traceDist != null || p.traceGain != null || p.traceLoss != null || p.traceGpx != null || p.traceMap != null) {
+      setTraceRoute(prev => ({
+        ...prev,
+        ...(p.traceDist != null ? { traceDist: p.traceDist } : {}),
+        ...(p.traceGain != null ? { traceGain: p.traceGain } : {}),
+        ...(p.traceLoss != null ? { traceLoss: p.traceLoss } : {}),
+        ...(p.traceGpx != null ? { traceGpx: p.traceGpx } : {}),
+        ...(p.traceMap != null ? { traceMap: p.traceMap } : {}),
+      }));
+    }
     if (p.coverMode !== undefined) setCoverMode(p.coverMode);
     if (p.coverUrl != null) setCoverUrl(p.coverUrl);
     if (p.coverMediaId !== undefined) setCoverMediaId(p.coverMediaId);
@@ -304,23 +300,23 @@ export default function RoadbookDetailPage() {
     e.preventDefault();
     const meta = { ...(roadbook?.metadata ?? {}) };
     meta.official = {
-      distance: officialDist ? Number(officialDist) : null,
-      elevationGain: officialGain ? Number(officialGain) : null,
-      elevationLoss: officialLoss ? Number(officialLoss) : null,
-      gpx: officialGpx || null,
-      mapEmbedUrl: officialMap || null,
+      distance: officialRoute.officialDist ? Number(officialRoute.officialDist) : null,
+      elevationGain: officialRoute.officialGain ? Number(officialRoute.officialGain) : null,
+      elevationLoss: officialRoute.officialLoss ? Number(officialRoute.officialLoss) : null,
+      gpx: officialRoute.officialGpx || null,
+      mapEmbedUrl: officialRoute.officialMap || null,
     };
     meta.stagesTotal = {
-      distance: traceDist ? Number(traceDist) : null,
-      elevationGain: traceGain ? Number(traceGain) : null,
-      elevationLoss: traceLoss ? Number(traceLoss) : null,
-      gpx: traceGpx || null,
-      mapEmbedUrl: traceMap || null,
+      distance: traceRoute.traceDist ? Number(traceRoute.traceDist) : null,
+      elevationGain: traceRoute.traceGain ? Number(traceRoute.traceGain) : null,
+      elevationLoss: traceRoute.traceLoss ? Number(traceRoute.traceLoss) : null,
+      gpx: traceRoute.traceGpx || null,
+      mapEmbedUrl: traceRoute.traceMap || null,
     };
     const updateFields = {
-      distance_km: traceDist ? Number(traceDist) : null,
-      elevation_gain_m: traceGain ? Number(traceGain) : null,
-      elevation_loss_m: traceLoss ? Number(traceLoss) : null,
+      distance_km: traceRoute.traceDist ? Number(traceRoute.traceDist) : null,
+      elevation_gain_m: traceRoute.traceGain ? Number(traceRoute.traceGain) : null,
+      elevation_loss_m: traceRoute.traceLoss ? Number(traceRoute.traceLoss) : null,
     };
     await saveWithLock({
       getUpdateFields: () => ({ metadata: meta, ...updateFields }),
@@ -814,11 +810,11 @@ export default function RoadbookDetailPage() {
             </div>
             <div className="studio-card__body">
               <form onSubmit={handleSaveRoute} className="studio-form-grid studio-form-grid--compact">
-                <label>Distance (km)<input type="number" step="0.1" value={officialDist} onChange={e => setOfficialDist(e.target.value)} /></label>
-                <label>D+ (m)<input type="number" value={officialGain} onChange={e => setOfficialGain(e.target.value)} /></label>
-                <label>D− (m)<input type="number" value={officialLoss} onChange={e => setOfficialLoss(e.target.value)} /></label>
-                <label className="studio-form-grid__full">GPX<input type="text" value={officialGpx} onChange={e => setOfficialGpx(e.target.value)} placeholder="URL du fichier GPX" /></label>
-                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={officialMap} onChange={e => setOfficialMap(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></label>
+                <label>Distance (km)<input type="number" step="0.1" value={officialRoute.officialDist} onChange={e => setOfficialRoute(prev => ({ ...prev, officialDist: e.target.value }))} /></label>
+                <label>D+ (m)<input type="number" value={officialRoute.officialGain} onChange={e => setOfficialRoute(prev => ({ ...prev, officialGain: e.target.value }))} /></label>
+                <label>D− (m)<input type="number" value={officialRoute.officialLoss} onChange={e => setOfficialRoute(prev => ({ ...prev, officialLoss: e.target.value }))} /></label>
+                <label className="studio-form-grid__full">GPX<input type="text" value={officialRoute.officialGpx} onChange={e => setOfficialRoute(prev => ({ ...prev, officialGpx: e.target.value }))} placeholder="URL du fichier GPX" /></label>
+                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={officialRoute.officialMap} onChange={e => setOfficialRoute(prev => ({ ...prev, officialMap: e.target.value }))} placeholder="https://www.google.com/maps/embed?..." /></label>
                 <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
                   {saving ? "Enregistrement..." : "Enregistrer"}
                 </button>
@@ -833,11 +829,11 @@ export default function RoadbookDetailPage() {
             </div>
             <div className="studio-card__body">
               <form onSubmit={handleSaveRoute} className="studio-form-grid studio-form-grid--compact">
-                <label>Distance (km)<input type="number" step="0.1" value={traceDist} onChange={e => setTraceDist(e.target.value)} /></label>
-                <label>D+ (m)<input type="number" value={traceGain} onChange={e => setTraceGain(e.target.value)} /></label>
-                <label>D− (m)<input type="number" value={traceLoss} onChange={e => setTraceLoss(e.target.value)} /></label>
-                <label className="studio-form-grid__full">GPX<input type="text" value={traceGpx} onChange={e => setTraceGpx(e.target.value)} placeholder="URL du fichier GPX" /></label>
-                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={traceMap} onChange={e => setTraceMap(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></label>
+                <label>Distance (km)<input type="number" step="0.1" value={traceRoute.traceDist} onChange={e => setTraceRoute(prev => ({ ...prev, traceDist: e.target.value }))} /></label>
+                <label>D+ (m)<input type="number" value={traceRoute.traceGain} onChange={e => setTraceRoute(prev => ({ ...prev, traceGain: e.target.value }))} /></label>
+                <label>D- (m)<input type="number" value={traceRoute.traceLoss} onChange={e => setTraceRoute(prev => ({ ...prev, traceLoss: e.target.value }))} /></label>
+                <label className="studio-form-grid__full">GPX<input type="text" value={traceRoute.traceGpx} onChange={e => setTraceRoute(prev => ({ ...prev, traceGpx: e.target.value }))} placeholder="URL du fichier GPX" /></label>
+                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={traceRoute.traceMap} onChange={e => setTraceRoute(prev => ({ ...prev, traceMap: e.target.value }))} placeholder="https://www.google.com/maps/embed?..." /></label>
                 <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
                   {saving ? "Enregistrement..." : "Enregistrer"}
                 </button>
