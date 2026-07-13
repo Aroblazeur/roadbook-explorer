@@ -16,6 +16,9 @@ export default function StageCard({
   enrich,
   stagePois,
   stageVariants,
+  dragHandlers,
+  draggingStageId,
+  dragOverStageId,
 }) {
   const {
     handleDeleteStage, deleting,
@@ -37,8 +40,21 @@ export default function StageCard({
   const meta = stage.metadata ?? {};
   const stageGpx = gpxByStage[stage.id] ?? null;
 
+  const isDragging = draggingStageId === stage.id;
+  const isDragOver = dragOverStageId === stage.id && !isDragging;
+
   return (
-    <article key={stage.id} className="studio-stage-card" data-expanded={expanded ? "true" : "false"}>
+    <article
+      key={stage.id}
+      className={`studio-stage-card ${isDragOver ? "studio-stage-card--drag-over" : ""}`}
+      data-expanded={expanded ? "true" : "false"}
+      draggable="true"
+      style={{ opacity: isDragging ? 0.5 : 1 }}
+      onDragStart={(e) => { dragHandlers?.handleDragStart(e, stage.id); }}
+      onDragOver={(e) => { dragHandlers?.handleDragOver(e, stage.id); }}
+      onDragEnd={dragHandlers?.handleDragEnd}
+      onDrop={(e) => { dragHandlers?.handleDrop(e, stage.id); }}
+    >
       {/* Stage header */}
       <div className="studio-stage-card__header" onClick={onToggleExpand}>
         <div className="studio-stage-card__eyebrow">

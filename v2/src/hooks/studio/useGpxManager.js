@@ -141,7 +141,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
   }, [supabase, reloadStages]);
 
   return {
-    gpxOfficial, gpxCustom, gpxByStage,
+    gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage,
     gpxUploading, metricsLoading,
     gpxError, setGpxError,
     reloadGpx,

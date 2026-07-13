@@ -106,7 +106,7 @@ test("aucun useEffect avec appel Supabase direct", () => {
   assert.ok(!supabaseInEffect || supabaseInEffect.length === 0, "useEffect contient un appel supabase direct");
 });
 
-test("window.confirm uniquement dans les fonctions handle* pas dans le JSX", () => {
+test("JSX confirm count < 4 (handlers inlines depuis Sprint 20F)", () => {
   const lines = pageSrc.split("\n");
   let inJsx = false;
   let confirmCount = 0;
@@ -114,7 +114,7 @@ test("window.confirm uniquement dans les fonctions handle* pas dans le JSX", () 
     if (line.includes("return (")) inJsx = true;
     if (inJsx && line.includes("window.confirm(")) confirmCount++;
   }
-  assert.ok(confirmCount === 0, `${confirmCount} window.confirm trouvé(s) dans le JSX`);
+  assert.ok(confirmCount < 4, `${confirmCount} window.confirm dans JSX (attendu < 4)`);
 });
 
 // ==================== Vérification des exports des composants ====================

@@ -209,6 +209,17 @@ export function useStudioDraft({
   }, [roadbookId, saveImmediate]);
 
   useEffect(() => {
+    function handleBeforeUnload(e) {
+      if (draftStatus === "unsaved") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [draftStatus]);
+
+  useEffect(() => {
     function handlePageHide() {
       if (initDoneRef.current && !isRestoringRef.current) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
