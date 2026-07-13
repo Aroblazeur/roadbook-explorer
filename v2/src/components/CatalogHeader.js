@@ -49,14 +49,21 @@ export default function CatalogHeader() {
           </svg>
         </div>
         <nav className="header-nav">
+          <Link href="/">Accueil</Link>
+          <Link href="/explore">Roadbooks publics</Link>
           {user ? (
             <>
               <span className="header-nav__email">{user.email}</span>
-              <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
+              <Link href="/dashboard/roadbooks">Nos roadbooks</Link>
+              <Link href="/dashboard">Studio</Link>
               <button onClick={handleLogout}>Déconnexion</button>
             </>
           ) : (
-            <Link href="/login">Connexion</Link>
+            <>
+              <Link href="/dashboard/roadbooks">Nos roadbooks</Link>
+              <Link href="/dashboard">Studio</Link>
+              <Link href="/login">Connexion</Link>
+            </>
           )}
         </nav>
       </div>

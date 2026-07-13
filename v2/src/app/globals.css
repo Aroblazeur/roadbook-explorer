@@ -101,6 +101,120 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 }
 .header-nav .header-nav__email { font-weight: 400; font-size: .85rem; opacity: .85; }
 
+/* ===== Home access (V1 visual language) ===== */
+.home-access-main { flex: 1; }
+
+.card.home-access-section {
+  margin-top: 32px;
+}
+
+.home-access-heading {
+  max-width: 720px;
+  margin-bottom: 24px;
+}
+
+.home-access-heading h2,
+.catalog-page-heading h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.home-access-heading > p:last-child {
+  margin-top: 6px;
+  color: var(--text-light);
+}
+
+.home-access-eyebrow {
+  margin: 0 0 4px;
+  color: var(--primary-dark);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.home-access-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-access-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 132px;
+  padding: 18px;
+  border: 1px solid rgba(46,125,50,.14);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.home-access-card:hover,
+.home-access-card:focus-visible {
+  border-color: rgba(46,125,50,.42);
+  background: #fbfefb;
+  color: var(--text);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.home-access-card:active {
+  transform: scale(.985);
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.home-access-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(46,125,50,.18);
+  border-radius: 50%;
+  background: #f1f8f2;
+  color: var(--primary);
+}
+
+.home-access-card__icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.home-access-card__content {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.home-access-card__content strong {
+  color: var(--primary-dark);
+  font-size: 1.04rem;
+}
+
+.home-access-card__content span {
+  color: var(--text-light);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+.home-access-card__arrow {
+  color: var(--primary);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.catalog-page-heading {
+  margin: 28px 0 18px;
+}
+
 /* ===== Roadbook Library Catalog (V1) ===== */
 .roadbook-library-grid { display: grid; gap: 14px; }
 
@@ -1048,6 +1162,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 /* ===== Responsive ===== */
 @media (max-width: 960px) {
   .studio-layout { grid-template-columns: 1fr; }
+  .home-access-grid { grid-template-columns: 1fr; }
+  .home-access-card { min-height: 96px; }
 }
 
 @media (max-width: 720px) {
@@ -1072,6 +1188,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .header { padding: 24px 16px; }
   .roadbook-library-card { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
   .header-logo { width: 48px; }
+  .home-access-section { margin-top: 16px; }
+  .home-access-card { padding: 14px; }
   .stage-card { margin: 12px 0; padding: 16px; }
   #stage-map-embed { height: clamp(200px, 50vw, 300px); }
 }
@@ -1093,6 +1211,15 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .variant-card { margin-left: 0.5rem; padding: 0.5rem; }
   .accommodation-resource { width: 100%; }
   .home-stage-card { padding: 10px; }
+  .home-access-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    min-height: 0;
+    padding: 12px;
+  }
+  .home-access-card__icon { width: 38px; height: 38px; }
+  .home-access-card__icon svg { width: 21px; height: 21px; }
+  .home-access-card__arrow { display: none; }
   .stage-photo { border-radius: 10px; }
   .stage-photo__image { max-height: 200px; }
   #stage-map-embed { height: clamp(180px, 55vw, 260px); border-radius: 8px; }
@@ -1141,5 +1268,11 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .roadbook-library-card { background: var(--surface); border-color: rgba(76, 175, 80, 0.2); }
   .roadbook-library-card:hover,
   .roadbook-library-card:focus-visible { background: #1a2a1a; border-color: rgba(76, 175, 80, 0.4); }
+  .home-access-card { background: var(--surface); border-color: rgba(76, 175, 80, 0.2); }
+  .home-access-card:hover,
+  .home-access-card:focus-visible { background: #1a2a1a; border-color: rgba(76, 175, 80, 0.4); }
+  .home-access-card__icon { background: #1a2a1a; color: #81c784; }
+  .home-access-card__content strong,
+  .home-access-eyebrow { color: #a5d6a7; }
   label { color: var(--text-light); }
 }

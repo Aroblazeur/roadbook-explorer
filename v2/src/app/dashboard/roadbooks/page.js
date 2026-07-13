@@ -138,21 +138,22 @@ export default function RoadbooksPage() {
   if (!user) return null;
 
   if (fetching) {
-    return <main className="page-dashboard"><h1>Mes roadbooks</h1><p>Chargement de la liste…</p></main>;
+    return <main className="page-dashboard"><h1>Nos roadbooks</h1><p>Chargement de la liste…</p></main>;
   }
 
   if (error && !roadbooks.length) {
-    return <main className="page-dashboard"><h1>Mes roadbooks</h1><p className="page-error">{error}</p><p><Link href="/dashboard/roadbooks">Réessayer</Link></p></main>;
+    return <main className="page-dashboard"><h1>Nos roadbooks</h1><p className="page-error">{error}</p><p><Link href="/dashboard/roadbooks">Réessayer</Link></p></main>;
   }
 
   return (
     <main className="page-dashboard studio-layout">
       <div className="studio-panel">
         <div className="studio-panel__header">
-          <h1>Mes roadbooks</h1>
+          <h1>Nos roadbooks</h1>
           <div className="studio-actions">
+            <Link href="/" className="terrain-button--secondary studio-action-button--compact" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Accueil</Link>
             <Link href="/explore" className="terrain-button--secondary studio-action-button--compact" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Explorer</Link>
-            <Link href="/dashboard" className="terrain-button--secondary studio-action-button--compact" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Dashboard</Link>
+            <Link href="/dashboard" className="terrain-button--secondary studio-action-button--compact" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Studio</Link>
           </div>
         </div>
 
