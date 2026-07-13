@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { loadGpxRows, getSignedUrl } from "@/lib/roadbooks/loaders";
-import { uploadGpx, insertGpxRecord, updateGpxRecord, deleteGpx as deleteGpxWriter } from "@/lib/roadbooks/writers";
+import { uploadGpx, insertGpxRecord, updateGpxRecord, deleteGpx as deleteGpxWriter, updateStage } from "@/lib/roadbooks/writers";
 import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
 
 const GPX_BUCKET = "roadbook-gpx";
 
-export function useGpxManager({ supabase, roadbookId, userId }) {
+export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
   const [gpxError, setGpxError] = useState(null);
   const [gpxUploading, setGpxUploading] = useState(null);
   const [gpxOfficial, setGpxOfficial] = useState(null);
@@ -108,6 +108,38 @@ export function useGpxManager({ supabase, roadbookId, userId }) {
     }
   }, [supabase]);
 
+  const analyzeStageGpx = useCallback(async (gpx, stage) => {
+    if (!gpx || !stage) return null;
+    try {
+      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, gpx.path, 3600);
+      if (!signedUrl) return { error: "URL signée indisponible", stageNumber: stage.stage_number };
+      const metrics = await fetchAndComputeGpxMetrics(signedUrl);
+      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
+      const durationStr = formatDuration(hours);
+      return { metrics, durationStr, stage, error: null };
+    } catch (err) {
+      return { error: err.message, stageNumber: stage.stage_number };
+    }
+  }, [supabase]);
+
+  const applyStageMetrics = useCallback(async (metrics, durationStr, stage) => {
+    if (!stage) return false;
+    try {
+      const update = {};
+      if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
+      if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
+      if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
+      if (durationStr) update.duration = durationStr;
+
+      await updateStage(supabase, stage.id, update);
+      if (reloadStages) await reloadStages();
+      return true;
+    } catch (err) {
+      setGpxError(err.message ?? String(err));
+      return false;
+    }
+  }, [supabase, reloadStages]);
+
   return {
     gpxOfficial, gpxCustom, gpxByStage,
     gpxUploading, metricsLoading,
@@ -118,6 +150,8 @@ export function useGpxManager({ supabase, roadbookId, userId }) {
     deleteGpx,
     downloadGpx,
     computeStageMetrics,
+    analyzeStageGpx,
+    applyStageMetrics,
     GPX_BUCKET,
   };
 }

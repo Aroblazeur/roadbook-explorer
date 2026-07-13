@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
 import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, findAccommodationByName, loadEnrichmentData } from "@/lib/enrichment";
 import { applyPoiEnrichment, applyAccommodationEnrichment } from "@/lib/roadbooks/enrich";
-import { loadPois } from "@/lib/roadbooks/loaders";
+import { loadPois, loadStages } from "@/lib/roadbooks/loaders";
+import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
 
-export function useEnrichment({ supabase, roadbook, stages, poisByStage, onError, onSuccess, reloadPoisVariants, reloadStages }) {
+export function useEnrichment({ supabase, roadbook, setRoadbook, stages, setStages, setPoisByStage, onError, onSuccess, reloadPoisVariants, reloadStages }) {
   const [poiIndex, setPoiIndex] = useState(null);
   const [accommodationIndex, setAccommodationIndex] = useState(null);
   const [enrichmentError, setEnrichmentError] = useState(null);
@@ -110,6 +111,36 @@ export function useEnrichment({ supabase, roadbook, stages, poisByStage, onError
     finally { setEnrichingAccommodation(null); }
   }, [supabase, accommodationIndex, onError, onSuccess, reloadStages]);
 
+  const recalculateTotals = useCallback(async (updateFields) => {
+    try {
+      const result = await conditionalUpdateRoadbook(supabase, roadbook?.id ?? stages[0]?.roadbook_id, updateFields, roadbook?.updated_at);
+      if (!result.ok) {
+        const errMsg = result.error === "conflict" ? "Conflit de version. Rechargez et réessayez." : result.error;
+        return { ok: false, msg: `Erreur : ${errMsg}` };
+      }
+      const summaryParts = [`${stages.length} étape(s)`];
+      if (updateFields.distance_km != null) summaryParts.push(`distance totale : ${updateFields.distance_km} km`);
+      if (updateFields.elevation_gain_m != null) summaryParts.push(`D+ total : ${updateFields.elevation_gain_m} m`);
+      if (updateFields.elevation_loss_m != null) summaryParts.push(`D− total : ${updateFields.elevation_loss_m} m`);
+      if (setRoadbook) setRoadbook(prev => ({ ...prev, ...updateFields, updated_at: result.data.updated_at }));
+      return { ok: true, msg: `Totaux appliqués : ${summaryParts.join(", ")}.` };
+    } catch (err) {
+      return { ok: false, msg: `Erreur : ${err.message}` };
+    }
+  }, [supabase, roadbook, stages, setRoadbook]);
+
+  const reloadAfterEnrichment = useCallback(async () => {
+    const stageIds = stages.map(s => s.id);
+    if (!stageIds.length) return;
+    try {
+      const pois = await loadPois(supabase, stageIds);
+      const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); });
+      if (setPoisByStage) setPoisByStage(m);
+      const refreshed = await loadStages(supabase, roadbook?.id ?? stages[0]?.roadbook_id);
+      if (refreshed && setStages) setStages(refreshed);
+    } catch {}
+  }, [supabase, roadbook, stages, setStages, setPoisByStage]);
+
   return {
     poiIndex, setPoiIndex,
     accommodationIndex, setAccommodationIndex,
@@ -120,5 +151,7 @@ export function useEnrichment({ supabase, roadbook, stages, poisByStage, onError
     loadEnrichmentIndices,
     enrichPoi,
     enrichAccommodation,
+    recalculateTotals,
+    reloadAfterEnrichment,
   };
 }

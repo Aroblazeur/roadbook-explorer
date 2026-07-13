@@ -70,13 +70,22 @@ page.js (< 400 lignes)
 | `src/hooks/studio/useRoadbookData.js` | Chargement roadbook + stages + POI + variantes | Élevé |
 | `src/hooks/studio/useStageCrud.js` | CRUD stages + POI + variantes (reducer-based) | Élevé |
 | `src/hooks/studio/useMediaManager.js` | Chargement + upload + suppression images | Moyen |
-| `src/hooks/studio/useGpxManager.js` | Chargement + upload + suppression GPX | Moyen |
+| `src/hooks/studio/useGpxManager.js` | Chargement + upload + suppression GPX + métriques | Moyen |
 | `src/hooks/studio/useCoverManager.js` | Cover URL/media | Faible |
-| `src/hooks/studio/useEnrichment.js` | Index + enrich POI/hébergement | Moyen |
+| `src/hooks/studio/useEnrichment.js` | Index + enrich POI/hébergement + automatisations | Moyen |
 | `src/hooks/studio/useNotifications.js` | Gestion centralisée erreur/succès | Faible |
 | `src/hooks/studio/useSaveWithLock.js` | Lock + conditionalUpdate + verify | Moyen |
 
-**Critères** : Les 17 `useState` du formulaire d'étape remplacés par un reducer. Les 11 booléens de chargement remplacés par un état structuré. 74 `useState` → < 20.
+**Statut : ✅ Terminé**
+- 8 hooks spécialisés créés + 1 reducer (`stageFormReducer`)
+- `page.js` : ~1548 → 1120 lignes
+- `useState` : 45 → 11
+- `useEffect` : 7 → 4
+- Appels Supabase directs : 0
+- Handlers métier lourds extraits (automatisations, calculs GPX, enrichissement batch)
+- Tests 20D : 22/22 ; 20C : 48/48 ; 20B : 42/42 ; 18D : 35/35 ; migration 18C : 10/10
+- Build : 0 erreur
+- Voir `docs/audits/sprint-20d-domain-hooks.md`
 
 ---
 
@@ -122,7 +131,7 @@ page.js (< 400 lignes)
 
 | Fichier | Lignes actuelles | Objectif | Sprint |
 |---------|:----------------:|:--------:|:------:|
-| `src/app/dashboard/roadbooks/[id]/page.js` | 1783 | < 400 | 20F |
+| `src/app/dashboard/roadbooks/[id]/page.js` | 1120 | < 400 | 20F |
 | `src/hooks/useStudioDraft.js` | 306 | < 200 | 20D (réduction interface) |
 
 ## Fichiers à créer

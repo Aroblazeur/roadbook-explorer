@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { findPoi, findAccommodation, findAccommodationByName } from "@/lib/enrichment";
 import { useNotifications } from "@/hooks/studio/useNotifications";
 import { useRoadbookData } from "@/hooks/studio/useRoadbookData";
@@ -16,17 +15,10 @@ import { useSaveWithLock } from "@/hooks/studio/useSaveWithLock";
 import { useStageCrud } from "@/hooks/studio/useStageCrud";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
-import {
-  conditionalUpdateRoadbook,
-} from "@/lib/sync-helpers";
+import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
-import {
-  loadCoverMedia, loadPois, loadStages,
-  getSignedUrl,
-} from "@/lib/roadbooks/loaders";
-import {
-  updateStage, insertRoadbook, duplicateRoadbook,
-} from "@/lib/roadbooks/writers";
+import { loadCoverMedia, getSignedUrl } from "@/lib/roadbooks/loaders";
+import { insertRoadbook, duplicateRoadbook } from "@/lib/roadbooks/writers";
 import { applyPoiEnrichment, applyAccommodationEnrichment } from "@/lib/roadbooks/enrich";
 
 export default function RoadbookDetailPage() {
@@ -113,7 +105,9 @@ export default function RoadbookDetailPage() {
     deleteGpx,
     downloadGpx,
     computeStageMetrics,
-  } = useGpxManager({ supabase, roadbookId: id, userId: user?.id });
+    applyStageMetrics,
+    analyzeStageGpx,
+  } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, reloadStages });
 
   const {
     coverUrl, setCoverUrl,
@@ -134,9 +128,11 @@ export default function RoadbookDetailPage() {
     loadEnrichmentIndices,
     enrichPoi,
     enrichAccommodation,
+    recalculateTotals,
+    reloadAfterEnrichment,
   } = useEnrichment({
-    supabase, roadbook, stages, poisByStage,
-    onSuccess: setStageSuccess,
+    supabase, roadbook, setRoadbook, stages, setStages, poisByStage, setPoisByStage,
+    onSuccess: setStageSuccess, onError: setError,
     reloadPoisVariants,
     reloadStages,
   });
@@ -400,22 +396,14 @@ export default function RoadbookDetailPage() {
       if (!ok) return;
     }
 
-    const update = {};
-    if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
-    if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
-    if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
-    if (durationStr) update.duration = durationStr;
-
-    await updateStage(supabase, stage.id, update);
-
-    setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km`
-      + (metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : "")
-      + (metrics.elevationLossM != null ? `, D− ${Math.round(metrics.elevationLossM)} m` : "")
-      + (durationStr ? `, ${durationStr}` : "")
-    );
-
-    const refreshed = await loadStages(supabase, id);
-    if (refreshed) setStages(refreshed);
+    const ok = await applyStageMetrics(metrics, durationStr, stage);
+    if (ok) {
+      setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km`
+        + (metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : "")
+        + (metrics.elevationLossM != null ? `, D− ${Math.round(metrics.elevationLossM)} m` : "")
+        + (durationStr ? `, ${durationStr}` : "")
+      );
+    }
   }
 
   async function handleEnrichPoi(poi, stageId) {
@@ -430,45 +418,43 @@ export default function RoadbookDetailPage() {
 
   async function handleRecalculateTotals() {
     if (!stages.length) { setAutomationResult("Aucune étape à analyser."); return; }
+    let totalDist = 0, totalGain = 0, totalLoss = 0;
+    let hasDist = false, hasGain = false, hasLoss = false;
+    stages.forEach(s => {
+      if (s.distance_km != null) { totalDist += Number(s.distance_km); hasDist = true; }
+      if (s.elevation_gain_m != null) { totalGain += Number(s.elevation_gain_m); hasGain = true; }
+      if (s.elevation_loss_m != null) { totalLoss += Number(s.elevation_loss_m); hasLoss = true; }
+    });
+
+    if (!hasDist && !hasGain && !hasLoss) {
+      setAutomationResult("Aucune métrique disponible dans les étapes pour calculer les totaux.");
+      return;
+    }
+
+    const summaryParts = [`${stages.length} étape(s)`];
+    if (hasDist) summaryParts.push(`distance totale : ${totalDist.toFixed(1)} km`);
+    if (hasGain) summaryParts.push(`D+ total : ${Math.round(totalGain)} m`);
+    if (hasLoss) summaryParts.push(`D− total : ${Math.round(totalLoss)} m`);
+
+    const ok = window.confirm(
+      `Totaux calculés sur ${stages.length} étape(s) :\n\n`
+      + (hasDist ? `• Distance : ${totalDist.toFixed(1)} km\n` : "")
+      + (hasGain ? `• D+ : ${Math.round(totalGain)} m\n` : "")
+      + (hasLoss ? `• D− : ${Math.round(totalLoss)} m\n` : "")
+      + `\nAppliquer ces totaux au roadbook ?`
+    );
+    if (!ok) return;
+
+    const updateFields = {};
+    if (hasDist) updateFields.distance_km = Math.round(totalDist * 100) / 100;
+    if (hasGain) updateFields.elevation_gain_m = Math.round(totalGain);
+    if (hasLoss) updateFields.elevation_loss_m = Math.round(totalLoss);
+
     setAutomationBusy("totals");
     setAutomationResult(null);
     try {
-      let totalDist = 0, totalGain = 0, totalLoss = 0;
-      let hasDist = false, hasGain = false, hasLoss = false;
-      stages.forEach(s => {
-        if (s.distance_km != null) { totalDist += Number(s.distance_km); hasDist = true; }
-        if (s.elevation_gain_m != null) { totalGain += Number(s.elevation_gain_m); hasGain = true; }
-        if (s.elevation_loss_m != null) { totalLoss += Number(s.elevation_loss_m); hasLoss = true; }
-      });
-      const summaryParts = [`${stages.length} étape(s)`];
-      if (hasDist) summaryParts.push(`distance totale : ${totalDist.toFixed(1)} km`);
-      else summaryParts.push("distance : aucune donnée");
-      if (hasGain) summaryParts.push(`D+ total : ${Math.round(totalGain)} m`);
-      if (hasLoss) summaryParts.push(`D− total : ${Math.round(totalLoss)} m`);
-
-      if (!hasDist && !hasGain && !hasLoss) {
-        setAutomationResult("Aucune métrique disponible dans les étapes pour calculer les totaux.");
-        setAutomationBusy(null); return;
-      }
-
-      const ok = window.confirm(
-        `Totaux calculés sur ${stages.length} étape(s) :\n\n`
-        + (hasDist ? `• Distance : ${totalDist.toFixed(1)} km\n` : "")
-        + (hasGain ? `• D+ : ${Math.round(totalGain)} m\n` : "")
-        + (hasLoss ? `• D− : ${Math.round(totalLoss)} m\n` : "")
-        + `\nAppliquer ces totaux au roadbook ?`
-      );
-      if (!ok) { setAutomationBusy(null); return; }
-
-      const updateFields = {};
-      if (hasDist) updateFields.distance_km = Math.round(totalDist * 100) / 100;
-      if (hasGain) updateFields.elevation_gain_m = Math.round(totalGain);
-      if (hasLoss) updateFields.elevation_loss_m = Math.round(totalLoss);
-
-      const calcResult = await conditionalUpdateRoadbook(supabase, id, updateFields, roadbook?.updated_at);
-      if (!calcResult.ok) { setAutomationResult(`Erreur : ${calcResult.error === "conflict" ? "Conflit de version. Rechargez et réessayez." : calcResult.error}`); return; }
-      setAutomationResult(`Totaux appliqués : ${summaryParts.join(", ")}.`);
-      setRoadbook(prev => ({ ...prev, ...updateFields, updated_at: calcResult.data.updated_at }));
+      const result = await recalculateTotals(updateFields);
+      setAutomationResult(result.msg);
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
     finally { setAutomationBusy(null); }
   }
@@ -500,41 +486,32 @@ export default function RoadbookDetailPage() {
 
       for (const { stage, gpx } of withGpx) {
         report.analyzed++;
-        try {
-          const signedUrl = await getSignedUrl(supabase, "roadbook-gpx", gpx.path, 3600);
-          if (!signedUrl) { report.errors.push(`Jour ${stage.stage_number} : URL signée indisponible`); continue; }
-          const metrics = await fetchAndComputeGpxMetrics(signedUrl);
-          const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
-          const durationStr = formatDuration(hours);
+        const result = await analyzeStageGpx(gpx, stage);
+        if (!result || result.error) {
+          report.errors.push(`Jour ${stage.stage_number} : ${result?.error || "Erreur inconnue"}`);
+          continue;
+        }
+        const { metrics, durationStr } = result;
 
-          const existing = [];
-          if (stage.distance_km != null) existing.push(`distance (${stage.distance_km} km)`);
-          if (stage.elevation_gain_m != null) existing.push(`D+ (${stage.elevation_gain_m} m)`);
-          if (stage.elevation_loss_m != null) existing.push(`D− (${stage.elevation_loss_m} m)`);
-          if (stage.duration) existing.push(`durée (${stage.duration})`);
+        const existing = [];
+        if (stage.distance_km != null) existing.push(`distance (${stage.distance_km} km)`);
+        if (stage.elevation_gain_m != null) existing.push(`D+ (${stage.elevation_gain_m} m)`);
+        if (stage.elevation_loss_m != null) existing.push(`D− (${stage.elevation_loss_m} m)`);
+        if (stage.duration) existing.push(`durée (${stage.duration})`);
 
-          const msg = existing.length
-            ? `Jour ${stage.stage_number} — valeurs existantes : ${existing.join(", ")}.\n\nNouvelles valeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nÉcraser ?`
-            : `Jour ${stage.stage_number} — aucune valeur existante.\n\nValeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nAppliquer ?`;
+        const msg = existing.length
+          ? `Jour ${stage.stage_number} — valeurs existantes : ${existing.join(", ")}.\n\nNouvelles valeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nÉcraser ?`
+          : `Jour ${stage.stage_number} — aucune valeur existante.\n\nValeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nAppliquer ?`;
 
-          if (!window.confirm(msg)) continue;
+        if (!window.confirm(msg)) continue;
 
-          const update = {};
-          if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
-          if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
-          if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
-          if (durationStr) update.duration = durationStr;
-
-          await updateStage(supabase, stage.id, update);
-          report.updated++;
-        } catch (err) { report.errors.push(`Jour ${stage.stage_number} : ${err.message}`); }
+        const saved = await applyStageMetrics(metrics, durationStr, stage);
+        if (saved) report.updated++;
       }
 
       let msg = `Analyse terminée : ${report.analyzed} analysée(s), ${report.updated} mise(s) à jour.`;
       if (report.errors.length) msg += `\nErreurs :\n${report.errors.map(e => `  • ${e}`).join("\n")}`;
       setAutomationResult(msg);
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
     finally { setAutomationBusy(null); }
   }
@@ -614,13 +591,7 @@ export default function RoadbookDetailPage() {
       let msg = `Enrichissement terminé : ${report.poisUpdated}/${report.poisFound} POI, ${report.accomsUpdated}/${report.accomsFound} hébergements mis à jour.`;
       if (report.errors.length) msg += `\nErreurs :\n${report.errors.map(e => `  • ${e}`).join("\n")}`;
       setAutomationResult(msg);
-      const stageIds = stages.map(s => s.id);
-      if (stageIds.length) {
-        const pois = await loadPois(supabase, stageIds);
-        const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m);
-        const refreshed = await loadStages(supabase, id);
-        if (refreshed) setStages(refreshed);
-      }
+      await reloadAfterEnrichment();
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
     finally { setAutomationBusy(null); }
   }
