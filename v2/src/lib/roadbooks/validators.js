@@ -1,0 +1,168 @@
+export function validateGpx(file) {
+  const name = file.name.toLowerCase();
+  const accept = name.endsWith(".gpx") || ["application/gpx+xml", "application/xml", "text/xml"].includes(file.type);
+  if (!accept) return "Seuls les fichiers .gpx sont acceptés.";
+  if (file.size > 10 * 1024 * 1024) return "Le fichier dépasse 10 Mo.";
+  return null;
+}
+
+export function normalizeNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function buildGpxPath(userId, roadbookId, scope, role, stageId) {
+  if (scope === "stage" && stageId) return `${userId}/${roadbookId}/stages/${stageId}/${crypto.randomUUID()}`;
+  return `${userId}/${roadbookId}/roadbook/${role}/${crypto.randomUUID()}`;
+}
+
+export function resizeImage(file, maxWidth = 1600) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round(height * maxWidth / width);
+        width = maxWidth;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error("Échec de la compression")); return; }
+        resolve({ blob, width, height, size: blob.size });
+      }, "image/jpeg", 0.85);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+export function defaultStageFormState() {
+  return {
+    dayNumber: "", title: "", start: "", end: "",
+    dist: "", gain: "", loss: "", difficulty: "",
+    accommodation: "", description: "", notes: "", warning: "",
+    mapEmbed: "", photoUrl: "", day: "", label: "", duration: "",
+  };
+}
+
+export function stageToFormValues(stage) {
+  const meta = stage.metadata ?? {};
+  return {
+    dayNumber: String(stage.stage_number),
+    title: stage.title ?? "",
+    start: stage.departure ?? "",
+    end: stage.arrival ?? "",
+    dist: stage.distance_km != null ? String(stage.distance_km) : "",
+    gain: stage.elevation_gain_m != null ? String(stage.elevation_gain_m) : "",
+    loss: stage.elevation_loss_m != null ? String(stage.elevation_loss_m) : "",
+    difficulty: meta.difficulty ?? "",
+    accommodation: stage.accommodation_name ?? "",
+    description: meta.description ?? "",
+    notes: stage.notes?.length ? stage.notes.map(n => n.text ?? n).join("\n") : "",
+    warning: meta.warning ?? "",
+    mapEmbed: stage.map_embed_url ?? "",
+    photoUrl: stage.stage_photo_url ?? "",
+    day: stage.day ?? "",
+    label: stage.stage_label ?? "",
+    duration: stage.duration ?? "",
+  };
+}
+
+export function buildStageRecord(id, form, editingStage) {
+  const dayNumber = Number(form.dayNumber);
+  const notes = form.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
+  const metadata = {};
+  if (form.difficulty) metadata.difficulty = form.difficulty;
+  if (form.description) metadata.description = form.description;
+  if (form.warning) metadata.warning = form.warning;
+  const record = {
+    roadbook_id: Number(id),
+    stage_number: dayNumber,
+    title: form.title || null,
+    departure: form.start || null,
+    arrival: form.end || null,
+    distance_km: normalizeNumber(form.dist),
+    elevation_gain_m: normalizeNumber(form.gain),
+    elevation_loss_m: normalizeNumber(form.loss),
+    accommodation_name: form.accommodation || null,
+    map_embed_url: form.mapEmbed || null,
+    stage_photo_url: form.photoUrl || null,
+    day: form.day || null,
+    stage_label: form.label || null,
+    duration: form.duration || null,
+    notes: notes.length ? notes : [],
+    metadata,
+  };
+  return record;
+}
+
+export function buildPoiRecord(poiForm) {
+  return {
+    stage_id: poiForm.stage_id,
+    name: poiForm.name,
+    poi_type: poiForm.type || null,
+    description: poiForm.description || null,
+    lat: poiForm.lat ? Number(poiForm.lat) : null,
+    lng: poiForm.lng ? Number(poiForm.lng) : null,
+    link_url: poiForm.url || null,
+  };
+}
+
+export function buildVariantRecord(variantForm) {
+  const meta = {};
+  if (variantForm.type) meta.type = variantForm.type;
+  const notesArr = variantForm.notes
+    ? variantForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }))
+    : [];
+  return {
+    stage_id: variantForm.stage_id,
+    label: variantForm.title,
+    description: variantForm.description || null,
+    distance_km: normalizeNumber(variantForm.distance_km),
+    departure: variantForm.departure || null,
+    arrival: variantForm.arrival || null,
+    elevation_gain_m: normalizeNumber(variantForm.elevation_gain_m),
+    elevation_loss_m: normalizeNumber(variantForm.elevation_loss_m),
+    map_embed_url: variantForm.map_embed_url || null,
+    notes: notesArr.length ? notesArr : [],
+    metadata: Object.keys(meta).length ? meta : {},
+  };
+}
+
+export function buildNotePayload(stage, noteForm) {
+  const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
+  if (noteForm.editing != null && notes[noteForm.editing]) {
+    notes[noteForm.editing] = { ...notes[noteForm.editing], text: noteForm.text.trim() };
+  } else {
+    notes.push({ text: noteForm.text.trim() });
+  }
+  return notes;
+}
+
+export function removeNote(stage, noteIndex) {
+  const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
+  notes.splice(noteIndex, 1);
+  return notes;
+}
+
+export function groupByStageId(rows) {
+  const map = {};
+  (rows || []).forEach(r => {
+    if (!map[r.stage_id]) map[r.stage_id] = [];
+    map[r.stage_id].push(r);
+  });
+  return map;
+}
+
+export function validateStageForm(form) {
+  const errors = [];
+  if (!form.dayNumber || !Number(form.dayNumber)) errors.push("Le numéro d'étape est obligatoire.");
+  return errors;
+}
