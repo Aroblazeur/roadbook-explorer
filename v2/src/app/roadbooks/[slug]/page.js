@@ -121,35 +121,23 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             gpxCustom={gpxCustom}
           />
           {images.length > 0 && <ImagesSection images={images} />}
+          <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
+            <span />
+            <Link href="/explore">Retour aux roadbooks</Link>
+            <span />
+          </nav>
         </>
       ) : (
-        <section className="card">
-          <h2>Étape {currentIdx + 1}</h2>
-          <ol className="home-stage-list__items">
-            <li>
-              <StageCard
-                stage={currentStage}
-                pois={poisByStage[currentStage.id] ?? []}
-                variants={variantsByStage[currentStage.id] ?? []}
-                stageGpx={gpxByStage[currentStage.id] ?? null}
-                showMap
-              />
-            </li>
-          </ol>
-        </section>
+        <StageDetailPage
+          roadbook={roadbook}
+          stages={stages}
+          currentIdx={currentIdx}
+          stage={currentStage}
+          pois={poisByStage[currentStage.id] ?? []}
+          variants={variantsByStage[currentStage.id] ?? []}
+          stageGpx={gpxByStage[currentStage.id] ?? null}
+        />
       )}
-
-      <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
-        {currentIdx != null && currentIdx > 0
-          ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx - 1}`}>← Étape précédente</Link>
-          : <span />}
-        <Link href={currentIdx != null ? `/roadbooks/${roadbook.slug}` : "/explore"}>
-          {currentIdx != null ? "Vue d'ensemble" : "Retour aux roadbooks"}
-        </Link>
-        {currentIdx != null && currentIdx < stages.length - 1
-          ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx + 1}`}>Étape suivante →</Link>
-          : <span />}
-      </nav>
     </main>
     </>
   );
@@ -355,34 +343,130 @@ function ImagesSection({ images }) {
   );
 }
 
-function VariantCard({ v }) {
-  const vmeta = v.metadata ?? {};
-  const vType = vmeta.type;
-  const vGain = v.elevation_gain_m ?? vmeta.elevation_gain_m;
-  const vLoss = v.elevation_loss_m ?? vmeta.elevation_loss_m;
-  const vDep = v.departure ?? vmeta.departure;
-  const vArr = v.arrival ?? vmeta.arrival;
+function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, stageGpx }) {
   return (
-    <div className="variant-card">
-      <p style={{ margin: 0 }}>
-        <span style={{ color: "#888", marginRight: "4px" }}>↳</span>
-        {vType && <span className="variant-badge">{vType}</span>}
-        <strong>{v.label}</strong>
-      </p>
-      {(vDep || vArr) && (
-        <p className="text-muted" style={{ margin: "0.25rem 0", fontSize: "0.9rem" }}>
-          {vDep && <span>{vDep}</span>}
-          {vDep && vArr && <> → </>}
-          {vArr && <span>{vArr}</span>}
-        </p>
-      )}
-      <div className="stats stats--compact" style={{ gap: "0.3rem", margin: "0.25rem 0 0" }}>
-        {v.distance_km != null && <span className="variant-pill"><strong>{v.distance_km}</strong> km</span>}
-        {vGain != null && <span className="variant-pill"><strong>{vGain}</strong> m D+</span>}
-        {vLoss != null && <span className="variant-pill"><strong>{vLoss}</strong> m D−</span>}
+    <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
+      <StageDetailNavigation roadbook={roadbook} stages={stages} currentIdx={currentIdx} stage={stage} />
+      <StageCard
+        stage={stage}
+        stageIndex={currentIdx}
+        pois={pois}
+        variants={variants}
+        stageGpx={stageGpx}
+      />
+    </section>
+  );
+}
+
+function StageDetailNavigation({ roadbook, stages, currentIdx, stage }) {
+  const overviewHref = `/roadbooks/${roadbook.slug}`;
+  const previousHref = currentIdx === 0 ? overviewHref : `/roadbooks/${roadbook.slug}?stage=${currentIdx - 1}`;
+  const nextHref = currentIdx < stages.length - 1 ? `/roadbooks/${roadbook.slug}?stage=${currentIdx + 1}` : null;
+  const stageNumber = stage.stage_number ?? currentIdx + 1;
+  const currentLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
+
+  return (
+    <nav className="stage-detail-navigation card" aria-label="Navigation entre les étapes">
+      <Link className="stage-detail-button stage-detail-button--secondary" href="/explore">
+        ← Retour aux roadbooks
+      </Link>
+      <Link className="stage-detail-button" href={previousHref}>
+        ← Étape précédente
+      </Link>
+      <div className="stage-detail-navigation__current">
+        <strong>{currentLabel}</strong>
+        <Link href={overviewHref}>Retour aux étapes</Link>
       </div>
-      {v.description && <p className="text-muted" style={{ margin: "0.25rem 0", fontSize: "0.88rem", lineHeight: "1.45" }}>{v.description}</p>}
-    </div>
+      {nextHref ? (
+        <Link className="stage-detail-button" href={nextHref}>
+          Étape suivante →
+        </Link>
+      ) : (
+        <span className="stage-detail-button stage-detail-button--disabled" aria-disabled="true">
+          Étape suivante →
+        </span>
+      )}
+    </nav>
+  );
+}
+
+function VariantCard({ variant, contextCity }) {
+  const meta = variant.metadata ?? {};
+  const type = meta.type || meta.itemType;
+  const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
+  const loss = variant.elevation_loss_m ?? meta.elevation_loss_m;
+  const departure = variant.departure ?? meta.departure;
+  const arrival = variant.arrival ?? meta.arrival;
+  const mapUrl = safeResourceUrl(variant.map_embed_url ?? meta.map_embed_url, { relative: false });
+  const gpxUrl = safeResourceUrl(variant.gpx_url);
+  const notes = normalizeNoteItems(variant.notes ?? meta.notes);
+  const accommodation = normalizeAccommodation(meta.accommodation ?? meta.legacyAccommodation);
+  const alternatives = normalizeAlternatives(meta.accommodation?.alternatives);
+  if (meta.alternativeAccommodationName || meta.alternativeAccommodationPhoto) {
+    alternatives.push(normalizeAccommodation({
+      name: meta.alternativeAccommodationName,
+      photo: meta.alternativeAccommodationPhoto,
+    }));
+  }
+
+  return (
+    <article className="stage-detail-variant">
+      <header className="stage-detail-variant__header">
+        <span className="stage-detail-variant__marker" aria-hidden="true">↳</span>
+        <div>
+          {type && <span className="stage-detail-variant__badge">{type}</span>}
+          <h3>{variant.label || "Variante"}</h3>
+        </div>
+      </header>
+      {(departure || arrival) && <StageRoute departure={departure} arrival={arrival} />}
+      <div className="stage-detail-variant__stats" aria-label="Statistiques de la variante">
+        {variant.distance_km != null && <span><strong>{formatNumber(variant.distance_km)}</strong> km</span>}
+        {gain != null && <span><strong>{formatNumber(gain)}</strong> m D+</span>}
+        {loss != null && <span><strong>{formatNumber(loss)}</strong> m D−</span>}
+      </div>
+      {variant.description && <p className="stage-detail-variant__description">{variant.description}</p>}
+      {notes.length > 0 && (
+        <div className="stage-detail-variant__notes">
+          <h4>Notes</h4>
+          <NoteList notes={notes} imageAlt="Photo associée à la variante" />
+        </div>
+      )}
+      {hasAccommodation(accommodation) && (
+        <div className="stage-detail-variant__accommodation">
+          <h4>Hébergement</h4>
+          <AccommodationResource accommodation={accommodation} contextCity={arrival || departure || contextCity} compact />
+        </div>
+      )}
+      {alternatives.filter(hasAccommodation).length > 0 && (
+        <div className="stage-detail-variant__accommodation">
+          <h4>Hébergements alternatifs</h4>
+          <div className="stage-detail-accommodation-list">
+            {alternatives.filter(hasAccommodation).map((item, index) => (
+              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={arrival || departure || contextCity} compact />
+            ))}
+          </div>
+        </div>
+      )}
+      {(mapUrl || gpxUrl) && (
+        <div className="stage-detail-variant__map">
+          <h4>Tracé de la variante</h4>
+          {mapUrl ? (
+            <div className="stage-detail-map">
+              <iframe src={mapUrl} title={`Carte de la variante ${variant.label || ""}`} allowFullScreen loading="lazy" />
+            </div>
+          ) : (
+            <div className="stage-detail-map">
+              <MapViewerClient gpxUrl={gpxUrl} height={260} />
+            </div>
+          )}
+          {gpxUrl && (
+            <a className="stage-detail-button stage-detail-button--secondary" href={gpxUrl} download>
+              Télécharger le GPX de la variante
+            </a>
+          )}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -409,120 +493,336 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, pois, variants, stageGpx, showMap = false }) {
+function StageCard({ stage, stageIndex, pois, variants, stageGpx }) {
   const meta = stage.metadata ?? {};
-  const accommodationTypeIcon = stage.accommodation_type === "hotel" ? "🏨" : stage.accommodation_type === "camping" ? "⛺" : stage.accommodation_type === "gite" ? "🏡" : stage.accommodation_type === "hostel" ? "🛏️" : "🏠";
+  const stageNumber = stage.stage_number ?? stageIndex + 1;
+  const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
+  const title = stageHeadingTitle(stage, stageNumber, stageLabel);
+  const photoUrl = safeResourceUrl(stage.stage_photo_url);
+  const stageGpxUrl = safeResourceUrl(stageGpx?.signedUrl ?? stage.gpx_url);
+  const mapUrl = safeResourceUrl(stage.map_embed_url, { relative: false });
+  const normalizedNotes = normalizeNoteItems(stage.notes);
+  const warningNotes = normalizedNotes.filter(note => note.type === "warning");
+  const notes = normalizedNotes.filter(note => note.type !== "warning");
+  const warnings = normalizeWarnings(meta.warning, meta.warnings, warningNotes);
+  const accommodation = normalizeAccommodation({
+    name: stage.accommodation_name,
+    url: stage.accommodation_url,
+    photo: stage.accommodation_photo,
+    type: stage.accommodation_type,
+  });
+  const alternatives = normalizeAlternatives(stage.alternatives);
+  if (meta.alternativeAccommodationName || meta.alternativeAccommodationPhoto) {
+    alternatives.push(normalizeAccommodation({
+      name: meta.alternativeAccommodationName,
+      photo: meta.alternativeAccommodationPhoto,
+    }));
+  }
+  const contextCity = stage.arrival || stage.departure || "";
+
   return (
-    <div className="stage-card" style={{ margin: "12px 0" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-        <span className="stage-number-circle" style={{ minWidth: 42, width: 42, height: 42, fontSize: "1.1rem" }}>
-          {stage.stage_number}
-        </span>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ margin: 0 }}>
-            {stage.stage_label || (stage.day ? `${stage.day}` : "")}
-            {stage.title && <span className="text-muted" style={{ fontWeight: "normal" }}> — {stage.title}</span>}
-          </h3>
-          {(stage.departure || stage.arrival) && (
-            <p className="stage-route-links">
-              {stage.departure && <span className="stage-city-link">Départ : {stage.departure}</span>}
-              {stage.departure && stage.arrival && <> → </>}
-              {stage.arrival && <span className="stage-city-link">Arrivée : {stage.arrival}</span>}
-            </p>
-          )}
-        </div>
-      </div>
+    <>
+      <article className="stage-detail-card stage-detail-card--primary card">
+        <header className="stage-detail-heading">
+          <span className="stage-detail-heading__number" aria-hidden="true">{stage.is_substep ? "↳" : stageNumber}</span>
+          <div>
+            <h2>{title || `Étape ${stageNumber}`}</h2>
+            {(stage.departure || stage.arrival) && <StageRoute departure={stage.departure} arrival={stage.arrival} />}
+          </div>
+        </header>
 
-      {stage.stage_photo_url && (
-        <figure className="stage-photo">
-          <img src={stage.stage_photo_url} alt="" className="stage-photo__image" />
-        </figure>
+        {photoUrl && (
+          <figure className="stage-detail-photo">
+            <img src={photoUrl} alt={`Photo de ${stage.title || stageLabel}`} loading="lazy" />
+          </figure>
+        )}
+
+        <StageDetailStats stage={stage} />
+        {(meta.description || stage.description) && <p className="stage-detail-description">{meta.description || stage.description}</p>}
+        {warnings.length > 0 && (
+          <div className="stage-detail-warning" role="note" aria-label="Avertissement">
+            <span aria-hidden="true">⚠</span>
+            <div>{warnings.map((warning, index) => <p key={`${warning}-${index}`}>{warning}</p>)}</div>
+          </div>
+        )}
+      </article>
+
+      <section className="stage-detail-card stage-detail-notes card" aria-labelledby="stage-detail-notes-title">
+        <h2 id="stage-detail-notes-title">Notes ({notes.length})</h2>
+        {notes.length > 0 && <NoteList notes={notes} imageAlt="Photo associée à la note" />}
+      </section>
+
+      <section className="stage-detail-card stage-detail-pois card" aria-labelledby="stage-detail-pois-title">
+        <h2 id="stage-detail-pois-title">Points d&apos;intérêt</h2>
+        {pois.length > 0 ? (
+          <ul className="stage-detail-poi-list">
+            {pois.map(poi => <PoiCard key={poi.id} poi={poi} />)}
+          </ul>
+        ) : (
+          <p className="stage-detail-empty">Non renseigné</p>
+        )}
+      </section>
+
+      {hasAccommodation(accommodation) && (
+        <section className="stage-detail-card stage-detail-accommodations card" aria-labelledby="stage-detail-primary-accommodation-title">
+          <h2 id="stage-detail-primary-accommodation-title">Hébergement principal</h2>
+          <AccommodationResource accommodation={accommodation} contextCity={contextCity} />
+        </section>
       )}
 
-      <Pills distanceKm={stage.distance_km} elevationGain={stage.elevation_gain_m} elevationLoss={stage.elevation_loss_m} duration={stage.duration} />
-
-      {meta.description && <p className="stage-description">{meta.description}</p>}
-      {meta.warning && <p className="stage-warning">⚠ {meta.warning}</p>}
-
-      {/* Accommodation */}
-      {stage.accommodation_name && (
-        <div className="accommodation-resource">
-          {stage.accommodation_photo && <img src={stage.accommodation_photo} alt={stage.accommodation_name} className="accommodation-resource__image" loading="lazy" />}
-          {stage.accommodation_url ? (
-            <a href={stage.accommodation_url} target="_blank" rel="noopener noreferrer" className="terrain-button terrain-button--secondary accommodation-resource__website-link" style={{ textDecoration: "none" }}>
-              <span className="accommodation-type-icon">{accommodationTypeIcon}</span> {stage.accommodation_name}
-            </a>
+      {(mapUrl || stageGpxUrl) && (
+        <section className="stage-detail-card stage-detail-map-card card" aria-labelledby="stage-detail-map-title">
+          <h2 id="stage-detail-map-title">Carte interactive</h2>
+          {mapUrl ? (
+            <div className="stage-detail-map">
+              <iframe src={mapUrl} title={`Carte de ${title || `l'étape ${stageNumber}`}`} allowFullScreen loading="lazy" />
+            </div>
           ) : (
-            <p><strong>{stage.accommodation_name}</strong></p>
+            <div className="stage-detail-map">
+              <MapViewerClient gpxUrl={stageGpxUrl} height={300} />
+            </div>
           )}
-        </div>
+          {stageGpxUrl && (
+            <div className="stage-detail-map-card__actions">
+              <a
+                className="stage-detail-button stage-detail-button--secondary"
+                href={stageGpxUrl}
+                download={stageGpx?.file_name ?? `etape-${stageNumber}.gpx`}
+              >
+                Télécharger le GPX de l&apos;étape
+              </a>
+            </div>
+          )}
+        </section>
       )}
 
-      {/* Map */}
-      {showMap && stage.map_embed_url && (
-        <div id="stage-map-embed" className="map-embed">
-          <iframe src={stage.map_embed_url} width="100%" height="100%" allowFullScreen loading="lazy" />
-        </div>
-      )}
-      {showMap && !stage.map_embed_url && stageGpx && (
-        <div id="stage-map-embed" className="map-embed">
-          <MapViewerClient gpxUrl={stageGpx.signedUrl} height={300} />
-        </div>
-      )}
-
-      {/* Notes */}
-      {Array.isArray(stage.notes) && stage.notes.length > 0 && (
-        <details style={{ marginTop: "0.5rem" }}>
-          <summary><strong>Notes ({stage.notes.length})</strong></summary>
-          <ul className="note-list" style={{ marginTop: "0.5rem" }}>
-            {stage.notes.map((note, i) => (
-              <li key={i} className="note-item">
-                <p className="note-item__text">{note.text ?? note}</p>
-                {note.photo && <img src={note.photo} alt="" className="note-item__photo" />}
-              </li>
+      {alternatives.filter(hasAccommodation).length > 0 && (
+        <section className="stage-detail-card stage-detail-accommodations card" aria-labelledby="stage-detail-alternatives-title">
+          <h2 id="stage-detail-alternatives-title">Hébergements alternatifs</h2>
+          <div className="stage-detail-accommodation-list">
+            {alternatives.filter(hasAccommodation).map((item, index) => (
+              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} />
             ))}
-          </ul>
-        </details>
+          </div>
+        </section>
       )}
 
-      {/* POI */}
-      {pois.length > 0 && (
-        <details style={{ marginTop: "0.5rem" }}>
-          <summary><strong>Points d&apos;intérêt ({pois.length})</strong></summary>
-          <ul className="poi-list poi-list--enriched" style={{ marginTop: "0.5rem" }}>
-            {pois.map(poi => (
-              <li key={poi.id} className="poi-card">
-                {poi.photo_url && <img src={poi.photo_url} alt="" className="poi-card__image" loading="lazy" />}
-                <div className="poi-card__content">
-                  <strong className="poi-card__name">{poi.poi_type && <span style={{ color: "#2e7d32" }}>[{poi.poi_type}] </span>}{poi.name}</strong>
-                  {poi.region && <p className="poi-card__region">{poi.region}</p>}
-                  {poi.description && <p className="poi-card__description">{poi.description}</p>}
-                  {poi.link_url && <a href={poi.link_url} target="_blank" rel="noopener" className="poi-card__map-link">Ouvrir le lien →</a>}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {/* Variants */}
       {variants.length > 0 && (
-        <div style={{ marginTop: "0.75rem" }}>
-          <p className="text-muted" style={{ fontWeight: "bold", fontSize: "0.9rem", marginBottom: "0.3rem" }}>Variantes ({variants.length})</p>
-          {variants.map(v => <VariantCard key={v.id} v={v} />)}
-        </div>
+        <section className="stage-detail-card stage-detail-variants card" aria-labelledby="stage-detail-variants-title">
+          <h2 id="stage-detail-variants-title">Variantes ({variants.length})</h2>
+          <div className="stage-detail-variant-list">
+            {variants.map(variant => <VariantCard key={variant.id} variant={variant} contextCity={contextCity} />)}
+          </div>
+        </section>
       )}
+    </>
+  );
+}
 
-      {stageGpx && (
-        <p className="gpx-actions" style={{ marginTop: "0.5rem" }}>
-          <strong>GPX d&apos;étape :</strong>{" "}
-          <a href={stageGpx.signedUrl} download={stageGpx.file_name ?? "etape.gpx"}>
-            {stageGpx.file_name ?? "Télécharger"}
-          </a>
-        </p>
+function StageRoute({ departure, arrival }) {
+  return (
+    <p className="stage-detail-route">
+      {departure && (
+        <a href={googleMapsSearchUrl(departure)} target="_blank" rel="noopener noreferrer">
+          {departure}
+        </a>
       )}
+      {departure && arrival && <span aria-hidden="true"> → </span>}
+      {arrival && (
+        <a href={googleMapsSearchUrl(arrival)} target="_blank" rel="noopener noreferrer">
+          {arrival}
+        </a>
+      )}
+    </p>
+  );
+}
+
+function StageDetailStats({ stage }) {
+  const items = [
+    { label: "Distance", value: formatMetric(stage.distance_km, "km"), icon: StatIconDistance },
+    { label: "D+", value: formatMetric(stage.elevation_gain_m, "m"), icon: StatIconElevationGain },
+    { label: "D−", value: formatMetric(stage.elevation_loss_m, "m"), icon: StatIconElevationLoss },
+    { label: "Durée", value: textValue(stage.duration) || "Non renseigné", icon: StatIconDuration },
+  ];
+
+  return (
+    <div className="stage-detail-stats" aria-label="Statistiques de l'étape">
+      {items.map(item => {
+        const Icon = item.icon;
+        return (
+          <div className="stage-detail-stat" key={item.label} aria-label={`${item.label} : ${item.value}`}>
+            <Icon />
+            <span className="stage-detail-stat__label">{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+function NoteList({ notes, imageAlt }) {
+  return (
+    <ul className="stage-detail-note-list">
+      {notes.map((note, index) => (
+        <li className="stage-detail-note" key={`${note.text}-${index}`}>
+          <p>{note.text}</p>
+          {note.photo && <img src={note.photo} alt={imageAlt} loading="lazy" />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PoiCard({ poi }) {
+  const photoUrl = safeResourceUrl(poi.photo_url);
+  const poiType = poi.poi_type || poi.type;
+  const linkUrl = safeResourceUrl(poi.link_url, { relative: false }) || poiMapUrl(poi);
+
+  return (
+    <li className={`stage-detail-poi${photoUrl ? "" : " stage-detail-poi--without-image"}`}>
+      {photoUrl && <img src={photoUrl} alt={`Photo de ${poi.name || "ce point d'intérêt"}`} loading="lazy" />}
+      <div className="stage-detail-poi__content">
+        <strong className="stage-detail-poi__name">{poiType && <span>[{poiType}] </span>}{poi.name || "Point d'intérêt"}</strong>
+        {poi.region && <p className="stage-detail-poi__region">{poi.region}</p>}
+        {poi.description && <p className="stage-detail-poi__description">{poi.description}</p>}
+        {linkUrl && (
+          <a className="stage-detail-poi__link" href={linkUrl} target="_blank" rel="noopener noreferrer">
+            {poi.link_url ? "Ouvrir le lien" : "Voir sur la carte"} →
+          </a>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function AccommodationResource({ accommodation, contextCity, compact = false }) {
+  const name = accommodation.name || "Hébergement";
+  const photoUrl = safeResourceUrl(accommodation.photo);
+  const websiteUrl = safeResourceUrl(accommodation.url, { relative: false });
+  const mapUrl = googleMapsSearchUrl([name, contextCity].filter(Boolean).join(" "));
+
+  return (
+    <article className={`stage-detail-accommodation${compact ? " stage-detail-accommodation--compact" : ""}`}>
+      {photoUrl ? (
+        <img className="stage-detail-accommodation__image" src={photoUrl} alt={`Photo de ${name}`} loading="lazy" />
+      ) : (
+        <div className="stage-detail-accommodation__placeholder" aria-hidden="true">
+          <span>{accommodationIcon(accommodation.type, name)}</span>
+          <span>Hébergement</span>
+        </div>
+      )}
+      <div className="stage-detail-accommodation__actions">
+        {websiteUrl ? (
+          <a className="stage-detail-button stage-detail-button--secondary" href={websiteUrl} target="_blank" rel="noopener noreferrer">
+            <span aria-hidden="true">{accommodationIcon(accommodation.type, name)}</span> {name}
+          </a>
+        ) : (
+          <span className="stage-detail-accommodation__name">
+            <span aria-hidden="true">{accommodationIcon(accommodation.type, name)}</span> {name}
+          </span>
+        )}
+        <a className="stage-detail-accommodation__map" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`Rechercher ${name} sur Google Maps`}>
+          Carte
+        </a>
+      </div>
+      {accommodation.note && <p className="stage-detail-accommodation__note">{accommodation.note}</p>}
+    </article>
+  );
+}
+
+function normalizeNoteItems(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(note => {
+    if (note && typeof note === "object") {
+      return {
+        text: textValue(note.text ?? note.note),
+        photo: safeResourceUrl(note.photo),
+        type: textValue(note.type).toLowerCase(),
+      };
+    }
+    return { text: textValue(note), photo: null, type: "" };
+  }).filter(note => note.text);
+}
+
+function normalizeWarnings(...sources) {
+  return sources.flatMap(source => {
+    if (Array.isArray(source)) return source.map(item => textValue(item?.text ?? item));
+    return [textValue(source?.text ?? source)];
+  }).filter(Boolean);
+}
+
+function normalizeAccommodation(value) {
+  if (typeof value === "string") return { name: textValue(value), url: "", photo: "", type: "", note: "" };
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    name: textValue(source.displayName ?? source.name),
+    url: textValue(source.website ?? source.url),
+    photo: textValue(source.photo),
+    type: textValue(source.type),
+    note: textValue(source.comment ?? source.note),
+  };
+}
+
+function normalizeAlternatives(value) {
+  return Array.isArray(value) ? value.map(normalizeAccommodation) : [];
+}
+
+function hasAccommodation(value) {
+  return Boolean(value && (value.name || value.url || value.photo));
+}
+
+function textValue(value) {
+  if (value == null) return "";
+  return String(value).trim();
+}
+
+function stageHeadingTitle(stage, stageNumber, fallback) {
+  const title = textValue(stage.title);
+  if (!title) return fallback;
+  const routeStart = [stage.departure, stage.arrival]
+    .map(textValue)
+    .filter(Boolean)
+    .map(city => title.toLocaleLowerCase("fr-FR").indexOf(city.toLocaleLowerCase("fr-FR")))
+    .filter(index => index >= 0)
+    .sort((a, b) => a - b)[0];
+  if (routeStart == null) return title;
+  const prefix = title.slice(0, routeStart).replace(/[\s→–—-]+$/u, "").trim();
+  return prefix || `Étape ${stageNumber}`;
+}
+
+function safeResourceUrl(value, { relative = true } = {}) {
+  const candidate = textValue(value);
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "http:" || url.protocol === "https:" ? candidate : null;
+  } catch {
+    if (!relative || candidate.startsWith("//") || candidate.includes(":")) return null;
+    return candidate;
+  }
+}
+
+function googleMapsSearchUrl(query) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(textValue(query))}`;
+}
+
+function poiMapUrl(poi) {
+  const latitude = Number(poi.latitude ?? poi.lat);
+  const longitude = Number(poi.longitude ?? poi.lng);
+  if (Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180) {
+    return googleMapsSearchUrl(`${latitude},${longitude}`);
+  }
+  return poi.name ? googleMapsSearchUrl(poi.name) : null;
+}
+
+function formatNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toLocaleString("fr-FR", { maximumFractionDigits: 1 }) : "—";
+}
+
+function formatMetric(value, unit) {
+  return value == null || value === "" ? `— ${unit}` : `${formatNumber(value)} ${unit}`;
 }
 
 function StatIconDistance() {
