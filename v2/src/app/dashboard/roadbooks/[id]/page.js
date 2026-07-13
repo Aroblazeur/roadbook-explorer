@@ -8,6 +8,7 @@ import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/l
 import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, loadEnrichmentData } from "@/lib/enrichment";
 import { useNotifications } from "@/hooks/studio/useNotifications";
 import { useRoadbookData } from "@/hooks/studio/useRoadbookData";
+import { useMediaManager } from "@/hooks/studio/useMediaManager";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
@@ -19,7 +20,7 @@ import {
 } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
 import {
-  loadCoverMedia, loadMediaWithUrls, loadGpxRows, loadPois,
+  loadCoverMedia, loadGpxRows, loadPois,
   getSignedUrl,
 } from "@/lib/roadbooks/loaders";
 import {
@@ -27,7 +28,7 @@ import {
   insertPoi, updatePoi, deletePoi,
   insertVariant, updateVariant, deleteVariant,
   updateStageNotes, updateStageAccommodation, clearStageAccommodation,
-  uploadImage, insertMediaRecord, deleteMedia, deleteMediaRecordOnly,
+
   uploadGpx, removeStorageFile, insertGpxRecord, updateGpxRecord, deleteGpx,
   swapStageNumbers, insertRoadbook, duplicateRoadbook,
 } from "@/lib/roadbooks/writers";
@@ -85,10 +86,16 @@ export default function RoadbookDetailPage() {
   const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", editing: null });
   const [expandedStages, setExpandedStages] = useState({});
 
-  const [images, setImages] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState(null);
-  const [deletingImage, setDeletingImage] = useState(null);
+  const {
+    images, setImages,
+    uploadLoading,
+    deleteLoading,
+    uploadError, setUploadError,
+    reloadMedia,
+    uploadMedia,
+    removeMedia,
+    handleSignedUrl,
+  } = useMediaManager({ supabase, roadbookId: id, userId: user?.id });
 
   const [gpxError, setGpxError] = useState(null);
   const [uploadingGpx, setUploadingGpx] = useState(null);
@@ -216,7 +223,7 @@ export default function RoadbookDetailPage() {
         loadEnrichmentData(data.slug, "accommodation").then(json => { if (json?.items) setAccommodationIndex(createAccommodationIndex(json.items)); }).catch(() => {});
       }
 
-      loadImages();
+      reloadMedia();
       loadGpx();
     } catch (err) {
       setFetchError(err.message);
@@ -467,67 +474,16 @@ export default function RoadbookDetailPage() {
     reloadPoisVariants(stages.map(s => s.id));
   }
 
-  function resizeImage(file, maxWidth = 1600) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const canvas = document.createElement("canvas");
-        let { width, height } = img;
-        if (width > maxWidth) { height = Math.round(height * maxWidth / width); width = maxWidth; }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(blob => {
-          if (!blob) { reject(new Error("Échec de la compression")); return; }
-          resolve({ blob, width, height, size: blob.size });
-        }, "image/jpeg", 0.85);
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  }
-
-  async function handleSignedUrl(path) {
-    return getSignedUrl(supabase, "roadbook-images", path, 3600);
-  }
-
-  async function loadImages() {
-    if (!user || !id) return;
-    try {
-      const rows = await loadMediaWithUrls(supabase, id);
-      setImages(rows);
-    } catch {}
-  }
-
   async function handleUploadImage(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadError(null); setUploading(true);
-    try {
-      const { blob, width, height, size } = await resizeImage(file);
-      const path = await uploadImage(supabase, user.id, id, file, blob);
-      await insertMediaRecord(supabase, {
-        roadbook_id: Number(id), stage_id: null, type: "image",
-        bucket: "roadbook-images", path, file_name: file.name,
-        mime_type: "image/jpeg",
-        uploaded_by: user.id,
-        metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg" },
-      });
-      await loadImages();
-    } catch (err) { setUploadError(err.message); }
-    finally { setUploading(false); e.target.value = ""; }
+    await uploadMedia(file);
+    e.target.value = "";
   }
 
   async function handleDeleteImage(mediaRow) {
     if (!window.confirm("Supprimer cette image ?")) return;
-    setDeletingImage(mediaRow.id);
-    try {
-      await deleteMedia(supabase, mediaRow);
-      setImages(prev => prev.filter(i => i.id !== mediaRow.id));
-    } catch (err) { setUploadError(err.message); }
-    finally { setDeletingImage(null); }
+    await removeMedia(mediaRow);
   }
 
   const GPX_BUCKET = "roadbook-gpx";
@@ -1270,8 +1226,8 @@ export default function RoadbookDetailPage() {
               {uploadError && <p className="page-error">{uploadError}</p>}
               <div className="studio-media-upload">
                 <label className="terrain-button--secondary studio-action-button--compact" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
-                  {uploading ? "Upload..." : "Choisir une image"}
-                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUploadImage} disabled={uploading} />
+                  {uploadLoading ? "Upload..." : "Choisir une image"}
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleUploadImage} disabled={uploadLoading} />
                 </label>
               </div>
               {images.length === 0 && <p className="text-muted">Aucune image.</p>}
@@ -1281,8 +1237,8 @@ export default function RoadbookDetailPage() {
                     {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} className="studio-media-item__image" />}
                     <div className="studio-media-item__info">
                       <span className="text-muted studio-media-item__name">{img.file_name}</span>
-                      <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteImage(img)} disabled={deletingImage === img.id}>
-                        {deletingImage === img.id ? "..." : "Supprimer"}
+                      <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteImage(img)} disabled={deleteLoading === img.id}>
+                        {deleteLoading === img.id ? "..." : "Supprimer"}
                       </button>
                     </div>
                   </div>
