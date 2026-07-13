@@ -9,6 +9,7 @@ import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, l
 import { useNotifications } from "@/hooks/studio/useNotifications";
 import { useRoadbookData } from "@/hooks/studio/useRoadbookData";
 import { useMediaManager } from "@/hooks/studio/useMediaManager";
+import { useGpxManager } from "@/hooks/studio/useGpxManager";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
@@ -20,7 +21,7 @@ import {
 } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
 import {
-  loadCoverMedia, loadGpxRows, loadPois,
+  loadCoverMedia, loadPois,
   getSignedUrl,
 } from "@/lib/roadbooks/loaders";
 import {
@@ -29,7 +30,7 @@ import {
   insertVariant, updateVariant, deleteVariant,
   updateStageNotes, updateStageAccommodation, clearStageAccommodation,
 
-  uploadGpx, removeStorageFile, insertGpxRecord, updateGpxRecord, deleteGpx,
+
   swapStageNumbers, insertRoadbook, duplicateRoadbook,
 } from "@/lib/roadbooks/writers";
 import { applyPoiEnrichment, applyAccommodationEnrichment } from "@/lib/roadbooks/enrich";
@@ -97,12 +98,17 @@ export default function RoadbookDetailPage() {
     handleSignedUrl,
   } = useMediaManager({ supabase, roadbookId: id, userId: user?.id });
 
-  const [gpxError, setGpxError] = useState(null);
-  const [uploadingGpx, setUploadingGpx] = useState(null);
-  const [gpxOfficial, setGpxOfficial] = useState(null);
-  const [gpxCustom, setGpxCustom] = useState(null);
-  const [gpxByStage, setGpxByStage] = useState({});
-  const [computingGpx, setComputingGpx] = useState(null);
+  const {
+    gpxOfficial, gpxCustom, gpxByStage,
+    gpxUploading, metricsLoading,
+    gpxError, setGpxError,
+    reloadGpx,
+    uploadGpx: uploadGpxFile,
+    replaceGpx,
+    deleteGpx,
+    downloadGpx,
+    computeStageMetrics,
+  } = useGpxManager({ supabase, roadbookId: id, userId: user?.id });
 
   const [coverMode, setCoverMode] = useState(null); // "url" | "media"
   const [coverUrl, setCoverUrl] = useState("");
@@ -224,7 +230,7 @@ export default function RoadbookDetailPage() {
       }
 
       reloadMedia();
-      loadGpx();
+      reloadGpx();
     } catch (err) {
       setFetchError(err.message);
     }
@@ -486,57 +492,15 @@ export default function RoadbookDetailPage() {
     await removeMedia(mediaRow);
   }
 
-  const GPX_BUCKET = "roadbook-gpx";
-
-  function buildGpxPath(scope, role, stageId) {
-    if (scope === "stage" && stageId) return `${user.id}/${id}/stages/${stageId}/${crypto.randomUUID()}`;
-    return `${user.id}/${id}/roadbook/${role}/${crypto.randomUUID()}`;
-  }
-
-  function validateGpx(file) {
-    const name = file.name.toLowerCase();
-    const accept = name.endsWith(".gpx") || ["application/gpx+xml","application/xml","text/xml"].includes(file.type);
-    if (!accept) return "Seuls les fichiers .gpx sont acceptés.";
-    if (file.size > 10 * 1024 * 1024) return "Le fichier dépasse 10 Mo.";
-    return null;
-  }
-
-  async function loadGpx() {
-    if (!user || !id) return;
-    try {
-      const rows = await loadGpxRows(supabase, id);
-      const official = rows.find(r => r.metadata?.gpx_role === "official");
-      const custom = rows.find(r => r.metadata?.gpx_role === "custom");
-      setGpxOfficial(official ?? null);
-      setGpxCustom(custom ?? null);
-      const byStage = {};
-      rows.filter(r => r.metadata?.scope === "stage" && r.stage_id).forEach(r => { byStage[r.stage_id] = r; });
-      setGpxByStage(byStage);
-    } catch {}
-  }
-
   async function handleGpxDownload(mediaRow) {
-    try {
-      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
-      if (!signedUrl) return;
-      const a = document.createElement("a"); a.href = signedUrl; a.download = mediaRow.file_name; a.click();
-    } catch {}
+    await downloadGpx(mediaRow);
   }
 
   async function handleGpxReplace(mediaRow, scope, role, stageId) {
     const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx";
     input.onchange = async () => {
       const file = input.files?.[0]; if (!file) return;
-      const valErr = validateGpx(file); if (valErr) { setGpxError(valErr); return; }
-      setGpxError(null); setUploadingGpx(role ?? stageId);
-      try {
-        const path = buildGpxPath(scope, role, stageId) + `-${file.name}`;
-        await uploadGpx(supabase, GPX_BUCKET, path, file);
-        const meta = { ...mediaRow.metadata, original_name: file.name, original_size: file.size };
-        await updateGpxRecord(supabase, mediaRow.id, { path, file_name: file.name, metadata: meta });
-        await loadGpx();
-      } catch (err) { setGpxError(err.message); }
-      finally { setUploadingGpx(null); }
+      await replaceGpx(file, mediaRow, { scope, role, stageId });
     };
     input.click();
   }
@@ -545,84 +509,53 @@ export default function RoadbookDetailPage() {
     const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx";
     input.onchange = async () => {
       const file = input.files?.[0]; if (!file) return;
-      const valErr = validateGpx(file); if (valErr) { setGpxError(valErr); return; }
-      setGpxError(null); setUploadingGpx(role ?? stageId);
-      try {
-        const path = buildGpxPath(scope, role, stageId) + `-${file.name}`;
-        await uploadGpx(supabase, GPX_BUCKET, path, file);
-        const meta = { scope, original_name: file.name, original_size: file.size };
-        if (role) meta.gpx_role = role;
-        await insertGpxRecord(supabase, {
-          roadbook_id: Number(id), stage_id: scope === "stage" ? stageId : null, type: "gpx",
-          bucket: GPX_BUCKET, path, file_name: file.name, mime_type: "application/gpx+xml",
-          uploaded_by: user.id, metadata: meta,
-        });
-        await loadGpx();
-      } catch (err) { setGpxError(err.message); }
-      finally { setUploadingGpx(null); }
+      await uploadGpxFile(file, { scope, role, stageId });
     };
     input.click();
   }
 
   async function handleComputeFromGpx(mediaRow, stage) {
     if (!mediaRow || !stage) return;
-    setComputingGpx(stage.id);
-    setGpxError(null);
     setStageError(null);
-    try {
-      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
-      if (!signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
+    const result = await computeStageMetrics(mediaRow, stage);
+    if (!result) return;
+    const { metrics, durationStr, anyExisting } = result;
 
-      const metrics = await fetchAndComputeGpxMetrics(data.signedUrl);
-      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
-      const durationStr = formatDuration(hours);
+    if (anyExisting) {
+      const msgParts = [];
+      if (stage.distance_km != null) msgParts.push(`distance (${stage.distance_km} km)`);
+      if (stage.elevation_gain_m != null) msgParts.push(`D+ (${stage.elevation_gain_m} m)`);
+      if (stage.elevation_loss_m != null) msgParts.push(`D− (${stage.elevation_loss_m} m)`);
+      if (stage.duration) msgParts.push(`durée (${stage.duration})`);
 
-      const existingDist = stage.distance_km != null;
-      const existingGain = stage.elevation_gain_m != null;
-      const existingLoss = stage.elevation_loss_m != null;
-      const existingDuration = stage.duration != null;
-
-      const anyExisting = existingDist || existingGain || existingLoss || existingDuration;
-      if (anyExisting) {
-        const msgParts = [];
-        if (existingDist) msgParts.push(`distance (${stage.distance_km} km)`);
-        if (existingGain) msgParts.push(`D+ (${stage.elevation_gain_m} m)`);
-        if (existingLoss) msgParts.push(`D− (${stage.elevation_loss_m} m)`);
-        if (existingDuration) msgParts.push(`durée (${stage.duration})`);
-
-        const ok = window.confirm(
-          `Cette étape a déjà des valeurs de ${msgParts.join(", ")}.\n\n`
-          + `Nouvelles valeurs calculées :\n`
-          + `• Distance : ${metrics.distanceKm.toFixed(1)} km\n`
-          + `• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n`
-          + `• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n`
-          + `• Durée : ${durationStr || "N/A"}\n\n`
-          + `Écraser les valeurs existantes ?`
-        );
-        if (!ok) { setComputingGpx(null); return; }
-      }
-
-      const update = {};
-      if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
-      if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
-      if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
-      if (durationStr) update.duration = durationStr;
-
-      await updateStage(supabase, stage.id, update);
-
-      setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km`
-        + (metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : "")
-        + (metrics.elevationLossM != null ? `, D− ${Math.round(metrics.elevationLossM)} m` : "")
-        + (durationStr ? `, ${durationStr}` : "")
+      const ok = window.confirm(
+        `Cette étape a déjà des valeurs de ${msgParts.join(", ")}.\n\n`
+        + `Nouvelles valeurs calculées :\n`
+        + `• Distance : ${metrics.distanceKm.toFixed(1)} km\n`
+        + `• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n`
+        + `• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n`
+        + `• Durée : ${durationStr || "N/A"}\n\n`
+        + `Écraser les valeurs existantes ?`
       );
-
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
-    } catch (err) {
-      setGpxError(err.message ?? String(err));
-    } finally {
-      setComputingGpx(null);
+      if (!ok) return;
     }
+
+    const update = {};
+    if (metrics.distanceKm > 0) update.distance_km = Math.round(metrics.distanceKm * 100) / 100;
+    if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
+    if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
+    if (durationStr) update.duration = durationStr;
+
+    await updateStage(supabase, stage.id, update);
+
+    setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km`
+      + (metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : "")
+      + (metrics.elevationLossM != null ? `, D− ${Math.round(metrics.elevationLossM)} m` : "")
+      + (durationStr ? `, ${durationStr}` : "")
+    );
+
+    const refreshed = await loadStages(supabase, id);
+    if (refreshed) setStages(refreshed);
   }
 
   async function handleEnrichPoi(poi, stageId) {
@@ -838,7 +771,7 @@ export default function RoadbookDetailPage() {
       for (const { stage, gpx } of withGpx) {
         report.analyzed++;
         try {
-          const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, gpx.path, 3600);
+          const signedUrl = await getSignedUrl(supabase, "roadbook-gpx", gpx.path, 3600);
           if (!signedUrl) { report.errors.push(`Jour ${stage.stage_number} : URL signée indisponible`); continue; }
           const metrics = await fetchAndComputeGpxMetrics(signedUrl);
           const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
@@ -964,29 +897,24 @@ export default function RoadbookDetailPage() {
 
   async function handleGpxDelete(mediaRow) {
     if (!window.confirm("Supprimer ce GPX ?")) return;
-    setUploadingGpx("delete");
-    try {
-      await deleteGpx(supabase, mediaRow, GPX_BUCKET);
-      await loadGpx();
-    } catch (err) { setGpxError(err.message); }
-    finally { setUploadingGpx(null); }
+    await deleteGpx(mediaRow);
   }
 
   function renderGpxBlock(label, mediaRow, scope, role, stageId) {
-    const isUploading = uploadingGpx === (role ?? stageId);
-    const loadingLabel = uploadingGpx === "delete" ? "Suppression..." : isUploading ? "Upload..." : null;
+    const isUploading = gpxUploading === (role ?? stageId);
+    const loadingLabel = gpxUploading === "delete" ? "Suppression..." : isUploading ? "Upload..." : null;
     return (
       <div style={{ marginTop: "0.3rem" }}>
         <strong>{label} :</strong>
         {mediaRow ? (
           <span>
             {mediaRow.file_name}
-            <button type="button" onClick={() => handleGpxDownload(mediaRow)} disabled={!!uploadingGpx}>Télécharger</button>
-            <button type="button" onClick={() => handleGpxReplace(mediaRow, scope, role, stageId)} disabled={!!uploadingGpx}>Remplacer</button>
-            <button type="button" onClick={() => handleGpxDelete(mediaRow)} disabled={!!uploadingGpx}>Supprimer</button>
+            <button type="button" onClick={() => handleGpxDownload(mediaRow)} disabled={!!gpxUploading}>Télécharger</button>
+            <button type="button" onClick={() => handleGpxReplace(mediaRow, scope, role, stageId)} disabled={!!gpxUploading}>Remplacer</button>
+            <button type="button" onClick={() => handleGpxDelete(mediaRow)} disabled={!!gpxUploading}>Supprimer</button>
           </span>
         ) : (
-          <button type="button" onClick={() => scope === "stage" ? handleGpxUpload("stage", null, stageId) : handleGpxUpload("roadbook", role, null)} disabled={!!uploadingGpx}>
+          <button type="button" onClick={() => scope === "stage" ? handleGpxUpload("stage", null, stageId) : handleGpxUpload("roadbook", role, null)} disabled={!!gpxUploading}>
             {loadingLabel ?? `Upload ${label}`}
           </button>
         )}
@@ -1412,8 +1340,8 @@ export default function RoadbookDetailPage() {
                         {renderGpxBlock("GPX", gpxByStage[stage.id] ?? null, "stage", null, stage.id)}
                         {gpxByStage[stage.id] && (
                           <div className="studio-gpx-actions">
-                            <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleComputeFromGpx(gpxByStage[stage.id], stage)} disabled={computingGpx === stage.id}>
-                              {computingGpx === stage.id ? "Calcul..." : "Lire"}
+                            <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleComputeFromGpx(gpxByStage[stage.id], stage)} disabled={metricsLoading === stage.id}>
+                              {metricsLoading === stage.id ? "Calcul..." : "Lire"}
                             </button>
                           </div>
                         )}
