@@ -13,6 +13,7 @@ import { useGpxManager } from "@/hooks/studio/useGpxManager";
 import { useCoverManager } from "@/hooks/studio/useCoverManager";
 import { useEnrichment } from "@/hooks/studio/useEnrichment";
 import { useSaveWithLock } from "@/hooks/studio/useSaveWithLock";
+import { useStageCrud } from "@/hooks/studio/useStageCrud";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
@@ -20,17 +21,11 @@ import {
 } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
 import {
-  loadCoverMedia, loadPois,
+  loadCoverMedia, loadPois, loadStages,
   getSignedUrl,
 } from "@/lib/roadbooks/loaders";
 import {
-  insertStage, updateStage, deleteStage,
-  insertPoi, updatePoi, deletePoi,
-  insertVariant, updateVariant, deleteVariant,
-  updateStageNotes, updateStageAccommodation, clearStageAccommodation,
-
-
-  swapStageNumbers, insertRoadbook, duplicateRoadbook,
+  updateStage, insertRoadbook, duplicateRoadbook,
 } from "@/lib/roadbooks/writers";
 import { applyPoiEnrichment, applyAccommodationEnrichment } from "@/lib/roadbooks/enrich";
 
@@ -65,32 +60,36 @@ export default function RoadbookDetailPage() {
   const [destination, setDestination] = useState("");
   const [project, setProject] = useState("");
 
-  const [stageDayNumber, setStageDayNumber] = useState("");
-  const [stageTitle, setStageTitle] = useState("");
-  const [stageStart, setStageStart] = useState("");
-  const [stageEnd, setStageEnd] = useState("");
-  const [stageDist, setStageDist] = useState("");
-  const [stageGain, setStageGain] = useState("");
-  const [stageLoss, setStageLoss] = useState("");
-  const [stageDifficulty, setStageDifficulty] = useState("");
-  const [stageAccommodation, setStageAccommodation] = useState("");
-  const [stageDescription, setStageDescription] = useState("");
-  const [stageNotes, setStageNotes] = useState("");
-  const [stageWarning, setStageWarning] = useState("");
-  const [stageMapEmbed, setStageMapEmbed] = useState("");
-  const [stagePhotoUrl, setStagePhotoUrl] = useState("");
-  const [stageDay, setStageDay] = useState("");
-  const [stageLabel, setStageLabel] = useState("");
-  const [stageDuration, setStageDuration] = useState("");
-  const [stageError, setStageError] = useState(null);
-  const [stageSuccess, setStageSuccess] = useState(null);
-  const [editingStage, setEditingStage] = useState(null);
-  const [deleting, setDeleting] = useState(null);
+  const {
+    stageForm, stageFormDispatch,
+    stageError, stageSuccess, setStageError, setStageSuccess,
+    editingStage,
+    deleting,
+    clearStageForm,
+    fillStageForm,
+    handleStageSubmit,
+    handleDeleteStage,
 
-  const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
-  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
-  const [noteForm, setNoteForm] = useState({ stage_id: null, text: "", editing: null });
-  const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", editing: null });
+    poiForm, setPoiForm, clearPoiForm,
+    handlePoiSubmit, handleDeletePoi,
+
+    variantForm, setVariantForm, clearVariantForm,
+    handleVariantSubmit, handleDeleteVariant,
+
+    noteForm, setNoteForm, clearNoteForm,
+    handleNoteSubmit, handleDeleteNote,
+
+    accommodationForm, setAccommodationForm, clearAccommodationForm,
+    handleAccommodationSubmit, handleClearAccommodation,
+
+    handleMoveStage,
+  } = useStageCrud({
+    supabase, roadbookId: id,
+    stages, setStages,
+    reloadPoisVariants,
+    reloadStages,
+  });
+
   const [expandedStages, setExpandedStages] = useState({});
 
   const {
@@ -343,137 +342,7 @@ export default function RoadbookDetailPage() {
     try { await fetch("/api/revalidate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roadbookId: id }) }); } catch {}
   }
 
-  function clearStageForm() {
-    setStageDayNumber(""); setStageTitle(""); setStageStart(""); setStageEnd("");
-    setStageDist(""); setStageGain(""); setStageLoss(""); setStageDifficulty("");
-    setStageAccommodation(""); setStageDescription(""); setStageNotes(""); setStageWarning("");
-    setStageMapEmbed(""); setStagePhotoUrl(""); setStageDay(""); setStageLabel(""); setStageDuration("");
-    setEditingStage(null);
-  }
 
-  function fillStageForm(stage) {
-    const meta = stage.metadata ?? {};
-    setStageDayNumber(String(stage.stage_number));
-    setStageTitle(stage.title ?? ""); setStageStart(stage.departure ?? "");
-    setStageEnd(stage.arrival ?? "");
-    setStageDist(stage.distance_km != null ? String(stage.distance_km) : "");
-    setStageGain(stage.elevation_gain_m != null ? String(stage.elevation_gain_m) : "");
-    setStageLoss(stage.elevation_loss_m != null ? String(stage.elevation_loss_m) : "");
-    setStageDifficulty(meta.difficulty ?? ""); setStageAccommodation(stage.accommodation_name ?? "");
-    setStageDescription(meta.description ?? "");
-    setStageNotes(stage.notes?.length ? stage.notes.map(n => n.text ?? n).join("\n") : "");
-    setStageWarning(meta.warning ?? "");
-    setStageMapEmbed(stage.map_embed_url ?? "");
-    setStagePhotoUrl(stage.stage_photo_url ?? "");
-    setStageDay(stage.day ?? "");
-    setStageLabel(stage.stage_label ?? "");
-    setStageDuration(stage.duration ?? "");
-    setEditingStage(stage);
-  }
-
-  async function handleStageSubmit(e) {
-    e.preventDefault();
-    setStageError(null); setStageSuccess(null);
-    const dayNumber = Number(stageDayNumber);
-    if (!dayNumber) { setStageError("Le numéro d'étape est obligatoire."); return; }
-    const notes = stageNotes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
-    const metadata = {};
-    if (stageDifficulty) metadata.difficulty = stageDifficulty;
-    if (stageDescription) metadata.description = stageDescription;
-    if (stageWarning) metadata.warning = stageWarning;
-    const record = {
-      roadbook_id: Number(id), stage_number: dayNumber, title: stageTitle || null,
-      departure: stageStart || null, arrival: stageEnd || null,
-      distance_km: stageDist ? Number(stageDist) : null,
-      elevation_gain_m: stageGain ? Number(stageGain) : null,
-      elevation_loss_m: stageLoss ? Number(stageLoss) : null,
-      accommodation_name: stageAccommodation || null,
-      map_embed_url: stageMapEmbed || null,
-      stage_photo_url: stagePhotoUrl || null,
-      day: stageDay || null,
-      stage_label: stageLabel || null,
-      duration: stageDuration || null,
-      notes: notes.length ? notes : [], metadata,
-    };
-
-    if (editingStage) {
-      await updateStage(supabase, editingStage.id, record);
-      setStageSuccess("Étape mise à jour.");
-    } else {
-      await insertStage(supabase, record);
-      setStageSuccess("Étape créée.");
-    }
-    clearStageForm();
-    const stagesData = await loadStages(supabase, id);
-    setStages(stagesData);
-  }
-
-  async function handleDeleteStage(stageId) {
-    if (!window.confirm("Supprimer cette étape ?")) return;
-    setDeleting(stageId);
-    try {
-      await deleteStage(supabase, stageId);
-      setStages(prev => prev.filter(s => s.id !== stageId));
-      setStageSuccess("Étape supprimée.");
-    } catch (err) { setStageError(err.message); }
-    setDeleting(null);
-  }
-
-  function clearPoiForm() { setPoiForm({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null }); }
-  function clearVariantForm() { setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }); }
-  function clearNoteForm() { setNoteForm({ stage_id: null, text: "", editing: null }); }
-  function clearAccommodationForm() { setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }); }
-
-  async function handlePoiSubmit(e) {
-    e.preventDefault();
-    setStageError(null); setStageSuccess(null);
-    const record = { stage_id: poiForm.stage_id, name: poiForm.name, poi_type: poiForm.type || null, description: poiForm.description || null, lat: poiForm.lat ? Number(poiForm.lat) : null, lng: poiForm.lng ? Number(poiForm.lng) : null, link_url: poiForm.url || null };
-    if (poiForm.editing) {
-      await updatePoi(supabase, poiForm.editing, record);
-      setStageSuccess("POI mis à jour.");
-    } else {
-      await insertPoi(supabase, record);
-      setStageSuccess("POI créé.");
-    }
-    clearPoiForm();
-    reloadPoisVariants(stages.map(s => s.id));
-  }
-
-  async function handleDeletePoi(poiId) {
-    if (!window.confirm("Supprimer ce POI ?")) return;
-    try {
-      await deletePoi(supabase, poiId);
-      setStageSuccess("POI supprimé.");
-    } catch (err) { setStageError(err.message); return; }
-    reloadPoisVariants(stages.map(s => s.id));
-  }
-
-  async function handleVariantSubmit(e) {
-    e.preventDefault();
-    setStageError(null); setStageSuccess(null);
-    const meta = {};
-    if (variantForm.type) meta.type = variantForm.type;
-    const notesArr = variantForm.notes ? variantForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text })) : [];
-    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, departure: variantForm.departure || null, arrival: variantForm.arrival || null, elevation_gain_m: variantForm.elevation_gain_m ? Number(variantForm.elevation_gain_m) : null, elevation_loss_m: variantForm.elevation_loss_m ? Number(variantForm.elevation_loss_m) : null, map_embed_url: variantForm.map_embed_url || null, notes: notesArr.length ? notesArr : [], metadata: Object.keys(meta).length ? meta : {} };
-    if (variantForm.editing) {
-      await updateVariant(supabase, variantForm.editing, record);
-      setStageSuccess("Variante mise à jour.");
-    } else {
-      await insertVariant(supabase, record);
-      setStageSuccess("Variante créée.");
-    }
-    clearVariantForm();
-    reloadPoisVariants(stages.map(s => s.id));
-  }
-
-  async function handleDeleteVariant(variantId) {
-    if (!window.confirm("Supprimer cette variante ?")) return;
-    try {
-      await deleteVariant(supabase, variantId);
-      setStageSuccess("Variante supprimée.");
-    } catch (err) { setStageError(err.message); return; }
-    reloadPoisVariants(stages.map(s => s.id));
-  }
 
   async function handleUploadImage(e) {
     const file = e.target.files?.[0];
@@ -559,65 +428,6 @@ export default function RoadbookDetailPage() {
 
   async function handleEnrichAccommodation(stage) {
     await enrichAccommodation(stage);
-  }
-
-  async function handleClearAccommodation(stageId) {
-    if (!window.confirm("Vider les informations d'hébergement de cette étape ?")) return;
-    try {
-      await clearStageAccommodation(supabase, stageId);
-      setStageSuccess("Hébergement supprimé.");
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
-    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
-  }
-
-  async function handleAccommodationSubmit(e) {
-    e.preventDefault();
-    const { stage_id, name, url, photo, editing } = accommodationForm;
-    if (!stage_id || !name.trim()) { setStageError("Le nom de l'hébergement est requis."); return; }
-    try {
-      const payload = { accommodation_name: name.trim(), accommodation_url: url.trim() || null, accommodation_photo: photo.trim() || null };
-      await updateStageAccommodation(supabase, stage_id, payload);
-      setStageSuccess(editing ? "Hébergement modifié." : "Hébergement ajouté.");
-      clearAccommodationForm();
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
-    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
-  }
-
-  async function handleNoteSubmit(e) {
-    e.preventDefault();
-    const { stage_id, text, editing } = noteForm;
-    if (!stage_id) return;
-    const stage = stages.find(s => s.id === stage_id);
-    if (!stage) return;
-    const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
-    if (editing != null && notes[editing]) {
-      notes[editing] = { ...notes[editing], text: text.trim() };
-    } else {
-      notes.push({ text: text.trim() });
-    }
-    try {
-      await updateStageNotes(supabase, stage_id, notes);
-      setStageSuccess(editing != null ? "Note modifiée." : "Note ajoutée.");
-      clearNoteForm();
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
-    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
-  }
-
-  async function handleDeleteNote(stageId, noteIndex) {
-    if (!window.confirm("Supprimer cette note ?")) return;
-    const stage = stages.find(s => s.id === stageId);
-    if (!stage) return;
-    const notes = Array.isArray(stage.notes) ? [...stage.notes] : [];
-    notes.splice(noteIndex, 1);
-    try {
-      await updateStageNotes(supabase, stageId, notes);
-      setStageSuccess("Note supprimée.");
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
-    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
   }
 
   // --- Automations ---
@@ -857,19 +667,6 @@ export default function RoadbookDetailPage() {
 
   async function handleRemoveCover() {
     await removeCover();
-  }
-
-  // --- Reorder stages ---
-  async function handleMoveStage(stage, direction) {
-    const sorted = [...stages].sort((a, b) => a.stage_number - b.stage_number);
-    const idx = sorted.findIndex(s => s.id === stage.id);
-    const target = direction === "up" ? idx - 1 : idx + 1;
-    if (target < 0 || target >= sorted.length) return;
-    const a = sorted[idx];
-    const b = sorted[target];
-    await swapStageNumbers(supabase, a.id, b.id);
-    const data = await loadStages(supabase, id);
-    if (data) setStages(data);
   }
 
   // --- Duplicate ---
@@ -1147,23 +944,23 @@ export default function RoadbookDetailPage() {
                   <h3>{editingStage ? "Modifier l'étape" : "Nouvelle étape"}</h3>
                   <form onSubmit={handleStageSubmit}>
                     <div className="studio-form-grid studio-form-grid--compact">
-                      <label>N° étape<input type="number" value={stageDayNumber} onChange={e => setStageDayNumber(e.target.value)} required /></label>
-                      <label>Titre<input type="text" value={stageTitle} onChange={e => setStageTitle(e.target.value)} /></label>
-                      <label>Départ<input type="text" value={stageStart} onChange={e => setStageStart(e.target.value)} /></label>
-                      <label>Arrivée<input type="text" value={stageEnd} onChange={e => setStageEnd(e.target.value)} /></label>
-                      <label>Distance (km)<input type="number" step="0.01" value={stageDist} onChange={e => setStageDist(e.target.value)} /></label>
-                      <label>D+ (m)<input type="number" value={stageGain} onChange={e => setStageGain(e.target.value)} /></label>
-                      <label>D- (m)<input type="number" value={stageLoss} onChange={e => setStageLoss(e.target.value)} /></label>
-                      <label>Difficulté<input type="text" value={stageDifficulty} onChange={e => setStageDifficulty(e.target.value)} placeholder="ex: modéré" /></label>
-                      <label>Hébergement<input type="text" value={stageAccommodation} onChange={e => setStageAccommodation(e.target.value)} /></label>
-                      <label>Description<textarea value={stageDescription} onChange={e => setStageDescription(e.target.value)} /></label>
-                      <label>Notes (une par ligne)<textarea value={stageNotes} onChange={e => setStageNotes(e.target.value)} placeholder="Note 1&#10;Note 2" /></label>
-                      <label>Avertissement<input type="text" value={stageWarning} onChange={e => setStageWarning(e.target.value)} /></label>
-                      <label>Jour<textarea value={stageDay} onChange={e => setStageDay(e.target.value)} placeholder="ex: Jour 1" /></label>
-                      <label>Libellé étape<input type="text" value={stageLabel} onChange={e => setStageLabel(e.target.value)} placeholder="ex: De X à Y" /></label>
-                      <label>Durée<input type="text" value={stageDuration} onChange={e => setStageDuration(e.target.value)} placeholder="ex: 4h30" /></label>
-                      <label>Photo URL<input type="url" value={stagePhotoUrl} onChange={e => setStagePhotoUrl(e.target.value)} placeholder="https://..." /></label>
-                      <label className="studio-form-grid__full">Carte intégrée (iframe)<input type="url" value={stageMapEmbed} onChange={e => setStageMapEmbed(e.target.value)} placeholder="https://www.google.com/maps/embed?..." /></label>
+                      <label>N° étape<input type="number" value={stageForm.dayNumber} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "dayNumber", value: e.target.value })} required /></label>
+                      <label>Titre<input type="text" value={stageForm.title} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "title", value: e.target.value })} /></label>
+                      <label>Départ<input type="text" value={stageForm.start} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "start", value: e.target.value })} /></label>
+                      <label>Arrivée<input type="text" value={stageForm.end} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "end", value: e.target.value })} /></label>
+                      <label>Distance (km)<input type="number" step="0.01" value={stageForm.dist} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "dist", value: e.target.value })} /></label>
+                      <label>D+ (m)<input type="number" value={stageForm.gain} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "gain", value: e.target.value })} /></label>
+                      <label>D- (m)<input type="number" value={stageForm.loss} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "loss", value: e.target.value })} /></label>
+                      <label>Difficulté<input type="text" value={stageForm.difficulty} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "difficulty", value: e.target.value })} placeholder="ex: modéré" /></label>
+                      <label>Hébergement<input type="text" value={stageForm.accommodation} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "accommodation", value: e.target.value })} /></label>
+                      <label>Description<textarea value={stageForm.description} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "description", value: e.target.value })} /></label>
+                      <label>Notes (une par ligne)<textarea value={stageForm.notes} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "notes", value: e.target.value })} placeholder="Note 1&#10;Note 2" /></label>
+                      <label>Avertissement<input type="text" value={stageForm.warning} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "warning", value: e.target.value })} /></label>
+                      <label>Jour<textarea value={stageForm.day} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "day", value: e.target.value })} placeholder="ex: Jour 1" /></label>
+                      <label>Libellé étape<input type="text" value={stageForm.label} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "label", value: e.target.value })} placeholder="ex: De X à Y" /></label>
+                      <label>Durée<input type="text" value={stageForm.duration} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "duration", value: e.target.value })} placeholder="ex: 4h30" /></label>
+                      <label>Photo URL<input type="url" value={stageForm.photoUrl} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "photoUrl", value: e.target.value })} placeholder="https://..." /></label>
+                      <label className="studio-form-grid__full">Carte intégrée (iframe)<input type="url" value={stageForm.mapEmbed} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "mapEmbed", value: e.target.value })} placeholder="https://www.google.com/maps/embed?..." /></label>
                     </div>
                     <div className="studio-create-form__actions">
                       <button type="submit">{editingStage ? "Mettre à jour" : "Créer l'étape"}</button>
