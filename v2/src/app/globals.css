@@ -601,8 +601,37 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 
 
 /* ===== Explorer Page Styles ===== */
-.home-stage-list { display: grid; gap: 14px; }
-.home-stage-list__items { display: grid; gap: 10px; }
+.roadbook-header__description { max-width: 760px; margin: 0 auto; }
+.roadbook-overview { margin-top: 32px; }
+.official-itinerary { display: grid; gap: 16px; }
+.official-itinerary h3,
+.home-stage-list h2,
+.roadbook-current-summary h3 { margin: 0; }
+.official-itinerary .stats,
+.roadbook-current-summary .stats { margin: 0 !important; }
+.official-itinerary__map,
+.roadbook-current-summary__map {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 5;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #e7eee8;
+}
+.official-itinerary__actions,
+.roadbook-current-summary__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.official-itinerary__actions .terrain-button,
+.roadbook-current-summary__actions .terrain-button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid rgba(46,125,50,.3);
+  border-radius: 8px;
+}
+.home-stage-list,
+.roadbook-current-summary { display: grid; gap: 14px; margin-top: 26px; }
+.home-stage-list__items { display: grid; gap: 10px; list-style: none; }
 .home-stage-card {
   display: grid;
   grid-template-columns: auto minmax(0,1fr) auto;
@@ -617,7 +646,19 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   color: var(--text);
   box-shadow: 0 2px 8px rgba(0,0,0,.04);
   text-align: left;
+  text-decoration: none;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
 }
+.home-stage-card:hover,
+.home-stage-card:focus-visible {
+  border-color: rgba(46,125,50,.42);
+  background: #fbfefb;
+  color: var(--text);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+.home-stage-card:active { transform: scale(.985); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
 .home-stage-card--substep {
   width: calc(100% - 28px);
   margin-left: 28px;
@@ -643,6 +684,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .home-stage-card__content { min-width: 0; display: grid; gap: 4px; }
 .home-stage-card__route { font-size: 1rem; font-weight: 700; }
 .home-stage-card__stats { margin: 4px 0 0; }
+.home-stage-card__stats:empty { display: none; }
 .home-stage-card__accommodation { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f8f2; color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }
 .home-stage-card__substep-type {
   display: inline-flex; align-items: center;
@@ -1173,8 +1215,6 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .studio-variant-card { margin-left: 0.75rem; }
   .poi-card { grid-template-columns: 1fr; gap: 12px; }
   .poi-card__image { height: 160px; }
-  .home-stage-card { grid-template-columns: 1fr; gap: 8px; min-height: auto; }
-  .home-stage-card--substep { width: 100%; margin-left: 0; }
   .stage-photo__image { max-height: 280px; }
   .dashboard-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
 }
@@ -1192,6 +1232,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .home-access-card { padding: 14px; }
   .stage-card { margin: 12px 0; padding: 16px; }
   #stage-map-embed { height: clamp(200px, 50vw, 300px); }
+  .official-itinerary__map,
+  .roadbook-current-summary__map { aspect-ratio: 16 / 6; }
 }
 
 @media (max-width: 400px) {
@@ -1211,6 +1253,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .variant-card { margin-left: 0.5rem; padding: 0.5rem; }
   .accommodation-resource { width: 100%; }
   .home-stage-card { padding: 10px; }
+  .home-stage-card--substep { width: calc(100% - 14px); margin-left: 14px; }
+  .home-stage-card__stats .stat { padding: 4px 7px; }
   .home-access-card {
     grid-template-columns: auto minmax(0, 1fr);
     gap: 10px;
@@ -1243,6 +1287,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .stat__value { color: #e0e0e0; }
   .stat__icon { color: #81c784; }
   .poi-card, .note-item, .variant-card, .automation-result, .home-stage-card { background: #1a1a1a; }
+  .home-stage-card:hover,
+  .home-stage-card:focus-visible { background: #203020; color: #e0e0e0; border-color: rgba(129, 199, 132, .45); }
   .poi-card { border-color: #333; }
   .poi-card__map-link { border-color: rgba(129, 199, 132, .35); color: #81c784; }
   .poi-card__map-link:hover { background: rgba(129, 199, 132, .12); }

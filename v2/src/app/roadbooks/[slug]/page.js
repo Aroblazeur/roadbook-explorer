@@ -104,82 +104,47 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const variantsByStage = {};
   variants.forEach(v => { if (!variantsByStage[v.stage_id]) variantsByStage[v.stage_id] = []; variantsByStage[v.stage_id].push(v); });
 
-  const visibleStages = stageParam != null && stageParam >= 0 && stageParam < stages.length
-    ? [stages[stageParam]] : stages;
-  const currentIdx = stageParam != null && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
+  const currentIdx = Number.isInteger(stageParam) && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
+  const currentStage = currentIdx != null ? stages[currentIdx] : null;
 
   return (
     <>
-      <header className="header">
-        <div className="container">
-          <div className="header-title-wrapper">
-            <svg className="header-logo" viewBox="0 0 80 40" fill="none" aria-hidden="true">
-              <circle cx="32" cy="26" r="9" stroke="white" strokeWidth="2" fill="none" />
-              <path d="M38 17 L42 13 L46 17" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <circle cx="55" cy="26" r="4" stroke="white" strokeWidth="1.5" fill="none" />
-              <rect x="22" y="18" width="12" height="2" rx="1" fill="white" opacity="0.7" />
-              <rect x="22" y="22" width="8" height="2" rx="1" fill="white" opacity="0.7" />
-              <rect x="22" y="26" width="10" height="2" rx="1" fill="white" opacity="0.7" />
-              <rect x="22" y="30" width="6" height="2" rx="1" fill="white" opacity="0.7" />
-              <path d="M14 34 L14 8 C14 6 15 5 17 5 L38 5" stroke="white" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-              <path d="M24 34 L24 12 C24 11 25 10 26 10 L38 10" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.6" />
-              <circle cx="42" cy="14" r="3" fill="white" opacity="0.9" />
-            </svg>
-            <h1>{roadbook.title}</h1>
-            <svg className="header-logo header-logo--outdoor" viewBox="0 0 80 40" fill="none" aria-hidden="true">
-              <path d="M20 35 L36 8 L52 35" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <path d="M12 35 L68 35" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M36 18 L44 35" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
-              <circle cx="52" cy="22" r="4" stroke="white" strokeWidth="1.5" fill="none" />
-              <circle cx="52" cy="22" r="1.5" fill="white" />
-              <circle cx="20" cy="26" r="3" stroke="white" strokeWidth="1.5" fill="none" />
-              <path d="M56 35 L60 28 L64 35" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
-            </svg>
-          </div>
-          {roadbook.description && <p>{roadbook.description}</p>}
-        </div>
-      </header>
+      <RoadbookHeader roadbook={roadbook} />
       <main className="container">
-
-      {!stageParam && (
+      {currentIdx == null ? (
         <>
-          <GlobalSummary
-            distance={totals.distance}
-            elevationGain={totals.elevationGain}
-            elevationLoss={totals.elevationLoss}
-            stageCount={stages.length}
+          <RoadbookOverview
+            roadbook={roadbook}
+            stages={stages}
+            totals={totals}
+            gpxOfficial={gpxOfficial}
+            gpxCustom={gpxCustom}
           />
-          {gpxOfficial && <GpxOfficialSection gpx={gpxOfficial} />}
+          {images.length > 0 && <ImagesSection images={images} />}
         </>
-      )}
-
-      <section className="card">
-        <h2>{stageParam != null ? `Étape ${stageParam + 1}` : `Étapes (${stages.length})`}</h2>
-        {stages.length === 0 && <p className="empty">Ce roadbook n&apos;a pas encore d&apos;étapes.</p>}
-        <ol className="home-stage-list__items">
-          {visibleStages.map(stage => (
-            <li key={stage.id}>
+      ) : (
+        <section className="card">
+          <h2>Étape {currentIdx + 1}</h2>
+          <ol className="home-stage-list__items">
+            <li>
               <StageCard
-                stage={stage}
-                pois={poisByStage[stage.id] ?? []}
-                variants={variantsByStage[stage.id] ?? []}
-                stageGpx={gpxByStage[stage.id] ?? null}
-                showMap={stageParam != null}
+                stage={currentStage}
+                pois={poisByStage[currentStage.id] ?? []}
+                variants={variantsByStage[currentStage.id] ?? []}
+                stageGpx={gpxByStage[currentStage.id] ?? null}
+                showMap
               />
             </li>
-          ))}
-        </ol>
-      </section>
-
-      {!stageParam && gpxCustom && <GpxCustomSection gpx={gpxCustom} totals={totals} />}
-      {!stageParam && images.length > 0 && <ImagesSection images={images} />}
+          </ol>
+        </section>
+      )}
 
       <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
         {currentIdx != null && currentIdx > 0
           ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx - 1}`}>← Étape précédente</Link>
           : <span />}
-        <Link href={currentIdx != null ? `/roadbooks/${roadbook.slug}` : "/"}>
-          {currentIdx != null ? "Vue d'ensemble" : "Retour à l'accueil"}
+        <Link href={currentIdx != null ? `/roadbooks/${roadbook.slug}` : "/explore"}>
+          {currentIdx != null ? "Vue d'ensemble" : "Retour aux roadbooks"}
         </Link>
         {currentIdx != null && currentIdx < stages.length - 1
           ? <Link href={`/roadbooks/${roadbook.slug}?stage=${currentIdx + 1}`}>Étape suivante →</Link>
@@ -190,41 +155,188 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   );
 }
 
-function GpxOfficialSection({ gpx }) {
+function RoadbookHeader({ roadbook }) {
   return (
-    <div className="card">
-      <h2>Trace officielle</h2>
-      <p>
-        Télécharger le GPX officiel complet :{" "}
-        <a href={gpx.signedUrl} download={gpx.file_name ?? "trace.gpx"}>
-          {gpx.file_name ?? "trace.gpx"}
-        </a>
-      </p>
-      <MapViewerClient gpxUrl={gpx.signedUrl} height={350} />
+    <header className="header roadbook-header">
+      <div className="container">
+        <div className="header-title-wrapper">
+          <svg className="header-logo" viewBox="0 0 100 48" aria-hidden="true" focusable="false">
+            <circle cx="28" cy="36" r="10" fill="none" stroke="white" strokeWidth="2.5" />
+            <circle cx="28" cy="36" r="2.5" fill="white" />
+            <circle cx="60" cy="36" r="10" fill="none" stroke="white" strokeWidth="2.5" />
+            <circle cx="60" cy="36" r="2.5" fill="white" />
+            <line x1="28" y1="36" x2="44" y2="16" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="44" y1="16" x2="60" y2="36" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="44" y1="16" x2="44" y2="36" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="28" y1="36" x2="44" y2="36" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="60" y1="36" x2="62" y2="20" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="58" y1="20" x2="66" y2="20" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="44" y1="16" x2="48" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            <line x1="45" y1="14" x2="52" y2="14" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1="28" y1="36" x2="10" y2="36" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" />
+            <rect x="2" y="27" width="18" height="11" rx="2" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
+            <circle cx="11" cy="38" r="5" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" />
+            <circle cx="11" cy="38" r="1.5" fill="rgba(255,255,255,0.85)" />
+            <polyline points="68,26 78,10 88,26" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" strokeLinejoin="round" />
+            <polyline points="82,26 90,14 98,26" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinejoin="round" />
+          </svg>
+          <h1>{roadbook.title}</h1>
+          <svg className="header-logo header-logo--outdoor" viewBox="0 0 100 48" aria-hidden="true" focusable="false">
+            <polyline points="4,38 22,14 38,38" fill="none" stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
+            <polyline points="30,38 52,10 76,38" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M50 38 L66 20 L82 38 Z" fill="none" stroke="white" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M66 20 L66 38" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+            <path d="M8 42 C26 38, 42 44, 60 40 C72 37, 84 39, 94 35" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="86" cy="10" r="2" fill="white" />
+          </svg>
+        </div>
+        {roadbook.description && <p className="roadbook-header__description">{roadbook.description}</p>}
+        <nav className="header-nav" aria-label="Navigation du roadbook">
+          <Link href="/explore">Retour aux roadbooks</Link>
+          <Link href="/dashboard">✏️ Studio</Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function RoadbookOverview({ roadbook, stages, totals, gpxOfficial, gpxCustom }) {
+  const metadata = roadbook.metadata ?? {};
+  const official = metadata.official ?? {};
+  const savedCurrent = metadata.stagesTotal ?? {};
+  const current = {
+    distance: savedCurrent.distance ?? totals.distance,
+    elevationGain: savedCurrent.elevationGain ?? totals.elevationGain,
+    elevationLoss: savedCurrent.elevationLoss ?? totals.elevationLoss,
+    gpx: savedCurrent.gpx,
+    mapEmbedUrl: savedCurrent.mapEmbedUrl,
+  };
+
+  return (
+    <section id="summary" className="card roadbook-overview" aria-label="Synthèse du roadbook">
+      <RouteSummary
+        className="official-itinerary"
+        heading="Itinéraire officiel"
+        summary={official}
+        gpx={gpxOfficial}
+        mapTitle="Carte interactive de l'itinéraire officiel"
+        downloadLabel="Télécharger le tracé officiel"
+      />
+      <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} />
+      <RouteSummary
+        className="roadbook-current-summary"
+        heading="Tracé total actuel"
+        summary={current}
+        gpx={gpxCustom}
+        mapTitle="Carte interactive du tracé total actuel"
+        downloadLabel="Télécharger le tracé total actuel"
+      />
+    </section>
+  );
+}
+
+function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabel }) {
+  const traceUrl = gpx?.signedUrl ?? summary.gpx ?? null;
+  const hasMetrics = summary.distance != null || summary.elevationGain != null || summary.elevationLoss != null;
+  const hasMap = Boolean(summary.mapEmbedUrl || traceUrl);
+  if (!hasMetrics && !hasMap) return null;
+
+  return (
+    <div className={className}>
+      <h3>{heading}</h3>
+      {hasMetrics && (
+        <Pills distanceKm={summary.distance} elevationGain={summary.elevationGain} elevationLoss={summary.elevationLoss} />
+      )}
+      {summary.mapEmbedUrl ? (
+        <div className={`${className}__map map-embed`}>
+          <iframe src={summary.mapEmbedUrl} title={mapTitle} width="100%" height="100%" allowFullScreen loading="lazy" />
+        </div>
+      ) : traceUrl ? (
+        <div className={`${className}__map map-embed`}>
+          <MapViewerClient gpxUrl={traceUrl} height={300} />
+        </div>
+      ) : null}
+      {traceUrl && (
+        <div className={`${className}__actions`}>
+          <a className="terrain-button terrain-button--secondary" href={traceUrl} download={gpx?.file_name ?? "trace.gpx"}>
+            {downloadLabel}
+          </a>
+        </div>
+      )}
     </div>
   );
 }
 
-function GpxCustomSection({ gpx, totals }) {
+function StageOverviewList({ roadbookSlug, stages }) {
   return (
-    <div className="card">
-      <h2>GPX personnalisé</h2>
-      {totals && (
-        <div className="stats" style={{ marginBottom: "0.75rem" }}>
-          <span className="stat"><StatIconDistance /><span className="stat__value"><strong>{totals.distance ?? "—"}</strong> km</span> <span className="stat__label">Distance</span></span>
-          <span className="stat"><StatIconElevationGain /><span className="stat__value"><strong>{totals.elevationGain ?? "—"}</strong> m</span> <span className="stat__label">D+</span></span>
-          <span className="stat"><StatIconElevationLoss /><span className="stat__value"><strong>{totals.elevationLoss ?? "—"}</strong> m</span> <span className="stat__label">D−</span></span>
-        </div>
+    <section className="home-stage-list" aria-labelledby="home-stage-list-title">
+      <h2 id="home-stage-list-title">Étapes</h2>
+      {stages.length === 0 ? (
+        <p className="empty">Ce roadbook n&apos;a pas encore d&apos;étapes.</p>
+      ) : (
+        <ol className="home-stage-list__items">
+          {stages.map((stage, index) => (
+            <li key={stage.id}>
+              <StageOverviewCard roadbookSlug={roadbookSlug} stage={stage} index={index} />
+            </li>
+          ))}
+        </ol>
       )}
-      <p>
-        Télécharger le GPX personnalisé :{" "}
-        <a href={gpx.signedUrl} download={gpx.file_name ?? "personnalise.gpx"}>
-          {gpx.file_name ?? "personnalise.gpx"}
-        </a>
-      </p>
-      <MapViewerClient gpxUrl={gpx.signedUrl} height={350} />
-    </div>
+    </section>
   );
+}
+
+function StageOverviewCard({ roadbookSlug, stage, index }) {
+  const metadata = stage.metadata ?? {};
+  const isSubstep = Boolean(stage.is_substep ?? metadata.isSubstep ?? metadata.is_substep);
+  const route = [stage.departure, stage.arrival].filter(Boolean).join(" → ")
+    || stage.title
+    || stage.stage_label
+    || `Étape ${index + 1}`;
+
+  return (
+    <Link
+      className={`home-stage-card${isSubstep ? " home-stage-card--substep" : ""}`}
+      href={`/roadbooks/${roadbookSlug}?stage=${index}`}
+      aria-label={`Ouvrir l'étape ${stage.stage_number ?? index + 1} : ${route}`}
+    >
+      <span className="home-stage-card__number">{isSubstep ? "↳" : stage.stage_number ?? index + 1}</span>
+      <span className="home-stage-card__content">
+        <strong className="home-stage-card__route">{route}</strong>
+        {isSubstep && metadata.type && <span className="home-stage-card__substep-type">{metadata.type}</span>}
+        <span className="home-stage-card__stats stats stats--compact">
+          <OverviewStat value={stage.distance_km} unit="km" label="Distance" icon={StatIconDistance} />
+          <OverviewStat value={stage.elevation_gain_m} unit="m" label="D+" icon={StatIconElevationGain} />
+          <OverviewStat value={stage.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
+        </span>
+      </span>
+      {(stage.accommodation_type || stage.accommodation_name) && (
+        <span className="home-stage-card__accommodation" aria-label={`Hébergement${stage.accommodation_name ? ` : ${stage.accommodation_name}` : ""}`}>
+          {accommodationIcon(stage.accommodation_type, stage.accommodation_name)}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function OverviewStat({ value, unit, label, icon: Icon }) {
+  if (value == null) return null;
+  return (
+    <span className="stat">
+      <Icon />
+      <span className="stat__value"><strong>{value}</strong> {unit}</span>
+      <span className="stat__label">{label}</span>
+    </span>
+  );
+}
+
+function accommodationIcon(type, name) {
+  const normalized = `${type ?? ""} ${name ?? ""}`.toLowerCase();
+  if (normalized.includes("camp")) return "⛺";
+  if (normalized.includes("hotel") || normalized.includes("hôtel")) return "🏨";
+  if (normalized.includes("gite") || normalized.includes("gîte")) return "🏡";
+  if (normalized.includes("hostel") || normalized.includes("auberge")) return "🛏️";
+  return name ? "🏠" : "—";
 }
 
 function ImagesSection({ images }) {
@@ -424,23 +536,6 @@ function StatIconElevationLoss() {
 }
 function StatIconDuration() {
   return <svg className="stat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>;
-}
-
-function GlobalSummary({ distance, elevationGain, elevationLoss, stageCount }) {
-  const hasTotal = stageCount > 0 && (distance > 0 || elevationGain > 0 || elevationLoss > 0);
-  if (!hasTotal) return null;
-
-  return (
-    <div className="card">
-      <h2>Résumé du parcours</h2>
-      <div className="stats" style={{ marginBottom: "0.5rem" }}>
-        <span className="stat"><StatIconDistance /><span className="stat__value"><strong>{distance ?? "—"}</strong> km</span> <span className="stat__label">Distance</span></span>
-        <span className="stat"><StatIconElevationGain /><span className="stat__value"><strong>{elevationGain ?? "—"}</strong> m</span> <span className="stat__label">D+</span></span>
-        <span className="stat"><StatIconElevationLoss /><span className="stat__value"><strong>{elevationLoss ?? "—"}</strong> m</span> <span className="stat__label">D−</span></span>
-        <span className="stat"><span className="stat__value"><strong>{stageCount}</strong></span> <span className="stat__label">Étapes</span></span>
-      </div>
-    </div>
-  );
 }
 
 function PrivateRoadbook() {
