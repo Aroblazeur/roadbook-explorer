@@ -7,6 +7,7 @@ import Link from "next/link";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, loadEnrichmentData } from "@/lib/enrichment";
 import { useNotifications } from "@/hooks/studio/useNotifications";
+import { useRoadbookData } from "@/hooks/studio/useRoadbookData";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
@@ -18,8 +19,7 @@ import {
 } from "@/lib/sync-helpers";
 import { exportDraftToJSON, downloadDraftExport } from "@/lib/studio-drafts";
 import {
-  loadRoadbook, loadRoadbookSafe, loadStages, loadPois, loadVariants,
-  loadMedia, loadCoverMedia, loadMediaWithUrls, loadGpxRows,
+  loadCoverMedia, loadMediaWithUrls, loadGpxRows, loadPois,
   getSignedUrl,
 } from "@/lib/roadbooks/loaders";
 import {
@@ -37,9 +37,17 @@ export default function RoadbookDetailPage() {
   const { user, loading: authLoading, supabase } = useAuth();
   const router = useRouter();
   const { id } = useParams();
-  const [roadbook, setRoadbook] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
+  const {
+    roadbook, setRoadbook,
+    stages, setStages,
+    poisByStage, setPoisByStage,
+    variantsByStage, setVariantsByStage,
+    loading, fetchError,
+    loadAll,
+    reloadStages,
+    reloadPoisVariants,
+  } = useRoadbookData({ supabase, roadbookId: id, user, enabled: !authLoading && !!user && !!id });
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
@@ -49,7 +57,6 @@ export default function RoadbookDetailPage() {
   const [destination, setDestination] = useState("");
   const [project, setProject] = useState("");
 
-  const [stages, setStages] = useState([]);
   const [stageDayNumber, setStageDayNumber] = useState("");
   const [stageTitle, setStageTitle] = useState("");
   const [stageStart, setStageStart] = useState("");
@@ -72,8 +79,6 @@ export default function RoadbookDetailPage() {
   const [editingStage, setEditingStage] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
-  const [poisByStage, setPoisByStage] = useState({});
-  const [variantsByStage, setVariantsByStage] = useState({});
   const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
   const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
   const [noteForm, setNoteForm] = useState({ stage_id: null, text: "", editing: null });
@@ -171,9 +176,8 @@ export default function RoadbookDetailPage() {
   async function loadData() {
     if (!user || !id) return;
     try {
-      const data = await loadRoadbookSafe(supabase, id);
-      if (!data) { setFetchError("Roadbook introuvable."); setLoading(false); return; }
-      setRoadbook(data);
+      const data = await loadAll();
+      if (!data) return;
       setTitle(data.title);
       setDescription(data.description ?? "");
       setIsPublic(data.is_public);
@@ -212,27 +216,11 @@ export default function RoadbookDetailPage() {
         loadEnrichmentData(data.slug, "accommodation").then(json => { if (json?.items) setAccommodationIndex(createAccommodationIndex(json.items)); }).catch(() => {});
       }
 
-      const stagesData = await loadStages(supabase, id);
-      setStages(stagesData);
-      const stageIds = stagesData.map(s => s.id);
-      if (stageIds.length) {
-        const [pois, variants] = await Promise.all([
-          loadPois(supabase, stageIds),
-          loadVariants(supabase, stageIds),
-        ]);
-        const poiMap = {};
-        pois.forEach(p => { if (!poiMap[p.stage_id]) poiMap[p.stage_id] = []; poiMap[p.stage_id].push(p); });
-        setPoisByStage(poiMap);
-        const variantMap = {};
-        variants.forEach(v => { if (!variantMap[v.stage_id]) variantMap[v.stage_id] = []; variantMap[v.stage_id].push(v); });
-        setVariantsByStage(variantMap);
-      }
+      loadImages();
+      loadGpx();
     } catch (err) {
       setFetchError(err.message);
     }
-    setLoading(false);
-    loadImages();
-    loadGpx();
   }
 
   useEffect(() => { loadData(); }, [user, id]);
@@ -427,16 +415,6 @@ export default function RoadbookDetailPage() {
   function clearVariantForm() { setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }); }
   function clearNoteForm() { setNoteForm({ stage_id: null, text: "", editing: null }); }
   function clearAccommodationForm() { setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }); }
-
-  async function reloadPoisVariants(stageIds) {
-    if (!stageIds?.length) return;
-    const [pois, variants] = await Promise.all([
-      loadPois(supabase, stageIds),
-      loadVariants(supabase, stageIds),
-    ]);
-    const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m);
-    const vm = {}; variants.forEach(v => { if (!vm[v.stage_id]) vm[v.stage_id] = []; vm[v.stage_id].push(v); }); setVariantsByStage(vm);
-  }
 
   async function handlePoiSubmit(e) {
     e.preventDefault();
