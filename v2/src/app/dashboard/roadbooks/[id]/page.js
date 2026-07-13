@@ -5,12 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
-import { createPoiIndex, createAccommodationIndex, findPoi, findAccommodation, loadEnrichmentData } from "@/lib/enrichment";
+import { findPoi, findAccommodation, findAccommodationByName } from "@/lib/enrichment";
 import { useNotifications } from "@/hooks/studio/useNotifications";
 import { useRoadbookData } from "@/hooks/studio/useRoadbookData";
 import { useMediaManager } from "@/hooks/studio/useMediaManager";
 import { useGpxManager } from "@/hooks/studio/useGpxManager";
 import { useCoverManager } from "@/hooks/studio/useCoverManager";
+import { useEnrichment } from "@/hooks/studio/useEnrichment";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
@@ -121,14 +122,23 @@ export default function RoadbookDetailPage() {
     removeCover,
   } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
 
+  const {
+    poiIndex, accommodationIndex,
+    enrichmentError, setEnrichmentError,
+    enrichingPoi, enrichingAccommodation,
+    automationBusy, setAutomationBusy,
+    automationResult, setAutomationResult,
+    loadEnrichmentIndices,
+    enrichPoi,
+    enrichAccommodation,
+  } = useEnrichment({
+    supabase, roadbook, stages, poisByStage,
+    onSuccess: setStageSuccess,
+    reloadPoisVariants,
+    reloadStages,
+  });
+
   const [duplicating, setDuplicating] = useState(false);
-  const [poiIndex, setPoiIndex] = useState(null);
-  const [accommodationIndex, setAccommodationIndex] = useState(null);
-  const [enrichmentError, setEnrichmentError] = useState(null);
-  const [enrichingPoi, setEnrichingPoi] = useState(null);
-  const [enrichingAccommodation, setEnrichingAccommodation] = useState(null);
-  const [automationBusy, setAutomationBusy] = useState(null);
-  const [automationResult, setAutomationResult] = useState(null);
   const [showStageForm, setShowStageForm] = useState(false);
 
   // Official route
@@ -231,10 +241,7 @@ export default function RoadbookDetailPage() {
         } catch {}
       } else { setCoverMode(null); setCoverPreview(null); }
 
-      if (data?.slug) {
-        loadEnrichmentData(data.slug, "poi").then(json => { if (json?.items) setPoiIndex(createPoiIndex(json.items)); }).catch(() => {});
-        loadEnrichmentData(data.slug, "accommodation").then(json => { if (json?.items) setAccommodationIndex(createAccommodationIndex(json.items)); }).catch(() => {});
-      }
+      loadEnrichmentIndices();
 
       reloadMedia();
       reloadGpx();
@@ -566,82 +573,11 @@ export default function RoadbookDetailPage() {
   }
 
   async function handleEnrichPoi(poi, stageId) {
-    if (!poi || !poiIndex) { setEnrichmentError("Aucune donnée d'enrichissement disponible pour ce roadbook."); return; }
-    const found = findPoi(poi.name, poiIndex);
-    if (!found) { setEnrichmentError(`Aucun enrichissement trouvé pour "${poi.name}".`); return; }
-    setEnrichingPoi(poi.id);
-    setEnrichmentError(null);
-    setStageError(null);
-    try {
-      const existingDesc = poi.description != null && poi.description !== "";
-      const existingLat = poi.lat != null;
-      const existingLng = poi.lng != null;
-      const existingLink = poi.link_url != null && poi.link_url !== "";
-      const anyExisting = existingDesc || existingLat || existingLng || existingLink;
-      if (anyExisting) {
-        const parts = [];
-        if (existingDesc) parts.push("description");
-        if (existingLat) parts.push("coordonnées");
-        if (existingLink) parts.push("lien");
-        const ok = window.confirm(
-          `Ce POI a déjà des valeurs (${parts.join(", ")}).\n\n`
-          + `Nouvelles valeurs proposées :\n`
-          + `• Description : ${found.description || "N/A"}\n`
-          + `• Coordonnées : ${found.coordinates ? `${found.coordinates.lat}, ${found.coordinates.lng}` : "N/A"}\n`
-          + `• Image : ${found.image || "N/A"}\n`
-          + `• Lien : ${found.url || "N/A"}\n\n`
-          + `Écraser les valeurs existantes ?`
-        );
-        if (!ok) { setEnrichingPoi(null); return; }
-      }
-      const result = await applyPoiEnrichment(supabase, poi.id, found);
-      if (!result.updated) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
-      setStageSuccess(`POI "${poi.name}" enrichi.`);
-      const stageIds = stages.map(s => s.id);
-      if (stageIds.length) {
-        const pois = await loadPois(supabase, stageIds);
-        const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); }); setPoisByStage(m);
-      }
-    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
-    finally { setEnrichingPoi(null); }
+    await enrichPoi(poi);
   }
 
   async function handleEnrichAccommodation(stage) {
-    if (!accommodationIndex) { setEnrichmentError("Aucune donnée d'enrichissement disponible pour ce roadbook."); return; }
-    const url = stage.accommodation_url;
-    const name = stage.accommodation_name;
-    let found = url ? findAccommodation(url, accommodationIndex) : null;
-    if (!found && name) {
-      found = findAccommodationByName(name, accommodationIndex);
-    }
-    if (!found) { setEnrichmentError(`Aucun enrichissement trouvé pour l'hébergement${url ? ` (${url})` : ""}${name ? ` "${name}"` : ""}.`); return; }
-    setEnrichingAccommodation(stage.id);
-    setEnrichmentError(null);
-    setStageError(null);
-    try {
-      const existingName = stage.accommodation_name != null && stage.accommodation_name !== "";
-      const existingPhoto = stage.accommodation_photo != null && stage.accommodation_photo !== "";
-      const anyExisting = existingName || existingPhoto;
-      if (anyExisting) {
-        const parts = [];
-        if (existingName) parts.push("nom");
-        if (existingPhoto) parts.push("photo");
-        const ok = window.confirm(
-          `Cet hébergement a déjà des valeurs (${parts.join(", ")}).\n\n`
-          + `Nouvelles valeurs proposées :\n`
-          + `• Nom : ${found.name || "N/A"}\n`
-          + `• Image : ${found.image || "N/A"}\n\n`
-          + `Écraser les valeurs existantes ?`
-        );
-        if (!ok) { setEnrichingAccommodation(null); return; }
-      }
-      const result = await applyAccommodationEnrichment(supabase, stage.id, found);
-      if (!result.updated) { setEnrichmentError("Aucune donnée à mettre à jour."); return; }
-      setStageSuccess(`Hébergement enrichi : ${found.name || "nom mis à jour"}.`);
-      const refreshed = await loadStages(supabase, id);
-      if (refreshed) setStages(refreshed);
-    } catch (err) { setEnrichmentError(err.message ?? String(err)); }
-    finally { setEnrichingAccommodation(null); }
+    await enrichAccommodation(stage);
   }
 
   async function handleClearAccommodation(stageId) {
