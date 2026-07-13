@@ -10,6 +10,7 @@ import { useNotifications } from "@/hooks/studio/useNotifications";
 import { useRoadbookData } from "@/hooks/studio/useRoadbookData";
 import { useMediaManager } from "@/hooks/studio/useMediaManager";
 import { useGpxManager } from "@/hooks/studio/useGpxManager";
+import { useCoverManager } from "@/hooks/studio/useCoverManager";
 import { useStudioDraft } from "@/hooks/useStudioDraft";
 import DraftStatus from "@/components/DraftStatus";
 import {
@@ -110,10 +111,16 @@ export default function RoadbookDetailPage() {
     computeStageMetrics,
   } = useGpxManager({ supabase, roadbookId: id, userId: user?.id });
 
-  const [coverMode, setCoverMode] = useState(null); // "url" | "media"
-  const [coverUrl, setCoverUrl] = useState("");
-  const [coverMediaId, setCoverMediaId] = useState(null);
-  const [coverPreview, setCoverPreview] = useState(null);
+  const {
+    coverUrl, setCoverUrl,
+    coverMediaId, setCoverMediaId,
+    coverPreview, setCoverPreview,
+    coverMode, setCoverMode,
+    setCoverFromMedia,
+    setCoverFromUrl,
+    removeCover,
+  } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
+
   const [duplicating, setDuplicating] = useState(false);
   const [poiIndex, setPoiIndex] = useState(null);
   const [accommodationIndex, setAccommodationIndex] = useState(null);
@@ -924,35 +931,15 @@ export default function RoadbookDetailPage() {
 
   // --- Cover image ---
   async function handleSetCoverFromMedia(mediaId) {
-    const result = await conditionalUpdateRoadbook(supabase, id, { cover_media_id: mediaId, cover_image_url: null }, roadbook?.updated_at);
-    if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
-    setCoverMediaId(mediaId); setCoverUrl(""); setCoverMode("media"); setCoverPreview(null);
-    setRoadbook(prev => ({ ...prev, cover_media_id: mediaId, cover_image_url: null, updated_at: result.data.updated_at }));
-    try {
-      const m = await loadCoverMedia(supabase, mediaId);
-      if (m) {
-        const signedUrl = await getSignedUrl(supabase, m.bucket, m.path, 86400);
-        if (signedUrl) setCoverPreview(signedUrl);
-      }
-    } catch {}
-    setSuccess("Image de couverture mise à jour.");
+    await setCoverFromMedia(mediaId);
   }
 
   async function handleSetCoverFromUrl(url) {
-    const cleanUrl = url || null;
-    const result = await conditionalUpdateRoadbook(supabase, id, { cover_image_url: cleanUrl, cover_media_id: null }, roadbook?.updated_at);
-    if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
-    setCoverUrl(url); setCoverMediaId(null); setCoverMode(cleanUrl ? "url" : null); setCoverPreview(cleanUrl);
-    setRoadbook(prev => ({ ...prev, cover_image_url: cleanUrl, cover_media_id: null, updated_at: result.data.updated_at }));
-    setSuccess(cleanUrl ? "Image de couverture mise à jour." : "Image de couverture retirée.");
+    await setCoverFromUrl(url);
   }
 
   async function handleRemoveCover() {
-    const result = await conditionalUpdateRoadbook(supabase, id, { cover_image_url: null, cover_media_id: null }, roadbook?.updated_at);
-    if (!result.ok) { setUploadError(result.error === "conflict" ? "Conflit de version." : result.error); return; }
-    setCoverUrl(""); setCoverMediaId(null); setCoverMode(null); setCoverPreview(null);
-    setRoadbook(prev => ({ ...prev, cover_image_url: null, cover_media_id: null, updated_at: result.data.updated_at }));
-    setSuccess("Image de couverture retirée.");
+    await removeCover();
   }
 
   // --- Reorder stages ---
