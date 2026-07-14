@@ -5,7 +5,7 @@ import { loadPois, loadStages } from "@/lib/roadbooks/loaders";
 import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
 
 export function useEnrichment({
-  supabase, roadbook, setRoadbook, stages, setStages, setPoisByStage,
+  supabase, roadbook, setRoadbook, stages, setStages, poisByStage, setPoisByStage,
   onError, onSuccess, reloadPoisVariants, reloadStages,
   gpxHelpers,
 }) {

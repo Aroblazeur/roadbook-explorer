@@ -48,7 +48,7 @@ export default function HomePage() {
               <span className="home-access-card__arrow" aria-hidden="true">→</span>
             </Link>
 
-            <Link href="/dashboard" className="home-access-card">
+            <Link href="/dashboard/roadbooks" className="home-access-card">
               <span className="home-access-card__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m14.7 6.3 3 3" />

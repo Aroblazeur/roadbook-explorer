@@ -55,13 +55,13 @@ export default function CatalogHeader() {
             <>
               <span className="header-nav__email">{user.email}</span>
               <Link href="/my-roadbooks">Mes roadbooks</Link>
-              <Link href="/dashboard">Studio</Link>
+              <Link href="/dashboard/roadbooks">Studio</Link>
               <button onClick={handleLogout}>Déconnexion</button>
             </>
           ) : (
             <>
               <Link href="/my-roadbooks">Mes roadbooks</Link>
-              <Link href="/dashboard">Studio</Link>
+              <Link href="/dashboard/roadbooks">Studio</Link>
               <Link href="/login">Connexion</Link>
             </>
           )}

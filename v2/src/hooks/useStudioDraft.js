@@ -22,6 +22,7 @@ export function useStudioDraft({
   gpxOfficial,
   gpxCustom,
   gpxByStage,
+  gpxByVariant,
   title,
   description,
   isPublic,

@@ -177,7 +177,7 @@ function RoadbookHeader({ roadbook }) {
         {roadbook.description && <p className="roadbook-header__description">{roadbook.description}</p>}
         <nav className="header-nav" aria-label="Navigation du roadbook">
           <Link href="/explore">Retour aux roadbooks</Link>
-          <Link href="/dashboard">✏️ Studio</Link>
+          <Link href={`/dashboard/roadbooks/${roadbook.id}`}>✏️ Studio</Link>
         </nav>
       </div>
     </header>

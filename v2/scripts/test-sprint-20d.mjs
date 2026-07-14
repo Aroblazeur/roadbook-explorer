@@ -166,6 +166,31 @@ for (const h of hooks) {
   });
 }
 
+test("useEnrichment déclare poisByStage parmi ses paramètres", () => {
+  const content = readFileSync("src/hooks/studio/useEnrichment.js", "utf-8");
+  const signature = content.match(/export function useEnrichment\(\{([\s\S]*?)\}\) \{/);
+  assert.ok(signature, "Signature de useEnrichment introuvable");
+  assert.match(signature[1], /\bpoisByStage\b/, "poisByStage est utilisé sans être déclaré");
+});
+
+test("useStudioDraft déclare gpxByVariant parmi ses paramètres", () => {
+  const content = readFileSync("src/hooks/useStudioDraft.js", "utf-8");
+  const signature = content.match(/export function useStudioDraft\(\{([\s\S]*?)\}\) \{/);
+  assert.ok(signature, "Signature de useStudioDraft introuvable");
+  assert.match(signature[1], /\bgpxByVariant\b/, "gpxByVariant est utilisé sans être déclaré");
+});
+
+test("les accès Studio principaux ciblent le catalogue du Studio", () => {
+  const sources = [
+    readFileSync("src/app/page.js", "utf-8"),
+    readFileSync("src/components/CatalogHeader.js", "utf-8"),
+  ];
+  for (const source of sources) {
+    assert.ok(source.includes('href="/dashboard/roadbooks"'), "Lien Studio vers /dashboard/roadbooks manquant");
+    assert.ok(!source.includes('href="/dashboard">Studio'), "Ancien lien Studio vers /dashboard encore présent");
+  }
+});
+
 // ===================== Synchronisation helpers check =====================
 console.log("\n=== 4. Vérification sync-helpers ===");
 
