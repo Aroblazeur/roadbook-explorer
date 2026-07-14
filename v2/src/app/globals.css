@@ -1001,7 +1001,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-accommodation__placeholder { display: grid; place-items: center; align-content: center; gap: 8px; padding: 18px; border: 1px dashed rgba(46, 125, 50, .28); background: linear-gradient(135deg, #f1f8f2, #e7eee8); color: var(--text-light); font-weight: 700; text-align: center; }
 .stage-detail-accommodation__placeholder span:first-child { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: rgba(46, 125, 50, .12); color: var(--primary); font-size: 1.35rem; }
 .stage-detail-accommodation__actions { display: flex; align-items: stretch; gap: 10px; min-width: 0; }
-.stage-detail-accommodation__actions .stage-detail-button { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.stage-detail-accommodation__identity { display: grid; flex: 1 1 auto; gap: 6px; min-width: 0; }
+.stage-detail-accommodation__identity .stage-detail-button { width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .stage-detail-accommodation__name { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 auto; min-height: 48px; padding: 11px 16px; border: 1px solid rgba(46, 125, 50, .3); border-radius: 9px; background: #e8f5e9; color: var(--primary-dark); font-weight: 750; text-align: center; overflow-wrap: anywhere; }
 .stage-detail-accommodation__map { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-height: 48px; padding: 10px 14px; border: 1px solid rgba(46, 125, 50, .3); border-radius: 9px; color: var(--primary-dark); font-weight: 750; text-decoration: none; }
 .stage-detail-accommodation__map:hover { background: rgba(46, 125, 50, .08); }

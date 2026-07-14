@@ -30,6 +30,7 @@ export default function StageCard({
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
     accommodationForm, setAccommodationForm, clearAccommodationForm,
     handleAccommodationSubmit, handleClearAccommodation,
+    handleDeleteAlternative, handlePromoteAlternative, handleDemotePrimary,
   } = stageCrud;
 
   const {
@@ -155,13 +156,10 @@ export default function StageCard({
             clearAccommodationForm={clearAccommodationForm}
             handleAccommodationSubmit={handleAccommodationSubmit}
             handleClearAccommodation={handleClearAccommodation}
+            handleDeleteAlternative={handleDeleteAlternative}
+            handlePromoteAlternative={handlePromoteAlternative}
+            handleDemotePrimary={handleDemotePrimary}
           />
-
-          {/* ZONE 4 — Hébergements alternatifs */}
-          <div className="studio-zone studio-zone--alternatives">
-            <h4 className="studio-zone__title">Hébergements alternatifs</h4>
-            <p className="studio-detail--empty">Aucun hébergement alternatif.</p>
-          </div>
 
           <NoteForm
             stageId={stage.id}

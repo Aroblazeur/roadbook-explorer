@@ -4,11 +4,19 @@ import {
   insertStage, updateStage, deleteStage,
   insertPoi, updatePoi, deletePoi,
   insertVariant, updateVariant, deleteVariant,
-  updateStageNotes, updateStageAccommodation, clearStageAccommodation,
+  updateStageNotes, updateStageAccommodation,
   swapStageNumbers,
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
 import { buildPoiRecord } from "@/lib/roadbooks/validators";
+import {
+  buildAlternativeAccommodationUpdate,
+  buildClearPrimaryAccommodationUpdate,
+  buildDemotePrimaryUpdate,
+  buildPrimaryAccommodationUpdate,
+  buildPromoteAlternativeUpdate,
+  buildRemoveAlternativeUpdate,
+} from "@/lib/roadbooks/accommodations";
 
 export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPoisVariants, reloadStages }) {
   const [stageForm, stageFormDispatch] = useReducer(stageFormReducer, { ...defaultStageForm });
@@ -20,7 +28,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
   const [poiForm, setPoiForm] = useState({ stage_id: null, name: "", region: "", link: "", description: "", editing: null });
   const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
   const [noteForm, setNoteForm] = useState({ stage_id: null, text: "", editing: null });
-  const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", editing: null });
+  const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", type: "", note: "", kind: "primary", editing: null });
 
   const clearStageForm = useCallback(() => {
     stageFormDispatch({ type: "RESET" });
@@ -72,7 +80,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
   const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, name: "", region: "", link: "", description: "", editing: null }), []);
   const clearVariantForm = useCallback(() => setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }), []);
   const clearNoteForm = useCallback(() => setNoteForm({ stage_id: null, text: "", editing: null }), []);
-  const clearAccommodationForm = useCallback(() => setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }), []);
+  const clearAccommodationForm = useCallback(() => setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", type: "", note: "", kind: "primary", editing: null }), []);
 
   const handlePoiSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -162,27 +170,62 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
 
   const handleAccommodationSubmit = useCallback(async (e) => {
     e.preventDefault();
-    const { stage_id, name, url, photo, editing } = accommodationForm;
-    if (!stage_id || !name.trim()) { setStageError("Le nom de l'hébergement est requis."); return; }
+    const { stage_id, name, url, photo, type, note, kind, editing } = accommodationForm;
+    if (!stage_id || ![name, url, photo].some(value => value.trim())) {
+      setStageError("Renseignez au moins le nom, le lien ou la photo de l'hébergement.");
+      return;
+    }
+    const stage = stages.find(item => item.id === stage_id);
+    if (!stage) return;
     try {
-      const payload = { accommodation_name: name.trim(), accommodation_url: url.trim() || null, accommodation_photo: photo.trim() || null };
+      const value = { name, url, photo, type, note };
+      const payload = kind === "alternative"
+        ? buildAlternativeAccommodationUpdate(stage, value, editing)
+        : buildPrimaryAccommodationUpdate(stage, value);
       await updateStageAccommodation(supabase, stage_id, payload);
-      setStageSuccess(editing ? "Hébergement modifié." : "Hébergement ajouté.");
+      setStageSuccess(editing != null ? "Hébergement modifié." : "Hébergement ajouté.");
       clearAccommodationForm();
       const refreshed = await loadStages(supabase, roadbookId);
       if (refreshed) setStages(refreshed);
     } catch (err) { setStageError(err.message ?? String(err)); }
-  }, [supabase, roadbookId, accommodationForm, clearAccommodationForm, setStages]);
+  }, [supabase, roadbookId, accommodationForm, stages, clearAccommodationForm, setStages]);
 
   const handleClearAccommodation = useCallback(async (stageId) => {
     if (!window.confirm("Vider les informations d'hébergement de cette étape ?")) return;
     try {
-      await clearStageAccommodation(supabase, stageId);
+      const stage = stages.find(item => item.id === stageId);
+      if (!stage) return;
+      await updateStageAccommodation(supabase, stageId, buildClearPrimaryAccommodationUpdate(stage));
       setStageSuccess("Hébergement supprimé.");
       const refreshed = await loadStages(supabase, roadbookId);
       if (refreshed) setStages(refreshed);
     } catch (err) { setStageError(err.message ?? String(err)); }
-  }, [supabase, roadbookId, setStages]);
+  }, [supabase, roadbookId, stages, setStages]);
+
+  const updateAccommodationPlacement = useCallback(async (stageId, buildUpdate, successMessage) => {
+    const stage = stages.find(item => item.id === stageId);
+    if (!stage) return;
+    try {
+      await updateStageAccommodation(supabase, stageId, buildUpdate(stage));
+      setStageSuccess(successMessage);
+      clearAccommodationForm();
+      const refreshed = await loadStages(supabase, roadbookId);
+      if (refreshed) setStages(refreshed);
+    } catch (err) { setStageError(err.message ?? String(err)); }
+  }, [supabase, roadbookId, stages, clearAccommodationForm, setStages]);
+
+  const handleDeleteAlternative = useCallback(async (stageId, index) => {
+    if (!window.confirm("Supprimer cet hébergement alternatif ?")) return;
+    await updateAccommodationPlacement(stageId, stage => buildRemoveAlternativeUpdate(stage, index), "Hébergement alternatif supprimé.");
+  }, [updateAccommodationPlacement]);
+
+  const handlePromoteAlternative = useCallback(async (stageId, index) => {
+    await updateAccommodationPlacement(stageId, stage => buildPromoteAlternativeUpdate(stage, index), "Hébergement défini comme principal.");
+  }, [updateAccommodationPlacement]);
+
+  const handleDemotePrimary = useCallback(async (stageId) => {
+    await updateAccommodationPlacement(stageId, buildDemotePrimaryUpdate, "Hébergement déplacé dans les alternatives.");
+  }, [updateAccommodationPlacement]);
 
   const handleMoveStage = useCallback(async (stage, direction) => {
     const index = stages.indexOf(stage);
@@ -217,6 +260,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
 
     accommodationForm, setAccommodationForm, clearAccommodationForm,
     handleAccommodationSubmit, handleClearAccommodation,
+    handleDeleteAlternative, handlePromoteAlternative, handleDemotePrimary,
 
     handleMoveStage,
   };

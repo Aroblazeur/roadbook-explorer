@@ -28,6 +28,13 @@ import {
   buildDuplicatePoiInsert, buildDuplicateVariantInsert,
 } from "../src/lib/roadbooks/mutations.js";
 
+import {
+  buildAlternativeAccommodationUpdate,
+  buildDemotePrimaryUpdate,
+  buildPrimaryAccommodationUpdate,
+  buildPromoteAlternativeUpdate,
+} from "../src/lib/roadbooks/accommodations.js";
+
 let passed = 0, failed = 0;
 
 function test(name, fn) {
@@ -163,6 +170,60 @@ test("removeNote supprime une note", () => {
   assert.equal(result.length, 2);
   assert.equal(result[0].text, "A");
   assert.equal(result[1].text, "C");
+});
+
+test("buildPrimaryAccommodationUpdate conserve la note dans les métadonnées", () => {
+  const update = buildPrimaryAccommodationUpdate(
+    { metadata: { difficulty: "facile" } },
+    { name: "Camping", url: "https://example.com", type: "camping", note: "Arriver avant 19 h" },
+  );
+  assert.equal(update.accommodation_name, "Camping");
+  assert.equal(update.accommodation_type, "camping");
+  assert.equal(update.metadata.accommodationNote, "Arriver avant 19 h");
+  assert.equal(update.metadata.difficulty, "facile");
+});
+
+test("buildAlternativeAccommodationUpdate ajoute puis modifie une alternative", () => {
+  const added = buildAlternativeAccommodationUpdate(
+    { alternatives: [] },
+    { name: "Gîte", note: "Cuisine disponible" },
+  );
+  assert.equal(added.alternatives.length, 1);
+  assert.equal(added.alternatives[0].note, "Cuisine disponible");
+  const edited = buildAlternativeAccommodationUpdate(
+    { alternatives: added.alternatives },
+    { name: "Gîte rénové", note: "Ouvert" },
+    0,
+  );
+  assert.equal(edited.alternatives[0].name, "Gîte rénové");
+});
+
+test("promouvoir une alternative échange le principal sans en créer deux", () => {
+  const stage = {
+    accommodation_name: "Principal",
+    accommodation_url: "https://principal.example",
+    metadata: { accommodationNote: "Note principale" },
+    alternatives: [{ name: "Alternative", url: "https://alternative.example", note: "Note alternative" }],
+  };
+  const update = buildPromoteAlternativeUpdate(stage, 0);
+  assert.equal(update.accommodation_name, "Alternative");
+  assert.equal(update.metadata.accommodationNote, "Note alternative");
+  assert.equal(update.alternatives.length, 1);
+  assert.equal(update.alternatives[0].name, "Principal");
+  assert.equal(update.alternatives[0].note, "Note principale");
+});
+
+test("rétrograder le principal le déplace dans les alternatives", () => {
+  const update = buildDemotePrimaryUpdate({
+    accommodation_name: "Principal",
+    metadata: { accommodationNote: "Informations" },
+    alternatives: [{ name: "Autre" }],
+  });
+  assert.equal(update.accommodation_name, null);
+  assert.ok(!("accommodationNote" in update.metadata));
+  assert.equal(update.alternatives.length, 2);
+  assert.equal(update.alternatives[1].name, "Principal");
+  assert.equal(update.alternatives[1].note, "Informations");
 });
 
 test("groupByStageId groupe les lignes par stage_id", () => {

@@ -143,6 +143,20 @@ test("le formulaire POI utilise Région / ville et Lien sans champ Type", () => 
   assert.ok(!poiSrc.includes(">Type<input"));
 });
 
+test("les hébergements principaux et alternatifs sont entièrement administrables", () => {
+  const accommodationSrc = readFileSync("src/components/studio/AccommSection.js", "utf-8");
+  const crudSrc = readFileSync("src/hooks/studio/useStageCrud.js", "utf-8");
+  const explorerSrc = readFileSync("src/app/roadbooks/[slug]/page.js", "utf-8");
+  assert.ok(accommodationSrc.includes("Ajouter un hébergement alternatif"));
+  assert.ok(accommodationSrc.includes("Rendre principal"));
+  assert.ok(accommodationSrc.includes("Passer en alternatif"));
+  assert.ok(accommodationSrc.includes(">Note<textarea"));
+  assert.ok(crudSrc.includes("buildPromoteAlternativeUpdate"));
+  assert.ok(crudSrc.includes("buildDemotePrimaryUpdate"));
+  assert.ok(explorerSrc.includes("note: meta.accommodationNote"));
+  assert.ok(explorerSrc.includes("stage-detail-accommodation__note"));
+});
+
 // ==================== Vérifications structurelles ====================
 console.log("\n=== 3. Vérifications structurelles de page.js ===");
 

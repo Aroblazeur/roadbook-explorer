@@ -517,6 +517,7 @@ function StageCard({ stage, stageIndex, pois, variants, stageGpx, gpxByVariant, 
     url: stage.accommodation_url,
     photo: stage.accommodation_photo,
     type: stage.accommodation_type,
+    note: meta.accommodationNote ?? meta.accommodation?.note,
   });
   const alternatives = normalizeAlternatives(stage.alternatives);
   if (meta.alternativeAccommodationName || meta.alternativeAccommodationPhoto) {
@@ -720,20 +721,22 @@ function AccommodationResource({ accommodation, contextCity, compact = false }) 
         </div>
       )}
       <div className="stage-detail-accommodation__actions">
-        {websiteUrl ? (
-          <a className="stage-detail-button stage-detail-button--secondary" href={websiteUrl} target="_blank" rel="noopener noreferrer">
-            <span aria-hidden="true">{accommodationIcon(accommodation.type, name)}</span> {name}
-          </a>
-        ) : (
-          <span className="stage-detail-accommodation__name">
-            <span aria-hidden="true">{accommodationIcon(accommodation.type, name)}</span> {name}
-          </span>
-        )}
+        <div className="stage-detail-accommodation__identity">
+          {websiteUrl ? (
+            <a className="stage-detail-button stage-detail-button--secondary" href={websiteUrl} target="_blank" rel="noopener noreferrer">
+              <span aria-hidden="true">{accommodationIcon(accommodation.type, name)}</span> {name}
+            </a>
+          ) : (
+            <span className="stage-detail-accommodation__name">
+              <span aria-hidden="true">{accommodationIcon(accommodation.type, name)}</span> {name}
+            </span>
+          )}
+          {accommodation.note && <p className="stage-detail-accommodation__note">{accommodation.note}</p>}
+        </div>
         <a className="stage-detail-accommodation__map" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`Rechercher ${name} sur Google Maps`}>
           Carte
         </a>
       </div>
-      {accommodation.note && <p className="stage-detail-accommodation__note">{accommodation.note}</p>}
     </article>
   );
 }
