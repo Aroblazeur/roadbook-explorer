@@ -282,10 +282,39 @@ test("les policies RLS respectent anon, propriétaire et autre utilisateur", { t
     path.join(root, "supabase/migrations/20260714114608_storage_media_policies.sql"),
     "utf8",
   );
+  const policyNames = [
+    "roadbook_media_owner_delete",
+    "roadbook_media_owner_insert",
+    "roadbook_media_owner_read",
+    "roadbook_media_owner_update",
+    "roadbook_media_public_read",
+  ];
+
+  async function readPolicyState() {
+    const result = await client.query(
+      `select policyname, cmd, roles::text as roles, qual, with_check
+       from pg_policies
+       where schemaname='storage'
+         and tablename='objects'
+         and policyname like 'roadbook_media_%'
+       order by policyname`,
+    );
+    return result.rows;
+  }
 
   await client.connect();
+  let initialPolicies = null;
   let transactionOpen = false;
   try {
+    initialPolicies = await readPolicyState();
+    assert.ok(
+      initialPolicies.length === 0 || initialPolicies.length === policyNames.length,
+      `l'état initial doit contenir 0 ou ${policyNames.length} policies Sprint 4C1`,
+    );
+    if (initialPolicies.length === policyNames.length) {
+      assert.deepEqual(initialPolicies.map(policy => policy.policyname), policyNames);
+    }
+
     await client.query("begin");
     transactionOpen = true;
     await client.query(migration);
@@ -428,18 +457,29 @@ test("les policies RLS respectent anon, propriétaire et autre utilisateur", { t
       assert.equal(await visibleCount(paths.linked), 1, `anon autorise ${operation} sur un roadbook public`);
     }
   } finally {
-    if (transactionOpen) await client.query("rollback");
+    try {
+      if (transactionOpen) await client.query("rollback");
 
-    const cleanup = await client.query(
-      `select
-        (select count(*) from pg_policies where schemaname='storage' and tablename='objects' and policyname like 'roadbook_media_%')::int as policies,
-        (select count(*) from public.roadbooks where slug=$1)::int as roadbooks,
-        (select count(*) from public.media where path like $2)::int as media,
-        (select count(*) from storage.objects where name like $2)::int as objects`,
-      [slug, `${prefix}%`],
-    );
-    assert.deepEqual(cleanup.rows[0], { policies: 0, roadbooks: 0, media: 0, objects: 0 });
-    await client.end();
+      if (initialPolicies) {
+        const finalPolicies = await readPolicyState();
+        assert.deepEqual(
+          finalPolicies,
+          initialPolicies,
+          "le rollback doit restaurer exactement les noms, commandes, rôles et définitions des policies initiales",
+        );
+      }
+
+      const cleanup = await client.query(
+        `select
+          (select count(*) from public.roadbooks where slug=$1)::int as roadbooks,
+          (select count(*) from public.media where path like $2)::int as media,
+          (select count(*) from storage.objects where name like $2)::int as objects`,
+        [slug, `${prefix}%`],
+      );
+      assert.deepEqual(cleanup.rows[0], { roadbooks: 0, media: 0, objects: 0 });
+    } finally {
+      await client.end();
+    }
   }
 });
 

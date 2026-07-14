@@ -1,3 +1,8 @@
+import {
+  gpxDiagnosticDetails,
+  selectUniqueGpxMedia,
+} from "./gpx-media.js";
+
 export async function loadRoadbook(supabase, roadbookId) {
   const { data, error } = await supabase
     .from("roadbooks")
@@ -131,6 +136,67 @@ export async function getSignedUrl(
     throw error;
   }
   return access.signedUrl;
+}
+
+export async function loadExplorerGpxMedia(
+  supabase,
+  rows,
+  { logger = console.error } = {},
+) {
+  const selection = selectUniqueGpxMedia(rows);
+
+  for (const { media, classification } of selection.classified) {
+    if (classification.status === "ambiguous" || classification.status === "invalid") {
+      logger?.(`[gpx-media] ${classification.status}`, gpxDiagnosticDetails(media, classification));
+    }
+  }
+
+  for (const duplicate of selection.duplicates) {
+    for (const { media, classification } of duplicate.entries) {
+      logger?.("[gpx-media] duplicate-identity", gpxDiagnosticDetails(media, classification, {
+        status: "duplicate-identity",
+        reason: "multiple-media-share-business-identity",
+      }));
+    }
+  }
+
+  const signedRows = await Promise.all(
+    [...selection.unique.values()].map(async ({ media, classification }) => {
+      const access = await getSignedMediaAccess(supabase, media, {
+        context: "explorer-roadbook-gpx",
+        logger: null,
+      });
+      if (access.status !== "available") {
+        logger?.("[gpx-media] signed-url-unavailable", gpxDiagnosticDetails(media, classification, {
+          status: "inaccessible",
+          reason: "signed-url-unavailable",
+        }));
+      }
+      return { media: { ...media, signedUrl: access.signedUrl, access }, classification };
+    }),
+  );
+
+  let gpxOfficial = null;
+  let gpxCustom = null;
+  const gpxByStage = {};
+  const gpxByVariant = {};
+  for (const { media, classification } of signedRows) {
+    if (classification.scope === "roadbook" && classification.role === "official") gpxOfficial = media;
+    else if (classification.scope === "roadbook" && classification.role === "custom") gpxCustom = media;
+    else if (classification.scope === "stage") gpxByStage[classification.stageId] = media;
+    else if (classification.scope === "variant") gpxByVariant[classification.variantId] = media;
+  }
+
+  return {
+    gpxOfficial,
+    gpxCustom,
+    gpxByStage,
+    gpxByVariant,
+    diagnostics: {
+      classified: selection.classified,
+      duplicates: selection.duplicates,
+    },
+  };
 }
 
 export async function loadMediaWithUrls(supabase, roadbookId) {

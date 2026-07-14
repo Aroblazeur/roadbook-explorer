@@ -1,0 +1,223 @@
+const GPX_SCOPES = new Set(["roadbook", "stage", "variant"]);
+const GPX_ROLES = new Set(["official", "custom"]);
+
+const LEGACY_ROLES = {
+  "gpx-official": { scope: "roadbook", role: "official" },
+  "gpx-total": { scope: "roadbook", role: "custom" },
+  "gpx-stage": { scope: "stage", role: "official" },
+  "gpx-variant": { scope: "variant", role: "official" },
+};
+
+function isPositiveInteger(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function result(media, overrides) {
+  return {
+    status: "invalid",
+    scope: null,
+    role: null,
+    roadbookId: media?.roadbook_id ?? null,
+    stageId: media?.stage_id ?? null,
+    variantId: media?.metadata?.variant_id ?? null,
+    source: "unknown",
+    reason: null,
+    ...overrides,
+  };
+}
+
+export function classifyGpxMedia(media) {
+  if (!media || media.type !== "gpx") {
+    return result(media, { reason: "media-type-is-not-gpx" });
+  }
+
+  const roadbookId = media.roadbook_id;
+  const stageId = media.stage_id ?? null;
+  const metadata = media.metadata && typeof media.metadata === "object" ? media.metadata : {};
+  const rawScope = metadata.scope ?? null;
+  const rawRole = metadata.role ?? null;
+  const compatibilityRole = metadata.gpx_role ?? null;
+  const variantId = metadata.variant_id ?? null;
+  const variantIdPresent = hasOwn(metadata, "variant_id");
+
+  if (!isPositiveInteger(roadbookId)) {
+    return result(media, { roadbookId, stageId, variantId, reason: "roadbook-id-is-required" });
+  }
+
+  if (rawScope != null && !GPX_SCOPES.has(rawScope)) {
+    return result(media, { roadbookId, stageId, variantId, reason: "unknown-scope" });
+  }
+  if (compatibilityRole != null && !GPX_ROLES.has(compatibilityRole)) {
+    return result(media, { roadbookId, stageId, variantId, reason: "unknown-gpx-role" });
+  }
+
+  const legacy = LEGACY_ROLES[rawRole] ?? null;
+  const canonicalRole = GPX_ROLES.has(rawRole) ? rawRole : null;
+  let status;
+  let scope;
+  let role;
+  let source;
+
+  if (legacy) {
+    scope = legacy.scope;
+    role = legacy.role;
+    source = "legacy-role";
+    status = "legacy-compatible";
+    if (rawScope != null && rawScope !== scope) {
+      return result(media, { roadbookId, stageId, variantId, source, reason: "canonical-legacy-scope-contradiction" });
+    }
+    if (compatibilityRole != null && compatibilityRole !== role) {
+      return result(media, { roadbookId, stageId, variantId, source, reason: "canonical-legacy-role-contradiction" });
+    }
+  } else if (canonicalRole) {
+    scope = rawScope;
+    role = canonicalRole;
+    source = "canonical";
+    status = "canonical";
+    if (compatibilityRole != null && compatibilityRole !== role) {
+      return result(media, { roadbookId, stageId, variantId, source, reason: "canonical-role-contradiction" });
+    }
+  } else if (rawRole != null) {
+    return result(media, { roadbookId, stageId, variantId, reason: "unknown-role" });
+  } else if (compatibilityRole != null) {
+    // Compatibilité avec les lignes déjà créées par le Studio V2 avant 4C2.
+    scope = rawScope;
+    role = compatibilityRole;
+    source = "legacy-gpx-role";
+    status = "legacy-compatible";
+  } else {
+    return result(media, { roadbookId, stageId, variantId, reason: "scope-and-role-are-required" });
+  }
+
+  if (!scope || !GPX_SCOPES.has(scope)) {
+    return result(media, { roadbookId, stageId, variantId, source, role, reason: "scope-is-required" });
+  }
+  if (!role || !GPX_ROLES.has(role)) {
+    return result(media, { roadbookId, stageId, variantId, source, scope, reason: "role-is-required" });
+  }
+  if (scope !== "variant" && variantIdPresent) {
+    return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "variant-id-not-allowed-for-scope" });
+  }
+
+  if (scope === "roadbook") {
+    if (stageId != null) {
+      return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "roadbook-scope-must-not-have-stage-id" });
+    }
+  } else if (scope === "stage") {
+    if (!isPositiveInteger(stageId)) {
+      return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "stage-id-is-required" });
+    }
+  } else {
+    if (variantIdPresent && !isPositiveInteger(variantId)) {
+      return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "variant-id-must-be-positive-integer" });
+    }
+    if (!isPositiveInteger(stageId) || !isPositiveInteger(variantId)) {
+      if (source === "legacy-role") {
+        return result(media, {
+          status: "ambiguous",
+          roadbookId,
+          stageId,
+          variantId,
+          source,
+          scope,
+          role,
+          reason: "legacy-variant-target-is-incomplete",
+        });
+      }
+      return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "variant-scope-requires-stage-and-variant-id" });
+    }
+  }
+
+  return result(media, { status, roadbookId, stageId, variantId, source, scope, role, reason: null });
+}
+
+export function buildGpxBusinessIdentity(classification) {
+  if (!classification || !["canonical", "legacy-compatible"].includes(classification.status)) return null;
+  const { roadbookId, stageId, variantId, scope, role } = classification;
+  if (!isPositiveInteger(roadbookId) || !GPX_SCOPES.has(scope) || !GPX_ROLES.has(role)) return null;
+  if (scope === "roadbook") return `roadbook:${roadbookId}:${scope}:${role}`;
+  if (!isPositiveInteger(stageId)) return null;
+  if (scope === "stage") return `roadbook:${roadbookId}:stage:${stageId}:${role}`;
+  if (!isPositiveInteger(variantId)) return null;
+  return `roadbook:${roadbookId}:stage:${stageId}:variant:${variantId}:${role}`;
+}
+
+export function isExplorerUsableGpx(classification) {
+  return buildGpxBusinessIdentity(classification) != null;
+}
+
+export function selectUniqueGpxMedia(rows = []) {
+  const classified = rows.map(media => ({ media, classification: classifyGpxMedia(media) }));
+  const groups = new Map();
+
+  for (const entry of classified) {
+    const identity = buildGpxBusinessIdentity(entry.classification);
+    if (!identity) continue;
+    const group = groups.get(identity) ?? [];
+    group.push(entry);
+    groups.set(identity, group);
+  }
+
+  const unique = new Map();
+  const duplicates = [];
+  for (const [identity, entries] of groups) {
+    if (entries.length === 1) unique.set(identity, entries[0]);
+    else duplicates.push({ identity, entries });
+  }
+
+  return { classified, unique, duplicates };
+}
+
+export function selectGpxMedia(rows, target) {
+  const identity = buildGpxBusinessIdentity({ status: "canonical", ...target });
+  if (!identity) return { status: "invalid-target", media: null, classification: null, reason: "invalid-target" };
+  const selection = selectUniqueGpxMedia(rows);
+  const duplicate = selection.duplicates.find(item => item.identity === identity);
+  if (duplicate) {
+    return { status: "duplicate-identity", media: null, classification: null, reason: "multiple-media-share-business-identity", entries: duplicate.entries };
+  }
+  const selected = selection.unique.get(identity);
+  if (!selected) return { status: "missing", media: null, classification: null, reason: "no-usable-media" };
+  return { status: "selected", media: selected.media, classification: selected.classification, reason: null };
+}
+
+export function classifyGpxReferenceUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return "absent";
+  const trimmed = value.trim();
+  if (/\/storage\/v1\/object\/sign\//i.test(trimmed) || /^\/?object\/sign\//i.test(trimmed)) {
+    return "legacy-storage-signed";
+  }
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === "http:" || url.protocol === "https:") return "external";
+  } catch {
+    return "legacy-relative";
+  }
+  return "invalid";
+}
+
+export function resolveExplorerGpxUrl({ media = null, fallbackUrl = null } = {}) {
+  if (typeof media?.signedUrl === "string" && media.signedUrl.trim()) {
+    return { url: media.signedUrl, source: "signed-media" };
+  }
+  const fallbackType = classifyGpxReferenceUrl(fallbackUrl);
+  if (fallbackType === "external") return { url: fallbackUrl, source: "external-url" };
+  if (fallbackType === "legacy-storage-signed") return { url: fallbackUrl, source: "legacy-storage-url" };
+  if (fallbackType === "legacy-relative") return { url: fallbackUrl, source: "legacy-relative-url" };
+  return { url: null, source: "absent" };
+}
+
+export function gpxDiagnosticDetails(media, classification, overrides = {}) {
+  return {
+    mediaId: media?.id ?? null,
+    roadbookId: classification?.roadbookId ?? media?.roadbook_id ?? null,
+    stageId: classification?.stageId ?? media?.stage_id ?? null,
+    variantId: classification?.variantId ?? media?.metadata?.variant_id ?? null,
+    status: overrides.status ?? classification?.status ?? "invalid",
+    reason: overrides.reason ?? classification?.reason ?? null,
+  };
+}

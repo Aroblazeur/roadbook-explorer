@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import MapViewerClient from "@/components/MapViewerClient";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { getSignedMediaAccess } from "@/lib/roadbooks/loaders";
+import { getSignedMediaAccess, loadExplorerGpxMedia } from "@/lib/roadbooks/loaders";
+import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -42,28 +43,18 @@ async function getRoadbook(slug) {
   const allMedia = mediaRows ?? [];
 
   const images = [];
-  let gpxOfficial = null, gpxCustom = null;
-  const gpxByStage = {};
   for (const m of allMedia) {
     if (m.type === "image") {
       const access = await getSignedMediaAccess(supabase, m, {
         context: "explorer-roadbook-image",
       });
       images.push({ ...m, signedUrl: access.signedUrl, access });
-    } else if (m.type === "gpx") {
-      const access = await getSignedMediaAccess(supabase, m, {
-        context: "explorer-roadbook-gpx",
-      });
-      const row = { ...m, signedUrl: access.signedUrl, access };
-      if (m.metadata?.scope === "stage" && m.stage_id) {
-        gpxByStage[m.stage_id] = row;
-      } else if (m.metadata?.gpx_role === "official") {
-        gpxOfficial = row;
-      } else if (m.metadata?.gpx_role === "custom") {
-        gpxCustom = row;
-      }
     }
   }
+  const { gpxOfficial, gpxCustom, gpxByStage, gpxByVariant } = await loadExplorerGpxMedia(
+    supabase,
+    allMedia.filter(media => media.type === "gpx"),
+  );
 
   let coverSignedUrl = null;
   let coverMediaAccess = { status: "absent", signedUrl: null, error: null };
@@ -84,7 +75,7 @@ async function getRoadbook(slug) {
   const totalElevationGain = (stages ?? []).reduce((sum, s) => sum + (s.elevation_gain_m ?? 0), 0);
   const totalElevationLoss = (stages ?? []).reduce((sum, s) => sum + (s.elevation_loss_m ?? 0), 0);
 
-  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false };
+  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false };
 }
 
 export default async function RoadbookViewPage({ params, searchParams: sp }) {
@@ -100,7 +91,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
     return <TechnicalError message={result.error} />;
   }
 
-  const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, totals } = result;
+  const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, totals } = result;
   const stageParam = searchParams?.stage ? Number(searchParams.stage) : null;
 
   const poisByStage = {};
@@ -140,6 +131,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           pois={poisByStage[currentStage.id] ?? []}
           variants={variantsByStage[currentStage.id] ?? []}
           stageGpx={gpxByStage[currentStage.id] ?? null}
+          gpxByVariant={gpxByVariant}
         />
       )}
     </main>
@@ -228,7 +220,7 @@ function RoadbookOverview({ roadbook, stages, totals, gpxOfficial, gpxCustom }) 
 }
 
 function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabel }) {
-  const traceUrl = gpx?.signedUrl ?? summary.gpx ?? null;
+  const traceUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: gpx, fallbackUrl: summary.gpx }).url);
   const hasMetrics = summary.distance != null || summary.elevationGain != null || summary.elevationLoss != null;
   const hasMap = Boolean(summary.mapEmbedUrl || traceUrl);
   if (!hasMetrics && !hasMap) return null;
@@ -355,7 +347,7 @@ function ImagesSection({ images }) {
   );
 }
 
-function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, stageGpx }) {
+function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, stageGpx, gpxByVariant }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
       <StageDetailNavigation roadbook={roadbook} stages={stages} currentIdx={currentIdx} stage={stage} />
@@ -365,6 +357,7 @@ function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, 
         pois={pois}
         variants={variants}
         stageGpx={stageGpx}
+        gpxByVariant={gpxByVariant}
       />
     </section>
   );
@@ -402,7 +395,7 @@ function StageDetailNavigation({ roadbook, stages, currentIdx, stage }) {
   );
 }
 
-function VariantCard({ variant, contextCity }) {
+function VariantCard({ variant, contextCity, variantGpx }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
   const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
@@ -410,7 +403,7 @@ function VariantCard({ variant, contextCity }) {
   const departure = variant.departure ?? meta.departure;
   const arrival = variant.arrival ?? meta.arrival;
   const mapUrl = safeResourceUrl(variant.map_embed_url ?? meta.map_embed_url, { relative: false });
-  const gpxUrl = safeResourceUrl(variant.gpx_url);
+  const gpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: variantGpx, fallbackUrl: variant.gpx_url }).url);
   const notes = normalizeNoteItems(variant.notes ?? meta.notes);
   const accommodation = normalizeAccommodation(meta.accommodation ?? meta.legacyAccommodation);
   const alternatives = normalizeAlternatives(meta.accommodation?.alternatives);
@@ -505,13 +498,13 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, stageIndex, pois, variants, stageGpx }) {
+function StageCard({ stage, stageIndex, pois, variants, stageGpx, gpxByVariant }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_number ?? stageIndex + 1;
   const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
   const title = stageHeadingTitle(stage, stageNumber, stageLabel);
   const photoUrl = safeResourceUrl(stage.stage_photo_url);
-  const stageGpxUrl = safeResourceUrl(stageGpx?.signedUrl ?? stage.gpx_url);
+  const stageGpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: stageGpx, fallbackUrl: stage.gpx_url }).url);
   const mapUrl = safeResourceUrl(stage.map_embed_url, { relative: false });
   const normalizedNotes = normalizeNoteItems(stage.notes);
   const warningNotes = normalizedNotes.filter(note => note.type === "warning");
@@ -623,7 +616,7 @@ function StageCard({ stage, stageIndex, pois, variants, stageGpx }) {
         <section className="stage-detail-card stage-detail-variants card" aria-labelledby="stage-detail-variants-title">
           <h2 id="stage-detail-variants-title">Variantes ({variants.length})</h2>
           <div className="stage-detail-variant-list">
-            {variants.map(variant => <VariantCard key={variant.id} variant={variant} contextCity={contextCity} />)}
+            {variants.map(variant => <VariantCard key={variant.id} variant={variant} contextCity={contextCity} variantGpx={gpxByVariant?.[variant.id] ?? null} />)}
           </div>
         </section>
       )}
