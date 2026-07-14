@@ -40,6 +40,7 @@ export default function RoadbooksPage() {
     supabase
       .from("roadbooks")
       .select("id, slug, title, description, is_public, created_at")
+      .eq("owner_id", user.id)
       .order("created_at", { ascending: false })
       .then(({ data, error: err }) => {
         if (err) setError(err.message);
@@ -109,6 +110,7 @@ export default function RoadbooksPage() {
       const { data } = await supabase
         .from("roadbooks")
         .select("id, slug, title, description, is_public, created_at")
+        .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
       setRoadbooks(data ?? []);
       router.push(`/dashboard/roadbooks/${newRb.id}`);
@@ -138,18 +140,18 @@ export default function RoadbooksPage() {
   if (!user) return null;
 
   if (fetching) {
-    return <main className="page-dashboard"><h1>Nos roadbooks</h1><p>Chargement de la liste…</p></main>;
+    return <main className="page-dashboard"><h1>Mes roadbooks</h1><p>Chargement de la liste…</p></main>;
   }
 
   if (error && !roadbooks.length) {
-    return <main className="page-dashboard"><h1>Nos roadbooks</h1><p className="page-error">{error}</p><p><Link href="/dashboard/roadbooks">Réessayer</Link></p></main>;
+    return <main className="page-dashboard"><h1>Mes roadbooks</h1><p className="page-error">{error}</p><p><Link href="/dashboard/roadbooks">Réessayer</Link></p></main>;
   }
 
   return (
     <main className="page-dashboard studio-layout">
       <div className="studio-panel">
         <div className="studio-panel__header">
-          <h1>Nos roadbooks</h1>
+          <h1>Mes roadbooks</h1>
           <div className="studio-actions">
             <Link href="/" className="terrain-button--secondary studio-action-button--compact" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Accueil</Link>
             <Link href="/explore" className="terrain-button--secondary studio-action-button--compact" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Explorer</Link>

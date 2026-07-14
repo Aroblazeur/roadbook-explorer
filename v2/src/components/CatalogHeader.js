@@ -54,13 +54,13 @@ export default function CatalogHeader() {
           {user ? (
             <>
               <span className="header-nav__email">{user.email}</span>
-              <Link href="/dashboard/roadbooks">Nos roadbooks</Link>
+              <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
               <Link href="/dashboard">Studio</Link>
               <button onClick={handleLogout}>Déconnexion</button>
             </>
           ) : (
             <>
-              <Link href="/dashboard/roadbooks">Nos roadbooks</Link>
+              <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
               <Link href="/dashboard">Studio</Link>
               <Link href="/login">Connexion</Link>
             </>

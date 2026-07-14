@@ -28,7 +28,7 @@ export default function HomePage() {
                 </svg>
               </span>
               <span className="home-access-card__content">
-                <strong>Nos roadbooks</strong>
+                <strong>Mes roadbooks</strong>
                 <span>Retrouvez la liste de vos roadbooks et choisissez celui à consulter.</span>
               </span>
               <span className="home-access-card__arrow" aria-hidden="true">→</span>
