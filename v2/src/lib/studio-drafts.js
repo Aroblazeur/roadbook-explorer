@@ -310,9 +310,7 @@ export function buildNewDraftPayload(formState) {
       officialElevationGain: formState.officialElevationGain ?? "",
       officialElevationLoss: formState.officialElevationLoss ?? "",
       officialGpx: formState.officialGpx ?? "",
-      officialMapEmbedUrl: formState.officialMapEmbedUrl ?? "",
       currentGpx: formState.currentGpx ?? "",
-      currentMapEmbedUrl: formState.currentMapEmbedUrl ?? "",
     },
   };
 }

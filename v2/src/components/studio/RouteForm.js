@@ -27,7 +27,7 @@ export default function RouteForm({
           <div className="studio-form-grid__full">
             <label htmlFor={`route-gpx-${mode}`}>GPX (URL ou fichier)</label>
             <div className="studio-resource-field">
-              <input id={`route-gpx-${mode}`} type="text" value={values.gpx} onChange={e => setValues(prev => ({ ...prev, gpx: e.target.value }))} placeholder="URL du fichier GPX" />
+              <input id={`route-gpx-${mode}`} type="text" value={values.gpx} onChange={e => setValues(prev => ({ ...prev, gpx: e.target.value }))} />
               {mediaRow ? (
                 <>
                   <span className="studio-resource-field__file" title={mediaRow.file_name}>{mediaRow.file_name}</span>
@@ -42,7 +42,7 @@ export default function RouteForm({
               )}
             </div>
           </div>
-          <label className="studio-form-grid__full">Carte intégrée<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} placeholder="https://www.google.com/maps/embed?..." /></label>
+          <label className="studio-form-grid__full">Carte intégrée<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} /></label>
         </div>
       </div>
     </div>

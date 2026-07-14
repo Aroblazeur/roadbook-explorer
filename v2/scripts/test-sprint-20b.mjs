@@ -120,11 +120,18 @@ test("buildStageRecord inclut metadata", () => {
 });
 
 test("buildPoiRecord construit le record POI", () => {
-  const poiForm = { stage_id: 1, name: "Point", type: "eau", description: "Fontaine", lat: "45.0", lng: "6.0", url: "", editing: null };
+  const poiForm = { stage_id: 1, name: "Point", region: "Grenoble", link: "https://example.com/point", description: "Fontaine", editing: null };
   const record = buildPoiRecord(poiForm);
   assert.equal(record.name, "Point");
-  assert.equal(record.poi_type, "eau");
-  assert.equal(record.lat, 45);
+  assert.ok(!("poi_type" in record));
+  assert.equal(record.region, "Grenoble");
+  assert.equal(record.link_url, "https://example.com/point");
+  assert.equal(record.lat, null);
+});
+
+test("buildPoiRecord génère le lien Maps seulement si le lien est vide", () => {
+  const record = buildPoiRecord({ stage_id: 1, name: "Col du Galibier", region: "Valloire", link: "", description: "" });
+  assert.equal(record.link_url, "https://www.google.com/maps/search/?api=1&query=Col%20du%20Galibier%2C%20Valloire");
 });
 
 test("buildVariantRecord construit le record variante", () => {

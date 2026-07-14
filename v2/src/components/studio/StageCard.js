@@ -92,7 +92,7 @@ export default function StageCard({
               <div className="studio-form-grid__full">
                 <label htmlFor={`stage-photo-${stage.id}`}>Photo de l'étape (URL ou fichier)</label>
                 <div className="studio-resource-field">
-                  <input id={`stage-photo-${stage.id}`} type="url" value={stage.stage_photo_url ?? ""} onChange={e => change({ stage_photo_url: e.target.value })} placeholder="https://..." />
+                  <input id={`stage-photo-${stage.id}`} type="url" value={stage.stage_photo_url ?? ""} onChange={e => change({ stage_photo_url: e.target.value })} />
                   {stagePhotoMedia && <span className="studio-resource-field__file">{stagePhotoMedia.file_name}</span>}
                   <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
                     {uploadLoading ? "Import…" : "Importer"}
@@ -119,7 +119,7 @@ export default function StageCard({
                 <h5>GPX et carte</h5>
               </div>
               <div className="studio-form-grid studio-form-grid--compact">
-                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} placeholder="https://www.google.com/maps/embed?..." /></label>
+                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} /></label>
               </div>
             </div>
 

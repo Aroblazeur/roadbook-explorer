@@ -42,7 +42,7 @@ export default function AccommSection({
           <div className="studio-form-grid studio-form-grid--compact">
             <label>Nom<input type="text" value={accommodationForm.name} onChange={e => setAccommodationForm({ ...accommodationForm, name: e.target.value })} required /></label>
             <label>URL<input type="url" value={accommodationForm.url} onChange={e => setAccommodationForm({ ...accommodationForm, url: e.target.value })} /></label>
-            <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} placeholder="URL de l'image" /></label>
+            <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} /></label>
           </div>
           <div className="studio-create-form__actions">
             <button type="submit" className="terrain-button">Enregistrer l’hébergement</button>

@@ -74,9 +74,11 @@ test("le GPX roadbook est intégré aux formulaires d'itinéraire", () => {
 
 test("les champs utiles de création V1 sont présents dans le catalogue V2", () => {
   const catalogSrc = readFileSync("src/components/studio/StudioCatalog.js", "utf-8");
-  for (const field of ["Projet", "officialDistance", "officialElevationGain", "officialElevationLoss", "officialGpx", "officialMapEmbedUrl", "currentGpx", "currentMapEmbedUrl"]) {
+  for (const field of ["Projet", "officialDistance", "officialElevationGain", "officialElevationLoss", "officialGpx", "currentGpx"]) {
     assert.ok(catalogSrc.includes(field), `Champ de création manquant : ${field}`);
   }
+  assert.ok(!catalogSrc.includes("officialMapEmbedUrl"));
+  assert.ok(!catalogSrc.includes("currentMapEmbedUrl"));
   assert.ok(!catalogSrc.includes("ID du roadbook"), "L'identifiant technique ne doit pas être demandé");
   assert.ok(catalogSrc.includes("const cleanSlug = title.toLowerCase()"), "Le slug doit être généré depuis le titre");
 });
@@ -125,6 +127,20 @@ test("les ressources URL ou fichier utilisent un champ visuel unique", () => {
   assert.ok(coverSrc.includes("Image de couverture (URL ou fichier)"));
   assert.ok(routeSrc.includes("GPX (URL ou fichier)"));
   assert.ok(stageFormSrc.includes("Photo (URL ou fichier)"));
+});
+
+test("les champs Studio vides n'affichent aucun exemple", () => {
+  for (const file of ["StudioCatalog", "GeneralInfoForm", "CoverSection", "RouteForm", "StageForm", "StageCard", "PoiForm", "VariantForm", "AccommSection"]) {
+    const source = readFileSync(`src/components/studio/${file}.js`, "utf-8");
+    assert.ok(!source.includes("placeholder="), `${file} contient encore un exemple dans un champ vide`);
+  }
+});
+
+test("le formulaire POI utilise Région / ville et Lien sans champ Type", () => {
+  const poiSrc = readFileSync("src/components/studio/PoiForm.js", "utf-8");
+  assert.ok(poiSrc.includes("Région / ville"));
+  assert.ok(poiSrc.includes(">Lien<input"));
+  assert.ok(!poiSrc.includes(">Type<input"));
 });
 
 // ==================== Vérifications structurelles ====================

@@ -24,7 +24,7 @@ export default function CoverSection({
             : <div className="cover-placeholder">Aucune image de couverture</div>}
           <label>Image de couverture (URL ou fichier)</label>
           <div className="studio-resource-field">
-            <input aria-label="URL de l'image de couverture" type="url" value={coverUrl} onChange={e => { setCoverUrl(e.target.value); onSelectCoverUrl(e.target.value); }} placeholder="https://..." />
+            <input aria-label="URL de l'image de couverture" type="url" value={coverUrl} onChange={e => { setCoverUrl(e.target.value); onSelectCoverUrl(e.target.value); }} />
             <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
               {uploadLoading ? "Import…" : "Importer"}
               <input type="file" accept="image/*" disabled={uploadLoading} onChange={handleUploadCover} />

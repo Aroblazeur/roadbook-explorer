@@ -28,9 +28,7 @@ export default function StudioCatalog({ selectedId = null }) {
   const [officialElevationGain, setOfficialElevationGain] = useState("");
   const [officialElevationLoss, setOfficialElevationLoss] = useState("");
   const [officialGpx, setOfficialGpx] = useState("");
-  const [officialMapEmbedUrl, setOfficialMapEmbedUrl] = useState("");
   const [currentGpx, setCurrentGpx] = useState("");
-  const [currentMapEmbedUrl, setCurrentMapEmbedUrl] = useState("");
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [pendingDraft, setPendingDraft] = useState(null);
@@ -79,9 +77,7 @@ export default function StudioCatalog({ selectedId = null }) {
       setOfficialElevationGain(payload.officialElevationGain ?? "");
       setOfficialElevationLoss(payload.officialElevationLoss ?? "");
       setOfficialGpx(payload.officialGpx ?? "");
-      setOfficialMapEmbedUrl(payload.officialMapEmbedUrl ?? "");
       setCurrentGpx(payload.currentGpx ?? "");
-      setCurrentMapEmbedUrl(payload.currentMapEmbedUrl ?? "");
       setShowCreate(true);
     }
   }, [user]);
@@ -100,9 +96,7 @@ export default function StudioCatalog({ selectedId = null }) {
       officialElevationGain,
       officialElevationLoss,
       officialGpx,
-      officialMapEmbedUrl,
       currentGpx,
-      currentMapEmbedUrl,
     }));
   }
 
@@ -112,7 +106,7 @@ export default function StudioCatalog({ selectedId = null }) {
     };
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [user?.id, title, description, isPublic, project, officialDistance, officialElevationGain, officialElevationLoss, officialGpx, officialMapEmbedUrl, currentGpx, currentMapEmbedUrl]);
+  }, [user?.id, title, description, isPublic, project, officialDistance, officialElevationGain, officialElevationLoss, officialGpx, currentGpx]);
 
   async function handleCreate(event) {
     event.preventDefault();
@@ -135,14 +129,14 @@ export default function StudioCatalog({ selectedId = null }) {
         elevationGain: numberOrNull(officialElevationGain),
         elevationLoss: numberOrNull(officialElevationLoss),
         gpx: officialGpx || null,
-        mapEmbedUrl: officialMapEmbedUrl || null,
+        mapEmbedUrl: null,
       },
       stagesTotal: {
         distance: null,
         elevationGain: null,
         elevationLoss: null,
         gpx: currentGpx || null,
-        mapEmbedUrl: currentMapEmbedUrl || null,
+        mapEmbedUrl: null,
       },
     };
     const { data: newRoadbook, error: insertError } = await supabase.from("roadbooks").insert({
@@ -169,9 +163,7 @@ export default function StudioCatalog({ selectedId = null }) {
     setOfficialElevationGain("");
     setOfficialElevationLoss("");
     setOfficialGpx("");
-    setOfficialMapEmbedUrl("");
     setCurrentGpx("");
-    setCurrentMapEmbedUrl("");
     setShowCreate(false);
     await loadRoadbooks();
     router.push(`/dashboard/roadbooks/${newRoadbook.id}`);
@@ -190,9 +182,7 @@ export default function StudioCatalog({ selectedId = null }) {
     setOfficialElevationGain("");
     setOfficialElevationLoss("");
     setOfficialGpx("");
-    setOfficialMapEmbedUrl("");
     setCurrentGpx("");
-    setCurrentMapEmbedUrl("");
     setShowCreate(false);
   }
 
@@ -222,10 +212,8 @@ export default function StudioCatalog({ selectedId = null }) {
             <label>Itinéraire officiel · distance (km)<input type="number" step="0.1" value={officialDistance} onChange={event => setOfficialDistance(event.target.value)} /></label>
             <label>Itinéraire officiel · D+ (m)<input type="number" step="1" value={officialElevationGain} onChange={event => setOfficialElevationGain(event.target.value)} /></label>
             <label>Itinéraire officiel · D− (m)<input type="number" step="1" value={officialElevationLoss} onChange={event => setOfficialElevationLoss(event.target.value)} /></label>
-            <label>Itinéraire officiel · GPX<input type="text" value={officialGpx} onChange={event => setOfficialGpx(event.target.value)} placeholder="URL du fichier GPX" /></label>
-            <label className="studio-form-grid__full">Itinéraire officiel · carte intégrée<input type="text" value={officialMapEmbedUrl} onChange={event => setOfficialMapEmbedUrl(event.target.value)} /></label>
-            <label>Tracé actuel · GPX<input type="text" value={currentGpx} onChange={event => setCurrentGpx(event.target.value)} placeholder="URL du fichier GPX" /></label>
-            <label className="studio-form-grid__full">Tracé actuel · carte intégrée<input type="text" value={currentMapEmbedUrl} onChange={event => setCurrentMapEmbedUrl(event.target.value)} /></label>
+            <label>Itinéraire officiel · GPX<input type="text" value={officialGpx} onChange={event => setOfficialGpx(event.target.value)} /></label>
+            <label>Tracé actuel · GPX<input type="text" value={currentGpx} onChange={event => setCurrentGpx(event.target.value)} /></label>
             <label className="studio-checkbox studio-form-grid__full"><input type="checkbox" checked={isPublic} onChange={event => setIsPublic(event.target.checked)} /> Public</label>
           </div>
           <div className="studio-actions studio-create-form__actions">

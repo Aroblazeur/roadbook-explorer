@@ -15,8 +15,8 @@ export default function GeneralInfoForm({
         <div className="studio-form-grid studio-form-grid--compact">
           <label className="studio-form-grid__full">Titre<input type="text" value={title} onChange={e => setTitle(e.target.value)} required /></label>
           <label className="studio-form-grid__full">Description<textarea value={description} onChange={e => setDescription(e.target.value)} /></label>
-          <label>Activité<input type="text" value={activity} onChange={e => setActivity(e.target.value)} placeholder="ex: vélo, randonnée" /></label>
-          <label>Destination<input type="text" value={destination} onChange={e => setDestination(e.target.value)} placeholder="ex: Espagne, Alpes" /></label>
+          <label>Activité<input type="text" value={activity} onChange={e => setActivity(e.target.value)} /></label>
+          <label>Destination<input type="text" value={destination} onChange={e => setDestination(e.target.value)} /></label>
           <label>Projet<select value={project} onChange={e => setProject(e.target.value)}>
             <option value="">—</option>
             <option value="En projet">En projet</option>

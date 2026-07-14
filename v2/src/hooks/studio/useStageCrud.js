@@ -17,7 +17,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
   const [deleting, setDeleting] = useState(null);
 
   // Sub-entity forms
-  const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", region: "", description: "", editing: null });
+  const [poiForm, setPoiForm] = useState({ stage_id: null, name: "", region: "", link: "", description: "", editing: null });
   const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
   const [noteForm, setNoteForm] = useState({ stage_id: null, text: "", editing: null });
   const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", editing: null });
@@ -69,7 +69,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
     setDeleting(null);
   }, [supabase, setStages]);
 
-  const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, type: "", name: "", region: "", description: "", editing: null }), []);
+  const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, name: "", region: "", link: "", description: "", editing: null }), []);
   const clearVariantForm = useCallback(() => setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }), []);
   const clearNoteForm = useCallback(() => setNoteForm({ stage_id: null, text: "", editing: null }), []);
   const clearAccommodationForm = useCallback(() => setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }), []);

@@ -133,14 +133,13 @@ export function buildPoiRecord(poiForm) {
   return {
     stage_id: poiForm.stage_id,
     name: poiForm.name.trim(),
-    poi_type: poiForm.type || null,
     description: poiForm.description || null,
     region: poiForm.region?.trim() || null,
     lat: null,
     lng: null,
-    link_url: mapQuery
+    link_url: poiForm.link?.trim() || (mapQuery
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`
-      : null,
+      : null),
   };
 }
 
