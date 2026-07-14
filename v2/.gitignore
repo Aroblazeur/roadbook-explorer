@@ -26,6 +26,8 @@ dev-server.log
 
 # real GPX migration plan (contains actual data)
 /reports/gpx-migration-plan.json
+/reports/gpx-migration-rollback.json
+/reports/gpx-migration-application-result.json
 
 
 # next.js

@@ -585,9 +585,22 @@ async function main() {
   process.exit(0);
 }
 
-export { buildGpxMigrationPlan, validateGpxMigrationPlan, formatGpxMigrationPlanJson, formatGpxMigrationPlanMarkdown };
+export {
+  buildGpxMigrationPlan,
+  validateGpxMigrationPlan,
+  formatGpxMigrationPlanJson,
+  formatGpxMigrationPlanMarkdown,
+  loadGpxMigrationPlanningData,
+  loadFixtures,
+  loadSupabase,
+  parseArgs,
+};
 
-main().catch(e => {
-  console.error("Erreur fatale:", e.message);
-  process.exit(1);
-});
+const thisFile = fileURLToPath(import.meta.url);
+const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(thisFile);
+if (isMain) {
+  main().catch(e => {
+    console.error("Erreur fatale:", e.message);
+    process.exit(1);
+  });
+}
