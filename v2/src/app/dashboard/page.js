@@ -21,7 +21,9 @@ export default function DashboardPage() {
       <nav>
         <Link href="/explore">Explorer</Link>
         {" | "}
-        <Link href="/dashboard/roadbooks">Mes roadbooks</Link>
+        <Link href="/my-roadbooks">Mes roadbooks</Link>
+        {" | "}
+        <Link href="/dashboard/roadbooks">Gérer mes roadbooks dans le Studio</Link>
       </nav>
       <button type="button" onClick={handleLogout}>
         Se déconnecter

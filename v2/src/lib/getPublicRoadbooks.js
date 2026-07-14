@@ -1,14 +1,15 @@
 import { createServerSupabase } from "./supabase-server";
 import { getSignedMediaAccess } from "./roadbooks/loaders";
 
-export async function getPublicRoadbooks() {
+async function getRoadbooksCatalog(filterQuery) {
   const supabase = await createServerSupabase();
 
-  const { data } = await supabase
+  let query = supabase
     .from("roadbooks")
-    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id, metadata")
-    .eq("is_public", true)
-    .order("created_at", { ascending: false });
+    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id, metadata, is_public");
+
+  query = filterQuery(query);
+  const { data } = await query.order("created_at", { ascending: false });
 
   const roadbooks = data ?? [];
 
@@ -53,4 +54,12 @@ export async function getPublicRoadbooks() {
       coverMediaAccess: coverAccess,
     };
   });
+}
+
+export function getPublicRoadbooks() {
+  return getRoadbooksCatalog(query => query.eq("is_public", true));
+}
+
+export function getOwnedRoadbooks(ownerId) {
+  return getRoadbooksCatalog(query => query.eq("owner_id", ownerId));
 }
