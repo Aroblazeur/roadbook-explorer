@@ -3,6 +3,17 @@ import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import { parseArgs } from "node:util";
+import {
+  buildPoiImportKey,
+  buildVariantImportKey,
+  loadExistingChildren,
+  persistImportedChild,
+  sourcePois,
+  validateV1Source,
+  variantLabel,
+  variantScope,
+  withImportKey,
+} from "./lib/import-v1-idempotency.mjs";
 
 const ROADBOOKS_DIR = path.resolve("..", "roadbooks");
 
@@ -87,6 +98,143 @@ function noteItemsToNotesArray(noteItems, notes, warning) {
     }
   }
   return result;
+}
+
+function hasOwn(object, field) {
+  return Object.prototype.hasOwnProperty.call(object ?? {}, field);
+}
+
+function normalizedSourceValue(value) {
+  return value === undefined || value === null || value === "" ? null : value;
+}
+
+function buildPoiImportRecord({ poi, enriched, stageId, stageNumber, variant = null }) {
+  const fields = ["name", "sort_order"];
+  const metadataFields = variant ? ["fromVariant"] : [];
+  const coordinates = enriched?.coordinates;
+  const hasLatitude = hasOwn(coordinates, "lat");
+  const hasLongitude = hasOwn(coordinates, "lng");
+  const hasDescription = hasOwn(poi, "description") || hasOwn(enriched, "description");
+  const description = hasOwn(poi, "description") ? poi.description : enriched?.description;
+
+  if (hasLatitude) fields.push("lat");
+  if (hasLongitude) fields.push("lng");
+  if (hasDescription) fields.push("description");
+  if (hasOwn(poi, "url")) fields.push("link_url");
+  if (hasOwn(poi, "region")) fields.push("region");
+  if (hasOwn(enriched, "source")) metadataFields.push("source");
+  if (hasOwn(enriched, "status")) metadataFields.push("status");
+
+  const metadata = {};
+  if (hasOwn(enriched, "source")) metadata.source = normalizedSourceValue(enriched.source);
+  if (hasOwn(enriched, "status")) metadata.status = normalizedSourceValue(enriched.status);
+  if (variant) metadata.fromVariant = variant;
+  const scope = variant ? variantScope(variant) : "stage";
+
+  return {
+    payload: {
+      stage_id: stageId,
+      name: poi.name,
+      lat: normalizedSourceValue(coordinates?.lat),
+      lng: normalizedSourceValue(coordinates?.lng),
+      poi_type: null,
+      description: normalizedSourceValue(description),
+      photo_url: normalizedSourceValue(poi.image ?? enriched?.image),
+      link_url: normalizedSourceValue(poi.url),
+      region: normalizedSourceValue(poi.region),
+      sort_order: 0,
+      metadata: withImportKey(metadata, buildPoiImportKey(stageNumber, poi.name, scope), poi.id),
+    },
+    presence: { fields, metadataFields },
+  };
+}
+
+function buildVariantImportRecord({ variant, stageId, stageNumber, sortOrder }) {
+  const label = variantLabel(variant);
+  const fields = ["label", "sort_order"];
+  const metadataFields = [];
+  const metadata = {};
+  const addField = (sourceField, targetField = sourceField) => {
+    if (hasOwn(variant, sourceField)) fields.push(targetField);
+  };
+  const addMetadata = (sourceField, targetField = sourceField) => {
+    if (!hasOwn(variant, sourceField)) return;
+    metadataFields.push(targetField);
+    metadata[targetField] = normalizedSourceValue(variant[sourceField]);
+  };
+
+  addField("distance", "distance_km");
+  addField("description");
+  addField("departure");
+  addField("arrival");
+  addField("elevationLoss", "elevation_loss_m");
+  addField("mapEmbedUrl", "map_embed_url");
+  if (hasOwn(variant, "elevationGain") || hasOwn(variant, "elevation")) fields.push("elevation_gain_m");
+  const notesPresent = ["noteItems", "notes", "warning"].some(field => hasOwn(variant, field));
+  if (notesPresent) fields.push("notes");
+
+  for (const field of ["type", "itemType", "hierarchyLevel", "enabled", "legacyAccommodation"]) addMetadata(field);
+  if (hasOwn(variant, "accommodation")) {
+    metadataFields.push("accommodation");
+    const accommodation = variant.accommodation;
+    metadata.accommodation = accommodation == null ? null : {
+      name: accommodation.name ?? "",
+      url: accommodation.url ?? accommodation.website ?? "",
+      photo: accommodation.photo ?? "",
+      alternatives: accommodation.alternatives ?? [],
+    };
+  }
+  if (hasOwn(variant, "alternativeAccommodation")) {
+    const alternative = variant.alternativeAccommodation;
+    metadataFields.push("alternativeAccommodationName", "alternativeAccommodationPhoto");
+    metadata.alternativeAccommodationName = normalizedSourceValue(alternative?.name);
+    metadata.alternativeAccommodationPhoto = normalizedSourceValue(alternative?.photo);
+  }
+
+  const elevationGain = hasOwn(variant, "elevationGain") ? variant.elevationGain : variant.elevation;
+  const variantNotes = noteItemsToNotesArray(variant.noteItems, variant.notes, variant.warning);
+  const mirroredMetadata = {
+    departure: normalizedSourceValue(variant.departure),
+    arrival: normalizedSourceValue(variant.arrival),
+    elevation_gain_m: normalizedSourceValue(elevationGain),
+    elevation_loss_m: normalizedSourceValue(variant.elevationLoss),
+    map_embed_url: normalizedSourceValue(variant.mapEmbedUrl),
+    notes: variantNotes,
+  };
+  const mirroredPresence = {
+    departure: hasOwn(variant, "departure"),
+    arrival: hasOwn(variant, "arrival"),
+    elevation_gain_m: hasOwn(variant, "elevationGain") || hasOwn(variant, "elevation"),
+    elevation_loss_m: hasOwn(variant, "elevationLoss"),
+    map_embed_url: hasOwn(variant, "mapEmbedUrl"),
+    notes: notesPresent,
+  };
+  for (const [field, present] of Object.entries(mirroredPresence)) {
+    if (present) {
+      metadataFields.push(field);
+      metadata[field] = mirroredMetadata[field];
+    }
+  }
+
+  return {
+    label,
+    payload: {
+      stage_id: stageId,
+      label,
+      distance_km: normalizedSourceValue(variant.distance),
+      gpx_url: normalizedSourceValue(variant.gpx),
+      description: normalizedSourceValue(variant.description),
+      sort_order: sortOrder,
+      departure: normalizedSourceValue(variant.departure),
+      arrival: normalizedSourceValue(variant.arrival),
+      elevation_gain_m: normalizedSourceValue(elevationGain),
+      elevation_loss_m: normalizedSourceValue(variant.elevationLoss),
+      map_embed_url: normalizedSourceValue(variant.mapEmbedUrl),
+      notes: variantNotes,
+      metadata: withImportKey(metadata, buildVariantImportKey(stageNumber, variant), variant.id),
+    },
+    presence: { fields, metadataFields },
+  };
 }
 
 function collectUnmappedFields(obj, knownKeys) {
@@ -203,6 +351,16 @@ async function importRoadbook(slug) {
     errors: [],
   };
 
+  const sourceConflicts = validateV1Source(v1.stages || []);
+  if (sourceConflicts.length) {
+    for (const conflict of sourceConflicts) {
+      const message = `Source V1 conflict: ${conflict}`;
+      console.error(message);
+      overallReport.errors.push(`${slug}: ${message}`);
+    }
+    return;
+  }
+
   // ── Dry-run display ──────────────────────────────────────────
   if (dryRun) {
     console.log(`\n=== DRY RUN: ${slug} ===\n`);
@@ -218,20 +376,12 @@ async function importRoadbook(slug) {
       if (s.stagePhoto) totalStagePhotos++;
       const notes = noteItemsToNotesArray(s.noteItems, s.notes, s.warning);
       totalNotes += notes.length;
-      const pois = new Set();
-      for (const list of [s.pois, s.pointsOfInterest, s.interest]) {
-        if (Array.isArray(list)) for (const p of list) if (p && p.name) pois.add(p.name);
-      }
-      totalPois += pois.size;
+      totalPois += sourcePois(s).filter(p => p?.name).length;
       if (Array.isArray(s.substeps)) {
         totalSubsteps += s.substeps.length;
         for (const sub of s.substeps) {
           if (sub.gpx) totalGpx++;
-          const subPois = new Set();
-          for (const list of [sub.pois, sub.pointsOfInterest, sub.interest]) {
-            if (Array.isArray(list)) for (const p of list) if (p && p.name) subPois.add(p.name);
-          }
-          totalPois += subPois.size;
+          totalPois += sourcePois(sub).filter(p => p?.name).length;
           const subNotes = noteItemsToNotesArray(sub.noteItems, sub.notes, sub.warning);
           totalNotes += subNotes.length;
         }
@@ -429,27 +579,30 @@ async function importRoadbook(slug) {
       console.log(`  Stage ${stageNumber} "${s.name}": created (id=${stageId})`);
     }
 
-    // 4a. Import POIs from this stage
-    const stagePoiNames = new Set();
-    const rawPois = [];
-    for (const list of [s.pois, s.pointsOfInterest, s.interest]) {
-      if (Array.isArray(list)) rawPois.push(...list);
+    const existingChildren = await loadExistingChildren(supabase, stageId);
+    if (existingChildren.poisError || existingChildren.variantsError) {
+      if (existingChildren.poisError) report.errors.push(`Load POIs for stage ${stageNumber}: ${existingChildren.poisError.message}`);
+      if (existingChildren.variantsError) report.errors.push(`Load variants for stage ${stageNumber}: ${existingChildren.variantsError.message}`);
+      continue;
     }
-    const uniquePois = [];
-    for (const p of rawPois) { if (p && p.name && !stagePoiNames.has(p.name)) { stagePoiNames.add(p.name); uniquePois.push(p); } }
+    const existingPois = existingChildren.pois;
+    const existingVariants = existingChildren.variants;
 
-    for (const p of uniquePois) {
+    // 4a. Import POIs from this stage
+    for (const p of sourcePois(s)) {
+      if (!p?.name) continue;
       const enriched = poiEnrichLookup[p.name?.toLowerCase().trim()];
-      const poiPayload = {
-        stage_id: stageId, name: p.name,
-        lat: enriched?.coordinates?.lat || null, lng: enriched?.coordinates?.lng || null,
-        poi_type: null, description: enriched?.description || null,
-        photo_url: p.image || enriched?.image || null, link_url: p.url || null,
-        region: p.region || null, sort_order: 0,
-        metadata: enriched ? { source: enriched.source, status: enriched.status } : {},
-      };
-      const { error: poiErr } = await supabase.from("stage_pois").insert(poiPayload);
-      if (poiErr) report.errors.push(`Insert POI "${p.name}": ${poiErr.message}`);
+      const { payload: poiPayload, presence: poiPresence } = buildPoiImportRecord({
+        poi: p, enriched, stageId, stageNumber,
+      });
+      const poiResult = await persistImportedChild({
+        supabase, table: "stage_pois", payload: poiPayload, presence: poiPresence,
+        existingRows: existingPois, upsert,
+      });
+      if (poiResult.action === "error") report.errors.push(`Insert POI "${p.name}": ${poiResult.error.message}`);
+      else if (poiResult.action === "conflict") report.errors.push(`POI conflict "${p.name}" on stage ${stageNumber}: ${poiResult.reason}`);
+      else if (poiResult.action === "skipped") report.ignored.duplicates++;
+      else if (poiResult.action === "updated") report.updated.pois++;
       else report.created.pois++;
     }
 
@@ -458,54 +611,37 @@ async function importRoadbook(slug) {
       let variantSortOrder = 0;
       for (const sub of s.substeps) {
         variantSortOrder++;
-        const variantNotes = noteItemsToNotesArray(sub.noteItems, sub.notes, sub.warning);
-        const variantMetadata = {};
-        if (sub.type) variantMetadata.type = sub.type;
-        if (sub.itemType) variantMetadata.itemType = sub.itemType;
-        if (sub.hierarchyLevel != null) variantMetadata.hierarchyLevel = sub.hierarchyLevel;
-        if (sub.enabled != null) variantMetadata.enabled = sub.enabled;
-        if (sub.legacyAccommodation) variantMetadata.legacyAccommodation = sub.legacyAccommodation;
-        if (sub.accommodation) variantMetadata.accommodation = { name: sub.accommodation.name || "", url: sub.accommodation.url || sub.accommodation.website || "", photo: sub.accommodation.photo || "", alternatives: sub.accommodation.alternatives || [] };
-        if (sub.alternativeAccommodation?.name) variantMetadata.alternativeAccommodationName = sub.alternativeAccommodation.name;
-        if (sub.alternativeAccommodation?.photo) variantMetadata.alternativeAccommodationPhoto = sub.alternativeAccommodation.photo;
-        variantMetadata.departure = sub.departure || null;
-        variantMetadata.arrival = sub.arrival || null;
-        variantMetadata.elevation_gain_m = sub.elevationGain || sub.elevation || null;
-        variantMetadata.elevation_loss_m = sub.elevationLoss || null;
-        variantMetadata.map_embed_url = sub.mapEmbedUrl || null;
-        variantMetadata.notes = variantNotes;
+        const {
+          label,
+          payload: variantPayload,
+          presence: variantPresence,
+        } = buildVariantImportRecord({ variant: sub, stageId, stageNumber, sortOrder: variantSortOrder });
 
-        const variantPayload = {
-          stage_id: stageId, label: sub.name || sub.title || "Variante",
-          distance_km: sub.distance || null, gpx_url: sub.gpx || null,
-          description: sub.description || null, sort_order: variantSortOrder,
-          metadata: variantMetadata,
-        };
-
-        const { error: varErr } = await supabase.from("stage_variants").insert(variantPayload);
-        if (varErr) report.errors.push(`Insert variant "${sub.name}": ${varErr.message}`);
+        const variantResult = await persistImportedChild({
+          supabase, table: "stage_variants", payload: variantPayload, presence: variantPresence,
+          existingRows: existingVariants, upsert,
+        });
+        if (variantResult.action === "error") report.errors.push(`Insert variant "${sub.name}": ${variantResult.error.message}`);
+        else if (variantResult.action === "conflict") report.errors.push(`Variant conflict "${label}" on stage ${stageNumber}: ${variantResult.reason}`);
+        else if (variantResult.action === "skipped") report.ignored.duplicates++;
+        else if (variantResult.action === "updated") report.updated.variants++;
         else report.created.variants++;
 
         // Import variant's own POIs
-        const varPoiNames = new Set();
-        const varRawPois = [];
-        for (const list of [sub.pois, sub.pointsOfInterest, sub.interest]) {
-          if (Array.isArray(list)) varRawPois.push(...list);
-        }
-        for (const p of varRawPois) {
-          if (p && p.name && !varPoiNames.has(p.name)) {
-            varPoiNames.add(p.name);
+        for (const p of sourcePois(sub)) {
+          if (p?.name) {
             const enriched = poiEnrichLookup[p.name?.toLowerCase().trim()];
-            const poiPayload = {
-              stage_id: stageId, name: p.name,
-              lat: enriched?.coordinates?.lat || null, lng: enriched?.coordinates?.lng || null,
-              poi_type: null, description: enriched?.description || null,
-              photo_url: p.image || enriched?.image || null, link_url: p.url || null,
-              region: p.region || null, sort_order: 0,
-              metadata: enriched ? { source: enriched.source, status: enriched.status, fromVariant: sub.name } : { fromVariant: sub.name },
-            };
-            const { error: poiErr } = await supabase.from("stage_pois").insert(poiPayload);
-            if (poiErr) report.errors.push(`Insert variant POI "${p.name}": ${poiErr.message}`);
+            const { payload: poiPayload, presence: poiPresence } = buildPoiImportRecord({
+              poi: p, enriched, stageId, stageNumber, variant: label,
+            });
+            const poiResult = await persistImportedChild({
+              supabase, table: "stage_pois", payload: poiPayload, presence: poiPresence,
+              existingRows: existingPois, upsert,
+            });
+            if (poiResult.action === "error") report.errors.push(`Insert variant POI "${p.name}": ${poiResult.error.message}`);
+            else if (poiResult.action === "conflict") report.errors.push(`POI conflict "${p.name}" in variant "${label}": ${poiResult.reason}`);
+            else if (poiResult.action === "skipped") report.ignored.duplicates++;
+            else if (poiResult.action === "updated") report.updated.pois++;
             else report.created.pois++;
           }
         }
@@ -516,7 +652,7 @@ async function importRoadbook(slug) {
   // ── Report for this roadbook ─────────────────────────────────
   console.log(`\n--- ${slug} REPORT ---`);
   console.log(`Created:  ${report.created.roadbooks} roadbook, ${report.created.stages} stages, ${report.created.pois} POIs, ${report.created.variants} variants`);
-  console.log(`Updated:  ${report.updated.roadbooks} roadbook, ${report.updated.stages} stages`);
+  console.log(`Updated:  ${report.updated.roadbooks} roadbook, ${report.updated.stages} stages, ${report.updated.pois} POIs, ${report.updated.variants} variants`);
   console.log(`Ignored:  ${report.ignored.duplicates} duplicates`);
   if (report.errors.length) console.log(`Errors:   ${report.errors.length}`);
 
