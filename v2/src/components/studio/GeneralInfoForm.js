@@ -8,13 +8,12 @@ export default function GeneralInfoForm({
   project, setProject,
   handleSave,
   saving,
+  embedded = false,
 }) {
   return (
-    <div className="studio-card studio-card--accent">
-      <div className="studio-card__header">
-        <h3>Informations générales</h3>
-      </div>
-      <div className="studio-card__body">
+    <div className={embedded ? "studio-section-block" : "studio-card studio-card--accent"}>
+      {!embedded && <div className="studio-card__header"><h3>Informations générales</h3></div>}
+      <div className={embedded ? "studio-section-block__body" : "studio-card__body"}>
         <form onSubmit={handleSave} className="studio-form-grid studio-form-grid--compact">
           <label className="studio-form-grid__full">Titre<input type="text" value={title} onChange={e => setTitle(e.target.value)} required /></label>
           <label className="studio-form-grid__full">Description<textarea value={description} onChange={e => setDescription(e.target.value)} /></label>

@@ -11,12 +11,15 @@ export default function StudioHeader({
   downloadDraftExport,
   user,
   id,
+  onAddStage,
+  onToggleVisibility,
 }) {
   return (
-    <div className="studio-hero">
-      <div className="studio-hero__info">
-        <h1 className="studio-hero__title">{roadbook?.title ?? "Roadbook"}</h1>
-        <div className="studio-hero__meta">
+    <div className="studio-panel__header studio-editor-header">
+      <div className="studio-editor-header__info">
+        <p className="studio-eyebrow">Éditeur</p>
+        <h2 id="studio-detail-title">{roadbook?.title ?? "Roadbook"}</h2>
+        <div className="studio-editor-meta">
           <span className={`studio-badge ${isPublic ? "studio-badge--public" : "studio-badge--private"}`}>
             {isPublic ? "Public" : "Privé"}
           </span>
@@ -25,14 +28,16 @@ export default function StudioHeader({
           {project && <span className="studio-hero__tag">{project}</span>}
         </div>
       </div>
-      <div className="studio-hero__actions">
+      <div className="studio-actions studio-editor-actions">
+        <button type="button" onClick={onAddStage}>Ajouter une étape</button>
+        <button type="button" onClick={() => downloadDraftExport(user?.id, id, `${roadbook?.slug ?? "roadbook"}.json`)} className="terrain-button--secondary">
+          Télécharger le JSON
+        </button>
+        <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Publier"}</button>
         <Link href="/dashboard/roadbooks" className="terrain-button--secondary studio-action-button--compact">Retour</Link>
         <Link href={`/roadbooks/${roadbook?.slug}`} className="terrain-button--secondary studio-action-button--compact">Voir</Link>
         <button type="button" onClick={handleDuplicate} disabled={duplicating} className="terrain-button--secondary studio-action-button--compact">
           {duplicating ? "..." : "Dupliquer"}
-        </button>
-        <button type="button" onClick={() => downloadDraftExport(user?.id, id, `${roadbook?.slug ?? "roadbook"}-brouillon.json`)} className="terrain-button--secondary studio-action-button--compact">
-          Export brouillon
         </button>
       </div>
     </div>

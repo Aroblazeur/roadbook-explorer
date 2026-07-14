@@ -6,15 +6,16 @@ export default function RouteForm({
   setValues,
   handleSave,
   saving,
+  embedded = false,
 }) {
   const isOfficial = mode === "official";
   const title = isOfficial ? "Itinéraire officiel" : "Tracé actuel";
   return (
-    <div className="studio-card">
-      <div className="studio-card__header">
-        <h3>{title}</h3>
+    <div className={embedded ? "studio-section-block studio-section-block--route" : "studio-card"}>
+      <div className={embedded ? "studio-section-block__header" : "studio-card__header"}>
+        {embedded ? <h4>{title}</h4> : <h3>{title}</h3>}
       </div>
-      <div className="studio-card__body">
+      <div className={embedded ? "studio-section-block__body" : "studio-card__body"}>
         <form onSubmit={handleSave} className="studio-form-grid studio-form-grid--compact">
           <label>Distance (km)<input type="number" step="0.1" value={values.dist} onChange={e => setValues(prev => ({ ...prev, dist: e.target.value }))} /></label>
           <label>D+ (m)<input type="number" value={values.gain} onChange={e => setValues(prev => ({ ...prev, gain: e.target.value }))} /></label>

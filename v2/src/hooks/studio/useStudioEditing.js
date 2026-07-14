@@ -8,7 +8,7 @@ export default function useStudioEditing() {
   const [duplicating, setDuplicating] = useState(false);
 
   const isStageExpanded = useCallback((stageId) => {
-    return expandedStages[stageId] !== false;
+    return expandedStages[stageId] === true;
   }, [expandedStages]);
 
   const toggleStage = useCallback((stageId) => {

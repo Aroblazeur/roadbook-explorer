@@ -68,7 +68,8 @@ export default function StageCard({
           </p>
         </div>
         <div className="studio-stage-card__actions">
-          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); fillStageForm(stage); setShowStageForm(true); }}>✎</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); clearVariantForm(); setVariantForm(current => ({ ...current, stage_id: stage.id })); }}>Ajouter une variante</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); fillStageForm(stage); setShowStageForm(true); }}>Modifier l'étape</button>
           <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }} disabled={deleting === stage.id}>Supprimer</button>
         </div>
       </div>

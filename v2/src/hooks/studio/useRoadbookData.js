@@ -79,7 +79,7 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
     stages, setStages,
     poisByStage, setPoisByStage,
     variantsByStage, setVariantsByStage,
-    loading, fetchError,
+    loading, fetchError, setFetchError,
     loadAll,
     reloadStages,
     reloadPoisVariants,

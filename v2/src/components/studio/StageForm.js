@@ -42,9 +42,5 @@ export default function StageForm({
     );
   }
 
-  return (
-    <button type="button" onClick={() => setShowStageForm(true)} className="studio-stage-create-bandeau">
-      + Nouvelle étape
-    </button>
-  );
+  return null;
 }

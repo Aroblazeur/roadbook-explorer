@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { loadCoverMedia, getSignedUrl } from "@/lib/roadbooks/loaders";
 
 export default function useLoadData({
@@ -8,7 +8,6 @@ export default function useLoadData({
   setCoverUrl, setCoverMediaId, setCoverPreview, setCoverMode,
   setFetchError,
   loadEnrichmentIndices, reloadMedia, reloadGpx,
-  restoredDraft,
   setRoadbook, setStages, setPoisByStage, setVariantsByStage,
   setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant,
 }) {
@@ -63,9 +62,9 @@ export default function useLoadData({
     })();
   }, [user, id]);
 
-  useEffect(() => {
-    if (!restoredDraft) return;
-    const p = restoredDraft;
+  const restoreDraft = useCallback((draft) => {
+    if (!draft) return;
+    const p = draft;
     if (p.title != null) setTitle(p.title);
     if (p.description != null) setDescription(p.description);
     if (p.isPublic != null) setIsPublic(p.isPublic);
@@ -86,7 +85,7 @@ export default function useLoadData({
     if (p.coverMode !== undefined) setCoverMode(p.coverMode);
     if (p.coverUrl != null) setCoverUrl(p.coverUrl);
     if (p.coverMediaId !== undefined) setCoverMediaId(p.coverMediaId);
-  }, [restoredDraft]);
+  }, [setTitle, setDescription, setIsPublic, setActivity, setDestination, setProject, setRoadbook, setStages, setPoisByStage, setVariantsByStage, setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant, setCoverMode, setCoverUrl, setCoverMediaId]);
 
-  return { officialRoute, setOfficialRoute, traceRoute, setTraceRoute };
+  return { officialRoute, setOfficialRoute, traceRoute, setTraceRoute, restoreDraft };
 }

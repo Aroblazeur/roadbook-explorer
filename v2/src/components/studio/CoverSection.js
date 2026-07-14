@@ -10,13 +10,14 @@ export default function CoverSection({
   handleSetCoverFromMedia,
   handleToggleVisibility,
   isPublic,
+  embedded = false,
 }) {
   return (
-    <div className="studio-card">
-      <div className="studio-card__header">
-        <h3>Image de couverture</h3>
+    <div className={embedded ? "studio-section-block" : "studio-card"}>
+      <div className={embedded ? "studio-section-block__header" : "studio-card__header"}>
+        {embedded ? <h4>Image de couverture</h4> : <h3>Image de couverture</h3>}
       </div>
-      <div className="studio-card__body">
+      <div className={embedded ? "studio-section-block__body" : "studio-card__body"}>
         <div className="cover-selector">
           {coverPreview
             ? <img src={coverPreview} alt="Couverture" className="cover-preview" />
