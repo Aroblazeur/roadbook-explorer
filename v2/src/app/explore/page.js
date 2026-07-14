@@ -81,7 +81,10 @@ function RoadbookCard({ roadbook }) {
             loading="lazy"
           />
         ) : (
-          <span aria-hidden="true">🧭</span>
+          <span>
+            <span aria-hidden="true">🧭</span>
+            {roadbook.coverMediaAccess?.status === "inaccessible" && " Image indisponible"}
+          </span>
         )}
       </div>
       <div className="roadbook-library-card__content">

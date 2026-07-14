@@ -61,19 +61,75 @@ export async function clearStageAccommodation(supabase, stageId) {
   if (error) throw new Error(error.message);
 }
 
-export async function uploadImage(supabase, userId, roadbookId, file, blob) {
+async function verifyMediaCompensation(supabase, mediaId) {
+  const { data, error } = await supabase
+    .from("media")
+    .select("id")
+    .eq("id", mediaId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data == null;
+}
+
+export async function compensateMediaRecord(supabase, mediaId) {
+  const { error } = await supabase.from("media").delete().eq("id", mediaId);
+  if (error) throw new Error(error.message);
+  if (!(await verifyMediaCompensation(supabase, mediaId))) {
+    throw new Error(`La ligne media ${mediaId} existe encore après compensation.`);
+  }
+}
+
+export async function createMediaWithUpload(supabase, record, uploadObject) {
+  const mediaRow = await insertMediaRecord(supabase, record);
+  try {
+    await uploadObject();
+    return mediaRow;
+  } catch (uploadError) {
+    try {
+      await compensateMediaRecord(supabase, mediaRow.id);
+    } catch (compensationError) {
+      const error = new Error(
+        `Échec du téléversement et de la compensation pour la ligne media ${mediaRow.id}: ${compensationError.message}`,
+      );
+      error.mediaId = mediaRow.id;
+      error.uploadError = uploadError?.message ?? String(uploadError);
+      error.compensationError = compensationError.message;
+      throw error;
+    }
+    throw uploadError;
+  }
+}
+
+export async function uploadImage(supabase, userId, roadbookId, file, blob, record = null) {
   const uuid = crypto.randomUUID();
   const path = `${userId}/${roadbookId}/${uuid}-${file.name}`;
-  const { error: storageError } = await supabase.storage
-    .from("roadbook-images")
-    .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-  if (storageError) throw new Error(storageError.message);
+  const uploadObject = async () => {
+    const { error: storageError } = await supabase.storage
+      .from("roadbook-images")
+      .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+    if (storageError) throw new Error(storageError.message);
+  };
+
+  if (record) {
+    await createMediaWithUpload(supabase, {
+      ...record,
+      bucket: "roadbook-images",
+      path,
+    }, uploadObject);
+  } else {
+    await uploadObject();
+  }
   return path;
 }
 
 export async function insertMediaRecord(supabase, record) {
-  const { error } = await supabase.from("media").insert(record);
+  const { data, error } = await supabase
+    .from("media")
+    .insert(record)
+    .select("*")
+    .single();
   if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function deleteMedia(supabase, mediaRow) {
@@ -90,11 +146,25 @@ export async function deleteMediaRecordOnly(supabase, mediaId) {
   if (error) throw new Error(error.message);
 }
 
-export async function uploadGpx(supabase, bucket, path, file) {
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(path, file, { contentType: "application/gpx+xml", upsert: false });
-  if (error) throw new Error(error.message);
+export async function uploadGpx(
+  supabase,
+  bucket,
+  path,
+  file,
+  { record = null, upsert = false } = {},
+) {
+  const uploadObject = async () => {
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(path, file, { contentType: "application/gpx+xml", upsert });
+    if (error) throw new Error(error.message);
+  };
+
+  if (record) {
+    return createMediaWithUpload(supabase, { ...record, bucket, path }, uploadObject);
+  }
+  await uploadObject();
+  return null;
 }
 
 export async function removeStorageFile(supabase, bucket, path) {
@@ -103,8 +173,7 @@ export async function removeStorageFile(supabase, bucket, path) {
 }
 
 export async function insertGpxRecord(supabase, record) {
-  const { error } = await supabase.from("media").insert(record);
-  if (error) throw new Error(error.message);
+  return insertMediaRecord(supabase, record);
 }
 
 export async function updateGpxRecord(supabase, mediaId, updates) {

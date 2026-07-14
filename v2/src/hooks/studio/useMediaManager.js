@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { loadMediaWithUrls, getSignedUrl } from "@/lib/roadbooks/loaders";
-import { uploadImage, insertMediaRecord, deleteMedia } from "@/lib/roadbooks/writers";
+import { uploadImage, deleteMedia } from "@/lib/roadbooks/writers";
 import { resizeImage } from "@/lib/roadbooks/validators";
 
 export function useMediaManager({ supabase, roadbookId, userId, onError, onSuccess }) {
@@ -14,8 +14,12 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
     try {
       const rows = await loadMediaWithUrls(supabase, roadbookId);
       setImages(rows);
-    } catch {}
-  }, [supabase, roadbookId, userId]);
+    } catch (err) {
+      const message = `Impossible de charger les médias : ${err.message}`;
+      setUploadError(message);
+      onError?.(message);
+    }
+  }, [supabase, roadbookId, userId, onError]);
 
   const handleSignedUrl = useCallback(async (path) => {
     return getSignedUrl(supabase, "roadbook-images", path, 3600);
@@ -27,15 +31,14 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
     setUploadLoading(true);
     try {
       const { blob, width, height, size } = await resizeImage(file);
-      const path = await uploadImage(supabase, userId, roadbookId, file, blob);
       const record = {
         roadbook_id: Number(roadbookId), stage_id: null, type: "image",
-        bucket: "roadbook-images", path, file_name: file.name,
+        file_name: file.name,
         mime_type: "image/jpeg",
         uploaded_by: userId,
         metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg" },
       };
-      await insertMediaRecord(supabase, record);
+      await uploadImage(supabase, userId, roadbookId, file, blob, record);
       onSuccess?.("");
       await reloadMedia();
     } catch (err) {

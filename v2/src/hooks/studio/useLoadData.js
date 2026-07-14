@@ -51,8 +51,10 @@ export default function useLoadData({
           setCoverMode("media"); setCoverPreview(null);
           try {
             const m = await loadCoverMedia(supabase, data.cover_media_id);
-            if (m) { const s = await getSignedUrl(supabase, m.bucket, m.path, 86400); if (s) setCoverPreview(s); }
-          } catch {}
+            if (m) { const s = await getSignedUrl(supabase, m.bucket, m.path, 3600); if (s) setCoverPreview(s); }
+          } catch (err) {
+            setFetchError(`Couverture inaccessible : ${err.message}`);
+          }
         } else { setCoverMode(null); setCoverPreview(null); }
         loadEnrichmentIndices();
         reloadMedia();

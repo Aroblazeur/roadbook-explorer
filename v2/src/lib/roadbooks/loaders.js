@@ -72,21 +72,75 @@ export async function loadCoverMedia(supabase, mediaId) {
   return data ?? null;
 }
 
-export async function getSignedUrl(supabase, bucket, path, expiresIn = 3600) {
-  if (!path) return null;
+export const MEDIA_SIGNED_URL_TTL_SECONDS = 3600;
+
+function serializeMediaAccessError(error, fallbackMessage) {
+  const redact = value => String(value)
+    .replace(/https?:\/\/\S+/gi, "[url-redacted]")
+    .replace(/([?&](?:token|signature)=)[^&\s]+/gi, "$1[redacted]");
+  return {
+    message: redact(error?.message ?? fallbackMessage),
+    code: error?.code == null ? null : redact(error.code),
+    statusCode: error?.statusCode ?? error?.status ?? null,
+  };
+}
+
+export async function getSignedMediaAccess(
+  supabase,
+  media,
+  { expiresIn = MEDIA_SIGNED_URL_TTL_SECONDS, context = "media", logger = console.error } = {},
+) {
+  if (!media?.bucket || !media?.path) {
+    return { status: "absent", signedUrl: null, error: null };
+  }
+
   const { data, error } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(path, expiresIn);
-  if (error) throw new Error(error.message);
-  return data?.signedUrl ?? null;
+    .from(media.bucket)
+    .createSignedUrl(media.path, expiresIn);
+
+  if (error || !data?.signedUrl) {
+    const safeError = serializeMediaAccessError(error, "URL signée indisponible");
+    logger?.("[media-access] signed-url-failed", {
+      context,
+      mediaId: media.id ?? null,
+      bucket: media.bucket,
+      path: media.path,
+      ...safeError,
+    });
+    return { status: "inaccessible", signedUrl: null, error: safeError };
+  }
+
+  return { status: "available", signedUrl: data.signedUrl, error: null };
+}
+
+export async function getSignedUrl(
+  supabase,
+  bucket,
+  path,
+  expiresIn = MEDIA_SIGNED_URL_TTL_SECONDS,
+) {
+  const access = await getSignedMediaAccess(
+    supabase,
+    { bucket, path },
+    { expiresIn, context: "signed-url" },
+  );
+  if (access.status === "absent") return null;
+  if (access.status === "inaccessible") {
+    const error = new Error(access.error?.message ?? "Média inaccessible");
+    error.mediaAccess = access;
+    throw error;
+  }
+  return access.signedUrl;
 }
 
 export async function loadMediaWithUrls(supabase, roadbookId) {
   const rows = await loadMedia(supabase, roadbookId, "image");
   const rowsWithUrls = await Promise.all(
     rows.map(async row => {
-      const signedUrl = await getSignedUrl(supabase, row.bucket, row.path);
-      return { ...row, signedUrl };
+      const access = await getSignedMediaAccess(supabase, row, {
+        context: "studio-media-list",
+      });
+      return { ...row, signedUrl: access.signedUrl, access };
     })
   );
   return rowsWithUrls;

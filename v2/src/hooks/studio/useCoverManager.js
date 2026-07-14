@@ -25,10 +25,12 @@ export function useCoverManager({ supabase, roadbookId, roadbook, setRoadbook, o
     try {
       const m = await loadCoverMedia(supabase, mediaId);
       if (m) {
-        const signedUrl = await getSignedUrl(supabase, m.bucket, m.path, 86400);
+        const signedUrl = await getSignedUrl(supabase, m.bucket, m.path, 3600);
         if (signedUrl) setCoverPreview(signedUrl);
       }
-    } catch {}
+    } catch (err) {
+      onError?.(`Couverture inaccessible : ${err.message}`);
+    }
     onSuccess?.("Image de couverture mise à jour.");
     setCoverSaving(false);
   }, [supabase, roadbookId, roadbook, setRoadbook, onError, onSuccess]);

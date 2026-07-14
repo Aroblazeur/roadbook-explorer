@@ -27,6 +27,9 @@ export default function MediaSection({
           {images.map(img => (
             <div key={img.id} className="studio-media-item">
               {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} className="studio-media-item__image" />}
+              {img.access?.status === "inaccessible" && (
+                <p className="page-error" role="status">Image inaccessible.</p>
+              )}
               <div className="studio-media-item__info">
                 <span className="text-muted studio-media-item__name">{img.file_name}</span>
                 <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleDeleteImage(img)} disabled={deleteLoading === img.id}>

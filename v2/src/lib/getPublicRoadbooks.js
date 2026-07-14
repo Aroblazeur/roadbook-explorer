@@ -1,4 +1,5 @@
 import { createServerSupabase } from "./supabase-server";
+import { getSignedMediaAccess } from "./roadbooks/loaders";
 
 export async function getPublicRoadbooks() {
   const supabase = await createServerSupabase();
@@ -11,13 +12,14 @@ export async function getPublicRoadbooks() {
 
   const roadbooks = data ?? [];
 
-  const signedUrls = {};
+  const coverAccessByRoadbook = {};
   for (const rb of roadbooks) {
     if (rb.cover_media_id) {
-      const { data: m } = await supabase.from("media").select("bucket, path").eq("id", rb.cover_media_id).maybeSingle();
+      const { data: m } = await supabase.from("media").select("id, bucket, path").eq("id", rb.cover_media_id).maybeSingle();
       if (m) {
-        const { data: s } = await supabase.storage.from(m.bucket).createSignedUrl(m.path, 86400);
-        signedUrls[rb.id] = s?.signedUrl ?? null;
+        coverAccessByRoadbook[rb.id] = await getSignedMediaAccess(supabase, m, {
+          context: "catalog-cover",
+        });
       }
     }
   }
@@ -36,6 +38,9 @@ export async function getPublicRoadbooks() {
 
   return roadbooks.map(rb => {
     const meta = rb.metadata || {};
+    const coverAccess = rb.cover_image_url
+      ? { status: "available", signedUrl: rb.cover_image_url, error: null }
+      : coverAccessByRoadbook[rb.id] ?? { status: "absent", signedUrl: null, error: null };
     return {
       ...rb,
       metadata: undefined,
@@ -44,7 +49,8 @@ export async function getPublicRoadbooks() {
       project: meta.project || null,
       projectStatus: meta.projectStatus || null,
       stage_count: countMap[rb.id] ?? 0,
-      coverSignedUrl: rb.cover_image_url || signedUrls[rb.id] || null,
+      coverSignedUrl: coverAccess.signedUrl,
+      coverMediaAccess: coverAccess,
     };
   });
 }

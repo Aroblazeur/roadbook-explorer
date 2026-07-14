@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import MapViewerClient from "@/components/MapViewerClient";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { getSignedMediaAccess } from "@/lib/roadbooks/loaders";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -40,21 +41,20 @@ async function getRoadbook(slug) {
     .from("media").select("*").eq("roadbook_id", roadbook.id).order("created_at", { ascending: false });
   const allMedia = mediaRows ?? [];
 
-  async function signedUrl(bucket, path) {
-    if (!path) return null;
-    const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 86400);
-    return data?.signedUrl ?? null;
-  }
-
   const images = [];
   let gpxOfficial = null, gpxCustom = null;
   const gpxByStage = {};
   for (const m of allMedia) {
     if (m.type === "image") {
-      images.push({ ...m, signedUrl: await signedUrl(m.bucket, m.path) });
+      const access = await getSignedMediaAccess(supabase, m, {
+        context: "explorer-roadbook-image",
+      });
+      images.push({ ...m, signedUrl: access.signedUrl, access });
     } else if (m.type === "gpx") {
-      const url = await signedUrl(m.bucket, m.path);
-      const row = { ...m, signedUrl: url };
+      const access = await getSignedMediaAccess(supabase, m, {
+        context: "explorer-roadbook-gpx",
+      });
+      const row = { ...m, signedUrl: access.signedUrl, access };
       if (m.metadata?.scope === "stage" && m.stage_id) {
         gpxByStage[m.stage_id] = row;
       } else if (m.metadata?.gpx_role === "official") {
@@ -66,13 +66,17 @@ async function getRoadbook(slug) {
   }
 
   let coverSignedUrl = null;
+  let coverMediaAccess = { status: "absent", signedUrl: null, error: null };
   if (roadbook.cover_image_url) {
     coverSignedUrl = roadbook.cover_image_url;
+    coverMediaAccess = { status: "available", signedUrl: coverSignedUrl, error: null };
   } else if (roadbook.cover_media_id) {
-    const { data: coverMedia } = await supabase.from("media").select("bucket, path").eq("id", roadbook.cover_media_id).maybeSingle();
+    const { data: coverMedia } = await supabase.from("media").select("id, bucket, path").eq("id", roadbook.cover_media_id).maybeSingle();
     if (coverMedia) {
-      const { data: s } = await supabase.storage.from(coverMedia.bucket).createSignedUrl(coverMedia.path, 86400);
-      coverSignedUrl = s?.signedUrl ?? null;
+      coverMediaAccess = await getSignedMediaAccess(supabase, coverMedia, {
+        context: "explorer-roadbook-cover",
+      });
+      coverSignedUrl = coverMediaAccess.signedUrl;
     }
   }
 
@@ -80,7 +84,7 @@ async function getRoadbook(slug) {
   const totalElevationGain = (stages ?? []).reduce((sum, s) => sum + (s.elevation_gain_m ?? 0), 0);
   const totalElevationLoss = (stages ?? []).reduce((sum, s) => sum + (s.elevation_loss_m ?? 0), 0);
 
-  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false };
+  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false };
 }
 
 export default async function RoadbookViewPage({ params, searchParams: sp }) {
@@ -328,17 +332,25 @@ function accommodationIcon(type, name) {
 }
 
 function ImagesSection({ images }) {
+  const availableImages = images.filter(img => img.access?.status === "available" && img.signedUrl);
+  const inaccessibleCount = images.filter(img => img.access?.status === "inaccessible").length;
+
   return (
     <div className="card">
-      <h2>Images ({images.length})</h2>
-      <div className="flex flex-wrap gap-1">
-        {images.map(img => (
+      <h2>Images ({availableImages.length})</h2>
+      {inaccessibleCount > 0 && (
+        <p className="text-muted" role="status">
+          {inaccessibleCount === 1 ? "Une image est inaccessible." : `${inaccessibleCount} images sont inaccessibles.`}
+        </p>
+      )}
+      {availableImages.length > 0 && <div className="flex flex-wrap gap-1">
+        {availableImages.map(img => (
           <div key={img.id} style={{ width: 180 }}>
-            {img.signedUrl && <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 135, objectFit: "cover", borderRadius: 8 }} />}
+            <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 135, objectFit: "cover", borderRadius: 8 }} />
             <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.2rem" }}>{img.file_name}</div>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }
