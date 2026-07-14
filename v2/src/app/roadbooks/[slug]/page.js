@@ -93,24 +93,35 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
 
   const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, totals } = result;
   const stageParam = searchParams?.stage ? Number(searchParams.stage) : null;
+  const variantParam = searchParams?.variant ? String(searchParams.variant) : null;
 
   const poisByStage = {};
   pois.forEach(p => { if (!poisByStage[p.stage_id]) poisByStage[p.stage_id] = []; poisByStage[p.stage_id].push(p); });
   const variantsByStage = {};
   variants.forEach(v => { if (!variantsByStage[v.stage_id]) variantsByStage[v.stage_id] = []; variantsByStage[v.stage_id].push(v); });
 
-  const currentIdx = Number.isInteger(stageParam) && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
-  const currentStage = currentIdx != null ? stages[currentIdx] : null;
+  const entries = buildRoadbookEntries(stages, variantsByStage);
+  const currentStageIdx = Number.isInteger(stageParam) && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
+  const currentVariant = variantParam == null
+    ? null
+    : variants.find(variant => String(variant.id) === variantParam) ?? null;
+  const currentEntryIndex = currentVariant
+    ? entries.findIndex(entry => entry.type === "variant" && entry.item.id === currentVariant.id)
+    : currentStageIdx == null
+      ? -1
+      : entries.findIndex(entry => entry.type === "stage" && entry.stageIndex === currentStageIdx);
+  const currentEntry = currentEntryIndex >= 0 ? entries[currentEntryIndex] : null;
 
   return (
     <>
       <RoadbookHeader roadbook={roadbook} />
       <main className="container">
-      {currentIdx == null ? (
+      {currentEntry == null ? (
         <>
           <RoadbookOverview
             roadbook={roadbook}
             stages={stages}
+            variantsByStage={variantsByStage}
             totals={totals}
             gpxOfficial={gpxOfficial}
             gpxCustom={gpxCustom}
@@ -122,17 +133,25 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             <span />
           </nav>
         </>
-      ) : (
+      ) : currentEntry.type === "stage" ? (
         <StageDetailPage
           roadbook={roadbook}
-          stages={stages}
-          currentIdx={currentIdx}
-          stage={currentStage}
-          pois={poisByStage[currentStage.id] ?? []}
-          variants={variantsByStage[currentStage.id] ?? []}
-          stageGpx={gpxByStage[currentStage.id] ?? null}
-          gpxByVariant={gpxByVariant}
-          stagePhotoUrl={images.find(image => image.stage_id === currentStage.id && image.signedUrl)?.signedUrl ?? null}
+          entries={entries}
+          currentEntryIndex={currentEntryIndex}
+          stage={currentEntry.item}
+          stageIndex={currentEntry.stageIndex}
+          pois={poisByStage[currentEntry.item.id] ?? []}
+          stageGpx={gpxByStage[currentEntry.item.id] ?? null}
+          stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.signedUrl)?.signedUrl ?? null}
+        />
+      ) : (
+        <VariantDetailPage
+          roadbook={roadbook}
+          entries={entries}
+          currentEntryIndex={currentEntryIndex}
+          variant={currentEntry.item}
+          parentStage={currentEntry.parentStage}
+          variantGpx={gpxByVariant[currentEntry.item.id] ?? null}
         />
       )}
     </main>
@@ -185,7 +204,7 @@ function RoadbookHeader({ roadbook }) {
   );
 }
 
-function RoadbookOverview({ roadbook, stages, totals, gpxOfficial, gpxCustom }) {
+function RoadbookOverview({ roadbook, stages, variantsByStage, totals, gpxOfficial, gpxCustom }) {
   const metadata = roadbook.metadata ?? {};
   const official = metadata.official ?? {};
   const savedCurrent = metadata.stagesTotal ?? {};
@@ -207,7 +226,7 @@ function RoadbookOverview({ roadbook, stages, totals, gpxOfficial, gpxCustom }) 
         mapTitle="Carte interactive de l'itinéraire officiel"
         downloadLabel="Télécharger le tracé officiel"
       />
-      <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} />
+      <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} variantsByStage={variantsByStage} />
       <RouteSummary
         className="roadbook-current-summary"
         heading="Tracé total actuel"
@@ -252,7 +271,26 @@ function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabe
   );
 }
 
-function StageOverviewList({ roadbookSlug, stages }) {
+function buildRoadbookEntries(stages, variantsByStage) {
+  return stages.flatMap((stage, stageIndex) => [
+    { type: "stage", item: stage, stageIndex },
+    ...(variantsByStage[stage.id] ?? []).map((variant, variantIndex) => ({
+      type: "variant",
+      item: variant,
+      parentStage: stage,
+      stageIndex,
+      variantIndex,
+    })),
+  ]);
+}
+
+function roadbookEntryHref(roadbookSlug, entry) {
+  return entry.type === "variant"
+    ? `/roadbooks/${roadbookSlug}?variant=${entry.item.id}`
+    : `/roadbooks/${roadbookSlug}?stage=${entry.stageIndex}`;
+}
+
+function StageOverviewList({ roadbookSlug, stages, variantsByStage }) {
   return (
     <section className="home-stage-list" aria-labelledby="home-stage-list-title">
       <h2 id="home-stage-list-title">Étapes</h2>
@@ -260,9 +298,13 @@ function StageOverviewList({ roadbookSlug, stages }) {
         <p className="empty">Ce roadbook n&apos;a pas encore d&apos;étapes.</p>
       ) : (
         <ol className="home-stage-list__items">
-          {stages.map((stage, index) => (
-            <li key={stage.id}>
-              <StageOverviewCard roadbookSlug={roadbookSlug} stage={stage} index={index} />
+          {buildRoadbookEntries(stages, variantsByStage).map(entry => (
+            <li key={`${entry.type}-${entry.item.id}`}>
+              {entry.type === "variant" ? (
+                <VariantOverviewCard roadbookSlug={roadbookSlug} entry={entry} />
+              ) : (
+                <StageOverviewCard roadbookSlug={roadbookSlug} stage={entry.item} index={entry.stageIndex} />
+              )}
             </li>
           ))}
         </ol>
@@ -300,6 +342,36 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
           {accommodationIcon(stage.accommodation_type, stage.accommodation_name)}
         </span>
       )}
+    </Link>
+  );
+}
+
+function VariantOverviewCard({ roadbookSlug, entry }) {
+  const { item: variant, parentStage } = entry;
+  const metadata = variant.metadata ?? {};
+  const type = metadata.type || metadata.itemType || "Variante";
+  const departure = variant.departure ?? metadata.departure;
+  const arrival = variant.arrival ?? metadata.arrival;
+  const route = variant.label
+    || [departure, arrival].filter(Boolean).join(" → ")
+    || `Variante de l'étape ${parentStage.stage_number ?? entry.stageIndex + 1}`;
+
+  return (
+    <Link
+      className="home-stage-card home-stage-card--substep"
+      href={roadbookEntryHref(roadbookSlug, entry)}
+      aria-label={`Ouvrir la variante ${route}`}
+    >
+      <span className="home-stage-card__number">↳</span>
+      <span className="home-stage-card__content">
+        <strong className="home-stage-card__route">{route}</strong>
+        <span className="home-stage-card__substep-type">{type}</span>
+        <span className="home-stage-card__stats stats stats--compact">
+          <OverviewStat value={variant.distance_km} unit="km" label="Distance" icon={StatIconDistance} />
+          <OverviewStat value={variant.elevation_gain_m ?? metadata.elevation_gain_m} unit="m" label="D+" icon={StatIconElevationGain} />
+          <OverviewStat value={variant.elevation_loss_m ?? metadata.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
+        </span>
+      </span>
     </Link>
   );
 }
@@ -348,29 +420,34 @@ function ImagesSection({ images }) {
   );
 }
 
-function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, stageGpx, gpxByVariant, stagePhotoUrl }) {
+function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
-      <StageDetailNavigation roadbook={roadbook} stages={stages} currentIdx={currentIdx} stage={stage} />
+      <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
       <StageCard
         stage={stage}
-        stageIndex={currentIdx}
+        stageIndex={stageIndex}
         pois={pois}
-        variants={variants}
         stageGpx={stageGpx}
-        gpxByVariant={gpxByVariant}
         stagePhotoUrl={stagePhotoUrl}
       />
     </section>
   );
 }
 
-function StageDetailNavigation({ roadbook, stages, currentIdx, stage }) {
+function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   const overviewHref = `/roadbooks/${roadbook.slug}`;
-  const previousHref = currentIdx === 0 ? overviewHref : `/roadbooks/${roadbook.slug}?stage=${currentIdx - 1}`;
-  const nextHref = currentIdx < stages.length - 1 ? `/roadbooks/${roadbook.slug}?stage=${currentIdx + 1}` : null;
-  const stageNumber = stage.stage_number ?? currentIdx + 1;
-  const currentLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
+  const currentEntry = entries[currentEntryIndex];
+  const previousHref = currentEntryIndex === 0
+    ? overviewHref
+    : roadbookEntryHref(roadbook.slug, entries[currentEntryIndex - 1]);
+  const nextHref = currentEntryIndex < entries.length - 1
+    ? roadbookEntryHref(roadbook.slug, entries[currentEntryIndex + 1])
+    : null;
+  const stageNumber = currentEntry.parentStage?.stage_number ?? currentEntry.item.stage_number ?? currentEntry.stageIndex + 1;
+  const currentLabel = currentEntry.type === "variant"
+    ? `Variante – ${currentEntry.item.label || `étape ${stageNumber}`}`
+    : currentEntry.item.stage_label || (currentEntry.item.day ? String(currentEntry.item.day) : `Étape ${stageNumber}`);
 
   return (
     <nav className="stage-detail-navigation card" aria-label="Navigation entre les étapes">
@@ -397,6 +474,19 @@ function StageDetailNavigation({ roadbook, stages, currentIdx, stage }) {
   );
 }
 
+function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, variantGpx }) {
+  return (
+    <section className="stage-detail-page" aria-label="Fiche détaillée de la variante">
+      <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
+      <VariantCard
+        variant={variant}
+        contextCity={parentStage?.arrival || parentStage?.departure || ""}
+        variantGpx={variantGpx}
+      />
+    </section>
+  );
+}
+
 function VariantCard({ variant, contextCity, variantGpx }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
@@ -417,12 +507,12 @@ function VariantCard({ variant, contextCity, variantGpx }) {
   }
 
   return (
-    <article className="stage-detail-variant">
+    <article className="stage-detail-card stage-detail-card--primary stage-detail-variant card">
       <header className="stage-detail-variant__header">
         <span className="stage-detail-variant__marker" aria-hidden="true">↳</span>
         <div>
           {type && <span className="stage-detail-variant__badge">{type}</span>}
-          <h3>{variant.label || "Variante"}</h3>
+          <h2>{variant.label || "Variante"}</h2>
         </div>
       </header>
       {(departure || arrival) && <StageRoute departure={departure} arrival={arrival} />}
@@ -500,7 +590,7 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, stageIndex, pois, variants, stageGpx, gpxByVariant, stagePhotoUrl }) {
+function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_number ?? stageIndex + 1;
   const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
@@ -615,14 +705,6 @@ function StageCard({ stage, stageIndex, pois, variants, stageGpx, gpxByVariant, 
         </section>
       )}
 
-      {variants.length > 0 && (
-        <section className="stage-detail-card stage-detail-variants card" aria-labelledby="stage-detail-variants-title">
-          <h2 id="stage-detail-variants-title">Variantes ({variants.length})</h2>
-          <div className="stage-detail-variant-list">
-            {variants.map(variant => <VariantCard key={variant.id} variant={variant} contextCity={contextCity} variantGpx={gpxByVariant?.[variant.id] ?? null} />)}
-          </div>
-        </section>
-      )}
     </>
   );
 }

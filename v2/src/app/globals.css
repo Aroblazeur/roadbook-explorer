@@ -542,8 +542,6 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .studio-stage-card[data-expanded="false"] .studio-stage-card__body,
 .studio-variant-card[data-expanded="false"] .studio-variant-card__body { display: none; }
 
-.studio-stage-card[data-expanded="false"] + .studio-variant-card { display: none; }
-
 .terrain-button {
   display: inline-flex;
   align-items: center;
@@ -1018,7 +1016,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-variant-list { display: grid; gap: 12px; }
 .stage-detail-variant { padding: 16px; border: 1px dashed #aaa; border-radius: 12px; background: #fafafa; }
 .stage-detail-variant__header { display: flex; align-items: flex-start; gap: 9px; }
-.stage-detail-variant__header h3 { display: inline; margin: 0; font-size: 1rem; }
+.stage-detail-variant__header h2,
+.stage-detail-variant__header h3 { display: inline; margin: 0; font-size: 1.25rem; }
 .stage-detail-variant__marker { color: var(--text-light); font-size: 1.15rem; }
 .stage-detail-variant__badge { display: inline-flex; margin: 0 7px 4px 0; padding: 2px 8px; border: 1px solid #999; border-radius: 999px; font-size: .78rem; }
 .stage-detail-variant__stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }

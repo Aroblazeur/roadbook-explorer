@@ -59,7 +59,11 @@ function PersonalRoadbookCard({ roadbook }) {
   ].filter(Boolean);
 
   return (
-    <article className="roadbook-library-card roadbook-library-card--personal">
+    <Link
+      href={`/roadbooks/${roadbook.slug}`}
+      className="roadbook-library-card roadbook-library-card--personal"
+      aria-label={`Consulter le roadbook ${roadbook.title}`}
+    >
       <div className={roadbook.coverSignedUrl ? "roadbook-library-card__cover" : "roadbook-library-card__cover roadbook-library-card__cover--placeholder"}>
         {roadbook.coverSignedUrl ? (
           <img
@@ -80,15 +84,7 @@ function PersonalRoadbookCard({ roadbook }) {
             {roadbook.description.length > 150 ? `${roadbook.description.slice(0, 150)}…` : roadbook.description}
           </p>
         )}
-        <div className="roadbook-library-card__actions">
-          <Link href={`/roadbooks/${roadbook.slug}`} className="terrain-button terrain-button--secondary studio-action-button--compact">
-            Consulter
-          </Link>
-          <Link href={`/dashboard/roadbooks/${roadbook.id}`} className="terrain-button terrain-button--secondary studio-action-button--compact">
-            Modifier dans le Studio
-          </Link>
-        </div>
       </div>
-    </article>
+    </Link>
   );
 }

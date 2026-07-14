@@ -102,7 +102,7 @@ export default function RoadbookDetailPage() {
           <StudioInfoCard roadbook={roadbook} />
           <div className="studio-card">
             <div className="studio-card__header">
-              <h2>Étapes ({stages.length})</h2>
+              <h2>Étapes et variantes ({stages.length + Object.values(variantsByStage).reduce((total, items) => total + items.length, 0)})</h2>
             </div>
             <div className="studio-card__body">
               {stageSuccess && <p className="page-success">{stageSuccess}</p>}

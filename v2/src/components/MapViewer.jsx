@@ -9,14 +9,17 @@ export default function MapViewer({ gpxUrl, height = 300 }) {
   useEffect(() => {
     if (mapRef.current) return;
 
+    let cancelled = false;
     let mapInstance = null;
     let traceLayer = null;
 
     async function init() {
-      if (!containerRef.current) return;
+      const container = containerRef.current;
+      if (!container) return;
       const L = await import("leaflet");
+      if (cancelled || containerRef.current !== container) return;
 
-      mapInstance = L.map(containerRef.current, {
+      mapInstance = L.map(container, {
         scrollWheelZoom: false,
         tap: true,
       });
@@ -66,6 +69,8 @@ export default function MapViewer({ gpxUrl, height = 300 }) {
         points = [];
       }
 
+      if (cancelled) return;
+
       if (points.length > 1) {
         traceLayer = L.polyline(points, {
           color: "#2e7d32",
@@ -83,9 +88,10 @@ export default function MapViewer({ gpxUrl, height = 300 }) {
     init();
 
     return () => {
+      cancelled = true;
       if (mapInstance) {
         mapInstance.remove();
-        mapRef.current = null;
+        if (mapRef.current === mapInstance) mapRef.current = null;
       }
     };
   }, [gpxUrl]);

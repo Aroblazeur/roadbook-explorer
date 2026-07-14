@@ -47,6 +47,7 @@ export default function StageCard({
   const isDragOver = dragOverStageId === stage.id && !isDragging;
 
   return (
+    <>
     <article
       key={stage.id}
       className={`studio-stage-card ${isDragOver ? "studio-stage-card--drag-over" : ""}`}
@@ -171,17 +172,18 @@ export default function StageCard({
             handleDeleteNote={handleDeleteNote}
           />
 
-          <VariantForm
-            stageId={stage.id}
-            stageVariants={stageVariants}
-            variantForm={variantForm}
-            setVariantForm={setVariantForm}
-            clearVariantForm={clearVariantForm}
-            handleVariantSubmit={handleVariantSubmit}
-            handleDeleteVariant={handleDeleteVariant}
-          />
         </div>
       )}
     </article>
+    <VariantForm
+      stageId={stage.id}
+      stageVariants={stageVariants}
+      variantForm={variantForm}
+      setVariantForm={setVariantForm}
+      clearVariantForm={clearVariantForm}
+      handleVariantSubmit={handleVariantSubmit}
+      handleDeleteVariant={handleDeleteVariant}
+    />
+    </>
   );
 }
