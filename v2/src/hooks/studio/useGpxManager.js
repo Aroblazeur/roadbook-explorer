@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { loadGpxRows, getSignedUrl } from "@/lib/roadbooks/loaders";
-import { buildCanonicalGpxMediaInput } from "@/lib/roadbooks/gpx-media";
+import { buildCanonicalGpxMediaInput, formatGpxUserError, classifyGpxMedia, selectGpxMedia, selectUniqueGpxMedia } from "@/lib/roadbooks/gpx-media";
 import { uploadGpx, updateGpxRecord, deleteGpx as deleteGpxWriter, updateStage } from "@/lib/roadbooks/writers";
 import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
 
@@ -13,53 +13,94 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
   const [gpxOfficial, setGpxOfficial] = useState(null);
   const [gpxCustom, setGpxCustom] = useState(null);
   const [gpxByStage, setGpxByStage] = useState({});
+  const [gpxByVariant, setGpxByVariant] = useState({});
   const [metricsLoading, setMetricsLoading] = useState(null);
 
   const reloadGpx = useCallback(async () => {
     if (!userId || !roadbookId) return;
     try {
       const rows = await loadGpxRows(supabase, roadbookId);
-      const official = rows.find(r => r.metadata?.role === "official" || r.metadata?.gpx_role === "official");
-      const custom = rows.find(r => r.metadata?.role === "custom" || r.metadata?.gpx_role === "custom");
-      setGpxOfficial(official ?? null);
-      setGpxCustom(custom ?? null);
+      const rbId = Number(roadbookId);
+      const selection = selectUniqueGpxMedia(rows);
+
+      const officialResult = selectGpxMedia(rows, { roadbookId: rbId, stageId: null, variantId: null, scope: "roadbook", role: "official" });
+      setGpxOfficial(officialResult.status === "selected" ? officialResult.media : null);
+
+      const customResult = selectGpxMedia(rows, { roadbookId: rbId, stageId: null, variantId: null, scope: "roadbook", role: "custom" });
+      setGpxCustom(customResult.status === "selected" ? customResult.media : null);
+
       const byStage = {};
-      rows.filter(r => r.metadata?.scope === "stage" && r.stage_id).forEach(r => { byStage[r.stage_id] = r; });
+      const byVariant = {};
+      for (const { media, classification } of selection.classified) {
+        if (classification.status === "ambiguous" || classification.status === "invalid") continue;
+        if (classification.scope === "stage" && classification.stageId) {
+          byStage[classification.stageId] = media;
+        } else if (classification.scope === "variant" && classification.stageId && classification.variantId) {
+          if (!byVariant[classification.stageId]) byVariant[classification.stageId] = {};
+          byVariant[classification.stageId][classification.variantId] = media;
+        }
+      }
       setGpxByStage(byStage);
+      setGpxByVariant(byVariant);
     } catch (err) {
-      setGpxError(`Impossible de charger les GPX : ${err.message}`);
+      setGpxError(formatGpxUserError(err, "Impossible de charger les GPX."));
     }
   }, [supabase, roadbookId, userId]);
 
-  const uploadGpx = useCallback(async (file, { scope, role, stageId }) => {
+  const uploadGpx = useCallback(async (file, { scope, role, stageId, variantId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
-    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, existingMetadata: { original_name: file.name, original_size: file.size } });
+    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, existingMetadata: { original_name: file.name, original_size: file.size } });
     if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
+    try {
+      const rows = await loadGpxRows(supabase, roadbookId);
+      const existing = selectGpxMedia(rows, { roadbookId: Number(roadbookId), stageId: stageId ?? null, variantId: variantId ?? null, scope, role });
+      if (existing.status === "selected") {
+        setGpxError(`Un GPX ${role} existe déjà pour cette cible. Utilisez le remplacement.`);
+        return;
+      }
+      if (existing.status === "duplicate-identity") {
+        setGpxError("Impossible d'enregistrer ce GPX : plusieurs médias existent déjà pour cette cible.");
+        return;
+      }
+    } catch (err) {
+      setGpxError(formatGpxUserError(err, "Impossible de vérifier les GPX existants."));
+      return;
+    }
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
-      const path = buildGpxPath(userId, roadbookId, scope, role, stageId) + `-${file.name}`;
+      const path = buildGpxPath(userId, roadbookId, scope, role, stageId, variantId) + `-${file.name}`;
       await uploadGpx(supabase, GPX_BUCKET, path, file, {
         record: { ...built.record, file_name: file.name, mime_type: "application/gpx+xml", uploaded_by: userId },
       });
       await reloadGpx();
-    } catch (err) { setGpxError(err.message); }
+    } catch (err) { setGpxError(formatGpxUserError(err, "Impossible d'enregistrer le GPX.")); }
     finally { setGpxUploading(null); }
   }, [supabase, roadbookId, userId, reloadGpx]);
 
-  const replaceGpx = useCallback(async (file, mediaRow, { scope, role, stageId }) => {
+  const replaceGpx = useCallback(async (file, mediaRow, { scope, role, stageId, variantId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
-    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, existingMetadata: { ...mediaRow.metadata, original_name: file.name, original_size: file.size } });
+    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, existingMetadata: { ...mediaRow.metadata, original_name: file.name, original_size: file.size } });
     if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
+    const rowClass = classifyGpxMedia(mediaRow);
+    if (!rowClass || rowClass.status === "ambiguous" || rowClass.status === "invalid") {
+      setGpxError("Impossible de remplacer ce GPX : le média cible est ambigu ou invalide.");
+      return;
+    }
+    const targetClass = classifyGpxMedia({ ...mediaRow, metadata: built.record.metadata });
+    if (targetClass.status !== "canonical" && targetClass.status !== "legacy-compatible") {
+      setGpxError("Impossible de remplacer ce GPX : la cible métier est contradictoire.");
+      return;
+    }
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
       await uploadGpx(supabase, GPX_BUCKET, mediaRow.path, file, { upsert: true });
       await updateGpxRecord(supabase, mediaRow.id, { file_name: file.name, metadata: built.record.metadata });
       await reloadGpx();
-    } catch (err) { setGpxError(err.message); }
+    } catch (err) { setGpxError(formatGpxUserError(err, "Impossible de remplacer le GPX.")); }
     finally { setGpxUploading(null); }
   }, [supabase, roadbookId, reloadGpx]);
 
@@ -68,7 +109,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
     try {
       await deleteGpxWriter(supabase, mediaRow, GPX_BUCKET);
       await reloadGpx();
-    } catch (err) { setGpxError(err.message); }
+    } catch (err) { setGpxError(formatGpxUserError(err, "Impossible de supprimer le GPX.")); }
     finally { setGpxUploading(null); }
   }, [supabase, reloadGpx]);
 
@@ -78,7 +119,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
       if (!signedUrl) return;
       const a = document.createElement("a"); a.href = signedUrl; a.download = mediaRow.file_name; a.click();
     } catch (err) {
-      setGpxError(`Impossible de télécharger le GPX : ${err.message}`);
+      setGpxError(formatGpxUserError(err, "Impossible de télécharger le GPX."));
     }
   }, [supabase]);
 
@@ -89,21 +130,13 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
     try {
       const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
       if (!signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
-
       const metrics = await fetchAndComputeGpxMetrics(signedUrl);
       const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
       const durationStr = formatDuration(hours);
-
-      const existingDist = stage.distance_km != null;
-      const existingGain = stage.elevation_gain_m != null;
-      const existingLoss = stage.elevation_loss_m != null;
-      const existingDuration = stage.duration != null;
-      const anyExisting = existingDist || existingGain || existingLoss || existingDuration;
-
-      const result = { metrics, durationStr, stage, anyExisting };
-      return result;
+      const anyExisting = stage.distance_km != null || stage.elevation_gain_m != null || stage.elevation_loss_m != null || stage.duration != null;
+      return { metrics, durationStr, stage, anyExisting };
     } catch (err) {
-      setGpxError(err.message ?? String(err));
+      setGpxError(formatGpxUserError(err, "Impossible de calculer les métriques du GPX."));
       return null;
     } finally {
       setMetricsLoading(null);
@@ -132,18 +165,17 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
       if (metrics.elevationGainM != null) update.elevation_gain_m = Math.round(metrics.elevationGainM);
       if (metrics.elevationLossM != null) update.elevation_loss_m = Math.round(metrics.elevationLossM);
       if (durationStr) update.duration = durationStr;
-
       await updateStage(supabase, stage.id, update);
       if (reloadStages) await reloadStages();
       return true;
     } catch (err) {
-      setGpxError(err.message ?? String(err));
+      setGpxError(formatGpxUserError(err, "Impossible d'appliquer les métriques à l'étape."));
       return false;
     }
   }, [supabase, reloadStages]);
 
   return {
-    gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage,
+    gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant,
     gpxUploading, metricsLoading,
     gpxError, setGpxError,
     reloadGpx,

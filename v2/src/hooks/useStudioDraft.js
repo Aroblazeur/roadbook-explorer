@@ -69,7 +69,8 @@ export function useStudioDraft({
     images,
     gpxOfficial,
     gpxCustom,
-    gpxByStage,
+  gpxByStage,
+  gpxByVariant,
     title,
     description,
     isPublic,
@@ -193,7 +194,7 @@ export function useStudioDraft({
     traceDist, traceGain, traceLoss, traceGpx, traceMap,
     stages, poisByStage, variantsByStage,
     coverMode, coverUrl, coverMediaId,
-    images, gpxOfficial, gpxCustom, gpxByStage,
+    images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant,
     scheduleSave,
   ]);
 

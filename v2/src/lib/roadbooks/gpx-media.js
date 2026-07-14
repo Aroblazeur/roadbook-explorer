@@ -262,3 +262,15 @@ export function gpxDiagnosticDetails(media, classification, overrides = {}) {
     reason: overrides.reason ?? classification?.reason ?? null,
   };
 }
+
+export function formatGpxUserError(error, fallback = "Erreur lors de l'opération GPX.") {
+  if (!error) return null;
+  const msg = String(error?.message ?? error);
+  if (/violates row-level security|new row violates/i.test(msg)) return "Permission insuffisante pour cette action.";
+  if (/duplicate key/i.test(msg)) return "Un enregistrement identique existe déjà.";
+  if (/JWT|jwt|token.*expir|session/i.test(msg)) return "Session expirée. Veuillez vous reconnecter.";
+  if (/network|fetch|networkerror|ECONNREFUSED/i.test(msg)) return "Erreur réseau. Vérifiez votre connexion.";
+  if (/not found|introuvable/i.test(msg)) return "Ressource introuvable.";
+  if (/timeout/i.test(msg)) return "L'opération a pris trop de temps. Veuillez réessayer.";
+  return fallback;
+}

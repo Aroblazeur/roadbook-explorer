@@ -12,7 +12,8 @@ export function normalizeNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-export function buildGpxPath(userId, roadbookId, scope, role, stageId) {
+export function buildGpxPath(userId, roadbookId, scope, role, stageId, variantId) {
+  if (scope === "variant" && stageId && variantId) return `${userId}/${roadbookId}/stages/${stageId}/variants/${variantId}/${crypto.randomUUID()}`;
   if (scope === "stage" && stageId) return `${userId}/${roadbookId}/stages/${stageId}/${crypto.randomUUID()}`;
   return `${userId}/${roadbookId}/roadbook/${role}/${crypto.randomUUID()}`;
 }

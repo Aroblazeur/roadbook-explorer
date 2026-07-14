@@ -10,7 +10,7 @@ export default function useLoadData({
   loadEnrichmentIndices, reloadMedia, reloadGpx,
   restoredDraft,
   setRoadbook, setStages, setPoisByStage, setVariantsByStage,
-  setImages, setGpxOfficial, setGpxCustom, setGpxByStage,
+  setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant,
 }) {
   const [officialRoute, setOfficialRoute] = useState({ officialDist: "", officialGain: "", officialLoss: "", officialGpx: "", officialMap: "" });
   const [traceRoute, setTraceRoute] = useState({ traceDist: "", traceGain: "", traceLoss: "", traceGpx: "", traceMap: "" });
@@ -80,6 +80,7 @@ export default function useLoadData({
     if (p.gpxOfficial !== undefined) setGpxOfficial(p.gpxOfficial);
     if (p.gpxCustom !== undefined) setGpxCustom(p.gpxCustom);
     if (p.gpxByStage) setGpxByStage(p.gpxByStage);
+    if (p.gpxByVariant) setGpxByVariant(p.gpxByVariant);
     if (p.officialDist != null || p.officialGain != null || p.officialLoss != null || p.officialGpx != null || p.officialMap != null) setOfficialRoute(prev => ({ ...prev, ...(p.officialDist != null ? { officialDist: p.officialDist } : {}), ...(p.officialGain != null ? { officialGain: p.officialGain } : {}), ...(p.officialLoss != null ? { officialLoss: p.officialLoss } : {}), ...(p.officialGpx != null ? { officialGpx: p.officialGpx } : {}), ...(p.officialMap != null ? { officialMap: p.officialMap } : {}) }));
     if (p.traceDist != null || p.traceGain != null || p.traceLoss != null || p.traceGpx != null || p.traceMap != null) setTraceRoute(prev => ({ ...prev, ...(p.traceDist != null ? { traceDist: p.traceDist } : {}), ...(p.traceGain != null ? { traceGain: p.traceGain } : {}), ...(p.traceLoss != null ? { traceLoss: p.traceLoss } : {}), ...(p.traceGpx != null ? { traceGpx: p.traceGpx } : {}), ...(p.traceMap != null ? { traceMap: p.traceMap } : {}) }));
     if (p.coverMode !== undefined) setCoverMode(p.coverMode);
