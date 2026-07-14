@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { loadGpxRows, getSignedUrl } from "@/lib/roadbooks/loaders";
+import { buildCanonicalGpxMediaInput } from "@/lib/roadbooks/gpx-media";
 import { uploadGpx, updateGpxRecord, deleteGpx as deleteGpxWriter, updateStage } from "@/lib/roadbooks/writers";
 import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
 
@@ -18,8 +19,8 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
     if (!userId || !roadbookId) return;
     try {
       const rows = await loadGpxRows(supabase, roadbookId);
-      const official = rows.find(r => r.metadata?.gpx_role === "official");
-      const custom = rows.find(r => r.metadata?.gpx_role === "custom");
+      const official = rows.find(r => r.metadata?.role === "official" || r.metadata?.gpx_role === "official");
+      const custom = rows.find(r => r.metadata?.role === "custom" || r.metadata?.gpx_role === "custom");
       setGpxOfficial(official ?? null);
       setGpxCustom(custom ?? null);
       const byStage = {};
@@ -33,17 +34,15 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
   const uploadGpx = useCallback(async (file, { scope, role, stageId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
+    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, existingMetadata: { original_name: file.name, original_size: file.size } });
+    if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
       const path = buildGpxPath(userId, roadbookId, scope, role, stageId) + `-${file.name}`;
-      const meta = { scope, original_name: file.name, original_size: file.size };
-      if (role) meta.gpx_role = role;
-      await uploadGpx(supabase, GPX_BUCKET, path, file, { record: {
-        roadbook_id: Number(roadbookId), stage_id: scope === "stage" ? stageId : null, type: "gpx",
-        file_name: file.name, mime_type: "application/gpx+xml",
-        uploaded_by: userId, metadata: meta,
-      } });
+      await uploadGpx(supabase, GPX_BUCKET, path, file, {
+        record: { ...built.record, file_name: file.name, mime_type: "application/gpx+xml", uploaded_by: userId },
+      });
       await reloadGpx();
     } catch (err) { setGpxError(err.message); }
     finally { setGpxUploading(null); }
@@ -52,16 +51,17 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
   const replaceGpx = useCallback(async (file, mediaRow, { scope, role, stageId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
+    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, existingMetadata: { ...mediaRow.metadata, original_name: file.name, original_size: file.size } });
+    if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
       await uploadGpx(supabase, GPX_BUCKET, mediaRow.path, file, { upsert: true });
-      const meta = { ...mediaRow.metadata, original_name: file.name, original_size: file.size };
-      await updateGpxRecord(supabase, mediaRow.id, { file_name: file.name, metadata: meta });
+      await updateGpxRecord(supabase, mediaRow.id, { file_name: file.name, metadata: built.record.metadata });
       await reloadGpx();
     } catch (err) { setGpxError(err.message); }
     finally { setGpxUploading(null); }
-  }, [supabase, reloadGpx]);
+  }, [supabase, roadbookId, reloadGpx]);
 
   const deleteGpx = useCallback(async (mediaRow) => {
     setGpxUploading("delete");

@@ -25,7 +25,7 @@ export default function GpxBlock({
           <button type="button" onClick={() => handleGpxDelete(mediaRow)} disabled={!!gpxUploading}>Supprimer</button>
         </span>
       ) : (
-        <button type="button" onClick={() => scope === "stage" ? handleGpxUpload("stage", null, stageId) : handleGpxUpload("roadbook", role, null)} disabled={!!gpxUploading}>
+        <button type="button" onClick={() => handleGpxUpload(scope, role, stageId)} disabled={!!gpxUploading}>
           {loadingLabel ?? `Upload ${label}`}
         </button>
       )}

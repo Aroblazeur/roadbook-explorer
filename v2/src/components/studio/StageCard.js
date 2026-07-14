@@ -111,7 +111,7 @@ export default function StageCard({
               <h5>GPX d'étape</h5>
               <GpxBlock
                 label="GPX" mediaRow={stageGpx}
-                scope="stage" role={null} stageId={stage.id}
+                scope="stage" role="official" stageId={stage.id}
                 gpxUploading={gpxUploading}
                 handleGpxDownload={handleGpxDownload}
                 handleGpxReplace={handleGpxReplace}

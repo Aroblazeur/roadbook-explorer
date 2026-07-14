@@ -135,6 +135,47 @@ export function classifyGpxMedia(media) {
   return result(media, { status, roadbookId, stageId, variantId, source, scope, role, reason: null });
 }
 
+const ALLOWED_META_FIELDS = new Set(["caption", "description", "original_name", "original_size"]);
+
+export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, scope, role, existingMetadata } = {}) {
+  const errors = [];
+
+  if (!isPositiveInteger(roadbookId)) errors.push("roadbookId doit être un entier positif");
+  if (!scope || !GPX_SCOPES.has(scope)) errors.push(`scope inconnu : ${scope}`);
+  if (!role) errors.push("role est requis");
+  else if (!GPX_ROLES.has(role)) errors.push(`role inconnu : ${role}`);
+
+  if (errors.length > 0) return { ok: false, errors };
+
+  if (scope === "roadbook") {
+    if (stageId != null) return { ok: false, errors: ["stageId interdit pour scope roadbook"] };
+  } else if (scope === "stage") {
+    if (!isPositiveInteger(stageId)) return { ok: false, errors: ["stageId requis pour scope stage"] };
+  } else if (scope === "variant") {
+    if (!isPositiveInteger(stageId)) return { ok: false, errors: ["stageId requis pour scope variant"] };
+    if (!isPositiveInteger(variantId)) return { ok: false, errors: ["variantId requis pour scope variant"] };
+  }
+
+  const metadata = { scope, role };
+
+  if (scope === "variant" && isPositiveInteger(variantId)) metadata.variant_id = variantId;
+
+  if (existingMetadata && typeof existingMetadata === "object") {
+    for (const key of ALLOWED_META_FIELDS) {
+      if (hasOwn(existingMetadata, key) && existingMetadata[key] != null) metadata[key] = existingMetadata[key];
+    }
+  }
+
+  const record = {
+    type: "gpx",
+    roadbook_id: roadbookId,
+    stage_id: scope === "roadbook" ? null : (isPositiveInteger(stageId) ? stageId : null),
+    metadata,
+  };
+
+  return { ok: true, record };
+}
+
 export function buildGpxBusinessIdentity(classification) {
   if (!classification || !["canonical", "legacy-compatible"].includes(classification.status)) return null;
   const { roadbookId, stageId, variantId, scope, role } = classification;
