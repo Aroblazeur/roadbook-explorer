@@ -19,6 +19,7 @@ export default function StageCard({
   dragHandlers,
   draggingStageId,
   dragOverStageId,
+  stagePhotoMedia,
 }) {
   const {
     handleDeleteStage, deleting,
@@ -85,7 +86,7 @@ export default function StageCard({
               <label>Distance (km)<span className="studio-input--readonly">{stage.distance_km != null ? stage.distance_km : "—"}</span></label>
               <label>D+ (m)<span className="studio-input--readonly">{stage.elevation_gain_m != null ? stage.elevation_gain_m : "—"}</span></label>
               <label>D− (m)<span className="studio-input--readonly">{stage.elevation_loss_m != null ? stage.elevation_loss_m : "—"}</span></label>
-              <label>Photo de l'étape<span className="studio-input--readonly">{stage.stage_photo_url ? "✓" : "—"}</span></label>
+              <label>Photo de l'étape<span className="studio-input--readonly">{stage.stage_photo_url || stagePhotoMedia ? "✓" : "—"}</span></label>
               <label>Type d'hébergement<span className="studio-input--readonly">{stage.accommodation_type || stage.accommodation_name || "—"}</span></label>
               <label className="studio-form-grid__full">Description<span className="studio-input--readonly">{meta.description || "—"}</span></label>
               <label>Libellé<span className="studio-input--readonly">{stage.stage_label || "—"}</span></label>

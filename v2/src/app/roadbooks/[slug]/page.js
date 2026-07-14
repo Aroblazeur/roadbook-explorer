@@ -132,6 +132,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           variants={variantsByStage[currentStage.id] ?? []}
           stageGpx={gpxByStage[currentStage.id] ?? null}
           gpxByVariant={gpxByVariant}
+          stagePhotoUrl={images.find(image => image.stage_id === currentStage.id && image.signedUrl)?.signedUrl ?? null}
         />
       )}
     </main>
@@ -347,7 +348,7 @@ function ImagesSection({ images }) {
   );
 }
 
-function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, stageGpx, gpxByVariant }) {
+function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, stageGpx, gpxByVariant, stagePhotoUrl }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
       <StageDetailNavigation roadbook={roadbook} stages={stages} currentIdx={currentIdx} stage={stage} />
@@ -358,6 +359,7 @@ function StageDetailPage({ roadbook, stages, currentIdx, stage, pois, variants, 
         variants={variants}
         stageGpx={stageGpx}
         gpxByVariant={gpxByVariant}
+        stagePhotoUrl={stagePhotoUrl}
       />
     </section>
   );
@@ -498,12 +500,12 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, stageIndex, pois, variants, stageGpx, gpxByVariant }) {
+function StageCard({ stage, stageIndex, pois, variants, stageGpx, gpxByVariant, stagePhotoUrl }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_number ?? stageIndex + 1;
   const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
   const title = stageHeadingTitle(stage, stageNumber, stageLabel);
-  const photoUrl = safeResourceUrl(stage.stage_photo_url);
+  const photoUrl = safeResourceUrl(stagePhotoUrl || stage.stage_photo_url);
   const stageGpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: stageGpx, fallbackUrl: stage.gpx_url }).url);
   const mapUrl = safeResourceUrl(stage.map_embed_url, { relative: false });
   const normalizedNotes = normalizeNoteItems(stage.notes);

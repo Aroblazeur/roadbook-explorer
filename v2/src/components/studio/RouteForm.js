@@ -6,6 +6,12 @@ export default function RouteForm({
   setValues,
   handleSave,
   saving,
+  mediaRow,
+  gpxUploading,
+  handleGpxUpload,
+  handleGpxReplace,
+  handleGpxDownload,
+  handleGpxDelete,
   embedded = false,
 }) {
   const isOfficial = mode === "official";
@@ -20,7 +26,24 @@ export default function RouteForm({
           <label>Distance (km)<input type="number" step="0.1" value={values.dist} onChange={e => setValues(prev => ({ ...prev, dist: e.target.value }))} /></label>
           <label>D+ (m)<input type="number" value={values.gain} onChange={e => setValues(prev => ({ ...prev, gain: e.target.value }))} /></label>
           <label>D− (m)<input type="number" value={values.loss} onChange={e => setValues(prev => ({ ...prev, loss: e.target.value }))} /></label>
-          <label className="studio-form-grid__full">GPX<input type="text" value={values.gpx} onChange={e => setValues(prev => ({ ...prev, gpx: e.target.value }))} placeholder="URL du fichier GPX" /></label>
+          <div className="studio-form-grid__full">
+            <label htmlFor={`route-gpx-${mode}`}>GPX (URL ou fichier)</label>
+            <div className="studio-resource-field">
+              <input id={`route-gpx-${mode}`} type="text" value={values.gpx} onChange={e => setValues(prev => ({ ...prev, gpx: e.target.value }))} placeholder="URL du fichier GPX" />
+              {mediaRow ? (
+                <>
+                  <span className="studio-resource-field__file" title={mediaRow.file_name}>{mediaRow.file_name}</span>
+                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxDownload(mediaRow)} disabled={!!gpxUploading}>Télécharger</button>
+                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxReplace(mediaRow, "roadbook", isOfficial ? "official" : "custom", null)} disabled={!!gpxUploading}>Remplacer</button>
+                  <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleGpxDelete(mediaRow)} disabled={!!gpxUploading}>Supprimer</button>
+                </>
+              ) : (
+                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxUpload("roadbook", isOfficial ? "official" : "custom", null)} disabled={!!gpxUploading}>
+                  {gpxUploading === (isOfficial ? "official" : "custom") ? "Import…" : "Importer"}
+                </button>
+              )}
+            </div>
+          </div>
           <label className="studio-form-grid__full">Carte intégrée<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} placeholder="https://www.google.com/maps/embed?..." /></label>
           <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
             {saving ? "Enregistrement..." : "Enregistrer"}

@@ -25,28 +25,30 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
     return getSignedUrl(supabase, "roadbook-images", path, 3600);
   }, [supabase]);
 
-  const uploadMedia = useCallback(async (file) => {
+  const uploadMedia = useCallback(async (file, { stageId = null } = {}) => {
     if (!file) return;
     setUploadError(null);
     setUploadLoading(true);
     try {
       const { blob, width, height, size } = await resizeImage(file);
       const record = {
-        roadbook_id: Number(roadbookId), stage_id: null, type: "image",
+        roadbook_id: Number(roadbookId), stage_id: stageId ? Number(stageId) : null, type: "image",
         file_name: file.name,
         mime_type: "image/jpeg",
         uploaded_by: userId,
         metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg" },
       };
-      await uploadImage(supabase, userId, roadbookId, file, blob, record);
+      const result = await uploadImage(supabase, userId, roadbookId, file, blob, record, { returnMedia: true });
       onSuccess?.("");
       await reloadMedia();
+      return result?.media ?? null;
     } catch (err) {
       setUploadError(err.message);
       onError?.(err.message);
     } finally {
       setUploadLoading(false);
     }
+    return null;
   }, [supabase, roadbookId, userId, onError, onSuccess, reloadMedia]);
 
   const removeMedia = useCallback(async (mediaRow) => {

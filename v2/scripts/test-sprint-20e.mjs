@@ -60,7 +60,6 @@ const IMPORTED_BY_PAGE = [
   "RouteForm",
   "CoverSection",
   "MediaSection",
-  "GpxSection",
   "AutomationPanel",
   "StageForm",
   "StageCard",
@@ -70,6 +69,28 @@ for (const name of IMPORTED_BY_PAGE) {
     assert.ok(pageSrc.includes(name), `Import manquant pour ${name} dans page.js`);
   });
 }
+
+test("le GPX roadbook est intégré aux formulaires d'itinéraire", () => {
+  assert.ok(!pageSrc.includes("GpxSection"), "GpxSection ne doit plus créer un second champ GPX séparé");
+  assert.ok(pageSrc.includes("mediaRow={gpxOfficial}"), "Le fichier GPX officiel doit être rattaché à RouteForm");
+  assert.ok(pageSrc.includes("mediaRow={gpxCustom}"), "Le fichier GPX du tracé doit être rattaché à RouteForm");
+});
+
+test("les champs de création V1 sont présents dans le catalogue V2", () => {
+  const catalogSrc = readFileSync("src/components/studio/StudioCatalog.js", "utf-8");
+  for (const field of ["ID du roadbook", "Projet", "officialDistance", "officialElevationGain", "officialElevationLoss", "officialGpx", "officialMapEmbedUrl", "currentGpx", "currentMapEmbedUrl"]) {
+    assert.ok(catalogSrc.includes(field), `Champ de création manquant : ${field}`);
+  }
+});
+
+test("les ressources URL ou fichier utilisent un champ visuel unique", () => {
+  const coverSrc = readFileSync("src/components/studio/CoverSection.js", "utf-8");
+  const routeSrc = readFileSync("src/components/studio/RouteForm.js", "utf-8");
+  const stageFormSrc = readFileSync("src/components/studio/StageForm.js", "utf-8");
+  assert.ok(coverSrc.includes("Image de couverture (URL ou fichier)"));
+  assert.ok(routeSrc.includes("GPX (URL ou fichier)"));
+  assert.ok(stageFormSrc.includes("Photo (URL ou fichier)"));
+});
 
 // ==================== Vérifications structurelles ====================
 console.log("\n=== 3. Vérifications structurelles de page.js ===");

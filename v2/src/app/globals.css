@@ -1672,6 +1672,35 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   margin: 0;
 }
 
+.studio-resource-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.studio-resource-field > input:not([type="file"]) {
+  flex: 1 1 280px;
+  width: auto;
+}
+
+.studio-file-button {
+  cursor: pointer;
+}
+
+.studio-file-button input[type="file"] {
+  display: none;
+}
+
+.studio-resource-field__file {
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--studio-muted);
+  font-size: .82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .studio-footer {
   padding: 1.5rem 1rem;
   color: var(--studio-muted);

@@ -302,9 +302,18 @@ export function buildNewDraftPayload(formState) {
     savedAt: new Date().toISOString(),
     tabId: formState.tabId,
     payload: {
+      slug: formState.slug ?? "",
       title: formState.title ?? "",
       description: formState.description ?? "",
       isPublic: formState.isPublic ?? false,
+      project: formState.project ?? "En projet",
+      officialDistance: formState.officialDistance ?? "",
+      officialElevationGain: formState.officialElevationGain ?? "",
+      officialElevationLoss: formState.officialElevationLoss ?? "",
+      officialGpx: formState.officialGpx ?? "",
+      officialMapEmbedUrl: formState.officialMapEmbedUrl ?? "",
+      currentGpx: formState.currentGpx ?? "",
+      currentMapEmbedUrl: formState.currentMapEmbedUrl ?? "",
     },
   };
 }

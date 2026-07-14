@@ -8,6 +8,9 @@ export default function StageForm({
   editingStage,
   clearStageForm,
   handleStageSubmit,
+  stagePhotoMedia,
+  uploadLoading,
+  handleUploadStagePhoto,
 }) {
   if (showStageForm || editingStage) {
     return (
@@ -30,7 +33,20 @@ export default function StageForm({
             <label>Jour<textarea value={stageForm.day} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "day", value: e.target.value })} placeholder="ex: Jour 1" /></label>
             <label>Libellé étape<input type="text" value={stageForm.label} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "label", value: e.target.value })} placeholder="ex: De X à Y" /></label>
             <label>Durée<input type="text" value={stageForm.duration} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "duration", value: e.target.value })} placeholder="ex: 4h30" /></label>
-            <label>Photo URL<input type="url" value={stageForm.photoUrl} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "photoUrl", value: e.target.value })} placeholder="https://..." /></label>
+            <div>
+              <label htmlFor="stage-photo-url">Photo (URL ou fichier)</label>
+              <div className="studio-resource-field">
+                <input id="stage-photo-url" type="url" value={stageForm.photoUrl} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "photoUrl", value: e.target.value })} placeholder="https://..." />
+                {editingStage && (
+                  <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
+                    {uploadLoading ? "Import…" : stagePhotoMedia ? "Remplacer" : "Importer"}
+                    <input type="file" accept="image/*" disabled={uploadLoading} onChange={handleUploadStagePhoto} />
+                  </label>
+                )}
+              </div>
+              {stagePhotoMedia && <span className="studio-resource-field__file">{stagePhotoMedia.file_name}</span>}
+              {!editingStage && <small className="text-muted">L'import de fichier sera disponible après la création de l'étape.</small>}
+            </div>
             <label className="studio-form-grid__full">Carte intégrée (iframe)<input type="url" value={stageForm.mapEmbed} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "mapEmbed", value: e.target.value })} placeholder="https://www.google.com/maps/embed?..." /></label>
           </div>
           <div className="studio-create-form__actions">

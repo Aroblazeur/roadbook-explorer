@@ -87,7 +87,7 @@ console.log("\n=== 3. Imports des composants UI ===");
 
 const COMPONENTS = [
   "GeneralInfoForm", "RouteForm", "CoverSection",
-  "MediaSection", "GpxSection", "AutomationPanel",
+  "MediaSection", "AutomationPanel",
   "StageForm", "StageCard", "StudioHeader", "StudioInfoCard",
 ];
 for (const name of COMPONENTS) {

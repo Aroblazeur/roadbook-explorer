@@ -100,7 +100,7 @@ export async function createMediaWithUpload(supabase, record, uploadObject) {
   }
 }
 
-export async function uploadImage(supabase, userId, roadbookId, file, blob, record = null) {
+export async function uploadImage(supabase, userId, roadbookId, file, blob, record = null, { returnMedia = false } = {}) {
   const uuid = crypto.randomUUID();
   const path = `${userId}/${roadbookId}/${uuid}-${file.name}`;
   const uploadObject = async () => {
@@ -111,15 +111,16 @@ export async function uploadImage(supabase, userId, roadbookId, file, blob, reco
   };
 
   if (record) {
-    await createMediaWithUpload(supabase, {
+    const media = await createMediaWithUpload(supabase, {
       ...record,
       bucket: "roadbook-images",
       path,
     }, uploadObject);
+    return returnMedia ? { path, media } : path;
   } else {
     await uploadObject();
   }
-  return path;
+  return returnMedia ? { path, media: null } : path;
 }
 
 export async function insertMediaRecord(supabase, record) {
