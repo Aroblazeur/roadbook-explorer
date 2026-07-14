@@ -6,6 +6,7 @@ export default function GpxBlock({
   scope,
   role,
   stageId,
+  variantId,
   gpxUploading,
   handleGpxDownload,
   handleGpxReplace,
@@ -21,11 +22,11 @@ export default function GpxBlock({
         <span>
           {mediaRow.file_name}
           <button type="button" onClick={() => handleGpxDownload(mediaRow)} disabled={!!gpxUploading}>Télécharger</button>
-          <button type="button" onClick={() => handleGpxReplace(mediaRow, scope, role, stageId)} disabled={!!gpxUploading}>Remplacer</button>
+          <button type="button" onClick={() => handleGpxReplace(mediaRow, scope, role, stageId, variantId)} disabled={!!gpxUploading}>Remplacer</button>
           <button type="button" onClick={() => handleGpxDelete(mediaRow)} disabled={!!gpxUploading}>Supprimer</button>
         </span>
       ) : (
-        <button type="button" onClick={() => handleGpxUpload(scope, role, stageId)} disabled={!!gpxUploading}>
+        <button type="button" onClick={() => handleGpxUpload(scope, role, stageId, variantId)} disabled={!!gpxUploading}>
           {loadingLabel ?? `Upload ${label}`}
         </button>
       )}

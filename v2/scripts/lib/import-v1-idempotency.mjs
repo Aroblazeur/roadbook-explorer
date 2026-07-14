@@ -4,7 +4,7 @@ const SOURCE_ID_FIELD = "v1SourceId";
 
 const TABLE_CONFIG = {
   stage_pois: {
-    fields: ["name", "lat", "lng", "poi_type", "description", "link_url", "region", "sort_order"],
+    fields: ["name", "lat", "lng", "poi_type", "description", "link_url", "region", "sort_order", "variant_id"],
     numericFields: new Set(["lat", "lng", "sort_order"]),
     metadataFields: ["source", "status", "fromVariant"],
   },
@@ -12,6 +12,8 @@ const TABLE_CONFIG = {
     fields: [
       "label", "distance_km", "description", "sort_order", "departure", "arrival",
       "elevation_gain_m", "elevation_loss_m", "map_embed_url", "notes",
+      "stage_photo_url", "day", "stage_label", "duration",
+      "accommodation_name", "accommodation_url", "accommodation_photo", "accommodation_type", "alternatives",
     ],
     numericFields: new Set(["distance_km", "sort_order", "elevation_gain_m", "elevation_loss_m"]),
     metadataFields: [

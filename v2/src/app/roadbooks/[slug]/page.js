@@ -96,7 +96,16 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const variantParam = searchParams?.variant ? String(searchParams.variant) : null;
 
   const poisByStage = {};
-  pois.forEach(p => { if (!poisByStage[p.stage_id]) poisByStage[p.stage_id] = []; poisByStage[p.stage_id].push(p); });
+  const poisByVariant = {};
+  pois.forEach(p => {
+    if (p.variant_id != null) {
+      if (!poisByVariant[p.variant_id]) poisByVariant[p.variant_id] = [];
+      poisByVariant[p.variant_id].push(p);
+      return;
+    }
+    if (!poisByStage[p.stage_id]) poisByStage[p.stage_id] = [];
+    poisByStage[p.stage_id].push(p);
+  });
   const variantsByStage = {};
   variants.forEach(v => { if (!variantsByStage[v.stage_id]) variantsByStage[v.stage_id] = []; variantsByStage[v.stage_id].push(v); });
 
@@ -151,7 +160,9 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           currentEntryIndex={currentEntryIndex}
           variant={currentEntry.item}
           parentStage={currentEntry.parentStage}
+          pois={poisByVariant[currentEntry.item.id] ?? []}
           variantGpx={gpxByVariant[currentEntry.item.id] ?? null}
+          variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && image.signedUrl)?.signedUrl ?? null}
         />
       )}
     </main>
@@ -474,20 +485,22 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   );
 }
 
-function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, variantGpx }) {
+function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpx, variantPhotoUrl }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de la variante">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
       <VariantCard
         variant={variant}
         contextCity={parentStage?.arrival || parentStage?.departure || ""}
+        pois={pois}
         variantGpx={variantGpx}
+        variantPhotoUrl={variantPhotoUrl}
       />
     </section>
   );
 }
 
-function VariantCard({ variant, contextCity, variantGpx }) {
+function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhotoUrl }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
   const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
@@ -496,9 +509,17 @@ function VariantCard({ variant, contextCity, variantGpx }) {
   const arrival = variant.arrival ?? meta.arrival;
   const mapUrl = safeResourceUrl(variant.map_embed_url ?? meta.map_embed_url, { relative: false });
   const gpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: variantGpx, fallbackUrl: variant.gpx_url }).url);
+  const photoUrl = safeResourceUrl(variantPhotoUrl || variant.stage_photo_url || meta.stagePhoto);
   const notes = normalizeNoteItems(variant.notes ?? meta.notes);
-  const accommodation = normalizeAccommodation(meta.accommodation ?? meta.legacyAccommodation);
-  const alternatives = normalizeAlternatives(meta.accommodation?.alternatives);
+  const legacyAccommodation = normalizeAccommodation(meta.accommodation ?? meta.legacyAccommodation);
+  const accommodation = normalizeAccommodation({
+    name: variant.accommodation_name ?? legacyAccommodation.name,
+    url: variant.accommodation_url ?? legacyAccommodation.url,
+    photo: variant.accommodation_photo ?? legacyAccommodation.photo,
+    type: variant.accommodation_type ?? legacyAccommodation.type,
+    note: meta.accommodationNote ?? legacyAccommodation.note,
+  });
+  const alternatives = normalizeAlternatives(variant.alternatives ?? meta.accommodation?.alternatives);
   if (meta.alternativeAccommodationName || meta.alternativeAccommodationPhoto) {
     alternatives.push(normalizeAccommodation({
       name: meta.alternativeAccommodationName,
@@ -515,13 +536,29 @@ function VariantCard({ variant, contextCity, variantGpx }) {
           <h2>{variant.label || "Variante"}</h2>
         </div>
       </header>
+      {photoUrl && (
+        <figure className="stage-detail-photo">
+          <img src={photoUrl} alt={`Photo de ${variant.label || "la variante"}`} loading="lazy" />
+        </figure>
+      )}
       {(departure || arrival) && <StageRoute departure={departure} arrival={arrival} />}
       <div className="stage-detail-variant__stats" aria-label="Statistiques de la variante">
         {variant.distance_km != null && <span><strong>{formatNumber(variant.distance_km)}</strong> km</span>}
         {gain != null && <span><strong>{formatNumber(gain)}</strong> m D+</span>}
         {loss != null && <span><strong>{formatNumber(loss)}</strong> m D−</span>}
+        {variant.duration && <span><strong>{variant.duration}</strong></span>}
       </div>
       {variant.description && <p className="stage-detail-variant__description">{variant.description}</p>}
+      <div className="stage-detail-variant__pois">
+        <h4>Points d&apos;intérêt</h4>
+        {pois.length > 0 ? (
+          <ul className="stage-detail-poi-list">
+            {pois.map(poi => <PoiCard key={poi.id} poi={poi} />)}
+          </ul>
+        ) : (
+          <p className="stage-detail-empty">Non renseigné</p>
+        )}
+      </div>
       {notes.length > 0 && (
         <div className="stage-detail-variant__notes">
           <h4>Notes</h4>

@@ -1,12 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import { loadPois, loadRoadbookSafe, loadStages, loadVariants } from "@/lib/roadbooks/loaders";
-import { groupByStageId } from "@/lib/roadbooks/validators";
+import { groupByStageId, groupByVariantId } from "@/lib/roadbooks/validators";
 import { getRemoteUpdatedAt } from "@/lib/sync-helpers";
 
 export function useRoadbookData({ supabase, roadbookId, user }) {
   const [roadbook, setRoadbook] = useState(null);
   const [stages, setStages] = useState([]);
   const [poisByStage, setPoisByStage] = useState({});
+  const [poisByVariant, setPoisByVariant] = useState({});
   const [variantsByStage, setVariantsByStage] = useState({});
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -42,10 +43,12 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
           loadVariants(supabase, stageIds),
         ]);
         if (cancelledRef.current) return null;
-        setPoisByStage(groupByStageId(pois));
+        setPoisByStage(groupByStageId(pois.filter(poi => poi.variant_id == null)));
+        setPoisByVariant(groupByVariantId(pois));
         setVariantsByStage(groupByStageId(variants));
       } else {
         setPoisByStage({});
+        setPoisByVariant({});
         setVariantsByStage({});
       }
       if (!cancelledRef.current) setLoading(false);
@@ -66,7 +69,8 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
         loadPois(supabase, stageIds),
         loadVariants(supabase, stageIds),
       ]);
-      setPoisByStage(groupByStageId(pois));
+      setPoisByStage(groupByStageId(pois.filter(poi => poi.variant_id == null)));
+      setPoisByVariant(groupByVariantId(pois));
       setVariantsByStage(groupByStageId(variants));
     }
     await refreshRoadbookVersion();
@@ -78,7 +82,8 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
       loadPois(supabase, stageIds),
       loadVariants(supabase, stageIds),
     ]);
-    setPoisByStage(groupByStageId(pois));
+    setPoisByStage(groupByStageId(pois.filter(poi => poi.variant_id == null)));
+    setPoisByVariant(groupByVariantId(pois));
     setVariantsByStage(groupByStageId(variants));
     await refreshRoadbookVersion();
   }, [supabase, refreshRoadbookVersion]);
@@ -87,6 +92,7 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
     roadbook, setRoadbook,
     stages, setStages,
     poisByStage, setPoisByStage,
+    poisByVariant, setPoisByVariant,
     variantsByStage, setVariantsByStage,
     loading, fetchError, setFetchError,
     loadAll,

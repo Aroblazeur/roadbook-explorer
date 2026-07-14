@@ -46,6 +46,19 @@ export async function updateVariant(supabase, variantId, updates) {
   if (error) throw new Error(error.message);
 }
 
+export async function updateVariants(supabase, variantsByStage, buildUpdates) {
+  const variants = Object.values(variantsByStage ?? {}).flat();
+  await Promise.all(variants.map(variant => updateVariant(supabase, variant.id, buildUpdates(variant))));
+}
+
+export async function updateVariantNotes(supabase, variantId, notes) {
+  return updateVariant(supabase, variantId, { notes });
+}
+
+export async function updateVariantAccommodation(supabase, variantId, payload) {
+  return updateVariant(supabase, variantId, payload);
+}
+
 export async function deleteVariant(supabase, variantId) {
   const { error } = await supabase.from("stage_variants").delete().eq("id", variantId);
   if (error) throw new Error(error.message);
@@ -239,7 +252,7 @@ export async function deleteRoadbook(supabase, roadbookId) {
   if (error) throw new Error(error.message);
 }
 
-export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, slug, userId) {
+export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, slug, userId, poisByVariant = {}) {
   const newRb = await insertRoadbook(supabase, {
     slug, owner_id: userId,
     title: `${roadbook.title} (copie)`,
@@ -279,7 +292,7 @@ export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage,
     }
     const stageVariants = variantsByStage[oldId] ?? [];
     for (const v of stageVariants) {
-      const { error: vError } = await supabase.from("stage_variants").insert({
+      const { data: newVariant, error: vError } = await supabase.from("stage_variants").insert({
         stage_id: newId, label: v.label, distance_km: v.distance_km,
         gpx_url: null, description: v.description, sort_order: v.sort_order,
         departure: v.departure ?? v.metadata?.departure ?? null,
@@ -287,10 +300,28 @@ export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage,
         elevation_gain_m: v.elevation_gain_m ?? v.metadata?.elevation_gain_m ?? null,
         elevation_loss_m: v.elevation_loss_m ?? v.metadata?.elevation_loss_m ?? null,
         map_embed_url: v.map_embed_url ?? v.metadata?.map_embed_url ?? null,
+        stage_photo_url: null,
+        day: v.day,
+        stage_label: v.stage_label,
+        duration: v.duration,
+        accommodation_name: v.accommodation_name,
+        accommodation_url: v.accommodation_url,
+        accommodation_photo: null,
+        accommodation_type: v.accommodation_type,
+        alternatives: v.alternatives ?? [],
         notes: v.notes ?? v.metadata?.notes ?? [],
         metadata: v.metadata,
-      });
+      }).select("id").single();
       if (vError) throw new Error(vError.message);
+      for (const poi of (poisByVariant[v.id] ?? [])) {
+        const { error: pError } = await supabase.from("stage_pois").insert({
+          stage_id: newId, variant_id: newVariant.id, name: poi.name,
+          lat: poi.lat, lng: poi.lng, poi_type: poi.poi_type,
+          description: poi.description, photo_url: null, link_url: poi.link_url,
+          region: poi.region, sort_order: poi.sort_order, metadata: poi.metadata,
+        });
+        if (pError) throw new Error(pError.message);
+      }
     }
   }
 

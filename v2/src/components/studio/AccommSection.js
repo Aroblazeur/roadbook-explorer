@@ -25,6 +25,7 @@ function AccommodationDetails({ accommodation }) {
 
 export default function AccommSection({
   stageId,
+  variantId = null,
   stage,
   accommodationForm,
   setAccommodationForm,
@@ -38,12 +39,13 @@ export default function AccommSection({
   const primary = primaryAccommodationFromStage(stage);
   const alternatives = alternativesFromStage(stage);
   const hasPrimary = hasAccommodation(primary);
-  const formIsOpen = accommodationForm.stage_id === stageId;
+  const formIsOpen = accommodationForm.stage_id === stageId && (accommodationForm.variant_id ?? null) === variantId;
 
   const openForm = (kind, accommodation = {}, editing = null) => {
     clearAccommodationForm();
     setAccommodationForm({
       stage_id: stageId,
+      variant_id: variantId,
       name: accommodation.name ?? "",
       url: accommodation.url ?? "",
       photo: accommodation.photo ?? "",
@@ -63,8 +65,8 @@ export default function AccommSection({
             <AccommodationDetails accommodation={primary} />
             <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
               <button type="button" className="terrain-button terrain-button--secondary" onClick={() => openForm("primary", primary, "primary")}>Modifier</button>
-              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => handleDemotePrimary(stageId)}>Passer en alternatif</button>
-              <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleClearAccommodation(stageId)}>Supprimer</button>
+              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => handleDemotePrimary(stageId, variantId)}>Passer en alternatif</button>
+              <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleClearAccommodation(stageId, variantId)}>Supprimer</button>
             </div>
           </div>
         ) : (
@@ -84,9 +86,9 @@ export default function AccommSection({
           <article className="studio-subitem-card" key={`${alternative.name}-${alternative.url}-${index}`}>
             <AccommodationDetails accommodation={alternative} />
             <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
-              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => handlePromoteAlternative(stageId, index)}>Rendre principal</button>
+              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => handlePromoteAlternative(stageId, index, variantId)}>Rendre principal</button>
               <button type="button" className="terrain-button terrain-button--secondary" onClick={() => openForm("alternative", alternative, index)}>Modifier</button>
-              <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleDeleteAlternative(stageId, index)}>Supprimer</button>
+              <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleDeleteAlternative(stageId, index, variantId)}>Supprimer</button>
             </div>
           </article>
         )) : <p className="studio-detail--empty">Aucun hébergement alternatif.</p>}

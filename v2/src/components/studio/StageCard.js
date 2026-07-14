@@ -15,12 +15,15 @@ export default function StageCard({
   gpx,
   stagePois,
   stageVariants,
+  poisByVariant,
   dragHandlers,
   draggingStageId,
   dragOverStageId,
   stagePhotoMedia,
   onStageChange,
   onUploadStagePhoto,
+  onVariantChange,
+  onUploadVariantPhoto,
   uploadLoading,
 }) {
   const {
@@ -178,11 +181,12 @@ export default function StageCard({
     <VariantForm
       stageId={stage.id}
       stageVariants={stageVariants}
-      variantForm={variantForm}
-      setVariantForm={setVariantForm}
-      clearVariantForm={clearVariantForm}
-      handleVariantSubmit={handleVariantSubmit}
-      handleDeleteVariant={handleDeleteVariant}
+      stageCrud={stageCrud}
+      gpx={gpx}
+      poisByVariant={poisByVariant}
+      onVariantChange={onVariantChange}
+      onUploadVariantPhoto={onUploadVariantPhoto}
+      uploadLoading={uploadLoading}
     />
     </>
   );

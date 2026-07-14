@@ -132,6 +132,7 @@ export function buildPoiRecord(poiForm) {
   const mapQuery = [poiForm.name, poiForm.region].map(value => value?.trim()).filter(Boolean).join(", ");
   return {
     stage_id: poiForm.stage_id,
+    variant_id: poiForm.variant_id ?? null,
     name: poiForm.name.trim(),
     description: poiForm.description || null,
     region: poiForm.region?.trim() || null,
@@ -207,6 +208,39 @@ export function groupByStageId(rows) {
     map[r.stage_id].push(r);
   });
   return map;
+}
+
+export function groupByVariantId(rows) {
+  const map = {};
+  (rows || []).forEach(row => {
+    if (row.variant_id == null) return;
+    if (!map[row.variant_id]) map[row.variant_id] = [];
+    map[row.variant_id].push(row);
+  });
+  return map;
+}
+
+export function buildEditableVariantUpdate(variant) {
+  return {
+    label: variant.label?.trim() || "Variante",
+    departure: variant.departure?.trim() || null,
+    arrival: variant.arrival?.trim() || null,
+    distance_km: normalizeNumber(variant.distance_km),
+    elevation_gain_m: normalizeNumber(variant.elevation_gain_m),
+    elevation_loss_m: normalizeNumber(variant.elevation_loss_m),
+    stage_photo_url: variant.stage_photo_url?.trim() || null,
+    accommodation_type: variant.accommodation_type?.trim() || null,
+    accommodation_name: variant.accommodation_name?.trim() || null,
+    accommodation_url: variant.accommodation_url?.trim() || null,
+    accommodation_photo: variant.accommodation_photo?.trim() || null,
+    alternatives: Array.isArray(variant.alternatives) ? variant.alternatives : [],
+    map_embed_url: variant.map_embed_url?.trim() || null,
+    day: variant.day?.trim() || null,
+    stage_label: variant.stage_label?.trim() || null,
+    duration: variant.duration?.trim() || null,
+    description: variant.description?.trim() || null,
+    metadata: { ...(variant.metadata ?? {}) },
+  };
 }
 
 export function validateStageForm(form) {

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
-import { deleteRoadbook, updatePois, updateStages } from "@/lib/roadbooks/writers";
-import { buildEditableStageUpdate, normalizeNumber } from "@/lib/roadbooks/validators";
+import { deleteRoadbook, updatePois, updateStages, updateVariants } from "@/lib/roadbooks/writers";
+import { buildEditableStageUpdate, buildEditableVariantUpdate, normalizeNumber } from "@/lib/roadbooks/validators";
 import { calculateTotals } from "@/lib/roadbooks/mutations";
 
 export default function useSaveActions({
@@ -10,7 +10,7 @@ export default function useSaveActions({
   isPublic, setIsPublic,
   officialRoute, traceRoute,
   coverMode, coverUrl, coverMediaId,
-  stages, setStages, poisByStage, setPoisByStage, setTraceRoute,
+  stages, setStages, poisByStage, setPoisByStage, variantsByStage, setTraceRoute,
   prepareAutomaticCompletion,
   setError, setSuccess, markRemoteConflict,
   saveWithLock,
@@ -64,6 +64,7 @@ export default function useSaveActions({
       getUpdatedRoadbook: (prev, data) => ({ ...prev, ...updateFields, updated_at: data.updated_at }),
       persistRelated: () => Promise.all([
         updateStages(supabase, completedStages, buildEditableStageUpdate),
+        updateVariants(supabase, variantsByStage, buildEditableVariantUpdate),
         updatePois(supabase, automation.poiUpdates ?? []),
       ]),
       successMessage: `Toutes les modifications ont été enregistrées.${automatedFields ? ` ${automatedFields} champ(s) complété(s) automatiquement.` : ""}${warningCount ? ` ${warningCount} automatisation(s) indisponible(s).` : ""}`,
@@ -79,7 +80,7 @@ export default function useSaveActions({
       }));
     }
     return saved;
-  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, supabase, saveWithLock, setError, setStages, setPoisByStage, setTraceRoute, prepareAutomaticCompletion]);
+  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, variantsByStage, supabase, saveWithLock, setError, setStages, setPoisByStage, setTraceRoute, prepareAutomaticCompletion]);
 
   const handleToggleVisibility = useCallback(async () => {
     const result = await conditionalUpdateRoadbook(supabase, id, { is_public: !isPublic }, roadbook?.updated_at);

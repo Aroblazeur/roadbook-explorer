@@ -2,6 +2,7 @@
 
 export default function PoiForm({
   stageId,
+  variantId = null,
   stagePois,
   poiForm,
   setPoiForm,
@@ -13,7 +14,7 @@ export default function PoiForm({
     <div className="studio-stage-extra">
       <div className="studio-stage-extra__header">
         <h5>Points d'intérêt ({stagePois.length})</h5>
-        <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setPoiForm({ ...poiForm, stage_id: stageId })}>Ajouter un POI</button>
+        <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setPoiForm({ ...poiForm, stage_id: stageId, variant_id: variantId })}>Ajouter un POI</button>
       </div>
       <div className="studio-sublist__list">
         {stagePois.length === 0 && <p className="studio-detail--empty">Aucun POI.</p>}
@@ -31,13 +32,13 @@ export default function PoiForm({
             </div>
             <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
               <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
-                setPoiForm({ stage_id: stageId, name: poi.name, region: poi.region ?? "", link: poi.link_url ?? "", description: poi.description ?? "", editing: poi.id });
+                setPoiForm({ stage_id: stageId, variant_id: variantId, name: poi.name, region: poi.region ?? "", link: poi.link_url ?? "", description: poi.description ?? "", editing: poi.id });
               }}>✎</button>
             </div>
           </article>
         ))}
       </div>
-      {poiForm.stage_id === stageId && (
+      {poiForm.stage_id === stageId && (poiForm.variant_id ?? null) === variantId && (
         <form onSubmit={handlePoiSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
           <h4>{poiForm.editing ? "Modifier le POI" : "Ajouter un POI"}</h4>
           <div className="studio-form-grid studio-form-grid--compact">

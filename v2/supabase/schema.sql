@@ -208,6 +208,7 @@ create policy "Owner can delete stages"
 create table if not exists public.stage_pois (
   id          bigint generated always as identity primary key,
   stage_id    bigint not null references public.stages(id) on delete cascade,
+  variant_id  bigint,
   name        text not null,
   lat         numeric(10,7),
   lng         numeric(10,7),
@@ -223,6 +224,7 @@ create table if not exists public.stage_pois (
 );
 
 create index if not exists idx_pois_stage on public.stage_pois(stage_id);
+create index if not exists idx_pois_variant on public.stage_pois(variant_id) where variant_id is not null;
 
 alter table public.stage_pois enable row level security;
 
@@ -293,6 +295,15 @@ create table if not exists public.stage_variants (
   elevation_gain_m integer,
   elevation_loss_m integer,
   map_embed_url text,
+  stage_photo_url text,
+  day text,
+  stage_label text,
+  duration text,
+  accommodation_name text,
+  accommodation_url text,
+  accommodation_photo text,
+  accommodation_type text,
+  alternatives jsonb not null default '[]'::jsonb,
   notes       jsonb not null default '[]'::jsonb,
   metadata    jsonb not null default '{}'::jsonb,
   created_at  timestamptz not null default now(),
@@ -300,6 +311,19 @@ create table if not exists public.stage_variants (
 );
 
 create index if not exists idx_variants_stage on public.stage_variants(stage_id);
+
+alter table public.stage_variants
+  add constraint stage_variants_id_stage_id_key unique (id, stage_id);
+
+alter table public.stage_pois
+  add constraint stage_pois_variant_stage_fkey
+  foreign key (variant_id, stage_id)
+  references public.stage_variants (id, stage_id)
+  on delete cascade;
+
+create index if not exists idx_stage_pois_variant_stage
+  on public.stage_pois(variant_id, stage_id)
+  where variant_id is not null;
 
 -- Ajout des colonnes manquantes pour les variantes existantes (idempotent)
 do $$

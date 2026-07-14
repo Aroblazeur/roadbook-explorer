@@ -1024,9 +1024,11 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-variant__stats span { padding: 4px 9px; border: 1px solid #4caf50; border-radius: 999px; background: #f1f8f2; font-size: .85rem; }
 .stage-detail-variant__description { margin: 10px 0 0; color: var(--text-light); font-size: .9rem; line-height: 1.5; white-space: pre-wrap; }
 .stage-detail-variant__notes,
+.stage-detail-variant__pois,
 .stage-detail-variant__accommodation,
 .stage-detail-variant__map { margin-top: 16px; }
 .stage-detail-variant__notes h4,
+.stage-detail-variant__pois h4,
 .stage-detail-variant__accommodation h4,
 .stage-detail-variant__map h4 { margin: 0 0 9px; font-size: .92rem; }
 .stage-detail-variant__map > .stage-detail-button { margin-top: 10px; }

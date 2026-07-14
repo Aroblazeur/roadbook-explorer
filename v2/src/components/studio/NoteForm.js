@@ -2,6 +2,7 @@
 
 export default function NoteForm({
   stageId,
+  variantId = null,
   stage,
   noteForm,
   setNoteForm,
@@ -14,7 +15,7 @@ export default function NoteForm({
     <div className="studio-stage-extra">
       <div className="studio-stage-extra__header">
         <h5>Notes ({notes.length})</h5>
-        <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setNoteForm({ ...noteForm, stage_id: stageId })}>Ajouter une note</button>
+        <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setNoteForm({ ...noteForm, stage_id: stageId, variant_id: variantId })}>Ajouter une note</button>
       </div>
       <div className="studio-sublist__list">
         {notes.length > 0 ? notes.map((note, ni) => (
@@ -22,8 +23,8 @@ export default function NoteForm({
             <div className="studio-subitem-card__header">
               <strong>Note {ni + 1}</strong>
               <div style={{ display: "flex", gap: "0.3rem" }}>
-                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setNoteForm({ stage_id: stageId, text: note.text ?? "", editing: ni })}>✎</button>
-                <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleDeleteNote(stageId, ni)}>Supprimer</button>
+                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => setNoteForm({ stage_id: stageId, variant_id: variantId, text: note.text ?? "", editing: ni })}>✎</button>
+                <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleDeleteNote(stageId, ni, variantId)}>Supprimer</button>
               </div>
             </div>
             <div className="studio-form-grid studio-form-grid--compact" style={{ marginTop: "0.3rem" }}>
@@ -33,7 +34,7 @@ export default function NoteForm({
           </article>
         )) : <p className="studio-detail--empty">Aucune note.</p>}
       </div>
-      {noteForm.stage_id === stageId && (
+      {noteForm.stage_id === stageId && (noteForm.variant_id ?? null) === variantId && (
         <form onSubmit={handleNoteSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
           <h4>{noteForm.editing != null ? "Modifier la note" : "Ajouter une note"}</h4>
           <div className="studio-form-grid studio-form-grid--compact">

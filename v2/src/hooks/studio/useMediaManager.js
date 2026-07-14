@@ -25,7 +25,7 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
     return getSignedUrl(supabase, "roadbook-images", path, 3600);
   }, [supabase]);
 
-  const uploadMedia = useCallback(async (file, { stageId = null } = {}) => {
+  const uploadMedia = useCallback(async (file, { stageId = null, variantId = null } = {}) => {
     if (!file) return;
     setUploadError(null);
     setUploadLoading(true);
@@ -36,7 +36,7 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
         file_name: file.name,
         mime_type: "image/jpeg",
         uploaded_by: userId,
-        metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg" },
+        metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg", ...(variantId ? { variant_id: Number(variantId) } : {}) },
       };
       const result = await uploadImage(supabase, userId, roadbookId, file, blob, record, { returnMedia: true });
       onSuccess?.("");

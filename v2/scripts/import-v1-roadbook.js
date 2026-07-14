@@ -108,8 +108,9 @@ function normalizedSourceValue(value) {
   return value === undefined || value === null || value === "" ? null : value;
 }
 
-function buildPoiImportRecord({ poi, enriched, stageId, stageNumber, variant = null }) {
+function buildPoiImportRecord({ poi, enriched, stageId, stageNumber, variant = null, variantId = null }) {
   const fields = ["name", "sort_order"];
+  if (variantId != null) fields.push("variant_id");
   const metadataFields = variant ? ["fromVariant"] : [];
   const coordinates = enriched?.coordinates;
   const hasLatitude = hasOwn(coordinates, "lat");
@@ -134,6 +135,7 @@ function buildPoiImportRecord({ poi, enriched, stageId, stageNumber, variant = n
   return {
     payload: {
       stage_id: stageId,
+      variant_id: variantId,
       name: poi.name,
       lat: normalizedSourceValue(coordinates?.lat),
       lng: normalizedSourceValue(coordinates?.lng),
@@ -169,6 +171,14 @@ function buildVariantImportRecord({ variant, stageId, stageNumber, sortOrder }) 
   addField("arrival");
   addField("elevationLoss", "elevation_loss_m");
   addField("mapEmbedUrl", "map_embed_url");
+  addField("stagePhoto", "stage_photo_url");
+  addField("day");
+  addField("stageLabel", "stage_label");
+  addField("duration");
+  if (hasOwn(variant, "accommodation") || hasOwn(variant, "legacyAccommodation")) {
+    fields.push("accommodation_name", "accommodation_url", "accommodation_photo", "alternatives");
+  }
+  addField("accommodationType", "accommodation_type");
   if (hasOwn(variant, "elevationGain") || hasOwn(variant, "elevation")) fields.push("elevation_gain_m");
   const notesPresent = ["noteItems", "notes", "warning"].some(field => hasOwn(variant, field));
   if (notesPresent) fields.push("notes");
@@ -230,6 +240,15 @@ function buildVariantImportRecord({ variant, stageId, stageNumber, sortOrder }) 
       elevation_gain_m: normalizedSourceValue(elevationGain),
       elevation_loss_m: normalizedSourceValue(variant.elevationLoss),
       map_embed_url: normalizedSourceValue(variant.mapEmbedUrl),
+      stage_photo_url: normalizedSourceValue(variant.stagePhoto),
+      day: normalizedSourceValue(variant.day),
+      stage_label: normalizedSourceValue(variant.stageLabel),
+      duration: normalizedSourceValue(variant.duration),
+      accommodation_name: normalizedSourceValue(variant.accommodation?.name ?? variant.legacyAccommodation),
+      accommodation_url: normalizedSourceValue(variant.accommodation?.url ?? variant.accommodation?.website),
+      accommodation_photo: normalizedSourceValue(variant.accommodation?.photo),
+      accommodation_type: normalizedSourceValue(variant.accommodationType),
+      alternatives: variant.accommodation?.alternatives ?? [],
       notes: variantNotes,
       metadata: withImportKey(metadata, buildVariantImportKey(stageNumber, variant), variant.id),
     },
@@ -627,12 +646,15 @@ async function importRoadbook(slug) {
         else if (variantResult.action === "updated") report.updated.variants++;
         else report.created.variants++;
 
+        const variantId = variantResult.row?.id ?? null;
+        if (!variantId) continue;
+
         // Import variant's own POIs
         for (const p of sourcePois(sub)) {
           if (p?.name) {
             const enriched = poiEnrichLookup[p.name?.toLowerCase().trim()];
             const { payload: poiPayload, presence: poiPresence } = buildPoiImportRecord({
-              poi: p, enriched, stageId, stageNumber, variant: label,
+              poi: p, enriched, stageId, stageNumber, variant: label, variantId,
             });
             const poiResult = await persistImportedChild({
               supabase, table: "stage_pois", payload: poiPayload, presence: poiPresence,
