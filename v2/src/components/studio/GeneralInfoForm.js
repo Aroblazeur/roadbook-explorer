@@ -26,7 +26,7 @@ export default function GeneralInfoForm({
             <option value="À faire">À faire</option>
           </select></label>
           <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
-            {saving ? "Enregistrement..." : "Enregistrer"}
+            {saving ? "Enregistrement..." : "Enregistrer les informations"}
           </button>
         </form>
       </div>

@@ -27,7 +27,6 @@ const COMPONENTS = [
   "GeneralInfoForm",
   "RouteForm",
   "CoverSection",
-  "MediaSection",
   "GpxSection",
   "GpxBlock",
   "AutomationPanel",
@@ -59,7 +58,6 @@ const IMPORTED_BY_PAGE = [
   "GeneralInfoForm",
   "RouteForm",
   "CoverSection",
-  "MediaSection",
   "AutomationPanel",
   "StageForm",
   "StageCard",
@@ -76,11 +74,37 @@ test("le GPX roadbook est intégré aux formulaires d'itinéraire", () => {
   assert.ok(pageSrc.includes("mediaRow={gpxCustom}"), "Le fichier GPX du tracé doit être rattaché à RouteForm");
 });
 
-test("les champs de création V1 sont présents dans le catalogue V2", () => {
+test("les champs utiles de création V1 sont présents dans le catalogue V2", () => {
   const catalogSrc = readFileSync("src/components/studio/StudioCatalog.js", "utf-8");
-  for (const field of ["ID du roadbook", "Projet", "officialDistance", "officialElevationGain", "officialElevationLoss", "officialGpx", "officialMapEmbedUrl", "currentGpx", "currentMapEmbedUrl"]) {
+  for (const field of ["Projet", "officialDistance", "officialElevationGain", "officialElevationLoss", "officialGpx", "officialMapEmbedUrl", "currentGpx", "currentMapEmbedUrl"]) {
     assert.ok(catalogSrc.includes(field), `Champ de création manquant : ${field}`);
   }
+  assert.ok(!catalogSrc.includes("ID du roadbook"), "L'identifiant technique ne doit pas être demandé");
+  assert.ok(catalogSrc.includes("const cleanSlug = title.toLowerCase()"), "Le slug doit être généré depuis le titre");
+});
+
+test("les doublons médias et visibilité ne sont plus rendus", () => {
+  assert.ok(!pageSrc.includes("MediaSection"), "La carte Médias dupliquait la couverture");
+  const coverSrc = readFileSync("src/components/studio/CoverSection.js", "utf-8");
+  assert.ok(!coverSrc.includes("Visibilité"), "La visibilité doit rester dans l'en-tête");
+});
+
+test("les actions de visibilité et d'enregistrement ont des libellés explicites", () => {
+  const headerSrc = readFileSync("src/components/studio/StudioHeader.js", "utf-8");
+  const generalSrc = readFileSync("src/components/studio/GeneralInfoForm.js", "utf-8");
+  const routeSrc = readFileSync("src/components/studio/RouteForm.js", "utf-8");
+  assert.ok(headerSrc.includes("Rendre public"));
+  assert.ok(!headerSrc.includes('"Publier"'));
+  assert.ok(generalSrc.includes("Enregistrer les informations"));
+  assert.ok(routeSrc.includes("Enregistrer l’itinéraire officiel"));
+  assert.ok(routeSrc.includes("Enregistrer le tracé actuel"));
+});
+
+test("chaque bouton d'itinéraire enregistre uniquement son bloc", () => {
+  assert.ok(pageSrc.includes('handleSaveRoute(event, "official")'));
+  assert.ok(pageSrc.includes('handleSaveRoute(event, "trace")'));
+  const saveActionsSrc = readFileSync("src/hooks/studio/useSaveActions.js", "utf-8");
+  assert.ok(saveActionsSrc.includes('if (mode === "official")'));
 });
 
 test("les ressources URL ou fichier utilisent un champ visuel unique", () => {

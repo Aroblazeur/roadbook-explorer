@@ -10,8 +10,6 @@ export default function CoverSection({
   handleSetCoverFromMedia,
   handleUploadCover,
   uploadLoading,
-  handleToggleVisibility,
-  isPublic,
   embedded = false,
 }) {
   return (
@@ -46,15 +44,6 @@ export default function CoverSection({
               </div>
             </div>
           )}
-        </div>
-        <div className="studio-stage-extra">
-          <div className="studio-stage-extra__header">
-            <h5>Visibilité</h5>
-            <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={handleToggleVisibility}>
-              Passer en {isPublic ? "privé" : "public"}
-            </button>
-          </div>
-          <p className="text-muted">Actuellement : {isPublic ? "public" : "privé"}</p>
         </div>
       </div>
     </div>

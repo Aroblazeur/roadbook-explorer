@@ -46,7 +46,7 @@ export default function RouteForm({
           </div>
           <label className="studio-form-grid__full">Carte intégrée<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} placeholder="https://www.google.com/maps/embed?..." /></label>
           <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
-            {saving ? "Enregistrement..." : "Enregistrer"}
+            {saving ? "Enregistrement..." : isOfficial ? "Enregistrer l’itinéraire officiel" : "Enregistrer le tracé actuel"}
           </button>
         </form>
       </div>

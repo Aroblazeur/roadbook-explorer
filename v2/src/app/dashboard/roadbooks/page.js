@@ -16,7 +16,7 @@ export default function RoadbooksPage() {
           <div className="studio-actions">
             <button type="button" disabled>Ajouter une étape</button>
             <button type="button" className="terrain-button--secondary" disabled>Télécharger le JSON</button>
-            <button type="button" disabled>Publier</button>
+            <button type="button" disabled>Rendre public</button>
           </div>
         </div>
         <div className="studio-detail studio-detail--empty">

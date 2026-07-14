@@ -22,32 +22,34 @@ export default function useSaveActions({
     });
   }, [roadbook, activity, destination, project, title, description, saveWithLock]);
 
-  const handleSaveRoute = useCallback(async (e) => {
+  const handleSaveRoute = useCallback(async (e, mode) => {
     e.preventDefault();
     const meta = { ...(roadbook?.metadata ?? {}) };
-    meta.official = {
-      distance: officialRoute.officialDist ? Number(officialRoute.officialDist) : null,
-      elevationGain: officialRoute.officialGain ? Number(officialRoute.officialGain) : null,
-      elevationLoss: officialRoute.officialLoss ? Number(officialRoute.officialLoss) : null,
-      gpx: officialRoute.officialGpx || null,
-      mapEmbedUrl: officialRoute.officialMap || null,
-    };
-    meta.stagesTotal = {
-      distance: traceRoute.traceDist ? Number(traceRoute.traceDist) : null,
-      elevationGain: traceRoute.traceGain ? Number(traceRoute.traceGain) : null,
-      elevationLoss: traceRoute.traceLoss ? Number(traceRoute.traceLoss) : null,
-      gpx: traceRoute.traceGpx || null,
-      mapEmbedUrl: traceRoute.traceMap || null,
-    };
-    const updateFields = {
-      distance_km: traceRoute.traceDist ? Number(traceRoute.traceDist) : null,
-      elevation_gain_m: traceRoute.traceGain ? Number(traceRoute.traceGain) : null,
-      elevation_loss_m: traceRoute.traceLoss ? Number(traceRoute.traceLoss) : null,
-    };
+    const updateFields = {};
+    if (mode === "official") {
+      meta.official = {
+        distance: officialRoute.officialDist ? Number(officialRoute.officialDist) : null,
+        elevationGain: officialRoute.officialGain ? Number(officialRoute.officialGain) : null,
+        elevationLoss: officialRoute.officialLoss ? Number(officialRoute.officialLoss) : null,
+        gpx: officialRoute.officialGpx || null,
+        mapEmbedUrl: officialRoute.officialMap || null,
+      };
+    } else {
+      meta.stagesTotal = {
+        distance: traceRoute.traceDist ? Number(traceRoute.traceDist) : null,
+        elevationGain: traceRoute.traceGain ? Number(traceRoute.traceGain) : null,
+        elevationLoss: traceRoute.traceLoss ? Number(traceRoute.traceLoss) : null,
+        gpx: traceRoute.traceGpx || null,
+        mapEmbedUrl: traceRoute.traceMap || null,
+      };
+      updateFields.distance_km = traceRoute.traceDist ? Number(traceRoute.traceDist) : null;
+      updateFields.elevation_gain_m = traceRoute.traceGain ? Number(traceRoute.traceGain) : null;
+      updateFields.elevation_loss_m = traceRoute.traceLoss ? Number(traceRoute.traceLoss) : null;
+    }
     await saveWithLock({
       getUpdateFields: () => ({ metadata: meta, ...updateFields }),
       getUpdatedRoadbook: (prev, data) => ({ ...prev, metadata: meta, ...updateFields, updated_at: data.updated_at }),
-      successMessage: "Itinéraire et tracé mis à jour.",
+      successMessage: mode === "official" ? "Itinéraire officiel mis à jour." : "Tracé actuel mis à jour.",
     });
   }, [roadbook, officialRoute, traceRoute, saveWithLock]);
 

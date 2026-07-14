@@ -33,7 +33,7 @@ export default function StudioHeader({
         <button type="button" onClick={() => downloadDraftExport(user?.id, id, `${roadbook?.slug ?? "roadbook"}.json`)} className="terrain-button--secondary">
           Télécharger le JSON
         </button>
-        <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Publier"}</button>
+        <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Rendre public"}</button>
         <Link href="/dashboard/roadbooks" className="terrain-button--secondary studio-action-button--compact">Retour</Link>
         <Link href={`/roadbooks/${roadbook?.slug}`} className="terrain-button--secondary studio-action-button--compact">Voir</Link>
         <button type="button" onClick={handleDuplicate} disabled={duplicating} className="terrain-button--secondary studio-action-button--compact">

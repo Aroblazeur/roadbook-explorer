@@ -45,7 +45,7 @@ export default function AccommSection({
             <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} placeholder="URL de l'image" /></label>
           </div>
           <div className="studio-create-form__actions">
-            <button type="submit" className="terrain-button">Enregistrer</button>
+            <button type="submit" className="terrain-button">Enregistrer l’hébergement</button>
             <button type="button" className="terrain-button terrain-button--secondary" onClick={clearAccommodationForm}>Annuler</button>
           </div>
         </form>

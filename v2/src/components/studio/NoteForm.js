@@ -40,7 +40,7 @@ export default function NoteForm({
             <label className="studio-form-grid__full">Texte<textarea value={noteForm.text} onChange={e => setNoteForm({ ...noteForm, text: e.target.value })} required /></label>
           </div>
           <div className="studio-create-form__actions">
-            <button type="submit" className="terrain-button">Enregistrer</button>
+            <button type="submit" className="terrain-button">Enregistrer la note</button>
             <button type="button" className="terrain-button terrain-button--secondary" onClick={clearNoteForm}>Annuler</button>
           </div>
         </form>

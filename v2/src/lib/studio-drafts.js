@@ -302,7 +302,6 @@ export function buildNewDraftPayload(formState) {
     savedAt: new Date().toISOString(),
     tabId: formState.tabId,
     payload: {
-      slug: formState.slug ?? "",
       title: formState.title ?? "",
       description: formState.description ?? "",
       isPublic: formState.isPublic ?? false,

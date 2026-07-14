@@ -57,7 +57,7 @@ export default function PoiForm({
             <label className="studio-form-grid__full">URL<input type="url" value={poiForm.url} onChange={e => setPoiForm({ ...poiForm, url: e.target.value })} /></label>
           </div>
           <div className="studio-create-form__actions">
-            <button type="submit" className="terrain-button">Enregistrer</button>
+            <button type="submit" className="terrain-button">Enregistrer le point d’intérêt</button>
             <button type="button" className="terrain-button terrain-button--secondary" onClick={clearPoiForm}>Annuler</button>
           </div>
         </form>

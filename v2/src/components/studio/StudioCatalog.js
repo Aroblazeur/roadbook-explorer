@@ -20,7 +20,6 @@ export default function StudioCatalog({ selectedId = null }) {
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState("Chargement du catalogue…");
   const [showCreate, setShowCreate] = useState(false);
-  const [slug, setSlug] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(false);
@@ -72,7 +71,6 @@ export default function StudioCatalog({ selectedId = null }) {
     if (restored) {
       const payload = restored.payload;
       setPendingDraft(restored);
-      setSlug(payload.slug ?? "");
       setTitle(payload.title ?? "");
       setDescription(payload.description ?? "");
       setIsPublic(Boolean(payload.isPublic));
@@ -94,7 +92,6 @@ export default function StudioCatalog({ selectedId = null }) {
       userId: user.id,
       localDraftId: localDraftIdRef.current,
       tabId: tabIdRef.current,
-      slug,
       title,
       description,
       isPublic,
@@ -111,20 +108,20 @@ export default function StudioCatalog({ selectedId = null }) {
 
   useEffect(() => {
     const handlePageHide = () => {
-      if (slug || title) saveFormDraft();
+      if (title) saveFormDraft();
     };
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [user?.id, slug, title, description, isPublic, project, officialDistance, officialElevationGain, officialElevationLoss, officialGpx, officialMapEmbedUrl, currentGpx, currentMapEmbedUrl]);
+  }, [user?.id, title, description, isPublic, project, officialDistance, officialElevationGain, officialElevationLoss, officialGpx, officialMapEmbedUrl, currentGpx, currentMapEmbedUrl]);
 
   async function handleCreate(event) {
     event.preventDefault();
     setError(null);
     setCreating(true);
-    let cleanSlug = (slug || title).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || `roadbook-${Date.now()}`;
+    const cleanSlug = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || `roadbook-${Date.now()}`;
     const { data: existing } = await supabase.from("roadbooks").select("id").eq("slug", cleanSlug).maybeSingle();
     if (existing) {
-      setError(`L'ID « ${cleanSlug} » est déjà utilisé.`);
+      setError(`Un roadbook utilise déjà l'identifiant « ${cleanSlug} ». Modifiez légèrement le titre.`);
       setCreating(false);
       return;
     }
@@ -164,7 +161,6 @@ export default function StudioCatalog({ selectedId = null }) {
     migrateNewDraftKey(user.id, localDraftIdRef.current, newRoadbook.id);
     localDraftIdRef.current = generateLocalDraftId();
     setPendingDraft(null);
-    setSlug("");
     setTitle("");
     setDescription("");
     setIsPublic(false);
@@ -186,7 +182,6 @@ export default function StudioCatalog({ selectedId = null }) {
     removeNewDraft(user.id, localDraftIdRef.current);
     localDraftIdRef.current = generateLocalDraftId();
     setPendingDraft(null);
-    setSlug("");
     setTitle("");
     setDescription("");
     setIsPublic(false);
@@ -221,7 +216,6 @@ export default function StudioCatalog({ selectedId = null }) {
           <h3>Créer un roadbook</h3>
           {pendingDraft && <p className="studio-draft-notice">Un brouillon a été restauré.</p>}
           <div className="studio-form-grid studio-form-grid--compact">
-            <label>ID du roadbook<input type="text" value={slug} onChange={event => setSlug(event.target.value)} required placeholder="ex. drava-velo" autoComplete="off" /></label>
             <label>Titre<input type="text" value={title} onChange={event => setTitle(event.target.value)} required /></label>
             <label>Projet<select value={project} onChange={event => setProject(event.target.value)}><option>En projet</option><option>Voyage réalisé</option></select></label>
             <label className="studio-form-grid__full">Description<textarea value={description} onChange={event => setDescription(event.target.value)} /></label>
