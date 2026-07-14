@@ -3,7 +3,7 @@ import { loadMediaWithUrls, getSignedUrl } from "@/lib/roadbooks/loaders";
 import { uploadImage, deleteMedia } from "@/lib/roadbooks/writers";
 import { resizeImage } from "@/lib/roadbooks/validators";
 
-export function useMediaManager({ supabase, roadbookId, userId, onError, onSuccess }) {
+export function useMediaManager({ supabase, roadbookId, userId, onError, onSuccess, onMutation }) {
   const [images, setImages] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(null);
@@ -41,6 +41,7 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
       const result = await uploadImage(supabase, userId, roadbookId, file, blob, record, { returnMedia: true });
       onSuccess?.("");
       await reloadMedia();
+      await onMutation?.();
       return result?.media ?? null;
     } catch (err) {
       setUploadError(err.message);
@@ -49,13 +50,14 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
       setUploadLoading(false);
     }
     return null;
-  }, [supabase, roadbookId, userId, onError, onSuccess, reloadMedia]);
+  }, [supabase, roadbookId, userId, onError, onSuccess, reloadMedia, onMutation]);
 
   const removeMedia = useCallback(async (mediaRow) => {
     setDeleteLoading(mediaRow.id);
     try {
       await deleteMedia(supabase, mediaRow);
       setImages(prev => prev.filter(i => i.id !== mediaRow.id));
+      await onMutation?.();
       onSuccess?.("");
     } catch (err) {
       setUploadError(err.message);
@@ -63,7 +65,7 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
     } finally {
       setDeleteLoading(null);
     }
-  }, [supabase, onError, onSuccess]);
+  }, [supabase, onError, onSuccess, onMutation]);
 
   return {
     images, setImages,

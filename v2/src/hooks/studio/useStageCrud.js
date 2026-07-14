@@ -8,50 +8,22 @@ import {
   swapStageNumbers,
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
+import { buildPoiRecord } from "@/lib/roadbooks/validators";
 
 export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPoisVariants, reloadStages }) {
   const [stageForm, stageFormDispatch] = useReducer(stageFormReducer, { ...defaultStageForm });
   const [stageError, setStageError] = useState(null);
   const [stageSuccess, setStageSuccess] = useState(null);
-  const [editingStage, setEditingStage] = useState(null);
   const [deleting, setDeleting] = useState(null);
 
   // Sub-entity forms
-  const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null });
+  const [poiForm, setPoiForm] = useState({ stage_id: null, type: "", name: "", region: "", description: "", editing: null });
   const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
   const [noteForm, setNoteForm] = useState({ stage_id: null, text: "", editing: null });
   const [accommodationForm, setAccommodationForm] = useState({ stage_id: null, name: "", url: "", photo: "", editing: null });
 
   const clearStageForm = useCallback(() => {
     stageFormDispatch({ type: "RESET" });
-    setEditingStage(null);
-  }, []);
-
-  const fillStageForm = useCallback((stage) => {
-    const meta = stage.metadata ?? {};
-    stageFormDispatch({
-      type: "SET_FORM",
-      payload: {
-        dayNumber: String(stage.stage_number),
-        title: stage.title ?? "",
-        start: stage.departure ?? "",
-        end: stage.arrival ?? "",
-        dist: stage.distance_km != null ? String(stage.distance_km) : "",
-        gain: stage.elevation_gain_m != null ? String(stage.elevation_gain_m) : "",
-        loss: stage.elevation_loss_m != null ? String(stage.elevation_loss_m) : "",
-        difficulty: meta.difficulty ?? "",
-        accommodation: stage.accommodation_name ?? "",
-        description: meta.description ?? "",
-        notes: stage.notes?.length ? stage.notes.map(n => n.text ?? n).join("\n") : "",
-        warning: meta.warning ?? "",
-        mapEmbed: stage.map_embed_url ?? "",
-        photoUrl: stage.stage_photo_url ?? "",
-        day: stage.day ?? "",
-        label: stage.stage_label ?? "",
-        duration: stage.duration ?? "",
-      },
-    });
-    setEditingStage(stage);
   }, []);
 
   const handleStageSubmit = useCallback(async (e) => {
@@ -79,17 +51,12 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
       notes: notes.length ? notes : [], metadata,
     };
 
-    if (editingStage) {
-      await updateStage(supabase, editingStage.id, record);
-      setStageSuccess("Étape mise à jour.");
-    } else {
-      await insertStage(supabase, record);
-      setStageSuccess("Étape créée.");
-    }
+    await insertStage(supabase, record);
+    setStageSuccess("Étape créée.");
     clearStageForm();
     const stagesData = await loadStages(supabase, roadbookId);
     setStages(stagesData);
-  }, [supabase, roadbookId, stageForm, editingStage, clearStageForm, setStages]);
+  }, [supabase, roadbookId, stageForm, clearStageForm, setStages]);
 
   const handleDeleteStage = useCallback(async (stageId) => {
     if (!window.confirm("Supprimer cette étape ?")) return;
@@ -102,7 +69,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
     setDeleting(null);
   }, [supabase, setStages]);
 
-  const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, type: "", name: "", description: "", lat: "", lng: "", url: "", editing: null }), []);
+  const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, type: "", name: "", region: "", description: "", editing: null }), []);
   const clearVariantForm = useCallback(() => setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }), []);
   const clearNoteForm = useCallback(() => setNoteForm({ stage_id: null, text: "", editing: null }), []);
   const clearAccommodationForm = useCallback(() => setAccommodationForm({ stage_id: null, name: "", url: "", photo: "", editing: null }), []);
@@ -110,7 +77,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
   const handlePoiSubmit = useCallback(async (e) => {
     e.preventDefault();
     setStageError(null); setStageSuccess(null);
-    const record = { stage_id: poiForm.stage_id, name: poiForm.name, poi_type: poiForm.type || null, description: poiForm.description || null, lat: poiForm.lat ? Number(poiForm.lat) : null, lng: poiForm.lng ? Number(poiForm.lng) : null, link_url: poiForm.url || null };
+    const record = buildPoiRecord(poiForm);
     if (poiForm.editing) {
       await updatePoi(supabase, poiForm.editing, record);
       setStageSuccess("POI mis à jour.");
@@ -234,10 +201,8 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, reloadPo
     stageForm, stageFormDispatch,
     stageError, setStageError,
     stageSuccess, setStageSuccess,
-    editingStage,
     deleting,
     clearStageForm,
-    fillStageForm,
     handleStageSubmit,
     handleDeleteStage,
 

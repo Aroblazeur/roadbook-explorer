@@ -7,7 +7,7 @@ import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
 
 const GPX_BUCKET = "roadbook-gpx";
 
-export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
+export function useGpxManager({ supabase, roadbookId, userId, reloadStages, onMutation }) {
   const [gpxError, setGpxError] = useState(null);
   const [gpxUploading, setGpxUploading] = useState(null);
   const [gpxOfficial, setGpxOfficial] = useState(null);
@@ -88,9 +88,10 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
         record: { ...built.record, file_name: file.name, mime_type: "application/gpx+xml", uploaded_by: userId },
       });
       await reloadGpx();
+      await onMutation?.();
     } catch (err) { setGpxError(formatGpxUserError(err, "Impossible d'enregistrer le GPX.")); }
     finally { setGpxUploading(null); }
-  }, [supabase, roadbookId, userId, reloadGpx]);
+  }, [supabase, roadbookId, userId, reloadGpx, onMutation]);
 
   const replaceGpx = useCallback(async (file, mediaRow, { scope, role, stageId, variantId }) => {
     const valErr = validateGpx(file);
@@ -113,18 +114,20 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
       await uploadGpx(supabase, GPX_BUCKET, mediaRow.path, file, { upsert: true });
       await updateGpxRecord(supabase, mediaRow.id, { file_name: file.name, metadata: built.record.metadata });
       await reloadGpx();
+      await onMutation?.();
     } catch (err) { setGpxError(formatGpxUserError(err, "Impossible de remplacer le GPX.")); }
     finally { setGpxUploading(null); }
-  }, [supabase, roadbookId, reloadGpx]);
+  }, [supabase, roadbookId, reloadGpx, onMutation]);
 
   const deleteGpx = useCallback(async (mediaRow) => {
     setGpxUploading("delete");
     try {
       await deleteGpxWriter(supabase, mediaRow, GPX_BUCKET);
       await reloadGpx();
+      await onMutation?.();
     } catch (err) { setGpxError(formatGpxUserError(err, "Impossible de supprimer le GPX.")); }
     finally { setGpxUploading(null); }
-  }, [supabase, reloadGpx]);
+  }, [supabase, reloadGpx, onMutation]);
 
   const downloadGpx = useCallback(async (mediaRow) => {
     try {

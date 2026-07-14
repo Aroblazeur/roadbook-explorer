@@ -14,8 +14,8 @@ export default function RoadbooksPage() {
             <h2 id="studio-detail-title">Sélectionne un roadbook</h2>
           </div>
           <div className="studio-actions">
+            <button type="button" disabled>Enregistrer les modifications</button>
             <button type="button" disabled>Ajouter une étape</button>
-            <button type="button" className="terrain-button--secondary" disabled>Télécharger le JSON</button>
             <button type="button" disabled>Rendre public</button>
           </div>
         </div>

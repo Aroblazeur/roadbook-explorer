@@ -95,16 +95,18 @@ test("les actions de visibilité et d'enregistrement ont des libellés explicite
   const routeSrc = readFileSync("src/components/studio/RouteForm.js", "utf-8");
   assert.ok(headerSrc.includes("Rendre public"));
   assert.ok(!headerSrc.includes('"Publier"'));
-  assert.ok(generalSrc.includes("Enregistrer les informations"));
-  assert.ok(routeSrc.includes("Enregistrer l’itinéraire officiel"));
-  assert.ok(routeSrc.includes("Enregistrer le tracé actuel"));
+  assert.ok(headerSrc.includes("Enregistrer les modifications"));
+  assert.ok(!generalSrc.includes("Enregistrer les informations"));
+  assert.ok(!routeSrc.includes("Enregistrer l’itinéraire officiel"));
+  assert.ok(!routeSrc.includes("Enregistrer le tracé actuel"));
 });
 
-test("chaque bouton d'itinéraire enregistre uniquement son bloc", () => {
-  assert.ok(pageSrc.includes('handleSaveRoute(event, "official")'));
-  assert.ok(pageSrc.includes('handleSaveRoute(event, "trace")'));
+test("un bouton unique enregistre le roadbook, les itinéraires et les étapes", () => {
+  assert.ok(pageSrc.includes("handleSaveAll"));
   const saveActionsSrc = readFileSync("src/hooks/studio/useSaveActions.js", "utf-8");
-  assert.ok(saveActionsSrc.includes('if (mode === "official")'));
+  assert.ok(saveActionsSrc.includes("meta.official"));
+  assert.ok(saveActionsSrc.includes("meta.stagesTotal"));
+  assert.ok(saveActionsSrc.includes("updateStages"));
 });
 
 test("les ressources URL ou fichier utilisent un champ visuel unique", () => {

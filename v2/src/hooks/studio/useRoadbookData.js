@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { loadPois, loadRoadbookSafe, loadStages, loadVariants } from "@/lib/roadbooks/loaders";
 import { groupByStageId } from "@/lib/roadbooks/validators";
+import { getRemoteUpdatedAt } from "@/lib/sync-helpers";
 
 export function useRoadbookData({ supabase, roadbookId, user }) {
   const [roadbook, setRoadbook] = useState(null);
@@ -10,6 +11,12 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const cancelledRef = useRef(false);
+
+  const refreshRoadbookVersion = useCallback(async () => {
+    const updatedAt = await getRemoteUpdatedAt(supabase, roadbookId);
+    if (updatedAt) setRoadbook(previous => previous ? { ...previous, updated_at: updatedAt } : previous);
+    return updatedAt;
+  }, [supabase, roadbookId]);
 
   const loadAll = useCallback(async () => {
     if (!user || !roadbookId) return null;
@@ -62,7 +69,8 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
       setPoisByStage(groupByStageId(pois));
       setVariantsByStage(groupByStageId(variants));
     }
-  }, [supabase, roadbookId]);
+    await refreshRoadbookVersion();
+  }, [supabase, roadbookId, refreshRoadbookVersion]);
 
   const reloadPoisVariants = useCallback(async (stageIds) => {
     if (!stageIds?.length) return;
@@ -72,7 +80,8 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
     ]);
     setPoisByStage(groupByStageId(pois));
     setVariantsByStage(groupByStageId(variants));
-  }, [supabase]);
+    await refreshRoadbookVersion();
+  }, [supabase, refreshRoadbookVersion]);
 
   return {
     roadbook, setRoadbook,
@@ -83,5 +92,6 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
     loadAll,
     reloadStages,
     reloadPoisVariants,
+    refreshRoadbookVersion,
   };
 }

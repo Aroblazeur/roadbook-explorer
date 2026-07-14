@@ -8,6 +8,10 @@ export async function updateStage(supabase, stageId, updates) {
   if (error) throw new Error(error.message);
 }
 
+export async function updateStages(supabase, stages, buildUpdates) {
+  await Promise.all(stages.map(stage => updateStage(supabase, stage.id, buildUpdates(stage))));
+}
+
 export async function deleteStage(supabase, stageId) {
   const { error } = await supabase.from("stages").delete().eq("id", stageId);
   if (error) throw new Error(error.message);
@@ -207,6 +211,28 @@ export async function insertRoadbook(supabase, record) {
   const { data, error } = await supabase.from("roadbooks").insert(record).select("id").single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function deleteRoadbook(supabase, roadbookId) {
+  const { data: media, error: mediaError } = await supabase
+    .from("media")
+    .select("bucket, path")
+    .eq("roadbook_id", Number(roadbookId));
+  if (mediaError) throw new Error(mediaError.message);
+
+  const pathsByBucket = (media ?? []).reduce((groups, row) => {
+    if (!groups[row.bucket]) groups[row.bucket] = [];
+    groups[row.bucket].push(row.path);
+    return groups;
+  }, {});
+  for (const [bucket, paths] of Object.entries(pathsByBucket)) {
+    if (!paths.length) continue;
+    const { error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) throw new Error(error.message);
+  }
+
+  const { error } = await supabase.from("roadbooks").delete().eq("id", Number(roadbookId));
+  if (error) throw new Error(error.message);
 }
 
 export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, slug, userId) {

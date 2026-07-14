@@ -129,14 +129,38 @@ export function buildStageRecord(id, form, editingStage) {
 }
 
 export function buildPoiRecord(poiForm) {
+  const mapQuery = [poiForm.name, poiForm.region].map(value => value?.trim()).filter(Boolean).join(", ");
   return {
     stage_id: poiForm.stage_id,
-    name: poiForm.name,
+    name: poiForm.name.trim(),
     poi_type: poiForm.type || null,
     description: poiForm.description || null,
-    lat: poiForm.lat ? Number(poiForm.lat) : null,
-    lng: poiForm.lng ? Number(poiForm.lng) : null,
-    link_url: poiForm.url || null,
+    region: poiForm.region?.trim() || null,
+    lat: null,
+    lng: null,
+    link_url: mapQuery
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`
+      : null,
+  };
+}
+
+export function buildEditableStageUpdate(stage) {
+  return {
+    stage_number: normalizeNumber(stage.stage_number),
+    title: stage.title?.trim() || null,
+    departure: stage.departure?.trim() || null,
+    arrival: stage.arrival?.trim() || null,
+    distance_km: normalizeNumber(stage.distance_km),
+    elevation_gain_m: normalizeNumber(stage.elevation_gain_m),
+    elevation_loss_m: normalizeNumber(stage.elevation_loss_m),
+    stage_photo_url: stage.stage_photo_url?.trim() || null,
+    accommodation_type: stage.accommodation_type?.trim() || null,
+    accommodation_name: stage.accommodation_name?.trim() || null,
+    map_embed_url: stage.map_embed_url?.trim() || null,
+    day: stage.day?.trim() || null,
+    stage_label: stage.stage_label?.trim() || null,
+    duration: stage.duration?.trim() || null,
+    metadata: { ...(stage.metadata ?? {}) },
   };
 }
 

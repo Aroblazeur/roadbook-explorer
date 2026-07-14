@@ -20,10 +20,12 @@ export default function StageCard({
   draggingStageId,
   dragOverStageId,
   stagePhotoMedia,
+  onStageChange,
+  onUploadStagePhoto,
+  uploadLoading,
 }) {
   const {
     handleDeleteStage, deleting,
-    setShowStageForm, clearStageForm, fillStageForm,
     poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi,
     variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant,
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
@@ -39,6 +41,8 @@ export default function StageCard({
   const { poiIndex, handleEnrichPoi, enrichingPoi } = enrich;
 
   const meta = stage.metadata ?? {};
+  const change = (updates) => onStageChange(stage.id, updates);
+  const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
 
   const isDragging = draggingStageId === stage.id;
@@ -70,7 +74,6 @@ export default function StageCard({
         </div>
         <div className="studio-stage-card__actions">
           <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); clearVariantForm(); setVariantForm(current => ({ ...current, stage_id: stage.id })); }}>Ajouter une variante</button>
-          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); fillStageForm(stage); setShowStageForm(true); }}>Modifier l'étape</button>
           <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }} disabled={deleting === stage.id}>Supprimer</button>
         </div>
       </div>
@@ -81,18 +84,32 @@ export default function StageCard({
           <div className="studio-zone studio-zone--info">
             <h4 className="studio-zone__title">Infos étape</h4>
             <div className="studio-form-grid studio-form-grid--compact">
-              <label>Départ<span className="studio-input--readonly">{stage.departure || "—"}</span></label>
-              <label>Arrivée<span className="studio-input--readonly">{stage.arrival || "—"}</span></label>
-              <label>Distance (km)<span className="studio-input--readonly">{stage.distance_km != null ? stage.distance_km : "—"}</span></label>
-              <label>D+ (m)<span className="studio-input--readonly">{stage.elevation_gain_m != null ? stage.elevation_gain_m : "—"}</span></label>
-              <label>D− (m)<span className="studio-input--readonly">{stage.elevation_loss_m != null ? stage.elevation_loss_m : "—"}</span></label>
-              <label>Photo de l'étape<span className="studio-input--readonly">{stage.stage_photo_url || stagePhotoMedia ? "✓" : "—"}</span></label>
-              <label>Type d'hébergement<span className="studio-input--readonly">{stage.accommodation_type || stage.accommodation_name || "—"}</span></label>
-              <label className="studio-form-grid__full">Description<span className="studio-input--readonly">{meta.description || "—"}</span></label>
-              <label>Libellé<span className="studio-input--readonly">{stage.stage_label || "—"}</span></label>
-              <label>Durée<span className="studio-input--readonly">{stage.duration || "—"}</span></label>
-              <label>Difficulté<span className="studio-input--readonly">{meta.difficulty || "—"}</span></label>
-              <label className="studio-form-grid__full">Avertissement<span className="studio-input--readonly">{meta.warning || "—"}</span></label>
+              <label>Numéro<input type="number" min="1" value={stage.stage_number ?? ""} onChange={e => change({ stage_number: e.target.value })} /></label>
+              <label>Jour<input type="text" value={stage.day ?? ""} onChange={e => change({ day: e.target.value })} /></label>
+              <label className="studio-form-grid__full">Titre<input type="text" value={stage.title ?? ""} onChange={e => change({ title: e.target.value })} /></label>
+              <label>Départ<input type="text" value={stage.departure ?? ""} onChange={e => change({ departure: e.target.value })} /></label>
+              <label>Arrivée<input type="text" value={stage.arrival ?? ""} onChange={e => change({ arrival: e.target.value })} /></label>
+              <label>Distance (km)<input type="number" step="0.1" value={stage.distance_km ?? ""} onChange={e => change({ distance_km: e.target.value })} /></label>
+              <label>D+ (m)<input type="number" value={stage.elevation_gain_m ?? ""} onChange={e => change({ elevation_gain_m: e.target.value })} /></label>
+              <label>D− (m)<input type="number" value={stage.elevation_loss_m ?? ""} onChange={e => change({ elevation_loss_m: e.target.value })} /></label>
+              <div className="studio-form-grid__full">
+                <label htmlFor={`stage-photo-${stage.id}`}>Photo de l'étape (URL ou fichier)</label>
+                <div className="studio-resource-field">
+                  <input id={`stage-photo-${stage.id}`} type="url" value={stage.stage_photo_url ?? ""} onChange={e => change({ stage_photo_url: e.target.value })} placeholder="https://..." />
+                  {stagePhotoMedia && <span className="studio-resource-field__file">{stagePhotoMedia.file_name}</span>}
+                  <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
+                    {uploadLoading ? "Import…" : "Importer"}
+                    <input type="file" accept="image/*" disabled={uploadLoading} onChange={e => onUploadStagePhoto(e, stage.id)} />
+                  </label>
+                </div>
+              </div>
+              <label>Type d'hébergement<input type="text" value={stage.accommodation_type ?? ""} onChange={e => change({ accommodation_type: e.target.value })} /></label>
+              <label>Hébergement<input type="text" value={stage.accommodation_name ?? ""} onChange={e => change({ accommodation_name: e.target.value })} /></label>
+              <label className="studio-form-grid__full">Description<textarea value={meta.description ?? ""} onChange={e => changeMeta({ description: e.target.value })} /></label>
+              <label>Libellé<input type="text" value={stage.stage_label ?? ""} onChange={e => change({ stage_label: e.target.value })} /></label>
+              <label>Durée<input type="text" value={stage.duration ?? ""} onChange={e => change({ duration: e.target.value })} /></label>
+              <label>Difficulté<input type="text" value={meta.difficulty ?? ""} onChange={e => changeMeta({ difficulty: e.target.value })} /></label>
+              <label className="studio-form-grid__full">Avertissement<textarea value={meta.warning ?? ""} onChange={e => changeMeta({ warning: e.target.value })} /></label>
             </div>
           </div>
 
@@ -105,7 +122,7 @@ export default function StageCard({
                 <h5>GPX et carte</h5>
               </div>
               <div className="studio-form-grid studio-form-grid--compact">
-                <label className="studio-form-grid__full">Carte intégrée<span className="studio-input--readonly">{stage.map_embed_url || "—"}</span></label>
+                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} placeholder="https://www.google.com/maps/embed?..." /></label>
               </div>
             </div>
 

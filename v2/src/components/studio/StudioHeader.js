@@ -8,9 +8,10 @@ export default function StudioHeader({
   project,
   duplicating,
   handleDuplicate,
-  downloadDraftExport,
-  user,
-  id,
+  saving,
+  deletingRoadbook,
+  onSaveAll,
+  onDeleteRoadbook,
   onAddStage,
   onToggleVisibility,
 }) {
@@ -29,15 +30,17 @@ export default function StudioHeader({
         </div>
       </div>
       <div className="studio-actions studio-editor-actions">
-        <button type="button" onClick={onAddStage}>Ajouter une étape</button>
-        <button type="button" onClick={() => downloadDraftExport(user?.id, id, `${roadbook?.slug ?? "roadbook"}.json`)} className="terrain-button--secondary">
-          Télécharger le JSON
+        <button type="button" onClick={onSaveAll} disabled={saving || deletingRoadbook}>
+          {saving ? "Enregistrement…" : "Enregistrer les modifications"}
         </button>
+        <button type="button" onClick={onAddStage}>Ajouter une étape</button>
         <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Rendre public"}</button>
-        <Link href="/dashboard/roadbooks" className="terrain-button--secondary studio-action-button--compact">Retour</Link>
         <Link href={`/roadbooks/${roadbook?.slug}`} className="terrain-button--secondary studio-action-button--compact">Voir</Link>
         <button type="button" onClick={handleDuplicate} disabled={duplicating} className="terrain-button--secondary studio-action-button--compact">
           {duplicating ? "..." : "Dupliquer"}
+        </button>
+        <button type="button" onClick={onDeleteRoadbook} disabled={saving || deletingRoadbook} className="terrain-button--danger studio-action-button--compact">
+          {deletingRoadbook ? "Suppression…" : "Supprimer le roadbook"}
         </button>
       </div>
     </div>

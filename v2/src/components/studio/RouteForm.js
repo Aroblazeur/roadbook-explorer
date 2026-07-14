@@ -4,8 +4,6 @@ export default function RouteForm({
   mode,
   values,
   setValues,
-  handleSave,
-  saving,
   mediaRow,
   gpxUploading,
   handleGpxUpload,
@@ -22,7 +20,7 @@ export default function RouteForm({
         {embedded ? <h4>{title}</h4> : <h3>{title}</h3>}
       </div>
       <div className={embedded ? "studio-section-block__body" : "studio-card__body"}>
-        <form onSubmit={handleSave} className="studio-form-grid studio-form-grid--compact">
+        <div className="studio-form-grid studio-form-grid--compact">
           <label>Distance (km)<input type="number" step="0.1" value={values.dist} onChange={e => setValues(prev => ({ ...prev, dist: e.target.value }))} /></label>
           <label>D+ (m)<input type="number" value={values.gain} onChange={e => setValues(prev => ({ ...prev, gain: e.target.value }))} /></label>
           <label>D− (m)<input type="number" value={values.loss} onChange={e => setValues(prev => ({ ...prev, loss: e.target.value }))} /></label>
@@ -45,10 +43,7 @@ export default function RouteForm({
             </div>
           </div>
           <label className="studio-form-grid__full">Carte intégrée<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} placeholder="https://www.google.com/maps/embed?..." /></label>
-          <button type="submit" disabled={saving} className="terrain-button--secondary studio-action-button--compact" style={{ gridColumn: "1 / -1", width: "auto", justifySelf: "start" }}>
-            {saving ? "Enregistrement..." : isOfficial ? "Enregistrer l’itinéraire officiel" : "Enregistrer le tracé actuel"}
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   );
