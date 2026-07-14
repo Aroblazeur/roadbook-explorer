@@ -1,7 +1,7 @@
 /**
  * Sprint 20E — Tests d'extraction des composants UI Studio
  *
- * Vérifie structurellement que les 12 composants existent,
+ * Vérifie structurellement que les composants existent,
  * sont importés par page.js, et que page.js a réduit sa taille.
  *
  * Usage:
@@ -21,7 +21,7 @@ function test(name, fn) {
 }
 
 // ===================== Composants extraits =====================
-console.log("=== 1. Vérification des 12 composants ===");
+console.log("=== 1. Vérification des composants ===");
 
 const COMPONENTS = [
   "GeneralInfoForm",
@@ -29,7 +29,6 @@ const COMPONENTS = [
   "CoverSection",
   "GpxSection",
   "GpxBlock",
-  "AutomationPanel",
   "PoiForm",
   "VariantForm",
   "NoteForm",
@@ -58,7 +57,6 @@ const IMPORTED_BY_PAGE = [
   "GeneralInfoForm",
   "RouteForm",
   "CoverSection",
-  "AutomationPanel",
   "StageForm",
   "StageCard",
 ];
@@ -107,6 +105,17 @@ test("un bouton unique enregistre le roadbook, les itinéraires et les étapes",
   assert.ok(saveActionsSrc.includes("meta.official"));
   assert.ok(saveActionsSrc.includes("meta.stagesTotal"));
   assert.ok(saveActionsSrc.includes("updateStages"));
+  assert.ok(saveActionsSrc.includes("prepareAutomaticCompletion"));
+  assert.ok(saveActionsSrc.includes("normalizeNumber(traceRoute.traceDist) ?? totals.totalDist"));
+});
+
+test("les automatisations sont intégrées à l'enregistrement et ne sont plus affichées", () => {
+  assert.ok(!pageSrc.includes("AutomationPanel"));
+  assert.ok(!existsSync("src/components/studio/AutomationPanel.js"));
+  const enrichmentSrc = readFileSync("src/hooks/studio/useEnrichment.js", "utf-8");
+  assert.ok(enrichmentSrc.includes("completeStageMetrics"));
+  assert.ok(enrichmentSrc.includes("completeAccommodation"));
+  assert.ok(enrichmentSrc.includes("completePoi"));
 });
 
 test("les ressources URL ou fichier utilisent un champ visuel unique", () => {

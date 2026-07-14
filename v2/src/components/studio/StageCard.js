@@ -13,7 +13,6 @@ export default function StageCard({
   onToggleExpand,
   stageCrud,
   gpx,
-  enrich,
   stagePois,
   stageVariants,
   dragHandlers,
@@ -34,11 +33,9 @@ export default function StageCard({
   } = stageCrud;
 
   const {
-    gpxByStage, gpxUploading, metricsLoading, handleComputeFromGpx,
+    gpxByStage, gpxUploading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
   } = gpx;
-
-  const { poiIndex, handleEnrichPoi, enrichingPoi } = enrich;
 
   const meta = stage.metadata ?? {};
   const change = (updates) => onStageChange(stage.id, updates);
@@ -137,13 +134,6 @@ export default function StageCard({
                 handleGpxDelete={handleGpxDelete}
                 handleGpxUpload={handleGpxUpload}
               />
-              {stageGpx && (
-                <div className="studio-gpx-actions">
-                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleComputeFromGpx(stageGpx, stage)} disabled={metricsLoading === stage.id}>
-                    {metricsLoading === stage.id ? "Calcul..." : "Lire"}
-                  </button>
-                </div>
-              )}
             </div>
 
             <PoiForm
@@ -154,9 +144,6 @@ export default function StageCard({
               clearPoiForm={clearPoiForm}
               handlePoiSubmit={handlePoiSubmit}
               handleDeletePoi={handleDeletePoi}
-              poiIndex={poiIndex}
-              handleEnrichPoi={handleEnrichPoi}
-              enrichingPoi={enrichingPoi}
             />
           </div>
 

@@ -21,7 +21,6 @@ import DraftStatus from "@/components/DraftStatus";
 import GeneralInfoForm from "@/components/studio/GeneralInfoForm";
 import RouteForm from "@/components/studio/RouteForm";
 import CoverSection from "@/components/studio/CoverSection";
-import AutomationPanel from "@/components/studio/AutomationPanel";
 import StageForm from "@/components/studio/StageForm";
 import StageCard from "@/components/studio/StageCard";
 import StudioHeader from "@/components/studio/StudioHeader";
@@ -55,11 +54,11 @@ export default function RoadbookDetailPage() {
 
   const { images, setImages, uploadLoading, reloadMedia, uploadMedia } = useMediaManager({ supabase, roadbookId: id, userId: user?.id, onMutation: refreshRoadbookVersion });
 
-  const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, metricsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, computeStageMetrics, applyStageMetrics, analyzeStageGpx } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, reloadStages, onMutation: refreshRoadbookVersion });
+  const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, analyzeStageGpx } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, reloadStages, onMutation: refreshRoadbookVersion });
 
   const { coverUrl, setCoverUrl, coverMediaId, setCoverMediaId, coverPreview, setCoverPreview, coverMode, setCoverMode } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
 
-  const { poiIndex, accommodationIndex, enrichmentError, enrichingPoi, automationBusy, automationResult, loadEnrichmentIndices, enrichPoi, handleRecalculateTotals, handleAnalyzeStageGpx, handleAutoEnrich } = useEnrichment({ supabase, roadbook, setRoadbook, stages, setStages, poisByStage, setPoisByStage, onSuccess: setStageSuccess, onError: setError, reloadPoisVariants, reloadStages, gpxHelpers: { gpxByStage, analyzeStageGpx, applyStageMetrics } });
+  const { loadEnrichmentIndices, prepareAutomaticCompletion } = useEnrichment({ roadbook, stages, poisByStage, gpxHelpers: { gpxByStage, analyzeStageGpx } });
 
   const { expandedStages, setExpandedStages, showStageForm, setShowStageForm, duplicating, setDuplicating, isStageExpanded, toggleStage } = useStudioEditing();
 
@@ -73,11 +72,10 @@ export default function RoadbookDetailPage() {
 
   useEffect(() => { if (!authLoading && !user) router.replace("/login"); }, [user, authLoading]);
 
-  const { handleSaveAll, handleToggleVisibility, handleDeleteRoadbook, deletingRoadbook } = useSaveActions({ supabase, id, roadbook, setRoadbook, title, description, activity, destination, project, isPublic, setIsPublic, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, setError, setSuccess, markRemoteConflict, saveWithLock, clearDraft, onDeleted: () => router.replace("/dashboard/roadbooks") });
+  const { handleSaveAll, handleToggleVisibility, handleDeleteRoadbook, deletingRoadbook } = useSaveActions({ supabase, id, roadbook, setRoadbook, title, description, activity, destination, project, isPublic, setIsPublic, officialRoute, traceRoute, setTraceRoute, coverMode, coverUrl, coverMediaId, stages, setStages, poisByStage, setPoisByStage, prepareAutomaticCompletion, setError, setSuccess, markRemoteConflict, saveWithLock, clearDraft, onDeleted: () => router.replace("/dashboard/roadbooks") });
 
   const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote, accommodationForm, setAccommodationForm, clearAccommodationForm, handleAccommodationSubmit, handleClearAccommodation };
-  const gpx = { gpxByStage, gpxByVariant, gpxUploading, metricsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleComputeFromGpx: async (mediaRow, stage) => { if (!mediaRow || !stage) return; setStageError(null); const result = await computeStageMetrics(mediaRow, stage); if (!result) return; const { metrics, durationStr, anyExisting } = result; if (anyExisting) { const mp = []; if (stage.distance_km != null) mp.push(`distance (${stage.distance_km} km)`); if (stage.elevation_gain_m != null) mp.push(`D+ (${stage.elevation_gain_m} m)`); if (stage.elevation_loss_m != null) mp.push(`D− (${stage.elevation_loss_m} m)`); if (stage.duration) mp.push(`durée (${stage.duration})`); if (!window.confirm(`Cette étape a déjà des valeurs de ${mp.join(", ")}.\n\nNouvelles valeurs calculées :\n• Distance : ${metrics.distanceKm.toFixed(1)} km\n• D+ : ${metrics.elevationGainM != null ? Math.round(metrics.elevationGainM) + " m" : "N/A"}\n• D− : ${metrics.elevationLossM != null ? Math.round(metrics.elevationLossM) + " m" : "N/A"}\n• Durée : ${durationStr || "N/A"}\n\nÉcraser les valeurs existantes ?`)) return; } const ok = await applyStageMetrics(metrics, durationStr, stage); if (ok) setStageSuccess(`Étape mise à jour depuis le GPX : ${metrics.distanceKm.toFixed(1)} km${metrics.elevationGainM != null ? `, D+ ${Math.round(metrics.elevationGainM)} m` : ""}${metrics.elevationLossM != null ? `, D− ${Math.round(metrics.elevationLossM)} m` : ""}${durationStr ? `, ${durationStr}` : ""}`); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (row, scope, role, stageId, variantId) => { const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx"; input.onchange = async () => { const file = input.files?.[0]; if (!file) return; await replaceGpx(file, row, { scope, role, stageId, variantId }); }; input.click(); }, handleGpxUpload: (scope, role, stageId, variantId) => { const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx"; input.onchange = async () => { const file = input.files?.[0]; if (!file) return; await uploadGpxFile(file, { scope, role, stageId, variantId }); }; input.click(); } };
-  const enrich = { poiIndex, handleEnrichPoi: enrichPoi, enrichingPoi };
+  const gpx = { gpxByStage, gpxByVariant, gpxUploading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (row, scope, role, stageId, variantId) => { const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx"; input.onchange = async () => { const file = input.files?.[0]; if (!file) return; await replaceGpx(file, row, { scope, role, stageId, variantId }); }; input.click(); }, handleGpxUpload: (scope, role, stageId, variantId) => { const input = document.createElement("input"); input.type = "file"; input.accept = ".gpx"; input.onchange = async () => { const file = input.files?.[0]; if (!file) return; await uploadGpxFile(file, { scope, role, stageId, variantId }); }; input.click(); } };
 
   if (authLoading || loading) return <StudioShell><StudioCatalog selectedId={id} /><section className="card studio-panel"><p>Chargement du roadbook...</p></section></StudioShell>;
   if (!user) return null;
@@ -101,24 +99,21 @@ export default function RoadbookDetailPage() {
             </div>
           </details>
           {gpxError && <p className="page-error">{gpxError}</p>}
-          <AutomationPanel automationResult={automationResult} automationBusy={automationBusy} handleRecalculateTotals={handleRecalculateTotals} handleAnalyzeStageGpx={handleAnalyzeStageGpx} handleAutoEnrich={handleAutoEnrich} />
           <StudioInfoCard roadbook={roadbook} />
           <div className="studio-card">
             <div className="studio-card__header">
               <h2>Étapes ({stages.length})</h2>
             </div>
             <div className="studio-card__body">
-              {enrichmentError && <p className="page-error">{enrichmentError}</p>}
               {stageSuccess && <p className="page-success">{stageSuccess}</p>}
               {stageError && <p className="page-error">{stageError}</p>}
-              {poiIndex === null && accommodationIndex === null && stages.length > 0 && <p className="text-muted" style={{ fontStyle: "italic" }}>Aucune donnée d'enrichissement.</p>}
               <StageForm showStageForm={showStageForm} setShowStageForm={setShowStageForm} stageForm={stageForm} stageFormDispatch={stageFormDispatch} clearStageForm={clearStageForm} handleStageSubmit={handleStageSubmit} />
               {stages.length === 0 && <p className="studio-detail--empty">Aucune étape.</p>}
               <div className="studio-stage-list">
                 {stages.map((stage, index) => {
                 const stagePois = poisByStage[stage.id] ?? [];
                 const stageVariants = variantsByStage[stage.id] ?? [];
-                return <StageCard key={stage.id} stage={stage} index={index} expanded={isStageExpanded(stage.id)} onToggleExpand={() => toggleStage(stage.id)} stageCrud={stageCrud} gpx={gpx} enrich={enrich} stagePois={stagePois} stageVariants={stageVariants} dragHandlers={{ handleDragStart, handleDragOver, handleDragEnd, handleDrop }} draggingStageId={draggingStageId} dragOverStageId={dragOverStageId} stagePhotoMedia={images.find(image => image.stage_id === stage.id) ?? null} onStageChange={(stageId, updates) => setStages(previous => previous.map(item => item.id === stageId ? { ...item, ...updates } : item))} onUploadStagePhoto={async (event, stageId) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await uploadMedia(file, { stageId }); }} uploadLoading={uploadLoading} />;
+                return <StageCard key={stage.id} stage={stage} index={index} expanded={isStageExpanded(stage.id)} onToggleExpand={() => toggleStage(stage.id)} stageCrud={stageCrud} gpx={gpx} stagePois={stagePois} stageVariants={stageVariants} dragHandlers={{ handleDragStart, handleDragOver, handleDragEnd, handleDrop }} draggingStageId={draggingStageId} dragOverStageId={dragOverStageId} stagePhotoMedia={images.find(image => image.stage_id === stage.id) ?? null} onStageChange={(stageId, updates) => setStages(previous => previous.map(item => item.id === stageId ? { ...item, ...updates } : item))} onUploadStagePhoto={async (event, stageId) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await uploadMedia(file, { stageId }); }} uploadLoading={uploadLoading} />;
               })}
               </div>
             </div>

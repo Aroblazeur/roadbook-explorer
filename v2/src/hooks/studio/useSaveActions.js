@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
-import { deleteRoadbook, updateStages } from "@/lib/roadbooks/writers";
+import { deleteRoadbook, updatePois, updateStages } from "@/lib/roadbooks/writers";
 import { buildEditableStageUpdate, normalizeNumber } from "@/lib/roadbooks/validators";
+import { calculateTotals } from "@/lib/roadbooks/mutations";
 
 export default function useSaveActions({
   supabase, id, roadbook, setRoadbook,
@@ -9,7 +10,8 @@ export default function useSaveActions({
   isPublic, setIsPublic,
   officialRoute, traceRoute,
   coverMode, coverUrl, coverMediaId,
-  stages,
+  stages, setStages, poisByStage, setPoisByStage, setTraceRoute,
+  prepareAutomaticCompletion,
   setError, setSuccess, markRemoteConflict,
   saveWithLock,
   clearDraft, onDeleted,
@@ -17,10 +19,22 @@ export default function useSaveActions({
   const [deletingRoadbook, setDeletingRoadbook] = useState(false);
   const handleSaveAll = useCallback(async () => {
     if (!title.trim()) { setError("Le titre est obligatoire."); return false; }
-    if (stages.some(stage => !normalizeNumber(stage.stage_number))) {
+    let automation = { stages, poisByStage, poiUpdates: [], report: { fields: 0, warnings: [] } };
+    try {
+      automation = await prepareAutomaticCompletion?.() ?? automation;
+    } catch (error) {
+      automation.report.warnings.push(error?.message ?? String(error));
+    }
+    const completedStages = automation.stages ?? stages;
+    const completedPois = automation.poisByStage ?? poisByStage;
+    if (completedStages.some(stage => !normalizeNumber(stage.stage_number))) {
       setError("Chaque étape doit avoir un numéro valide.");
       return false;
     }
+    const totals = calculateTotals(completedStages);
+    const traceDistance = normalizeNumber(traceRoute.traceDist) ?? totals.totalDist;
+    const traceGain = normalizeNumber(traceRoute.traceGain) ?? totals.totalGain;
+    const traceLoss = normalizeNumber(traceRoute.traceLoss) ?? totals.totalLoss;
     const meta = { ...(roadbook?.metadata ?? {}) };
     if (activity) meta.activity = activity; else delete meta.activity;
     if (destination) meta.destination = destination; else delete meta.destination;
@@ -31,25 +45,41 @@ export default function useSaveActions({
       mapEmbedUrl: officialRoute.officialMap || null,
     };
     meta.stagesTotal = {
-      distance: normalizeNumber(traceRoute.traceDist), elevationGain: normalizeNumber(traceRoute.traceGain),
-      elevationLoss: normalizeNumber(traceRoute.traceLoss), gpx: traceRoute.traceGpx || null,
+      distance: traceDistance, elevationGain: traceGain,
+      elevationLoss: traceLoss, gpx: traceRoute.traceGpx || null,
       mapEmbedUrl: traceRoute.traceMap || null,
     };
     const updateFields = {
       title: title.trim(), description, metadata: meta,
-      distance_km: normalizeNumber(traceRoute.traceDist),
-      elevation_gain_m: normalizeNumber(traceRoute.traceGain),
-      elevation_loss_m: normalizeNumber(traceRoute.traceLoss),
+      distance_km: traceDistance,
+      elevation_gain_m: traceGain,
+      elevation_loss_m: traceLoss,
       cover_image_url: coverMode === "url" ? coverUrl.trim() || null : null,
       cover_media_id: coverMode === "media" ? coverMediaId : null,
     };
-    return saveWithLock({
+    const warningCount = automation.report?.warnings?.length ?? 0;
+    const automatedFields = automation.report?.fields ?? 0;
+    const saved = await saveWithLock({
       getUpdateFields: () => updateFields,
       getUpdatedRoadbook: (prev, data) => ({ ...prev, ...updateFields, updated_at: data.updated_at }),
-      persistRelated: () => updateStages(supabase, stages, buildEditableStageUpdate),
-      successMessage: "Toutes les modifications ont été enregistrées.",
+      persistRelated: () => Promise.all([
+        updateStages(supabase, completedStages, buildEditableStageUpdate),
+        updatePois(supabase, automation.poiUpdates ?? []),
+      ]),
+      successMessage: `Toutes les modifications ont été enregistrées.${automatedFields ? ` ${automatedFields} champ(s) complété(s) automatiquement.` : ""}${warningCount ? ` ${warningCount} automatisation(s) indisponible(s).` : ""}`,
     });
-  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, supabase, saveWithLock, setError]);
+    if (saved) {
+      setStages(completedStages);
+      setPoisByStage(completedPois);
+      setTraceRoute(previous => ({
+        ...previous,
+        traceDist: traceDistance != null ? String(traceDistance) : "",
+        traceGain: traceGain != null ? String(traceGain) : "",
+        traceLoss: traceLoss != null ? String(traceLoss) : "",
+      }));
+    }
+    return saved;
+  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, supabase, saveWithLock, setError, setStages, setPoisByStage, setTraceRoute, prepareAutomaticCompletion]);
 
   const handleToggleVisibility = useCallback(async () => {
     const result = await conditionalUpdateRoadbook(supabase, id, { is_public: !isPublic }, roadbook?.updated_at);

@@ -8,9 +8,6 @@ export default function PoiForm({
   clearPoiForm,
   handlePoiSubmit,
   handleDeletePoi,
-  poiIndex,
-  handleEnrichPoi,
-  enrichingPoi,
 }) {
   return (
     <div className="studio-stage-extra">
@@ -36,11 +33,6 @@ export default function PoiForm({
               <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => {
                 setPoiForm({ stage_id: stageId, type: poi.poi_type ?? "", name: poi.name, region: poi.region ?? "", description: poi.description ?? "", editing: poi.id });
               }}>✎</button>
-              {poiIndex && (
-                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleEnrichPoi(poi, stageId)} disabled={enrichingPoi === poi.id}>
-                  {enrichingPoi === poi.id ? "..." : "Enrichir"}
-                </button>
-              )}
             </div>
           </article>
         ))}

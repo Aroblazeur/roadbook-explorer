@@ -27,6 +27,10 @@ export async function updatePoi(supabase, poiId, updates) {
   if (error) throw new Error(error.message);
 }
 
+export async function updatePois(supabase, operations) {
+  await Promise.all(operations.map(operation => updatePoi(supabase, operation.id, operation.updates)));
+}
+
 export async function deletePoi(supabase, poiId) {
   const { error } = await supabase.from("stage_pois").delete().eq("id", poiId);
   if (error) throw new Error(error.message);

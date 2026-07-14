@@ -11,6 +11,7 @@
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import { stageFormReducer, defaultStageForm } from "../src/hooks/studio/stageFormReducer.js";
+import { completeAccommodation, completePoi, completeStageMetrics } from "../src/lib/roadbooks/automation.js";
 
 let passed = 0, failed = 0;
 const failures = [];
@@ -33,6 +34,34 @@ test("SET_FIELD modifie un champ", () => {
   const state = stageFormReducer(defaultStageForm, { type: "SET_FIELD", field: "title", value: "Mon étape" });
   assert.equal(state.title, "Mon étape");
   assert.equal(state.dayNumber, "");
+});
+
+test("les automatisations complètent uniquement les champs vides", () => {
+  const stage = completeStageMetrics(
+    { distance_km: 42, elevation_gain_m: null, elevation_loss_m: "", duration: "manuel" },
+    { distanceKm: 12.345, elevationGainM: 456.7, elevationLossM: 321.2 },
+    "2 h 30",
+  );
+  assert.equal(stage.value.distance_km, 42);
+  assert.equal(stage.value.elevation_gain_m, 457);
+  assert.equal(stage.value.elevation_loss_m, 321);
+  assert.equal(stage.value.duration, "manuel");
+  assert.equal(stage.filled, 2);
+
+  const accommodation = completeAccommodation(
+    { accommodation_name: "Refuge saisi", accommodation_photo: null },
+    { name: "Nom automatique", image: "https://example.com/refuge.jpg" },
+  );
+  assert.equal(accommodation.value.accommodation_name, "Refuge saisi");
+  assert.equal(accommodation.value.accommodation_photo, "https://example.com/refuge.jpg");
+
+  const poi = completePoi(
+    { description: "Description saisie", photo_url: null, link_url: "https://maps.example/existant" },
+    { description: "Description auto", image: "https://example.com/poi.jpg", url: "https://example.com/poi" },
+  );
+  assert.equal(poi.value.description, "Description saisie");
+  assert.equal(poi.value.photo_url, "https://example.com/poi.jpg");
+  assert.equal(poi.value.link_url, "https://maps.example/existant");
 });
 
 test("SET_FIELD ne modifie pas les autres champs", () => {
@@ -166,15 +195,14 @@ for (const h of hooks) {
   });
 }
 
-test("useEnrichment déclare poisByStage parmi ses paramètres", () => {
+test("useEnrichment prépare les compléments automatiques sans écraser les champs", () => {
   const content = readFileSync("src/hooks/studio/useEnrichment.js", "utf-8");
   const signature = content.match(/export function useEnrichment\(\{([\s\S]*?)\}\) \{/);
   assert.ok(signature, "Signature de useEnrichment introuvable");
   assert.match(signature[1], /\bpoisByStage\b/, "poisByStage est utilisé sans être déclaré");
-  assert.ok(
-    content.indexOf("const reloadAfterEnrichment") < content.indexOf("const handleAutoEnrich"),
-    "reloadAfterEnrichment doit être initialisé avant handleAutoEnrich",
-  );
+  assert.ok(content.includes("prepareAutomaticCompletion"));
+  assert.ok(content.includes("completeStageMetrics"));
+  assert.ok(content.includes("completePoi"));
 });
 
 test("useStudioDraft déclare gpxByVariant parmi ses paramètres", () => {
