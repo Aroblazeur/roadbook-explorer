@@ -1,0 +1,283 @@
+{
+  "generatedAt": "2026-07-14T19:37:19.893Z",
+  "sourceSummary": {
+    "totalMedia": 13,
+    "canonical": 1,
+    "legacyCompatible": 9,
+    "ambiguous": 2,
+    "invalid": 1,
+    "duplicates": 2
+  },
+  "alreadyCanonical": [
+    {
+      "mediaId": 3,
+      "status": "canonical",
+      "scope": "stage",
+      "role": "official",
+      "reason": null
+    }
+  ],
+  "eligible": {
+    "count": 3,
+    "items": [
+      {
+        "mediaId": 1,
+        "roadbookId": 1,
+        "scope": "roadbook",
+        "role": "official",
+        "status": "legacy-compatible",
+        "identity": "roadbook:1:roadbook:official"
+      },
+      {
+        "mediaId": 6,
+        "roadbookId": 1,
+        "scope": "stage",
+        "role": "official",
+        "status": "legacy-compatible",
+        "identity": "roadbook:1:stage:20:official"
+      },
+      {
+        "mediaId": 11,
+        "roadbookId": 1,
+        "scope": "variant",
+        "role": "official",
+        "status": "legacy-compatible",
+        "identity": "roadbook:1:stage:10:variant:30:official"
+      }
+    ]
+  },
+  "excluded": {
+    "count": 9,
+    "items": [
+      {
+        "mediaId": 2,
+        "roadbookId": 1,
+        "scope": "stage",
+        "role": "official",
+        "status": "legacy-compatible",
+        "reason": "duplicate-identity",
+        "review": "auto"
+      },
+      {
+        "mediaId": 4,
+        "roadbookId": 1,
+        "scope": "variant",
+        "role": "official",
+        "status": "ambiguous",
+        "reason": "legacy-variant-target-is-incomplete",
+        "review": "manual"
+      },
+      {
+        "mediaId": 5,
+        "roadbookId": 1,
+        "scope": null,
+        "role": null,
+        "status": "invalid",
+        "reason": "invalid-media",
+        "review": "auto"
+      },
+      {
+        "mediaId": 7,
+        "roadbookId": 1,
+        "scope": "stage",
+        "role": "official",
+        "status": "legacy-compatible",
+        "reason": "duplicate-identity",
+        "review": "auto"
+      },
+      {
+        "mediaId": 8,
+        "roadbookId": 9999,
+        "scope": "roadbook",
+        "role": "official",
+        "status": "legacy-compatible",
+        "reason": "missing-roadbook",
+        "review": "auto"
+      },
+      {
+        "mediaId": 9,
+        "roadbookId": 1,
+        "scope": "stage",
+        "role": "official",
+        "status": "legacy-compatible",
+        "reason": "missing-stage",
+        "review": "auto"
+      },
+      {
+        "mediaId": 10,
+        "roadbookId": 1,
+        "scope": "stage",
+        "role": "official",
+        "status": "legacy-compatible",
+        "reason": "stage-roadbook-mismatch",
+        "review": "auto"
+      },
+      {
+        "mediaId": 12,
+        "roadbookId": 1,
+        "scope": "variant",
+        "role": "official",
+        "status": "ambiguous",
+        "reason": "legacy-variant-target-is-incomplete",
+        "review": "manual"
+      },
+      {
+        "mediaId": 13,
+        "roadbookId": 1,
+        "scope": "variant",
+        "role": "official",
+        "status": "legacy-compatible",
+        "reason": "stage-roadbook-mismatch",
+        "review": "auto"
+      }
+    ]
+  },
+  "operations": {
+    "count": 3,
+    "items": [
+      {
+        "sequence": 1,
+        "mediaId": 1,
+        "businessIdentity": "roadbook:1:roadbook:official",
+        "roadbook": "Test Roadbook",
+        "roadbookId": 1,
+        "stageNumber": null,
+        "classificationBefore": {
+          "status": "legacy-compatible",
+          "source": "legacy-role",
+          "scope": "roadbook",
+          "role": "official"
+        },
+        "before": {
+          "stage_id": null,
+          "metadata": {
+            "role": "gpx-official",
+            "source": "v1-import"
+          }
+        },
+        "after": {
+          "stage_id": null,
+          "metadata": {
+            "scope": "roadbook",
+            "role": "official",
+            "original_name": "1.gpx"
+          }
+        },
+        "preconditions": {
+          "expectedMediaId": 1,
+          "expectedRoadbookId": 1,
+          "expectedStageId": null,
+          "expectedCurrentRole": "gpx-official",
+          "expectedUpdatedAt": "2026-01-01"
+        },
+        "reversibleSnapshot": {
+          "stage_id": null,
+          "metadata": {
+            "role": "gpx-official",
+            "source": "v1-import"
+          },
+          "updated_at": "2026-01-01"
+        }
+      },
+      {
+        "sequence": 2,
+        "mediaId": 6,
+        "businessIdentity": "roadbook:1:stage:20:official",
+        "roadbook": "Test Roadbook",
+        "roadbookId": 1,
+        "stageNumber": 2,
+        "classificationBefore": {
+          "status": "legacy-compatible",
+          "source": "legacy-role",
+          "scope": "stage",
+          "role": "official"
+        },
+        "before": {
+          "stage_id": 20,
+          "metadata": {
+            "role": "gpx-stage",
+            "source": "v1-import"
+          }
+        },
+        "after": {
+          "stage_id": 20,
+          "metadata": {
+            "scope": "stage",
+            "role": "official",
+            "original_name": "6.gpx"
+          }
+        },
+        "preconditions": {
+          "expectedMediaId": 6,
+          "expectedRoadbookId": 1,
+          "expectedStageId": 20,
+          "expectedCurrentRole": "gpx-stage",
+          "expectedUpdatedAt": "2026-01-01"
+        },
+        "reversibleSnapshot": {
+          "stage_id": 20,
+          "metadata": {
+            "role": "gpx-stage",
+            "source": "v1-import"
+          },
+          "updated_at": "2026-01-01"
+        }
+      },
+      {
+        "sequence": 3,
+        "mediaId": 11,
+        "businessIdentity": "roadbook:1:stage:10:variant:30:official",
+        "roadbook": "Test Roadbook",
+        "roadbookId": 1,
+        "stageNumber": 1,
+        "classificationBefore": {
+          "status": "legacy-compatible",
+          "source": "legacy-role",
+          "scope": "variant",
+          "role": "official"
+        },
+        "before": {
+          "stage_id": 10,
+          "metadata": {
+            "role": "gpx-variant",
+            "scope": "variant",
+            "variant_id": 30,
+            "source": "v1-import"
+          }
+        },
+        "after": {
+          "stage_id": 10,
+          "metadata": {
+            "scope": "variant",
+            "role": "official",
+            "variant_id": 30,
+            "original_name": "11.gpx"
+          }
+        },
+        "preconditions": {
+          "expectedMediaId": 11,
+          "expectedRoadbookId": 1,
+          "expectedStageId": 10,
+          "expectedCurrentRole": "gpx-variant",
+          "expectedUpdatedAt": "2026-01-01"
+        },
+        "reversibleSnapshot": {
+          "stage_id": 10,
+          "metadata": {
+            "role": "gpx-variant",
+            "scope": "variant",
+            "variant_id": 30,
+            "source": "v1-import"
+          },
+          "updated_at": "2026-01-01"
+        }
+      }
+    ]
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "timestamp": "2026-07-14T19:37:19.894Z"
+  },
+  "decision": "GO application contrôlée — le plan est valide, toutes les préconditions sont documentées, les 19 opérations sont réversibles."
+}

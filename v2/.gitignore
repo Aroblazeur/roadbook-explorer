@@ -24,6 +24,9 @@ dev-server.log
 # validation files
 /validation/
 
+# real GPX migration plan (contains actual data)
+/reports/gpx-migration-plan.json
+
 
 # next.js
 /.next/
