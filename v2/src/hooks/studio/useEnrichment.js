@@ -238,6 +238,18 @@ export function useEnrichment({
     finally { setAutomationBusy(null); }
   }, [stages, gpxHelpers]);
 
+  const reloadAfterEnrichment = useCallback(async () => {
+    const stageIds = stages.map(s => s.id);
+    if (!stageIds.length) return;
+    try {
+      const pois = await loadPois(supabase, stageIds);
+      const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); });
+      if (setPoisByStage) setPoisByStage(m);
+      const refreshed = await loadStages(supabase, roadbook?.id ?? stages[0]?.roadbook_id);
+      if (refreshed && setStages) setStages(refreshed);
+    } catch {}
+  }, [supabase, roadbook, stages, setStages, setPoisByStage]);
+
   const handleAutoEnrich = useCallback(async () => {
     setAutomationBusy("enrich");
     setAutomationResult(null);
@@ -290,10 +302,10 @@ export function useEnrichment({
       }
 
       for (const stage of enrichableAccoms) {
+        const name = stage.accommodation_name;
         try {
           report.accomsFound++;
           const url = stage.accommodation_url;
-          const name = stage.accommodation_name;
           let found = url ? findAccommodation(url, accommodationIndex) : null;
           if (!found && name) found = findAccommodationByName(name, accommodationIndex);
           if (!found) continue;
@@ -317,18 +329,6 @@ export function useEnrichment({
     } catch (err) { setAutomationResult(`Erreur : ${err.message}`); }
     finally { setAutomationBusy(null); }
   }, [supabase, poiIndex, accommodationIndex, poisByStage, stages, reloadAfterEnrichment]);
-
-  const reloadAfterEnrichment = useCallback(async () => {
-    const stageIds = stages.map(s => s.id);
-    if (!stageIds.length) return;
-    try {
-      const pois = await loadPois(supabase, stageIds);
-      const m = {}; pois.forEach(p => { if (!m[p.stage_id]) m[p.stage_id] = []; m[p.stage_id].push(p); });
-      if (setPoisByStage) setPoisByStage(m);
-      const refreshed = await loadStages(supabase, roadbook?.id ?? stages[0]?.roadbook_id);
-      if (refreshed && setStages) setStages(refreshed);
-    } catch {}
-  }, [supabase, roadbook, stages, setStages, setPoisByStage]);
 
   return {
     poiIndex, setPoiIndex,

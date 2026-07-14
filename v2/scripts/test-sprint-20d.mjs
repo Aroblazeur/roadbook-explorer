@@ -171,6 +171,10 @@ test("useEnrichment déclare poisByStage parmi ses paramètres", () => {
   const signature = content.match(/export function useEnrichment\(\{([\s\S]*?)\}\) \{/);
   assert.ok(signature, "Signature de useEnrichment introuvable");
   assert.match(signature[1], /\bpoisByStage\b/, "poisByStage est utilisé sans être déclaré");
+  assert.ok(
+    content.indexOf("const reloadAfterEnrichment") < content.indexOf("const handleAutoEnrich"),
+    "reloadAfterEnrichment doit être initialisé avant handleAutoEnrich",
+  );
 });
 
 test("useStudioDraft déclare gpxByVariant parmi ses paramètres", () => {
