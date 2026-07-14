@@ -16,8 +16,10 @@ using (
   storage.objects.bucket_id in ('roadbook-images', 'roadbook-gpx')
   and storage.allow_any_operation(
     array[
-      'object.get_authenticated_info',
-      'object.get_authenticated'
+      'object.sign',
+      'object.sign_many',
+      'object.get_authenticated',
+      'object.get_authenticated_info'
     ]
   )
   and exists (
@@ -38,8 +40,13 @@ using (
   storage.objects.bucket_id in ('roadbook-images', 'roadbook-gpx')
   and storage.allow_any_operation(
     array[
+      'object.sign',
+      'object.sign_many',
+      'object.get_authenticated',
       'object.get_authenticated_info',
-      'object.get_authenticated'
+      'object.upload',
+      'object.upload_update',
+      'object.delete_many'
     ]
   )
   and exists (

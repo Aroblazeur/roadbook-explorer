@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
+import { createClient } from "@supabase/supabase-js";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
@@ -211,7 +212,7 @@ test("un remplacement GPX conserve le chemin et utilise upsert", async () => {
   assert.equal(supabase.calls.some(call => call.operation === "media-insert"), false);
 });
 
-test("la migration contient les cinq policies et n'autorise pas le listing", () => {
+test("la migration contient les cinq policies et les operations Storage exactes", () => {
   const migration = fs.readFileSync(
     path.join(root, "supabase/migrations/20260714114608_storage_media_policies.sql"),
     "utf8",
@@ -225,9 +226,34 @@ test("la migration contient les cinq policies et n'autorise pas le listing", () 
   ]) {
     assert.match(migration, new RegExp(policy, "g"));
   }
-  assert.match(migration, /object\.get_authenticated_info/);
-  assert.match(migration, /object\.get_authenticated/);
-  assert.doesNotMatch(migration, /object\.list/);
+  const publicRead = migration.slice(
+    migration.indexOf('create policy "roadbook_media_public_read"'),
+    migration.indexOf('create policy "roadbook_media_owner_read"'),
+  );
+  const ownerRead = migration.slice(
+    migration.indexOf('create policy "roadbook_media_owner_read"'),
+    migration.indexOf('create policy "roadbook_media_owner_insert"'),
+  );
+  for (const operation of [
+    "object.sign",
+    "object.sign_many",
+    "object.get_authenticated",
+    "object.get_authenticated_info",
+  ]) {
+    const pattern = new RegExp(`'${operation.replaceAll(".", "\\.")}'`);
+    assert.match(publicRead, pattern);
+    assert.match(ownerRead, pattern);
+  }
+  for (const operation of ["object.upload", "object.upload_update", "object.delete_many"]) {
+    const pattern = new RegExp(`'${operation.replaceAll(".", "\\.")}'`);
+    assert.doesNotMatch(publicRead, pattern);
+    assert.match(ownerRead, pattern);
+  }
+  for (const operation of ["object.list", "object.get_signed", "object.move", "object.copy"]) {
+    const pattern = new RegExp(`'${operation.replaceAll(".", "\\.")}'`);
+    assert.doesNotMatch(publicRead, pattern);
+    assert.doesNotMatch(ownerRead, pattern);
+  }
   assert.doesNotMatch(migration, /storage\.objects\.owner_id/);
   assert.match(migration, /m\.bucket = storage\.objects\.bucket_id/);
   assert.match(migration, /m\.path = storage\.objects\.name/);
@@ -245,7 +271,9 @@ test("les policies RLS respectent anon, propriétaire et autre utilisateur", { t
   const prefix = `__sprint_4c1__/${suffix}`;
   const paths = {
     linked: `${prefix}/linked.jpg`,
-    mutate: `${prefix}/mutate.jpg`,
+    upsert: `${prefix}/upsert.jpg`,
+    update: `${prefix}/update.jpg`,
+    remove: `${prefix}/remove.jpg`,
     ownerInsert: `${prefix}/owner-insert.jpg`,
     otherInsert: `${prefix}/other-insert.jpg`,
     orphan: `${prefix}/orphan.jpg`,
@@ -273,13 +301,20 @@ test("les policies RLS respectent anon, propriétaire et autre utilisateur", { t
     );
     const roadbookId = roadbookResult.rows[0].id;
 
-    for (const objectPath of [paths.linked, paths.mutate, paths.ownerInsert, paths.otherInsert]) {
+    for (const objectPath of [
+      paths.linked,
+      paths.upsert,
+      paths.update,
+      paths.remove,
+      paths.ownerInsert,
+      paths.otherInsert,
+    ]) {
       await client.query(
         "insert into public.media(bucket,path,roadbook_id,type,uploaded_by) values ('roadbook-images',$1,$2,'image',$3)",
         [objectPath, roadbookId, ownerId],
       );
     }
-    for (const objectPath of [paths.linked, paths.mutate, paths.orphan]) {
+    for (const objectPath of [paths.linked, paths.upsert, paths.update, paths.remove, paths.orphan]) {
       await client.query(
         "insert into storage.objects(bucket_id,name,owner_id,metadata) values ('roadbook-images',$1,null,'{}'::jsonb)",
         [objectPath],
@@ -316,11 +351,17 @@ test("les policies RLS respectent anon, propriétaire et autre utilisateur", { t
       }
     }
 
-    await setActor("anon", null);
-    assert.equal(await visibleCount(paths.linked), 0, "anon ne lit pas un roadbook privé");
+    await setActor("anon", null, "storage.object.sign");
+    assert.equal(await visibleCount(paths.linked), 0, "anon ne signe pas un roadbook privé");
 
-    await setActor("authenticated", ownerId);
-    assert.equal(await visibleCount(paths.linked), 1, "le propriétaire lit son média privé");
+    for (const operation of [
+      "storage.object.sign",
+      "storage.object.sign_many",
+      "storage.object.get_authenticated",
+    ]) {
+      await setActor("authenticated", ownerId, operation);
+      assert.equal(await visibleCount(paths.linked), 1, `le propriétaire autorise ${operation}`);
+    }
     assert.equal(await visibleCount(paths.orphan), 0, "un objet sans ligne media reste inaccessible");
     const historical = await client.query(
       "select count(*)::int as count from storage.objects where bucket_id='roadbook-images' and name=$1 and owner_id is null",
@@ -331,41 +372,61 @@ test("les policies RLS respectent anon, propriétaire et autre utilisateur", { t
     const listing = await client.query("select count(*)::int as count from storage.objects where bucket_id='roadbook-images'");
     assert.equal(listing.rows[0].count, 0, "le listing du bucket reste interdit");
 
-    await setActor("authenticated", otherId);
+    await setActor("authenticated", otherId, "storage.object.sign");
     assert.equal(await visibleCount(paths.linked), 0, "un autre utilisateur ne lit pas le roadbook privé");
+    await setActor("authenticated", otherId, "storage.object.upload");
     assert.notEqual(await attemptDml(
       "insert into storage.objects(bucket_id,name,owner_id,metadata) values ('roadbook-images',$1,null,'{}'::jsonb)",
       [paths.otherInsert],
     ), 1, "un autre utilisateur ne peut pas insérer");
+    await setActor("authenticated", otherId, "storage.object.upload_update");
     assert.notEqual(await attemptDml(
       "update storage.objects set user_metadata='{}'::jsonb where bucket_id='roadbook-images' and name=$1",
-      [paths.mutate],
+      [paths.update],
     ), 1, "un autre utilisateur ne peut pas mettre à jour");
+    await setActor("authenticated", otherId, "storage.object.delete_many");
     await client.query("select set_config('storage.allow_delete_query','true',true)");
     assert.notEqual(await attemptDml(
       "delete from storage.objects where bucket_id='roadbook-images' and name=$1",
-      [paths.mutate],
+      [paths.remove],
     ), 1, "un autre utilisateur ne peut pas supprimer");
 
-    await setActor("authenticated", ownerId);
+    await setActor("authenticated", ownerId, "storage.object.upload");
     assert.equal(await attemptDml(
       "insert into storage.objects(bucket_id,name,owner_id,metadata) values ('roadbook-images',$1,null,'{}'::jsonb)",
       [paths.ownerInsert],
-    ), 1, "le propriétaire peut insérer");
+    ), 1, "upload simple : le propriétaire peut insérer");
+    assert.equal(await visibleCount(paths.upsert), 1, "upsert : SELECT autorisé avec object.upload");
     assert.equal(await attemptDml(
       "update storage.objects set user_metadata='{}'::jsonb where bucket_id='roadbook-images' and name=$1",
-      [paths.mutate],
-    ), 1, "le propriétaire peut mettre à jour");
+      [paths.upsert],
+    ), 1, "upsert : UPDATE autorisé avec object.upload");
+
+    await setActor("authenticated", ownerId, "storage.object.upload_update");
+    assert.equal(await visibleCount(paths.update), 1, "update : SELECT autorisé avec object.upload_update");
+    assert.equal(await attemptDml(
+      "update storage.objects set user_metadata='{}'::jsonb where bucket_id='roadbook-images' and name=$1",
+      [paths.update],
+    ), 1, "update : le propriétaire peut mettre à jour");
+
+    await setActor("authenticated", ownerId, "storage.object.delete_many");
+    assert.equal(await visibleCount(paths.remove), 1, "remove : SELECT autorisé avec object.delete_many");
     await client.query("select set_config('storage.allow_delete_query','true',true)");
     assert.equal(await attemptDml(
       "delete from storage.objects where bucket_id='roadbook-images' and name=$1",
-      [paths.mutate],
-    ), 1, "le propriétaire peut supprimer");
+      [paths.remove],
+    ), 1, "remove : le propriétaire peut supprimer");
 
     await client.query("reset role");
     await client.query("update public.roadbooks set is_public=true where id=$1", [roadbookId]);
-    await setActor("anon", null);
-    assert.equal(await visibleCount(paths.linked), 1, "anon lit un média lié à un roadbook public");
+    for (const operation of [
+      "storage.object.sign",
+      "storage.object.sign_many",
+      "storage.object.get_authenticated",
+    ]) {
+      await setActor("anon", null, operation);
+      assert.equal(await visibleCount(paths.linked), 1, `anon autorise ${operation} sur un roadbook public`);
+    }
   } finally {
     if (transactionOpen) await client.query("rollback");
 
@@ -401,5 +462,758 @@ test("les erreurs média du Studio ne sont plus absorbées silencieusement", () 
   ]) {
     const source = fs.readFileSync(path.join(root, relativePath), "utf8");
     assert.doesNotMatch(source, /catch\s*\{\s*\}/, relativePath);
+  }
+});
+
+const sprint4c1RemotePhases = [
+  "public-read",
+  "private-read",
+  "owner-write",
+  "other-user-write",
+  "listing",
+  "cleanup-check",
+];
+const sprint4c1PhaseArgumentIndex = process.argv.indexOf("--phase");
+const sprint4c1RequestedPhase = sprint4c1PhaseArgumentIndex >= 0
+  ? process.argv[sprint4c1PhaseArgumentIndex + 1]
+  : process.env.SPRINT_4C1_PHASE;
+const sprint4c1RemoteRequested = process.env.SPRINT_4C1_REMOTE_HTTP === "1"
+  || Boolean(sprint4c1RequestedPhase);
+
+test("le banc distant expose uniquement les six phases courtes attendues", () => {
+  assert.deepEqual(sprint4c1RemotePhases, [
+    "public-read",
+    "private-read",
+    "owner-write",
+    "other-user-write",
+    "listing",
+    "cleanup-check",
+  ]);
+});
+
+test("la phase HTTP Storage reelle utilise des fixtures autonomes", {
+  skip: !sprint4c1RemoteRequested,
+  timeout: 75_000,
+}, async () => {
+  assert.ok(
+    sprint4c1RemotePhases.includes(sprint4c1RequestedPhase),
+    `--phase est requis (${sprint4c1RemotePhases.join(", ")})`,
+  );
+  console.log(`[sprint-4c1] phase-start ${sprint4c1RequestedPhase}`);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  assert.ok(supabaseUrl, "NEXT_PUBLIC_SUPABASE_URL est requis");
+  assert.ok(anonKey, "NEXT_PUBLIC_SUPABASE_ANON_KEY est requis");
+  assert.ok(serviceRoleKey, "SUPABASE_SERVICE_ROLE_KEY est requis");
+  assert.ok(process.env.SUPABASE_DB_URL, "SUPABASE_DB_URL est requis");
+
+  const stepTimeoutMs = 20_000;
+  const safeLogMessage = value => String(value)
+    .replace(/https?:\/\/\S+/gi, "[url-redacted]")
+    .replace(/([?&]token=)[^&\s]+/gi, "$1[redacted]");
+  async function withTimeout(promise, timeoutMs, label) {
+    let timeoutId;
+
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  }
+  const closePostgresClient = async (client, label) => {
+    const endPromise = client.end();
+    endPromise.catch(() => {});
+    try {
+      await withTimeout(endPromise, 5_000, `fermeture PostgreSQL ${label}`);
+      console.log(`[sprint-4c1] postgres-closed ${label}`);
+    } catch (error) {
+      console.error(`[sprint-4c1] postgres-force-close ${label}: ${safeLogMessage(error.message)}`);
+      client.connection?.stream?.destroy();
+    }
+    await assert.rejects(
+      Promise.resolve().then(() => client.query("select 1")),
+      /closed|ended|not queryable|Client was closed/i,
+      `${label} doit etre inutilisable apres fermeture`,
+    );
+  };
+  const clientOptions = { auth: { persistSession: false, autoRefreshToken: false } };
+  const createObservedClient = (key, role) => {
+    let activeScenario = null;
+    const observedFetch = async (input, init = {}) => {
+      const timeoutSignal = AbortSignal.timeout(stepTimeoutMs);
+      const signal = init.signal
+        ? AbortSignal.any([init.signal, timeoutSignal])
+        : timeoutSignal;
+      const response = await fetch(input, { ...init, signal });
+      if (activeScenario) activeScenario.httpStatuses.push(response.status);
+      return response;
+    };
+    const client = createClient(supabaseUrl, key, {
+      ...clientOptions,
+      global: { fetch: observedFetch },
+    });
+
+    const runScenario = async ({ id, operation, bucket = null, objectPath = null, expected }, task) => {
+      assert.equal(activeScenario, null, `scenario concurrent interdit pour ${role}`);
+      const startedAt = new Date();
+      const startedMs = performance.now();
+      const scenario = { id, role, operation, bucket, path: objectPath, expected, httpStatuses: [] };
+      activeScenario = scenario;
+      console.log(`SCENARIO START ${JSON.stringify({ ...scenario, httpStatuses: undefined, startedAt: startedAt.toISOString() })}`);
+      let timer;
+      try {
+        const result = await Promise.race([
+          task(client),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error(`timeout ${stepTimeoutMs}ms: ${id}`));
+            }, stepTimeoutMs);
+          }),
+        ]);
+        const elapsedMs = Math.round(performance.now() - startedMs);
+        console.log(`SCENARIO END ${JSON.stringify({
+          ...scenario,
+          finishedAt: new Date().toISOString(),
+          elapsedMs,
+        })}`);
+        return { result, httpStatuses: [...scenario.httpStatuses], elapsedMs };
+      } catch (error) {
+        const elapsedMs = Math.round(performance.now() - startedMs);
+        console.error(`SCENARIO FAIL ${JSON.stringify({
+          ...scenario,
+          finishedAt: new Date().toISOString(),
+          elapsedMs,
+          error: safeLogMessage(error instanceof Error ? error.message : String(error)),
+        })}`);
+        throw error;
+      } finally {
+        clearTimeout(timer);
+        activeScenario = null;
+      }
+    };
+    return { client, runScenario, role };
+  };
+  const anonObserved = createObservedClient(anonKey, "anon");
+  const serviceObserved = createObservedClient(serviceRoleKey, "service-role-cleanup");
+  const anon = anonObserved.client;
+  const service = serviceObserved.client;
+  const suffix = crypto.randomUUID();
+  const prefix = `__sprint_4c1_http__/${suffix}`;
+  const slug = `__sprint-4c1-http-${suffix}`;
+  const userIds = [];
+  const fixturePaths = {
+    private: `${prefix}/private.txt`,
+    historical: `${prefix}/historical.txt`,
+    simpleUpload: `${prefix}/simple-upload.txt`,
+    upsert: `${prefix}/upsert.txt`,
+    update: `${prefix}/update.txt`,
+    remove: `${prefix}/remove.txt`,
+    otherUpload: `${prefix}/other-upload.txt`,
+    otherRemove: `${prefix}/other-remove.txt`,
+    orphan: `${prefix}/orphan.txt`,
+  };
+  let roadbookId = null;
+
+  const asBlob = value => new Blob([value], { type: "text/plain" });
+  const assertDenied = (result, message) => {
+    assert.ok(result.error || !result.data, message);
+  };
+  const fetchSigned = async result => {
+    assert.ifError(result.error);
+    assert.ok(result.data?.signedUrl, "l'URL signee est absente");
+    const response = await fetch(result.data.signedUrl, {
+      signal: AbortSignal.timeout(stepTimeoutMs),
+    });
+    assert.equal(response.status, 200);
+    return response.status;
+  };
+  const createFixtureUser = async label => {
+    const email = `sprint-4c1-${label}-${suffix}@example.invalid`;
+    const password = `S4c1!${crypto.randomUUID()}aA`;
+    const created = await service.auth.admin.createUser({ email, password, email_confirm: true });
+    assert.ifError(created.error);
+    const authId = created.data.user.id;
+    userIds.push(authId);
+
+    const profile = await service.from("profiles").insert({ id: authId }).select("id").single();
+    assert.ifError(profile.error);
+    assert.equal(profile.data.id, authId, "le profil doit reutiliser exactement l'UUID Auth");
+
+    const observed = createObservedClient(anonKey, label === "owner" ? "owner" : "other-user");
+    const login = await observed.client.auth.signInWithPassword({ email, password });
+    assert.ifError(login.error);
+    assert.equal(login.data.user.id, authId);
+    return { id: authId, ...observed };
+  };
+  const storageScenario = (observed, id, operation, objectPath, expected, task) => (
+    observed.runScenario({
+      id,
+      operation,
+      bucket: "roadbook-images",
+      objectPath,
+      expected,
+    }, task)
+  );
+
+  try {
+    const phaseMediaNames = {
+      "private-read": ["private", "historical"],
+      "owner-write": ["simpleUpload", "upsert", "update", "remove"],
+      "other-user-write": ["otherUpload", "upsert", "update", "otherRemove"],
+      listing: ["private"],
+    }[sprint4c1RequestedPhase] ?? [];
+    const needsOwner = phaseMediaNames.length > 0;
+    const needsOther = ["private-read", "other-user-write", "listing"].includes(sprint4c1RequestedPhase);
+    const owner = needsOwner ? await createFixtureUser("owner") : null;
+    const other = needsOther ? await createFixtureUser("other") : null;
+
+    if (needsOwner) {
+      const roadbook = await service.from("roadbooks").insert({
+        slug,
+        owner_id: owner.id,
+        title: `Sprint 4C1 ${sprint4c1RequestedPhase} fixture`,
+        is_public: false,
+      }).select("id,owner_id").single();
+      assert.ifError(roadbook.error);
+      assert.equal(roadbook.data.owner_id, owner.id);
+      roadbookId = roadbook.data.id;
+    }
+
+    if (phaseMediaNames.length > 0) {
+      const mediaRows = phaseMediaNames.map(name => ({
+        bucket: "roadbook-images",
+        path: fixturePaths[name],
+        roadbook_id: roadbookId,
+        type: "other",
+        file_name: `${name}.txt`,
+        mime_type: "text/plain",
+        uploaded_by: name === "otherUpload" ? other.id : owner.id,
+      }));
+      const mediaInsert = await service.from("media").insert(mediaRows);
+      assert.ifError(mediaInsert.error);
+    }
+
+    if (sprint4c1RequestedPhase === "private-read") {
+      for (const [name, objectPath] of [
+        ["private", fixturePaths.private],
+        ["historical", fixturePaths.historical],
+        ["orphan", fixturePaths.orphan],
+      ]) {
+        const uploaded = await storageScenario(
+          serviceObserved,
+          `service-setup-upload-${name}`,
+          "upload",
+          objectPath,
+          "allowed",
+          client => client.storage.from("roadbook-images").upload(objectPath, asBlob(objectPath)),
+        );
+        assert.ifError(uploaded.result.error);
+      }
+
+      const db = new Client({
+        connectionString: process.env.SUPABASE_DB_URL,
+        connectionTimeoutMillis: stepTimeoutMs,
+        query_timeout: stepTimeoutMs,
+      });
+      await withTimeout(db.connect(), stepTimeoutMs, "connexion PostgreSQL historical-owner-check");
+      try {
+        await withTimeout(
+          db.query(
+            "update storage.objects set owner_id=null where bucket_id='roadbook-images' and name=$1",
+            [fixturePaths.historical],
+          ),
+          stepTimeoutMs,
+          "mise a jour PostgreSQL historical-owner-check",
+        );
+        const historicalOwner = await withTimeout(
+          db.query(
+            "select owner_id from storage.objects where bucket_id='roadbook-images' and name=$1",
+            [fixturePaths.historical],
+          ),
+          stepTimeoutMs,
+          "lecture PostgreSQL historical-owner-check",
+        );
+        assert.equal(historicalOwner.rows[0]?.owner_id, null);
+      } finally {
+        await closePostgresClient(db, "historical-owner-check");
+      }
+    } else if (["other-user-write", "listing"].includes(sprint4c1RequestedPhase)) {
+      const seedNames = sprint4c1RequestedPhase === "listing"
+        ? ["private"]
+        : ["upsert", "update", "otherRemove"];
+      for (const name of seedNames) {
+        const uploaded = await storageScenario(
+          serviceObserved,
+          `service-setup-upload-${name}`,
+          "upload",
+          fixturePaths[name],
+          "allowed",
+          client => client.storage.from("roadbook-images").upload(fixturePaths[name], asBlob(`${name}-seed`)),
+        );
+        assert.ifError(uploaded.result.error);
+      }
+    }
+
+    if (sprint4c1RequestedPhase === "public-read") {
+    const voiePath = "roadbooks/voie-bleue/cover/cover.jpg";
+    const alsacePath = "roadbooks/alsace-canal-marne-rhin/cover/cover.webp";
+    const voieSign = await storageScenario(
+      anonObserved,
+      "anon-sign-voie-bleue-allowed",
+      "createSignedUrl",
+      voiePath,
+      "allowed",
+      client => client.storage.from("roadbook-images").createSignedUrl(voiePath, 3600),
+    );
+    assert.equal(await fetchSigned(voieSign.result), 200);
+    const alsaceSign = await storageScenario(
+      anonObserved,
+      "anon-sign-alsace-allowed",
+      "createSignedUrl",
+      alsacePath,
+      "allowed",
+      client => client.storage.from("roadbook-images").createSignedUrl(alsacePath, 3600),
+    );
+    assert.equal(await fetchSigned(alsaceSign.result), 200);
+    const signedManyScenario = await storageScenario(
+      anonObserved,
+      "anon-sign-many-public-allowed",
+      "createSignedUrls",
+      `${voiePath},${alsacePath}`,
+      "allowed",
+      client => client.storage.from("roadbook-images").createSignedUrls([voiePath, alsacePath], 3600),
+    );
+    assert.ifError(signedManyScenario.result.error);
+    assert.equal(signedManyScenario.result.data.length, 2);
+    for (const signed of signedManyScenario.result.data) {
+      assert.ok(signed.signedUrl);
+      assert.equal((await fetch(signed.signedUrl, { signal: AbortSignal.timeout(stepTimeoutMs) })).status, 200);
+    }
+
+    }
+
+    if (sprint4c1RequestedPhase === "private-read") {
+    const anonPrivate = await storageScenario(
+      anonObserved,
+      "anon-sign-private-denied",
+      "createSignedUrl",
+      fixturePaths.private,
+      "denied",
+      client => client.storage.from("roadbook-images").createSignedUrl(fixturePaths.private, 3600),
+    );
+    assertDenied(anonPrivate.result, "anon ne doit pas signer un media prive");
+    const ownerPrivate = await storageScenario(
+      owner,
+      "owner-sign-private-allowed",
+      "createSignedUrl",
+      fixturePaths.private,
+      "allowed",
+      client => client.storage.from("roadbook-images").createSignedUrl(fixturePaths.private, 3600),
+    );
+    assert.equal(await fetchSigned(ownerPrivate.result), 200);
+    const ownerHistorical = await storageScenario(
+      owner,
+      "owner-sign-historical-null-owner-allowed",
+      "createSignedUrl",
+      fixturePaths.historical,
+      "allowed",
+      client => client.storage.from("roadbook-images").createSignedUrl(fixturePaths.historical, 3600),
+    );
+    assert.equal(await fetchSigned(ownerHistorical.result), 200);
+    const otherPrivate = await storageScenario(
+      other,
+      "other-user-sign-private-denied",
+      "createSignedUrl",
+      fixturePaths.private,
+      "denied",
+      client => client.storage.from("roadbook-images").createSignedUrl(fixturePaths.private, 3600),
+    );
+    assertDenied(otherPrivate.result, "un autre utilisateur ne doit pas signer un media prive");
+    const orphanSign = await storageScenario(
+      owner,
+      "owner-sign-orphan-denied",
+      "createSignedUrl",
+      fixturePaths.orphan,
+      "denied",
+      client => client.storage.from("roadbook-images").createSignedUrl(fixturePaths.orphan, 3600),
+    );
+    assertDenied(orphanSign.result, "un objet sans ligne media ne doit pas etre signable");
+
+    const download = await storageScenario(
+      owner,
+      "owner-download-private-allowed",
+      "download",
+      fixturePaths.private,
+      "allowed",
+      client => client.storage.from("roadbook-images").download(fixturePaths.private),
+    );
+    assert.ifError(download.result.error);
+    assert.equal(await download.result.data.text(), fixturePaths.private);
+
+    }
+
+    if (sprint4c1RequestedPhase === "owner-write") {
+    const simpleUpload = await storageScenario(
+      owner,
+      "owner-upload-simple-allowed",
+      "upload",
+      fixturePaths.simpleUpload,
+      "allowed",
+      client => client.storage.from("roadbook-images").upload(fixturePaths.simpleUpload, asBlob("simple")),
+    );
+    assert.ifError(simpleUpload.result.error);
+    const initialUpsert = await storageScenario(
+      owner,
+      "owner-upload-upsert-seed-allowed",
+      "upload",
+      fixturePaths.upsert,
+      "allowed",
+      client => client.storage.from("roadbook-images").upload(fixturePaths.upsert, asBlob("upsert-v1")),
+    );
+    assert.ifError(initialUpsert.result.error);
+    const upsert = await storageScenario(
+      owner,
+      "owner-upsert-allowed",
+      "upload upsert",
+      fixturePaths.upsert,
+      "allowed",
+      client => client.storage.from("roadbook-images").upload(
+        fixturePaths.upsert,
+        asBlob("upsert-v2"),
+        { upsert: true },
+      ),
+    );
+    assert.ifError(upsert.result.error);
+    const initialUpdate = await storageScenario(
+      owner,
+      "owner-upload-update-seed-allowed",
+      "upload",
+      fixturePaths.update,
+      "allowed",
+      client => client.storage.from("roadbook-images").upload(fixturePaths.update, asBlob("update-v1")),
+    );
+    assert.ifError(initialUpdate.result.error);
+    const update = await storageScenario(
+      owner,
+      "owner-update-allowed",
+      "update",
+      fixturePaths.update,
+      "allowed",
+      client => client.storage.from("roadbook-images").update(fixturePaths.update, asBlob("update-v2")),
+    );
+    assert.ifError(update.result.error);
+    const initialRemove = await storageScenario(
+      owner,
+      "owner-upload-remove-seed-allowed",
+      "upload",
+      fixturePaths.remove,
+      "allowed",
+      client => client.storage.from("roadbook-images").upload(fixturePaths.remove, asBlob("remove")),
+    );
+    assert.ifError(initialRemove.result.error);
+    const remove = await storageScenario(
+      owner,
+      "owner-remove-allowed",
+      "remove",
+      fixturePaths.remove,
+      "allowed",
+      client => client.storage.from("roadbook-images").remove([fixturePaths.remove]),
+    );
+    assert.ifError(remove.result.error);
+    const removedObject = await storageScenario(
+      serviceObserved,
+      "service-check-owner-remove-object-absent",
+      "download",
+      fixturePaths.remove,
+      "absent",
+      client => client.storage.from("roadbook-images").download(fixturePaths.remove),
+    );
+    assert.ok(removedObject.result.error, "owner remove doit supprimer effectivement l'objet");
+
+    }
+
+    if (sprint4c1RequestedPhase === "other-user-write") {
+    const otherUpload = await storageScenario(
+      other,
+      "other-user-upload-denied",
+      "upload",
+      fixturePaths.otherUpload,
+      "denied",
+      client => client.storage.from("roadbook-images").upload(fixturePaths.otherUpload, asBlob("denied")),
+    );
+    assertDenied(otherUpload.result, "un autre utilisateur ne doit pas uploader");
+    const deniedUploadAbsent = await storageScenario(
+      serviceObserved,
+      "service-check-other-upload-object-absent",
+      "download",
+      fixturePaths.otherUpload,
+      "absent",
+      client => client.storage.from("roadbook-images").download(fixturePaths.otherUpload),
+    );
+    assert.ok(deniedUploadAbsent.result.error, "l'upload refuse ne doit creer aucun objet");
+    const otherUpsert = await storageScenario(
+      other,
+      "other-user-upsert-denied",
+      "upload upsert",
+      fixturePaths.upsert,
+      "denied",
+      client => client.storage.from("roadbook-images").upload(
+        fixturePaths.upsert,
+        asBlob("denied"),
+        { upsert: true },
+      ),
+    );
+    assertDenied(otherUpsert.result, "un autre utilisateur ne doit pas faire d'upsert");
+    const unchangedUpsert = await storageScenario(
+      serviceObserved,
+      "service-check-other-upsert-object-unchanged",
+      "download",
+      fixturePaths.upsert,
+      "unchanged",
+      client => client.storage.from("roadbook-images").download(fixturePaths.upsert),
+    );
+    assert.ifError(unchangedUpsert.result.error);
+    assert.equal(await unchangedUpsert.result.data.text(), "upsert-seed");
+    const otherUpdate = await storageScenario(
+      other,
+      "other-user-update-denied",
+      "update",
+      fixturePaths.update,
+      "denied",
+      client => client.storage.from("roadbook-images").update(fixturePaths.update, asBlob("denied")),
+    );
+    assertDenied(otherUpdate.result, "un autre utilisateur ne doit pas mettre a jour");
+    const unchangedUpdate = await storageScenario(
+      serviceObserved,
+      "service-check-other-update-object-unchanged",
+      "download",
+      fixturePaths.update,
+      "unchanged",
+      client => client.storage.from("roadbook-images").download(fixturePaths.update),
+    );
+    assert.ifError(unchangedUpdate.result.error);
+    assert.equal(await unchangedUpdate.result.data.text(), "update-seed");
+    const otherRemove = await storageScenario(
+      other,
+      "other-user-remove-denied",
+      "remove",
+      fixturePaths.otherRemove,
+      "denied",
+      client => client.storage.from("roadbook-images").remove([fixturePaths.otherRemove]),
+    );
+    console.log(`SCENARIO INFO ${JSON.stringify({
+      id: "other-user-remove-denied",
+      httpStatuses: otherRemove.httpStatuses,
+      clientError: Boolean(otherRemove.result.error),
+      deletedRows: Array.isArray(otherRemove.result.data) ? otherRemove.result.data.length : null,
+      interpretation: "HTTP 200 possible; suppression vide; autorisation metier refusee si objet preserve",
+    })}`);
+    const otherRemoveStillExists = await storageScenario(
+      serviceObserved,
+      "service-check-other-remove-object-still-present",
+      "download",
+      fixturePaths.otherRemove,
+      "allowed",
+      client => client.storage.from("roadbook-images").download(fixturePaths.otherRemove),
+    );
+    assert.ifError(otherRemoveStillExists.result.error);
+    assert.equal(await otherRemoveStillExists.result.data.text(), "otherRemove-seed");
+
+    }
+
+    if (sprint4c1RequestedPhase === "listing") {
+    const listingCases = [
+      { id: "anon-list-denied", observed: anonObserved },
+      { id: "owner-list-denied", observed: owner },
+      { id: "other-user-list-denied", observed: other },
+    ];
+    const listingResults = [];
+    for (const listingCase of listingCases) {
+      const listing = await storageScenario(
+        listingCase.observed,
+        listingCase.id,
+        "list",
+        prefix,
+        "denied or empty",
+        client => client.storage.from("roadbook-images").list(prefix, { limit: 100 }),
+      );
+      const items = Array.isArray(listing.result.data) ? listing.result.data : [];
+      const visibleFixtureNames = items
+        .map(item => item?.name)
+        .filter(name => typeof name === "string")
+        .filter(name => Object.values(fixturePaths).some(value => value.endsWith(`/${name}`)));
+      const result = {
+        id: listingCase.id,
+        httpStatuses: listing.httpStatuses,
+        clientError: Boolean(listing.result.error),
+        returnedCount: items.length,
+        visibleFixtureNames,
+      };
+      listingResults.push(result);
+      console.log(`[sprint-4c1] listing-result ${JSON.stringify({
+        ...result,
+        interpretation: visibleFixtureNames.length === 0
+          ? "refus effectif: HTTP 200 avec liste vide autorise"
+          : "echec: une fixture existante est visible",
+      })}`);
+    }
+    assert.deepEqual(
+      listingResults.map(result => result.id),
+      listingCases.map(listingCase => listingCase.id),
+      "les trois scenarios de listing doivent etre executes",
+    );
+    for (const listingResult of listingResults) {
+      assert.deepEqual(
+        listingResult.visibleFixtureNames,
+        [],
+        `${listingResult.id} ne doit exposer aucune fixture existante`,
+      );
+    }
+    }
+
+    if (sprint4c1RequestedPhase === "cleanup-check") {
+      const cleanupCheckDb = new Client({
+        connectionString: process.env.SUPABASE_DB_URL,
+        connectionTimeoutMillis: stepTimeoutMs,
+        query_timeout: stepTimeoutMs,
+      });
+      try {
+        await withTimeout(cleanupCheckDb.connect(), stepTimeoutMs, "connexion PostgreSQL cleanup-check");
+        const cleanupCheck = await withTimeout(
+          cleanupCheckDb.query(`select
+            (select count(*) from storage.objects where name like '__sprint_4c1_http__/%')::int as objects,
+            (select count(*) from public.media where path like '__sprint_4c1_http__/%')::int as media,
+            (select count(*) from public.roadbooks where slug like '__sprint-4c1-http-%')::int as roadbooks,
+            (select count(*) from public.profiles p join auth.users u on u.id=p.id where u.email like 'sprint-4c1-%@example.invalid')::int as profiles,
+            (select count(*) from auth.users where email like 'sprint-4c1-%@example.invalid')::int as auth_users`),
+          stepTimeoutMs,
+          "requete PostgreSQL cleanup-check",
+        );
+        console.log(`[sprint-4c1] cleanup-check ${JSON.stringify(cleanupCheck.rows[0])}`);
+        assert.deepEqual(cleanupCheck.rows[0], { objects: 0, media: 0, roadbooks: 0, profiles: 0, auth_users: 0 });
+      } finally {
+        await closePostgresClient(cleanupCheckDb, "cleanup-check");
+      }
+    }
+  } finally {
+    const cleanupErrors = [];
+    const cleanupStep = async (name, task) => {
+      const startedMs = performance.now();
+      console.log(`service-cleanup START ${name}`);
+      try {
+        const result = await task();
+        if (result?.error) throw result.error;
+        console.log(`service-cleanup END ${name} ${Math.round(performance.now() - startedMs)}ms`);
+      } catch (error) {
+        cleanupErrors.push(error);
+        console.error(`service-cleanup FAIL ${name} ${Math.round(performance.now() - startedMs)}ms: ${safeLogMessage(error.message)}`);
+      }
+    };
+
+    if (sprint4c1RequestedPhase !== "cleanup-check") {
+      await cleanupStep("service-cleanup-remove-objects", async () => {
+        const scenario = await storageScenario(
+          serviceObserved,
+          "service-cleanup-remove",
+          "remove",
+          Object.values(fixturePaths).join(","),
+          "allowed",
+          client => client.storage.from("roadbook-images").remove(Object.values(fixturePaths)),
+        );
+        return scenario.result;
+      });
+    }
+    if (roadbookId !== null) {
+      await cleanupStep(
+        "service-cleanup-delete-media",
+        () => service.from("media").delete().eq("roadbook_id", roadbookId),
+      );
+      await cleanupStep(
+        "service-cleanup-delete-roadbook",
+        () => service.from("roadbooks").delete().eq("id", roadbookId),
+      );
+    }
+    if (userIds.length > 0) {
+      await cleanupStep(
+        "service-cleanup-delete-profiles",
+        () => service.from("profiles").delete().in("id", userIds),
+      );
+      for (const userId of userIds) {
+        await cleanupStep(
+          `service-cleanup-delete-auth-user-${userId}`,
+          () => service.auth.admin.deleteUser(userId),
+        );
+      }
+    }
+
+    const verificationDb = new Client({
+      connectionString: process.env.SUPABASE_DB_URL,
+      connectionTimeoutMillis: stepTimeoutMs,
+      query_timeout: stepTimeoutMs,
+    });
+    let counters;
+    try {
+      await withTimeout(
+        verificationDb.connect(),
+        stepTimeoutMs,
+        "connexion PostgreSQL final-fixture-verification",
+      );
+      const verificationQuery = sprint4c1RequestedPhase === "cleanup-check"
+        ? {
+            text: `select
+              (select count(*) from storage.objects where name like '__sprint_4c1_http__/%')::int as objects,
+              (select count(*) from public.media where path like '__sprint_4c1_http__/%')::int as media,
+              (select count(*) from public.roadbooks where slug like '__sprint-4c1-http-%')::int as roadbooks,
+              (select count(*) from public.profiles p join auth.users u on u.id=p.id where u.email like 'sprint-4c1-%@example.invalid')::int as profiles,
+              (select count(*) from auth.users where email like 'sprint-4c1-%@example.invalid')::int as auth_users`,
+            values: [],
+          }
+        : {
+            text: `select
+              (select count(*) from storage.objects where bucket_id='roadbook-images' and name=any($1::text[]))::int as objects,
+              (select count(*) from public.media where roadbook_id=$2::bigint)::int as media,
+              (select count(*) from public.roadbooks where id=$2::bigint)::int as roadbooks,
+              (select count(*) from public.profiles where id=any($3::uuid[]))::int as profiles,
+              (select count(*) from auth.users where id=any($3::uuid[]))::int as auth_users`,
+            values: [Object.values(fixturePaths), roadbookId, userIds],
+          };
+      const verification = await withTimeout(
+        verificationDb.query(verificationQuery.text, verificationQuery.values),
+        stepTimeoutMs,
+        "requete PostgreSQL final-fixture-verification",
+      );
+      counters = verification.rows[0];
+    } finally {
+      const handlesBeforeClose = process
+        ._getActiveHandles()
+        .map(handle => handle?.constructor?.name ?? "Unknown");
+      console.log("[sprint-4c1] active-handles-before-postgres-close", handlesBeforeClose);
+      await closePostgresClient(verificationDb, "final-fixture-verification");
+    }
+    console.log(`service-cleanup COUNTERS ${JSON.stringify(counters)}`);
+    assert.deepEqual(counters, { objects: 0, media: 0, roadbooks: 0, profiles: 0, auth_users: 0 });
+    await new Promise(resolve => setImmediate(resolve));
+    const activeHandles = process
+      ._getActiveHandles()
+      .map(handle => handle?.constructor?.name ?? "Unknown");
+    const activeRequests = process
+      ._getActiveRequests()
+      .map(request => request?.constructor?.name ?? "Unknown");
+    console.log("[sprint-4c1] active-handles", activeHandles);
+    console.log("[sprint-4c1] active-requests", activeRequests);
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(cleanupErrors, "une ou plusieurs actions service-cleanup ont echoue");
+    }
+    console.log(`[sprint-4c1] phase-clean ${sprint4c1RequestedPhase}`);
   }
 });
