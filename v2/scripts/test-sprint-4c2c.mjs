@@ -119,29 +119,26 @@ test("scope roadbook → chemin roadbook/role/uuid", () => {
   assert.equal(path.split("/").length, 5);
 });
 
-test("scope stage → chemin stages/id/uuid", () => {
+test("scope stage → chemin stages/id/role/uuid", () => {
   const path = buildGpxPath(UID, RB, "stage", "official", 7, null);
-  assert.ok(path.startsWith(`${UID}/${RB}/stages/7/`));
+  assert.ok(path.startsWith(`${UID}/${RB}/stages/7/official/`));
 });
 
-test("scope variant → chemin stages/id/variants/id/uuid", () => {
+test("scope variant → chemin stages/id/variants/id/role/uuid", () => {
   const path = buildGpxPath(UID, RB, "variant", "official", 7, 3);
-  assert.ok(path.startsWith(`${UID}/${RB}/stages/7/variants/3/`));
+  assert.ok(path.startsWith(`${UID}/${RB}/stages/7/variants/3/official/`));
 });
 
-test("scope variant sans variantId → fallthrough à roadbook/role", () => {
-  const path = buildGpxPath(UID, RB, "variant", "custom", 7, null);
-  assert.ok(path.startsWith(`${UID}/${RB}/roadbook/custom/`));
+test("scope variant sans variantId → erreur", () => {
+  assert.throws(() => buildGpxPath(UID, RB, "variant", "custom", 7, null), /gpx-path-variant-id-required/);
 });
 
-test("scope variant sans stageId → fallthrough", () => {
-  const path = buildGpxPath(UID, RB, "variant", "official", null, 3);
-  assert.ok(path.startsWith(`${UID}/${RB}/roadbook/official/`));
+test("scope variant sans stageId → erreur", () => {
+  assert.throws(() => buildGpxPath(UID, RB, "variant", "official", null, 3), /gpx-path-stage-id-required/);
 });
 
-test("scope stage sans stageId → fallthrough", () => {
-  const path = buildGpxPath(UID, RB, "stage", "official", null, null);
-  assert.ok(path.startsWith(`${UID}/${RB}/roadbook/official/`));
+test("scope stage sans stageId → erreur", () => {
+  assert.throws(() => buildGpxPath(UID, RB, "stage", "official", null, null), /gpx-path-stage-id-required/);
 });
 
 // ===================== 10.3 selectUniqueGpxMedia / selectGpxMedia =====================

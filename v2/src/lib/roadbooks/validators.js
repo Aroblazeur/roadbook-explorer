@@ -12,10 +12,34 @@ export function normalizeNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+const GPX_SCOPES_VALID = new Set(["roadbook", "stage", "variant"]);
+const GPX_ROLES_VALID = new Set(["official", "custom"]);
+
+function isPosInt(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
 export function buildGpxPath(userId, roadbookId, scope, role, stageId, variantId) {
-  if (scope === "variant" && stageId && variantId) return `${userId}/${roadbookId}/stages/${stageId}/variants/${variantId}/${crypto.randomUUID()}`;
-  if (scope === "stage" && stageId) return `${userId}/${roadbookId}/stages/${stageId}/${crypto.randomUUID()}`;
-  return `${userId}/${roadbookId}/roadbook/${role}/${crypto.randomUUID()}`;
+  if (!userId || String(userId).trim() === "") throw new Error("gpx-path-user-id-required");
+  if (!isPosInt(roadbookId)) throw new Error("gpx-path-roadbook-id-invalid");
+  if (!GPX_SCOPES_VALID.has(scope)) throw new Error("gpx-path-scope-invalid");
+  if (!GPX_ROLES_VALID.has(role)) throw new Error("gpx-path-role-invalid");
+  if (scope === "roadbook") {
+    if (stageId != null) throw new Error("gpx-path-stage-id-not-allowed");
+    if (variantId != null) throw new Error("gpx-path-variant-id-not-allowed");
+    return `${userId}/${roadbookId}/roadbook/${role}/${crypto.randomUUID()}`;
+  }
+  if (scope === "stage") {
+    if (!isPosInt(stageId)) throw new Error("gpx-path-stage-id-required");
+    if (variantId != null) throw new Error("gpx-path-variant-id-not-allowed");
+    return `${userId}/${roadbookId}/stages/${stageId}/${role}/${crypto.randomUUID()}`;
+  }
+  if (scope === "variant") {
+    if (!isPosInt(stageId)) throw new Error("gpx-path-stage-id-required");
+    if (!isPosInt(variantId)) throw new Error("gpx-path-variant-id-required");
+    return `${userId}/${roadbookId}/stages/${stageId}/variants/${variantId}/${role}/${crypto.randomUUID()}`;
+  }
+  throw new Error("gpx-path-scope-invalid");
 }
 
 export function resizeImage(file, maxWidth = 1600) {

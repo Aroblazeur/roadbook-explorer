@@ -68,13 +68,18 @@ test("normalizeNumber invalide", () => {
 });
 
 test("buildGpxPath roadbook official", () => {
-  const path = buildGpxPath("u1", "42", "roadbook", "official", null);
+  const path = buildGpxPath("u1", 42, "roadbook", "official", null, null);
   assert.ok(path.startsWith("u1/42/roadbook/official/"), `path=${path}`);
 });
 
-test("buildGpxPath stage", () => {
-  const path = buildGpxPath("u1", "42", "stage", null, "s1");
-  assert.ok(path.startsWith("u1/42/stages/s1/"), `path=${path}`);
+test("buildGpxPath stage official", () => {
+  const path = buildGpxPath("u1", 42, "stage", "official", 1, null);
+  assert.ok(path.startsWith("u1/42/stages/1/official/"), `path=${path}`);
+});
+
+test("buildGpxPath stage custom", () => {
+  const path = buildGpxPath("u1", 42, "stage", "custom", 1, null);
+  assert.ok(path.startsWith("u1/42/stages/1/custom/"), `path=${path}`);
 });
 
 test("defaultStageFormState retourne un état vide", () => {

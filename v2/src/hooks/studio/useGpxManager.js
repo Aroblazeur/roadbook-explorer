@@ -31,8 +31,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
 
       const byStage = {};
       const byVariant = {};
-      for (const { media, classification } of selection.classified) {
-        if (classification.status === "ambiguous" || classification.status === "invalid") continue;
+      for (const { media, classification } of selection.unique.values()) {
         if (classification.scope === "stage" && classification.stageId) {
           byStage[classification.stageId] = media;
         } else if (classification.scope === "variant" && classification.stageId && classification.variantId) {
@@ -42,6 +41,12 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
       }
       setGpxByStage(byStage);
       setGpxByVariant(byVariant);
+
+      if (selection.duplicates.length > 0) {
+        setGpxError("Certains GPX ne peuvent pas être chargés car plusieurs médias existent pour la même cible.");
+      } else {
+        setGpxError(null);
+      }
     } catch (err) {
       setGpxError(formatGpxUserError(err, "Impossible de charger les GPX."));
     }
@@ -70,7 +75,15 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
-      const path = buildGpxPath(userId, roadbookId, scope, role, stageId, variantId) + `-${file.name}`;
+      let path;
+      try {
+        path = buildGpxPath(userId, roadbookId, scope, role, stageId, variantId);
+      } catch (pathErr) {
+        setGpxError(formatGpxUserError(pathErr, "Impossible de construire le chemin de stockage."));
+        setGpxUploading(null);
+        return;
+      }
+      path += `-${file.name}`;
       await uploadGpx(supabase, GPX_BUCKET, path, file, {
         record: { ...built.record, file_name: file.name, mime_type: "application/gpx+xml", uploaded_by: userId },
       });
@@ -153,7 +166,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages }) {
       const durationStr = formatDuration(hours);
       return { metrics, durationStr, stage, error: null };
     } catch (err) {
-      return { error: err.message, stageNumber: stage.stage_number };
+      return { error: formatGpxUserError(err, "Impossible d'analyser le GPX de cette étape."), stageNumber: stage.stage_number };
     }
   }, [supabase]);
 
