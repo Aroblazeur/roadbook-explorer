@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { fetchAndComputeGpxMetrics, estimateGpxHours, formatDuration } from "@/lib/gpx-metrics";
 import { loadGpxRows, getSignedUrl } from "@/lib/roadbooks/loaders";
 import { buildCanonicalGpxMediaInput, formatGpxUserError, classifyGpxMedia, selectGpxMedia, selectUniqueGpxMedia } from "@/lib/roadbooks/gpx-media";
-import { uploadGpx, updateGpxRecord, deleteGpx as deleteGpxWriter, updateStage } from "@/lib/roadbooks/writers";
+import { uploadGpx as uploadGpxObject, updateGpxRecord, deleteGpx as deleteGpxWriter, updateStage } from "@/lib/roadbooks/writers";
 import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
 
 const GPX_BUCKET = "roadbook-gpx";
@@ -55,14 +55,27 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
   const uploadGpx = useCallback(async (file, { scope, role, stageId, variantId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
-    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, existingMetadata: { original_name: file.name, original_size: file.size } });
+    let built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, existingMetadata: { original_name: file.name, original_size: file.size } });
     if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
+    let existingMedia = null;
     try {
       const rows = await loadGpxRows(supabase, roadbookId);
       const existing = selectGpxMedia(rows, { roadbookId: Number(roadbookId), stageId: stageId ?? null, variantId: variantId ?? null, scope, role });
       if (existing.status === "selected") {
-        setGpxError(`Un GPX ${role} existe déjà pour cette cible. Utilisez le remplacement.`);
-        return;
+        existingMedia = existing.media;
+        built = buildCanonicalGpxMediaInput({
+          roadbookId: Number(roadbookId),
+          scope,
+          role,
+          stageId,
+          variantId,
+          existingMetadata: {
+            ...existingMedia.metadata,
+            original_name: file.name,
+            original_size: file.size,
+          },
+        });
+        if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
       }
       if (existing.status === "duplicate-identity") {
         setGpxError("Impossible d'enregistrer ce GPX : plusieurs médias existent déjà pour cette cible.");
@@ -75,6 +88,13 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
+      if (existingMedia) {
+        await uploadGpxObject(supabase, GPX_BUCKET, existingMedia.path, file, { upsert: true });
+        await updateGpxRecord(supabase, existingMedia.id, { file_name: file.name, metadata: built.record.metadata });
+        await reloadGpx();
+        await onMutation?.();
+        return;
+      }
       let path;
       try {
         path = buildGpxPath(userId, Number(roadbookId), scope, role, stageId, variantId);
@@ -84,7 +104,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
         return;
       }
       path += `-${file.name}`;
-      await uploadGpx(supabase, GPX_BUCKET, path, file, {
+      await uploadGpxObject(supabase, GPX_BUCKET, path, file, {
         record: { ...built.record, file_name: file.name, mime_type: "application/gpx+xml", uploaded_by: userId },
       });
       await reloadGpx();
@@ -111,7 +131,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     setGpxError(null);
     setGpxUploading(role ?? stageId);
     try {
-      await uploadGpx(supabase, GPX_BUCKET, mediaRow.path, file, { upsert: true });
+      await uploadGpxObject(supabase, GPX_BUCKET, mediaRow.path, file, { upsert: true });
       await updateGpxRecord(supabase, mediaRow.id, { file_name: file.name, metadata: built.record.metadata });
       await reloadGpx();
       await onMutation?.();
