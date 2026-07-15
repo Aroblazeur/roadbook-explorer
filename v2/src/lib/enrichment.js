@@ -62,7 +62,8 @@ export function createPoiIndex(items) {
         description: safeDescription(item.description),
         coordinates: safeCoordinates(item.coordinates),
         url: safeImageUrl(item.url || item.link || item.sourceUrl),
-        source: String(item.source || "").trim()
+        source: String(item.source || "").trim(),
+        location: String(item.location || item.region || item.address || "").trim(),
       });
     }
   });
@@ -75,34 +76,44 @@ export function createAccommodationIndex(items) {
     if (!item || item.status !== "ok") return;
     const key = normalizeAccommodationUrl(item.url);
     if (!key) return;
-    const prev = index.get(key) || { name: "", image: "", description: "", url: "" };
+    const prev = index.get(key) || { name: "", image: "", description: "", url: "", location: "" };
     index.set(key, {
       name: String(item.name || "").trim() || prev.name,
       image: safeImageUrl(item.image) || prev.image,
       description: safeDescription(item.description) || prev.description,
       url: safeImageUrl(item.url) || prev.url,
+      location: String(item.location || item.region || item.address || "").trim() || prev.location,
     });
   });
   return index;
 }
 
-export function findPoi(poiName, poiIndex) {
+function matchesLocation(entry, locations) {
+  const expected = (locations ?? []).map(normalizeText).filter(value => value.length >= 3);
+  if (!expected.length) return true;
+  const evidence = normalizeText([entry?.name, entry?.description, entry?.location, entry?.url].filter(Boolean).join(" "));
+  return expected.some(location => evidence.includes(location));
+}
+
+export function findPoi(poiName, poiIndex, locations = []) {
   if (!poiIndex || !poiName) return null;
   const key = normalizeText(poiName);
-  return poiIndex.get(key) || null;
+  const entry = poiIndex.get(key) || null;
+  return entry && matchesLocation(entry, locations) ? entry : null;
 }
 
-export function findAccommodation(url, accommodationIndex) {
+export function findAccommodation(url, accommodationIndex, locations = []) {
   if (!accommodationIndex || !url) return null;
   const key = normalizeAccommodationUrl(url);
-  return accommodationIndex.get(key) || null;
+  const entry = accommodationIndex.get(key) || null;
+  return entry && matchesLocation(entry, locations) ? entry : null;
 }
 
-export function findAccommodationByName(name, accommodationIndex) {
+export function findAccommodationByName(name, accommodationIndex, locations = []) {
   if (!accommodationIndex || !name) return null;
   const normalized = normalizeText(name);
   for (const entry of accommodationIndex.values()) {
-    if (normalizeText(entry.name) === normalized) return entry;
+    if (normalizeText(entry.name) === normalized && matchesLocation(entry, locations)) return entry;
   }
   return null;
 }

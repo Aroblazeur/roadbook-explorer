@@ -1,6 +1,6 @@
 function accommodationValue(value, trim = true) {
   if (typeof value === "string") {
-    return { name: trim ? value.trim() : value, url: "", photo: "", photoMediaId: null, type: "", price: "", note: "", description: "", preview: null };
+    return { name: trim ? value.trim() : value, url: "", photo: "", photoMediaId: null, type: "", price: "", note: "", description: "", preview: null, enrichment: null };
   }
   const source = value && typeof value === "object" ? value : {};
   const text = (field) => {
@@ -19,6 +19,9 @@ function accommodationValue(value, trim = true) {
     note: text("note"),
     description: text("description"),
     preview: normalizeLinkPreview(source.preview),
+    enrichment: source.enrichment && typeof source.enrichment === "object"
+      ? { source: String(source.enrichment.source ?? "").trim(), confidence: String(source.enrichment.confidence ?? "").trim() }
+      : null,
   };
 }
 

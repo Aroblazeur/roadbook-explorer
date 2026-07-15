@@ -31,6 +31,7 @@ export function completeAccommodation(stage, found) {
   if (isMissingAutomationValue(completed.accommodation_photo) && !metadata.accommodationPhotoMediaId && found?.image) { completed.accommodation_photo = found.image; filled++; }
   if (isMissingAutomationValue(metadata.accommodationDescription) && found?.description) { metadata.accommodationDescription = found.description; filled++; }
   if (!metadata.accommodationPreview && found?.preview) metadata.accommodationPreview = found.preview;
+  if (found?.confidence === "high" && found?.source) metadata.accommodationEnrichment = { source: found.source, confidence: found.confidence };
   completed.metadata = metadata;
   return { value: completed, filled };
 }
@@ -42,6 +43,7 @@ export function completeAccommodationValue(accommodation, found) {
   if (isMissingAutomationValue(completed.photo) && !completed.photoMediaId && found?.image) { completed.photo = found.image; filled++; }
   if (isMissingAutomationValue(completed.description) && found?.description) { completed.description = found.description; filled++; }
   if (!completed.preview && found?.preview) completed.preview = found.preview;
+  if (found?.confidence === "high" && found?.source) completed.enrichment = { source: found.source, confidence: found.confidence };
   return { value: completed, filled };
 }
 
@@ -53,6 +55,9 @@ export function completePoi(poi, found) {
   if (isMissingAutomationValue(completed.link_url) && found?.url) { completed.link_url = found.url; filled++; }
   if (!completed.metadata?.linkPreview && found?.preview) {
     completed.metadata = { ...(completed.metadata ?? {}), linkPreview: found.preview };
+  }
+  if (found?.confidence === "high" && found?.source) {
+    completed.metadata = { ...(completed.metadata ?? {}), resourceEnrichment: { source: found.source, confidence: found.confidence } };
   }
   return { value: completed, filled };
 }

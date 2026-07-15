@@ -11,6 +11,10 @@ function cleanItem(value, index) {
     kind: source.kind === "accommodation" ? "accommodation" : "poi",
     name: String(source.name ?? "").trim().slice(0, 300),
     region: String(source.region ?? "").trim().slice(0, 300),
+    locations: (Array.isArray(source.locations) ? source.locations : [])
+      .map(value => String(value ?? "").trim().slice(0, 300))
+      .filter(Boolean)
+      .slice(0, 6),
     url: String(source.url ?? "").trim().slice(0, 2_000),
   };
 }

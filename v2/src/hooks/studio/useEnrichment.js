@@ -53,6 +53,16 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
     );
     const report = { gpxStages: 0, gpxVariants: 0, pois: 0, accommodations: 0, fields: 0, warnings: [] };
     const poiUpdates = new Map();
+    const stageById = new Map(completedStages.map(stage => [String(stage.id), stage]));
+    const variantById = new Map(Object.values(completedVariantsByStage).flat().map(variant => [String(variant.id), variant]));
+    const locationsForEntity = entity => [entity?.arrival, entity?.departure].map(value => String(value ?? "").trim()).filter(Boolean);
+    const locationsForPoi = poi => {
+      const entity = poi?.variant_id != null ? variantById.get(String(poi.variant_id)) : stageById.get(String(poi?.stage_id));
+      return locationsForEntity(entity);
+    };
+    const safeEnrichmentResult = result => result?.confidence === "high"
+      ? result
+      : result?.preview ? { preview: result.preview } : null;
 
     let activePoiIndex = poiIndex;
     let activeAccommodationIndex = accommodationIndex;
@@ -116,15 +126,16 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
     if (activeAccommodationIndex) {
       for (const entity of [...completedStages, ...Object.values(completedVariantsByStage).flat()]) {
         const primary = primaryAccommodationFromStage(entity);
-        let found = primary.url ? findAccommodation(primary.url, activeAccommodationIndex) : null;
-        if (!found && primary.name) found = findAccommodationByName(primary.name, activeAccommodationIndex);
+        const entityLocations = locationsForEntity(entity);
+        let found = primary.url ? findAccommodation(primary.url, activeAccommodationIndex, entityLocations) : null;
+        if (!found && primary.name) found = findAccommodationByName(primary.name, activeAccommodationIndex, entityLocations);
         if (found) {
           const completion = completeAccommodation(entity, found);
           Object.assign(entity, completion.value);
           if (completion.filled) { report.accommodations++; report.fields += completion.filled; }
         }
         const alternatives = alternativesFromStage(entity).map(item => {
-          const alternativeFound = (item.url ? findAccommodation(item.url, activeAccommodationIndex) : null) || findAccommodationByName(item.name, activeAccommodationIndex);
+          const alternativeFound = (item.url ? findAccommodation(item.url, activeAccommodationIndex, entityLocations) : null) || findAccommodationByName(item.name, activeAccommodationIndex, entityLocations);
           if (!alternativeFound) return item;
           const completion = completeAccommodationValue(item, alternativeFound);
           if (completion.filled) { report.accommodations++; report.fields += completion.filled; }
@@ -137,7 +148,7 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
     if (activePoiIndex) {
       for (const pois of [...Object.values(completedPois), ...Object.values(completedVariantPois)]) {
         for (const poi of pois) {
-          const found = findPoi(poi.name, activePoiIndex);
+          const found = findPoi(poi.name, activePoiIndex, [poi.region, ...locationsForPoi(poi)].filter(Boolean));
           if (!found) continue;
           const completion = completePoi(poi, found);
           Object.assign(poi, completion.value);
@@ -159,18 +170,18 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
       const scope = completedStages.includes(entity) ? `stage:${entity.id}` : `variant:${entity.id}`;
       const primary = primaryAccommodationFromStage(entity);
       if ((isMissingAutomationValue(primary.photo) && !primary.photoMediaId) || isMissingAutomationValue(primary.description)) {
-        if (primary.name || primary.url) remoteItems.push({ id: `${scope}:primary`, kind: "accommodation", name: primary.name, url: primary.url });
+        if (primary.name || primary.url) remoteItems.push({ id: `${scope}:primary`, kind: "accommodation", name: primary.name, url: primary.url, locations: locationsForEntity(entity) });
       }
       alternativesFromStage(entity).forEach((item, index) => {
         if (((isMissingAutomationValue(item.photo) && !item.photoMediaId) || isMissingAutomationValue(item.description)) && (item.name || item.url)) {
-          remoteItems.push({ id: `${scope}:alternative:${index}`, kind: "accommodation", name: item.name, url: item.url });
+          remoteItems.push({ id: `${scope}:alternative:${index}`, kind: "accommodation", name: item.name, url: item.url, locations: locationsForEntity(entity) });
         }
       });
     }
     for (const pois of [...Object.values(completedPois), ...Object.values(completedVariantPois)]) {
       for (const poi of pois) {
         if ((isMissingAutomationValue(poi.photo_url) && !poi.metadata?.poiPhotoMediaId) || isMissingAutomationValue(poi.description)) {
-          remoteItems.push({ id: `poi:${poi.id}`, kind: "poi", name: poi.name, region: poi.region, url: poi.link_url });
+          remoteItems.push({ id: `poi:${poi.id}`, kind: "poi", name: poi.name, region: poi.region, url: poi.link_url, locations: locationsForPoi(poi) });
         }
       }
     }
@@ -178,14 +189,14 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
     const remoteResults = await enrichResourceBatch(remoteItems);
     for (const entity of [...completedStages, ...Object.values(completedVariantsByStage).flat()]) {
       const scope = completedStages.includes(entity) ? `stage:${entity.id}` : `variant:${entity.id}`;
-      const primaryResult = remoteResults.get(`${scope}:primary`);
+      const primaryResult = safeEnrichmentResult(remoteResults.get(`${scope}:primary`));
       if (primaryResult) {
         const completion = completeAccommodation(entity, primaryResult);
         Object.assign(entity, completion.value);
         if (completion.filled) { report.accommodations++; report.fields += completion.filled; }
       }
       const alternatives = alternativesFromStage(entity).map((item, index) => {
-        const result = remoteResults.get(`${scope}:alternative:${index}`);
+        const result = safeEnrichmentResult(remoteResults.get(`${scope}:alternative:${index}`));
         if (!result) return item;
         const completion = completeAccommodationValue(item, result);
         if (completion.filled) { report.accommodations++; report.fields += completion.filled; }
@@ -195,7 +206,7 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
     }
     for (const pois of [...Object.values(completedPois), ...Object.values(completedVariantPois)]) {
       for (const poi of pois) {
-        const result = remoteResults.get(`poi:${poi.id}`);
+        const result = safeEnrichmentResult(remoteResults.get(`poi:${poi.id}`));
         if (!result) continue;
         const completion = completePoi(poi, result);
         Object.assign(poi, completion.value);
