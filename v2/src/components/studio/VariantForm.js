@@ -16,6 +16,7 @@ export default function VariantForm({
   onUploadVariantPhoto,
   images,
   onUploadAccommodationPhoto,
+  onUploadPoiPhoto,
   uploadLoading,
 }) {
   const [expandedVariants, setExpandedVariants] = useState(() => new Set());
@@ -127,6 +128,9 @@ export default function VariantForm({
                     clearPoiForm={clearPoiForm}
                     handlePoiSubmit={handlePoiSubmit}
                     handleDeletePoi={handleDeletePoi}
+                    images={images}
+                    onUploadPhoto={onUploadPoiPhoto}
+                    uploadLoading={uploadLoading}
                   />
                 </div>
 

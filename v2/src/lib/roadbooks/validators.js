@@ -100,7 +100,7 @@ export function stageToFormValues(stage) {
 export function buildStageRecord(id, form, editingStage) {
   const dayNumber = Number(form.dayNumber);
   const notes = form.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
-  const metadata = {};
+  const metadata = { ...(poiForm.metadata ?? {}) };
   if (form.description) metadata.description = form.description;
   const record = {
     roadbook_id: Number(id),
@@ -123,6 +123,11 @@ export function buildStageRecord(id, form, editingStage) {
 
 export function buildPoiRecord(poiForm) {
   const mapQuery = [poiForm.name, poiForm.region].map(value => value?.trim()).filter(Boolean).join(", ");
+  const metadata = {};
+  const photoMediaId = Number(poiForm.photoMediaId);
+  if (Number.isInteger(photoMediaId) && photoMediaId > 0) metadata.poiPhotoMediaId = photoMediaId;
+  if (poiForm.preview) metadata.linkPreview = poiForm.preview;
+  else delete metadata.linkPreview;
   return {
     stage_id: poiForm.stage_id,
     variant_id: poiForm.variant_id ?? null,
@@ -131,9 +136,11 @@ export function buildPoiRecord(poiForm) {
     region: poiForm.region?.trim() || null,
     lat: null,
     lng: null,
+    photo_url: poiForm.photoUrl?.trim() || null,
     link_url: poiForm.link?.trim() || (mapQuery
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`
       : null),
+    metadata,
   };
 }
 

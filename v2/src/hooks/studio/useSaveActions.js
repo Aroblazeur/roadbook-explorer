@@ -10,7 +10,7 @@ export default function useSaveActions({
   isPublic, setIsPublic,
   officialRoute, traceRoute,
   coverMode, coverUrl, coverMediaId,
-  stages, setStages, poisByStage, setPoisByStage, variantsByStage, setVariantsByStage, setTraceRoute,
+  stages, setStages, poisByStage, setPoisByStage, poisByVariant, setPoisByVariant, variantsByStage, setVariantsByStage, setTraceRoute,
   prepareAutomaticCompletion,
   prepareStartPointForSave, persistStartPoint, setStartPoint,
   setError, setSuccess, markRemoteConflict,
@@ -20,7 +20,7 @@ export default function useSaveActions({
   const [deletingRoadbook, setDeletingRoadbook] = useState(false);
   const handleSaveAll = useCallback(async () => {
     if (!title.trim()) { setError("Le titre est obligatoire."); return false; }
-    let automation = { stages, variantsByStage, poisByStage, poiUpdates: [], report: { fields: 0, warnings: [] } };
+    let automation = { stages, variantsByStage, poisByStage, poisByVariant, poiUpdates: [], report: { fields: 0, warnings: [] } };
     try {
       automation = await prepareAutomaticCompletion?.() ?? automation;
     } catch (error) {
@@ -35,6 +35,7 @@ export default function useSaveActions({
     const completedStages = automation.stages ?? stages;
     const completedVariantsByStage = automation.variantsByStage ?? variantsByStage;
     const completedPois = automation.poisByStage ?? poisByStage;
+    const completedVariantPois = automation.poisByVariant ?? poisByVariant;
     if (completedStages.some(stage => !normalizeNumber(stage.stage_number))) {
       setError("Chaque étape doit avoir un numéro valide.");
       return false;
@@ -82,6 +83,7 @@ export default function useSaveActions({
       setStages(completedStages);
       setVariantsByStage(completedVariantsByStage);
       setPoisByStage(completedPois);
+      setPoisByVariant?.(completedVariantPois);
       setTraceRoute(previous => ({
         ...previous,
         traceDist: traceDistance != null ? String(traceDistance) : "",
@@ -91,7 +93,7 @@ export default function useSaveActions({
       if (startPointAutomation.value) setStartPoint?.(startPointAutomation.value);
     }
     return saved;
-  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, variantsByStage, supabase, saveWithLock, setError, setStages, setVariantsByStage, setPoisByStage, setTraceRoute, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint]);
+  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, poisByVariant, variantsByStage, supabase, saveWithLock, setError, setStages, setVariantsByStage, setPoisByStage, setPoisByVariant, setTraceRoute, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint]);
 
   const handleToggleVisibility = useCallback(async () => {
     const result = await conditionalUpdateRoadbook(supabase, id, { is_public: !isPublic }, roadbook?.updated_at);

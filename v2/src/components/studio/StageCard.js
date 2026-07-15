@@ -24,6 +24,7 @@ export default function StageCard({
   onStageChange,
   onUploadStagePhoto,
   onUploadAccommodationPhoto,
+  onUploadPoiPhoto,
   onVariantChange,
   onUploadVariantPhoto,
   uploadLoading,
@@ -155,6 +156,9 @@ export default function StageCard({
               clearPoiForm={clearPoiForm}
               handlePoiSubmit={handlePoiSubmit}
               handleDeletePoi={handleDeletePoi}
+              images={images}
+              onUploadPhoto={onUploadPoiPhoto}
+              uploadLoading={uploadLoading}
             />
           </div>
 
@@ -190,6 +194,7 @@ export default function StageCard({
       onUploadVariantPhoto={onUploadVariantPhoto}
       images={images}
       onUploadAccommodationPhoto={onUploadAccommodationPhoto}
+      onUploadPoiPhoto={onUploadPoiPhoto}
       uploadLoading={uploadLoading}
     />
     </>

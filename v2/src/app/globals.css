@@ -992,6 +992,13 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 }
 .stage-detail-poi--without-image { grid-template-columns: 1fr; }
 .stage-detail-poi > img { width: 100%; height: 130px; border-radius: 9px; object-fit: cover; }
+.resource-link-preview { display: grid; align-content: center; gap: 5px; min-width: 0; height: clamp(150px, 24vw, 220px); padding: 16px; overflow: hidden; border: 1px solid rgba(46, 125, 50, .24); border-radius: 12px; background: linear-gradient(135deg, #f1f8f2, #e7eee8); color: var(--text); text-decoration: none; }
+.stage-detail-poi > .resource-link-preview { height: 130px; border-radius: 9px; }
+.resource-link-preview__site { color: var(--primary-dark); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.resource-link-preview strong { overflow: hidden; font-size: .92rem; line-height: 1.3; text-overflow: ellipsis; }
+.resource-link-preview__description { display: -webkit-box; overflow: hidden; color: var(--text-light); font-size: .78rem; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.resource-link-preview__action { color: var(--primary); font-size: .76rem; font-weight: 750; }
+.resource-link-preview:hover { border-color: rgba(46, 125, 50, .5); background: #e8f5e9; }
 .stage-detail-poi__content { min-width: 0; }
 .stage-detail-poi__name { display: block; margin-bottom: 6px; font-size: .95rem; }
 .stage-detail-poi__name span { color: var(--primary); }
@@ -1014,6 +1021,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-accommodation__map { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-height: 48px; padding: 10px 14px; border: 1px solid rgba(46, 125, 50, .3); border-radius: 9px; color: var(--primary-dark); font-weight: 750; text-decoration: none; }
 .stage-detail-accommodation__map:hover { background: rgba(46, 125, 50, .08); }
 .stage-detail-accommodation__note { margin: 0; color: var(--text-light); font-size: .875rem; line-height: 1.5; }
+.stage-detail-accommodation__description { margin: 0; color: var(--text-light); font-size: .875rem; line-height: 1.5; white-space: pre-wrap; }
 .stage-detail-accommodation__price { margin: 0; color: var(--primary-dark); font-size: .875rem; font-weight: 750; line-height: 1.5; }
 .stage-detail-accommodation--compact .stage-detail-accommodation__image,
 .stage-detail-accommodation--compact .stage-detail-accommodation__placeholder { height: 150px; }

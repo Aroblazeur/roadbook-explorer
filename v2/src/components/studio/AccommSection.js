@@ -38,6 +38,7 @@ function AccommodationFields({ accommodation, onChange, idPrefix, photoMedia, on
           </label>
         </div>
       </div>
+      <label className="studio-form-grid__full" htmlFor={`${idPrefix}-description`}>Description (automatique si vide)<textarea id={`${idPrefix}-description`} value={accommodation.description} onChange={event => onChange("description", event.target.value)} /></label>
       <label className="studio-form-grid__full" htmlFor={`${idPrefix}-note`}>Note<textarea id={`${idPrefix}-note`} value={accommodation.note} onChange={event => onChange("note", event.target.value)} /></label>
     </div>
   );
@@ -49,8 +50,8 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
   const targetPrefix = variantId == null ? `stage-${stageId}` : `variant-${variantId}`;
 
   const changePrimary = (field, value) => {
-    if (field === "note" || field === "price") {
-      const metadataKey = field === "note" ? "accommodationNote" : "accommodationPrice";
+    if (field === "note" || field === "price" || field === "description") {
+      const metadataKey = field === "note" ? "accommodationNote" : field === "price" ? "accommodationPrice" : "accommodationDescription";
       onChange({ metadata: { ...(stage.metadata ?? {}), [metadataKey]: value } });
       return;
     }
@@ -60,18 +61,24 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
       onChange({ accommodation_photo: value, metadata });
       return;
     }
+    if (field === "url") {
+      const metadata = { ...(stage.metadata ?? {}) };
+      delete metadata.accommodationPreview;
+      onChange({ accommodation_url: value, metadata });
+      return;
+    }
     onChange({ [PRIMARY_FIELDS[field]]: value });
   };
 
   const changeAlternative = (index, field, value) => {
     const nextAlternatives = alternatives.map((item, itemIndex) => (
-      itemIndex === index ? { ...item, [field]: value, ...(field === "photo" ? { photoMediaId: null } : {}) } : item
+      itemIndex === index ? { ...item, [field]: value, ...(field === "photo" ? { photoMediaId: null } : {}), ...(field === "url" ? { preview: null } : {}) } : item
     ));
     onChange({ alternatives: nextAlternatives });
   };
 
   const addAlternative = () => {
-    onChange({ alternatives: [...alternatives, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "" }] });
+    onChange({ alternatives: [...alternatives, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "", description: "", preview: null }] });
   };
 
   const removeAlternative = (index) => {

@@ -36,7 +36,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
   const [deleting, setDeleting] = useState(null);
 
   // Sub-entity forms
-  const [poiForm, setPoiForm] = useState({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", editing: null });
+  const [poiForm, setPoiForm] = useState({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", photoUrl: "", photoMediaId: null, preview: null, metadata: {}, editing: null });
   const [variantForm, setVariantForm] = useState({ ...EMPTY_VARIANT_FORM });
   const [noteForm, setNoteForm] = useState({ stage_id: null, variant_id: null, text: "", editing: null });
 
@@ -88,7 +88,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     setDeleting(null);
   }, [supabase, setStages]);
 
-  const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", editing: null }), []);
+  const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", photoUrl: "", photoMediaId: null, preview: null, metadata: {}, editing: null }), []);
   const clearVariantForm = useCallback(() => setVariantForm({ ...EMPTY_VARIANT_FORM }), []);
   const clearNoteForm = useCallback(() => setNoteForm({ stage_id: null, variant_id: null, text: "", editing: null }), []);
 

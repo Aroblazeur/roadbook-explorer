@@ -75,10 +75,12 @@ export function createAccommodationIndex(items) {
     if (!item || item.status !== "ok") return;
     const key = normalizeAccommodationUrl(item.url);
     if (!key) return;
-    const prev = index.get(key) || { name: "", image: "" };
+    const prev = index.get(key) || { name: "", image: "", description: "", url: "" };
     index.set(key, {
       name: String(item.name || "").trim() || prev.name,
-      image: safeImageUrl(item.image) || prev.image
+      image: safeImageUrl(item.image) || prev.image,
+      description: safeDescription(item.description) || prev.description,
+      url: safeImageUrl(item.url) || prev.url,
     });
   });
   return index;
@@ -113,5 +115,21 @@ export async function loadEnrichmentData(slug, type) {
     return await res.json();
   } catch {
     return null;
+  }
+}
+
+export async function enrichResourceBatch(items) {
+  if (typeof fetch === "undefined" || !Array.isArray(items) || !items.length) return new Map();
+  try {
+    const response = await fetch("/api/resource-enrichment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (!response.ok) return new Map();
+    const payload = await response.json();
+    return new Map((payload.results ?? []).map(item => [String(item.id), item]));
+  } catch {
+    return new Map();
   }
 }

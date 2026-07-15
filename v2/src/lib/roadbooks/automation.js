@@ -25,9 +25,23 @@ export function completeStageMetrics(stage, metrics, durationStr) {
 
 export function completeAccommodation(stage, found) {
   const completed = { ...stage };
+  const metadata = { ...(completed.metadata ?? {}) };
   let filled = 0;
   if (isMissingAutomationValue(completed.accommodation_name) && found?.name) { completed.accommodation_name = found.name; filled++; }
-  if (isMissingAutomationValue(completed.accommodation_photo) && found?.image) { completed.accommodation_photo = found.image; filled++; }
+  if (isMissingAutomationValue(completed.accommodation_photo) && !metadata.accommodationPhotoMediaId && found?.image) { completed.accommodation_photo = found.image; filled++; }
+  if (isMissingAutomationValue(metadata.accommodationDescription) && found?.description) { metadata.accommodationDescription = found.description; filled++; }
+  if (!metadata.accommodationPreview && found?.preview) metadata.accommodationPreview = found.preview;
+  completed.metadata = metadata;
+  return { value: completed, filled };
+}
+
+export function completeAccommodationValue(accommodation, found) {
+  const completed = { ...(accommodation ?? {}) };
+  let filled = 0;
+  if (isMissingAutomationValue(completed.name) && found?.name) { completed.name = found.name; filled++; }
+  if (isMissingAutomationValue(completed.photo) && !completed.photoMediaId && found?.image) { completed.photo = found.image; filled++; }
+  if (isMissingAutomationValue(completed.description) && found?.description) { completed.description = found.description; filled++; }
+  if (!completed.preview && found?.preview) completed.preview = found.preview;
   return { value: completed, filled };
 }
 
@@ -37,5 +51,8 @@ export function completePoi(poi, found) {
   if (isMissingAutomationValue(completed.description) && found?.description) { completed.description = found.description; filled++; }
   if (isMissingAutomationValue(completed.photo_url) && found?.image) { completed.photo_url = found.image; filled++; }
   if (isMissingAutomationValue(completed.link_url) && found?.url) { completed.link_url = found.url; filled++; }
+  if (!completed.metadata?.linkPreview && found?.preview) {
+    completed.metadata = { ...(completed.metadata ?? {}), linkPreview: found.preview };
+  }
   return { value: completed, filled };
 }

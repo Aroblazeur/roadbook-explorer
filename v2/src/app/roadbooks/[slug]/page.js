@@ -159,7 +159,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             gpxCustom={gpxCustom}
             images={images}
           />
-          {images.some(image => image.metadata?.purpose !== "accommodation") && <ImagesSection images={images} />}
+          {images.some(image => !["accommodation", "poi"].includes(image.metadata?.purpose)) && <ImagesSection images={images} />}
           <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
             <span />
             <Link href="/explore">Retour aux roadbooks</Link>
@@ -175,7 +175,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           stageIndex={currentEntry.stageIndex}
           pois={poisByStage[currentEntry.item.id] ?? []}
           stageGpx={gpxByStage[currentEntry.item.id] ?? null}
-          stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.metadata?.variant_id == null && image.metadata?.purpose !== "accommodation" && image.signedUrl)?.signedUrl ?? null}
+          stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.metadata?.variant_id == null && !["accommodation", "poi"].includes(image.metadata?.purpose) && image.signedUrl)?.signedUrl ?? null}
           images={images}
         />
       ) : (
@@ -187,7 +187,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           parentStage={currentEntry.parentStage}
           pois={poisByVariant[currentEntry.item.id] ?? []}
           variantGpx={gpxByVariant[currentEntry.item.id] ?? null}
-          variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && image.metadata?.purpose !== "accommodation" && image.signedUrl)?.signedUrl ?? null}
+          variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && !["accommodation", "poi"].includes(image.metadata?.purpose) && image.signedUrl)?.signedUrl ?? null}
           images={images}
         />
       )}
@@ -304,7 +304,7 @@ function StartPointOverview({ value, images }) {
     </div>
     {point.description && <p className="roadbook-start-point__description">{point.description}</p>}
     {point.accommodations.length > 0 && <div className="roadbook-start-point__resources"><h3>Hébergements</h3><div className="stage-detail-accommodation-list">{point.accommodations.map((item, index) => <AccommodationResource key={`${item.name}-${index}`} accommodation={item} contextCity={point.arrival_city || point.departure_city} images={images} compact />)}</div></div>}
-    {point.pois.length > 0 && <div className="roadbook-start-point__resources"><h3>Points d’intérêt</h3><div className="stage-detail-pois">{point.pois.map((poi, index) => <PoiCard key={`${poi.name}-${index}`} poi={poi} />)}</div></div>}
+    {point.pois.length > 0 && <div className="roadbook-start-point__resources"><h3>Points d’intérêt</h3><ul className="stage-detail-poi-list">{point.pois.map((poi, index) => <PoiCard key={`${poi.name}-${index}`} poi={{ ...poi, metadata: { poiPhotoMediaId: poi.photoMediaId, linkPreview: poi.preview } }} images={images} />)}</ul></div>}
   </section>;
 }
 
@@ -466,7 +466,7 @@ function accommodationIcon(type, name) {
 }
 
 function ImagesSection({ images }) {
-  const availableImages = images.filter(img => img.metadata?.purpose !== "accommodation" && img.access?.status === "available" && img.signedUrl);
+  const availableImages = images.filter(img => !["accommodation", "poi"].includes(img.metadata?.purpose) && img.access?.status === "available" && img.signedUrl);
   const inaccessibleCount = images.filter(img => img.access?.status === "inaccessible").length;
 
   return (
@@ -579,6 +579,8 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
     price: meta.accommodationPrice,
     photoMediaId: meta.accommodationPhotoMediaId,
     note: meta.accommodationNote,
+    description: meta.accommodationDescription,
+    preview: meta.accommodationPreview,
   });
   const alternatives = normalizeAlternatives(variant.alternatives);
 
@@ -608,7 +610,7 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
         <h4>Points d&apos;intérêt</h4>
         {pois.length > 0 ? (
           <ul className="stage-detail-poi-list">
-            {pois.map(poi => <PoiCard key={poi.id} poi={poi} />)}
+            {pois.map(poi => <PoiCard key={poi.id} poi={poi} images={images} />)}
           </ul>
         ) : (
           <p className="stage-detail-empty">Non renseigné</p>
@@ -702,6 +704,8 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
     price: meta.accommodationPrice,
     photoMediaId: meta.accommodationPhotoMediaId,
     note: meta.accommodationNote,
+    description: meta.accommodationDescription,
+    preview: meta.accommodationPreview,
   });
   const alternatives = normalizeAlternatives(stage.alternatives);
   const contextCity = stage.arrival || stage.departure || "";
@@ -742,7 +746,7 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
         <h2 id="stage-detail-pois-title">Points d&apos;intérêt</h2>
         {pois.length > 0 ? (
           <ul className="stage-detail-poi-list">
-            {pois.map(poi => <PoiCard key={poi.id} poi={poi} />)}
+            {pois.map(poi => <PoiCard key={poi.id} poi={poi} images={images} />)}
           </ul>
         ) : (
           <p className="stage-detail-empty">Non renseigné</p>
@@ -852,14 +856,15 @@ function NoteList({ notes, imageAlt }) {
   );
 }
 
-function PoiCard({ poi }) {
-  const photoUrl = safeResourceUrl(poi.photo_url);
+function PoiCard({ poi, images = [] }) {
+  const photoMedia = images.find(image => Number(image.id) === Number(poi.metadata?.poiPhotoMediaId));
+  const photoUrl = safeResourceUrl(photoMedia?.signedUrl || poi.photo_url);
   const poiType = poi.poi_type || poi.type;
   const linkUrl = safeResourceUrl(poi.link_url, { relative: false }) || poiMapUrl(poi);
 
   return (
-    <li className={`stage-detail-poi${photoUrl ? "" : " stage-detail-poi--without-image"}`}>
-      {photoUrl && <img src={photoUrl} alt={`Photo de ${poi.name || "ce point d'intérêt"}`} loading="lazy" />}
+    <li className={`stage-detail-poi${photoUrl || linkUrl ? "" : " stage-detail-poi--without-image"}`}>
+      {photoUrl ? <img src={photoUrl} alt={`Photo de ${poi.name || "ce point d'intérêt"}`} loading="lazy" /> : linkUrl ? <LinkPreviewCard preview={poi.metadata?.linkPreview ?? poi.preview} url={linkUrl} title={poi.name} /> : null}
       <div className="stage-detail-poi__content">
         <strong className="stage-detail-poi__name">{poiType && <span>[{poiType}] </span>}{poi.name || "Point d'intérêt"}</strong>
         {poi.region && <p className="stage-detail-poi__region">{poi.region}</p>}
@@ -885,6 +890,8 @@ function AccommodationResource({ accommodation, contextCity, images = [], compac
     <article className={`stage-detail-accommodation${compact ? " stage-detail-accommodation--compact" : ""}`}>
       {photoUrl ? (
         <img className="stage-detail-accommodation__image" src={photoUrl} alt={`Photo de ${name}`} loading="lazy" />
+      ) : websiteUrl ? (
+        <LinkPreviewCard preview={accommodation.preview} url={websiteUrl} title={name} />
       ) : (
         <div className="stage-detail-accommodation__placeholder" aria-hidden="true">
           <span>{accommodationIcon(accommodation.type, name)}</span>
@@ -903,6 +910,7 @@ function AccommodationResource({ accommodation, contextCity, images = [], compac
             </span>
           )}
           {accommodation.note && <p className="stage-detail-accommodation__note">{accommodation.note}</p>}
+          {accommodation.description && <p className="stage-detail-accommodation__description">{accommodation.description}</p>}
           {accommodation.price && <p className="stage-detail-accommodation__price">Prix : {accommodation.price}</p>}
         </div>
         <a className="stage-detail-accommodation__map" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`Rechercher ${name} sur Google Maps`}>
@@ -910,6 +918,20 @@ function AccommodationResource({ accommodation, contextCity, images = [], compac
         </a>
       </div>
     </article>
+  );
+}
+
+function LinkPreviewCard({ preview, url, title }) {
+  const source = preview && typeof preview === "object" ? preview : {};
+  let hostname = "";
+  try { hostname = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+  return (
+    <a className="resource-link-preview" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Ouvrir ${title || "le lien"}`}>
+      <span className="resource-link-preview__site">{source.siteName || hostname || "Aperçu du lien"}</span>
+      <strong>{source.title || title || "Ouvrir la page"}</strong>
+      {source.description && <span className="resource-link-preview__description">{source.description}</span>}
+      <span className="resource-link-preview__action">Voir la page →</span>
+    </a>
   );
 }
 
@@ -935,7 +957,7 @@ function normalizeWarnings(...sources) {
 }
 
 function normalizeAccommodation(value) {
-  if (typeof value === "string") return { name: textValue(value), url: "", photo: "", photoMediaId: null, type: "", price: "", note: "" };
+  if (typeof value === "string") return { name: textValue(value), url: "", photo: "", photoMediaId: null, type: "", price: "", note: "", description: "", preview: null };
   const source = value && typeof value === "object" ? value : {};
   return {
     name: textValue(source.name),
@@ -945,6 +967,8 @@ function normalizeAccommodation(value) {
     type: textValue(source.type),
     price: textValue(source.price),
     note: textValue(source.note),
+    description: textValue(source.description),
+    preview: source.preview && typeof source.preview === "object" ? source.preview : null,
   };
 }
 
@@ -953,7 +977,7 @@ function normalizeAlternatives(value) {
 }
 
 function hasAccommodation(value) {
-  return Boolean(value && (value.name || value.url || value.photo || value.photoMediaId || value.type || value.price || value.note));
+  return Boolean(value && (value.name || value.url || value.photo || value.photoMediaId || value.type || value.price || value.note || value.description || value.preview));
 }
 
 function textValue(value) {

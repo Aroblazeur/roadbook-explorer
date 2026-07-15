@@ -41,6 +41,9 @@ export function normalizeStartPointPoi(value) {
     region: String(source.region ?? ""),
     link_url: String(source.link_url ?? source.link ?? ""),
     description: String(source.description ?? ""),
+    photo_url: String(source.photo_url ?? source.photo ?? ""),
+    photoMediaId: Number(source.photoMediaId ?? source.photo_media_id) || null,
+    preview: source.preview && typeof source.preview === "object" ? source.preview : null,
   };
 }
 
@@ -83,8 +86,8 @@ export function buildStartPointRecord(value, roadbookId) {
     distance_km: distance === "" || !Number.isFinite(Number(distance)) ? null : Number(distance),
     duration: point.duration.trim() || null,
     google_maps_url: buildGoogleMapsDirectionsUrl(point) || null,
-    accommodations: point.accommodations.map(normalizeAccommodation).filter(item => item.name || item.url || item.photo || item.photoMediaId || item.type || item.price || item.note),
-    pois: point.pois.map(normalizeStartPointPoi).filter(item => item.name || item.region || item.link_url || item.description).map(item => ({
+    accommodations: point.accommodations.map(normalizeAccommodation).filter(item => item.name || item.url || item.photo || item.photoMediaId || item.type || item.price || item.note || item.description),
+    pois: point.pois.map(normalizeStartPointPoi).filter(item => item.name || item.region || item.link_url || item.description || item.photo_url || item.photoMediaId).map(item => ({
       ...item,
       link_url: item.link_url.trim() || (item.name.trim() ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name, item.region].filter(Boolean).join(" "))}` : ""),
     })),
