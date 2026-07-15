@@ -14,6 +14,8 @@ export default function VariantForm({
   poisByVariant,
   onVariantChange,
   onUploadVariantPhoto,
+  images,
+  onUploadAccommodationPhoto,
   uploadLoading,
 }) {
   const [expandedVariants, setExpandedVariants] = useState(() => new Set());
@@ -133,6 +135,9 @@ export default function VariantForm({
                   variantId={variant.id}
                   stage={variant}
                   onChange={change}
+                  images={images}
+                  onUploadPhoto={onUploadAccommodationPhoto}
+                  uploadLoading={uploadLoading}
                 />
 
                 <NoteForm

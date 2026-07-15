@@ -156,8 +156,9 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             totals={totals}
             gpxOfficial={gpxOfficial}
             gpxCustom={gpxCustom}
+            images={images}
           />
-          {images.length > 0 && <ImagesSection images={images} />}
+          {images.some(image => image.metadata?.purpose !== "accommodation") && <ImagesSection images={images} />}
           <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
             <span />
             <Link href="/explore">Retour aux roadbooks</Link>
@@ -173,7 +174,8 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           stageIndex={currentEntry.stageIndex}
           pois={poisByStage[currentEntry.item.id] ?? []}
           stageGpx={gpxByStage[currentEntry.item.id] ?? null}
-          stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.signedUrl)?.signedUrl ?? null}
+          stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.metadata?.variant_id == null && image.metadata?.purpose !== "accommodation" && image.signedUrl)?.signedUrl ?? null}
+          images={images}
         />
       ) : (
         <VariantDetailPage
@@ -184,7 +186,8 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           parentStage={currentEntry.parentStage}
           pois={poisByVariant[currentEntry.item.id] ?? []}
           variantGpx={gpxByVariant[currentEntry.item.id] ?? null}
-          variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && image.signedUrl)?.signedUrl ?? null}
+          variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && image.metadata?.purpose !== "accommodation" && image.signedUrl)?.signedUrl ?? null}
+          images={images}
         />
       )}
     </main>
@@ -245,7 +248,7 @@ function RoadbookHeader({ roadbook, startPoint, stages, pois, variants, user, ca
   );
 }
 
-function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, totals, gpxOfficial, gpxCustom }) {
+function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, totals, gpxOfficial, gpxCustom, images }) {
   const metadata = roadbook.metadata ?? {};
   const official = metadata.official ?? {};
   const savedCurrent = metadata.stagesTotal ?? {};
@@ -267,7 +270,7 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
         mapTitle="Carte interactive de l'itinéraire officiel"
         downloadLabel="Télécharger le tracé officiel"
       />
-      <StartPointOverview value={startPoint} />
+      <StartPointOverview value={startPoint} images={images} />
       <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} variantsByStage={variantsByStage} />
       <RouteSummary
         className="roadbook-current-summary"
@@ -281,7 +284,7 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
   );
 }
 
-function StartPointOverview({ value }) {
+function StartPointOverview({ value, images }) {
   if (!hasStartPoint(value)) return null;
   const point = normalizeStartPoint(value);
   const mapsUrl = safeResourceUrl(point.google_maps_url || buildGoogleMapsDirectionsUrl(point), { relative: false });
@@ -299,7 +302,7 @@ function StartPointOverview({ value }) {
       {point.duration && <span><strong>Durée</strong>{point.duration}</span>}
     </div>
     {point.description && <p className="roadbook-start-point__description">{point.description}</p>}
-    {point.accommodations.length > 0 && <div className="roadbook-start-point__resources"><h3>Hébergements</h3><div className="stage-detail-accommodation-list">{point.accommodations.map((item, index) => <AccommodationResource key={`${item.name}-${index}`} accommodation={item} contextCity={point.arrival_city || point.departure_city} compact />)}</div></div>}
+    {point.accommodations.length > 0 && <div className="roadbook-start-point__resources"><h3>Hébergements</h3><div className="stage-detail-accommodation-list">{point.accommodations.map((item, index) => <AccommodationResource key={`${item.name}-${index}`} accommodation={item} contextCity={point.arrival_city || point.departure_city} images={images} compact />)}</div></div>}
     {point.pois.length > 0 && <div className="roadbook-start-point__resources"><h3>Points d’intérêt</h3><div className="stage-detail-pois">{point.pois.map((poi, index) => <PoiCard key={`${poi.name}-${index}`} poi={poi} />)}</div></div>}
   </section>;
 }
@@ -462,7 +465,7 @@ function accommodationIcon(type, name) {
 }
 
 function ImagesSection({ images }) {
-  const availableImages = images.filter(img => img.access?.status === "available" && img.signedUrl);
+  const availableImages = images.filter(img => img.metadata?.purpose !== "accommodation" && img.access?.status === "available" && img.signedUrl);
   const inaccessibleCount = images.filter(img => img.access?.status === "inaccessible").length;
 
   return (
@@ -485,7 +488,7 @@ function ImagesSection({ images }) {
   );
 }
 
-function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
+function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
@@ -495,6 +498,7 @@ function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageInd
         pois={pois}
         stageGpx={stageGpx}
         stagePhotoUrl={stagePhotoUrl}
+        images={images}
       />
     </section>
   );
@@ -539,7 +543,7 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   );
 }
 
-function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpx, variantPhotoUrl }) {
+function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpx, variantPhotoUrl, images }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de la variante">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
@@ -549,12 +553,13 @@ function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, pare
         pois={pois}
         variantGpx={variantGpx}
         variantPhotoUrl={variantPhotoUrl}
+        images={images}
       />
     </section>
   );
 }
 
-function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhotoUrl }) {
+function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhotoUrl, images }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
   const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
@@ -570,6 +575,8 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
     url: variant.accommodation_url,
     photo: variant.accommodation_photo,
     type: variant.accommodation_type,
+    price: meta.accommodationPrice,
+    photoMediaId: meta.accommodationPhotoMediaId,
     note: meta.accommodationNote,
   });
   const alternatives = normalizeAlternatives(variant.alternatives);
@@ -615,7 +622,7 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
       {hasAccommodation(accommodation) && (
         <div className="stage-detail-variant__accommodation">
           <h4>Hébergement</h4>
-          <AccommodationResource accommodation={accommodation} contextCity={arrival || departure || contextCity} compact />
+          <AccommodationResource accommodation={accommodation} contextCity={arrival || departure || contextCity} images={images} compact />
         </div>
       )}
       {alternatives.filter(hasAccommodation).length > 0 && (
@@ -623,7 +630,7 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
           <h4>Hébergements alternatifs</h4>
           <div className="stage-detail-accommodation-list">
             {alternatives.filter(hasAccommodation).map((item, index) => (
-              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={arrival || departure || contextCity} compact />
+              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={arrival || departure || contextCity} images={images} compact />
             ))}
           </div>
         </div>
@@ -674,7 +681,7 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
+function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_number ?? stageIndex + 1;
   const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
@@ -691,6 +698,8 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
     url: stage.accommodation_url,
     photo: stage.accommodation_photo,
     type: stage.accommodation_type,
+    price: meta.accommodationPrice,
+    photoMediaId: meta.accommodationPhotoMediaId,
     note: meta.accommodationNote,
   });
   const alternatives = normalizeAlternatives(stage.alternatives);
@@ -742,7 +751,7 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
       {hasAccommodation(accommodation) && (
         <section className="stage-detail-card stage-detail-accommodations card" aria-labelledby="stage-detail-primary-accommodation-title">
           <h2 id="stage-detail-primary-accommodation-title">Hébergement principal</h2>
-          <AccommodationResource accommodation={accommodation} contextCity={contextCity} />
+          <AccommodationResource accommodation={accommodation} contextCity={contextCity} images={images} />
         </section>
       )}
 
@@ -777,7 +786,7 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
           <h2 id="stage-detail-alternatives-title">Hébergements alternatifs</h2>
           <div className="stage-detail-accommodation-list">
             {alternatives.filter(hasAccommodation).map((item, index) => (
-              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} />
+              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} images={images} />
             ))}
           </div>
         </section>
@@ -864,9 +873,10 @@ function PoiCard({ poi }) {
   );
 }
 
-function AccommodationResource({ accommodation, contextCity, compact = false }) {
+function AccommodationResource({ accommodation, contextCity, images = [], compact = false }) {
   const name = accommodation.name || "Hébergement";
-  const photoUrl = safeResourceUrl(accommodation.photo);
+  const photoMedia = images.find(image => Number(image.id) === Number(accommodation.photoMediaId));
+  const photoUrl = safeResourceUrl(photoMedia?.signedUrl || accommodation.photo);
   const websiteUrl = safeResourceUrl(accommodation.url, { relative: false });
   const mapUrl = googleMapsSearchUrl([name, contextCity].filter(Boolean).join(" "));
 
@@ -892,6 +902,7 @@ function AccommodationResource({ accommodation, contextCity, compact = false }) 
             </span>
           )}
           {accommodation.note && <p className="stage-detail-accommodation__note">{accommodation.note}</p>}
+          {accommodation.price && <p className="stage-detail-accommodation__price">Prix : {accommodation.price}</p>}
         </div>
         <a className="stage-detail-accommodation__map" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`Rechercher ${name} sur Google Maps`}>
           Carte
@@ -923,13 +934,15 @@ function normalizeWarnings(...sources) {
 }
 
 function normalizeAccommodation(value) {
-  if (typeof value === "string") return { name: textValue(value), url: "", photo: "", type: "", note: "" };
+  if (typeof value === "string") return { name: textValue(value), url: "", photo: "", photoMediaId: null, type: "", price: "", note: "" };
   const source = value && typeof value === "object" ? value : {};
   return {
     name: textValue(source.name),
     url: textValue(source.url),
     photo: textValue(source.photo),
+    photoMediaId: Number(source.photoMediaId ?? source.photo_media_id) || null,
     type: textValue(source.type),
+    price: textValue(source.price),
     note: textValue(source.note),
   };
 }
@@ -939,7 +952,7 @@ function normalizeAlternatives(value) {
 }
 
 function hasAccommodation(value) {
-  return Boolean(value && (value.name || value.url || value.photo));
+  return Boolean(value && (value.name || value.url || value.photo || value.photoMediaId || value.type || value.price || value.note));
 }
 
 function textValue(value) {

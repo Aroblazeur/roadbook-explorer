@@ -7,24 +7,45 @@ const TRANSPORTS = [
   ["walk", "À pied"], ["motorcycle", "Moto"], ["other", "Autre"],
 ];
 
-function AccommodationFields({ item, onChange, prefix }) {
+function AccommodationFields({ item, onChange, prefix, photoMedia, onUploadPhoto, uploadLoading }) {
   return <div className="studio-form-grid studio-form-grid--compact">
     <label htmlFor={`${prefix}-name`}>Nom<input id={`${prefix}-name`} value={item.name} onChange={e => onChange("name", e.target.value)} /></label>
     <label htmlFor={`${prefix}-type`}>Type<input id={`${prefix}-type`} value={item.type} onChange={e => onChange("type", e.target.value)} /></label>
+    <label className="studio-form-grid__full" htmlFor={`${prefix}-price`}>Prix<input id={`${prefix}-price`} value={item.price} onChange={e => onChange("price", e.target.value)} /></label>
     <label className="studio-form-grid__full" htmlFor={`${prefix}-url`}>Lien<input id={`${prefix}-url`} type="url" value={item.url} onChange={e => onChange("url", e.target.value)} /></label>
-    <label className="studio-form-grid__full" htmlFor={`${prefix}-photo`}>Photo<input id={`${prefix}-photo`} type="url" value={item.photo} onChange={e => onChange("photo", e.target.value)} /></label>
+    <div className="studio-form-grid__full">
+      <label htmlFor={`${prefix}-photo`}>Photo (URL ou fichier)</label>
+      <div className="studio-resource-field">
+        <input id={`${prefix}-photo`} type="url" value={item.photo} onChange={e => onChange("photo", e.target.value)} />
+        {photoMedia && <span className="studio-resource-field__file">{photoMedia.file_name}</span>}
+        <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
+          {uploadLoading ? "Import…" : "Importer"}
+          <input type="file" accept="image/*" disabled={uploadLoading} onChange={async event => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) await onUploadPhoto?.(file);
+          }} />
+        </label>
+      </div>
+    </div>
     <label className="studio-form-grid__full" htmlFor={`${prefix}-note`}>Note<textarea id={`${prefix}-note`} value={item.note} onChange={e => onChange("note", e.target.value)} /></label>
   </div>;
 }
 
-export default function StartPointSection({ value, onChange }) {
+export default function StartPointSection({ value, onChange, images = [], onUploadAccommodationPhoto, uploadLoading = false }) {
   const point = normalizeStartPoint(value);
   const update = patch => onChange(previous => ({ ...normalizeStartPoint(previous), ...patch }));
   const mapsUrl = buildGoogleMapsDirectionsUrl(point);
 
   const changeArrayItem = (key, index, field, nextValue) => update({
-    [key]: point[key].map((item, itemIndex) => itemIndex === index ? { ...item, [field]: nextValue } : item),
+    [key]: point[key].map((item, itemIndex) => itemIndex === index ? { ...item, [field]: nextValue, ...(key === "accommodations" && field === "photo" ? { photoMediaId: null } : {}) } : item),
   });
+
+  const uploadAccommodationPhoto = async (file, index) => {
+    const media = await onUploadAccommodationPhoto?.(file);
+    if (!media?.id) return;
+    update({ accommodations: point.accommodations.map((item, itemIndex) => itemIndex === index ? { ...item, photo: "", photoMediaId: media.id } : item) });
+  };
 
   return <details className="studio-general-info studio-start-point">
     <summary className="studio-general-info__header"><span className="studio-general-info__title" role="heading" aria-level="3">Point de départ</span></summary>
@@ -53,9 +74,9 @@ export default function StartPointSection({ value, onChange }) {
       {mapsUrl && <p className="studio-generated-link"><a href={mapsUrl} target="_blank" rel="noreferrer">Ouvrir l’itinéraire complet dans Google Maps</a></p>}
 
       <section className="studio-section-block">
-        <div className="studio-stage-extra__header"><h4>Hébergements</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => update({ accommodations: [...point.accommodations, { name: "", type: "", url: "", photo: "", note: "" }] })}>Ajouter un hébergement</button></div>
+        <div className="studio-stage-extra__header"><h4>Hébergements</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => update({ accommodations: [...point.accommodations, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "" }] })}>Ajouter un hébergement</button></div>
         {point.accommodations.map((item, index) => <article className="studio-subitem-card" key={`start-accommodation-${index}`}>
-          <AccommodationFields item={item} prefix={`start-accommodation-${index}`} onChange={(field, nextValue) => changeArrayItem("accommodations", index, field, nextValue)} />
+          <AccommodationFields item={item} prefix={`start-accommodation-${index}`} onChange={(field, nextValue) => changeArrayItem("accommodations", index, field, nextValue)} photoMedia={images.find(image => Number(image.id) === Number(item.photoMediaId)) ?? null} onUploadPhoto={file => uploadAccommodationPhoto(file, index)} uploadLoading={uploadLoading} />
           <button type="button" className="terrain-button terrain-button--danger" onClick={() => update({ accommodations: point.accommodations.filter((_, itemIndex) => itemIndex !== index) })}>Supprimer</button>
         </article>)}
         {!point.accommodations.length && <p className="studio-detail--empty">Aucun hébergement.</p>}

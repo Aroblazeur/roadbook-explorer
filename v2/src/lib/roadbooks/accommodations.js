@@ -1,6 +1,6 @@
 function accommodationValue(value, trim = true) {
   if (typeof value === "string") {
-    return { name: trim ? value.trim() : value, url: "", photo: "", type: "", note: "" };
+    return { name: trim ? value.trim() : value, url: "", photo: "", photoMediaId: null, type: "", price: "", note: "" };
   }
   const source = value && typeof value === "object" ? value : {};
   const text = (field) => {
@@ -11,7 +11,11 @@ function accommodationValue(value, trim = true) {
     name: text("name"),
     url: text("url"),
     photo: text("photo"),
+    photoMediaId: Number.isInteger(Number(source.photoMediaId ?? source.photo_media_id)) && Number(source.photoMediaId ?? source.photo_media_id) > 0
+      ? Number(source.photoMediaId ?? source.photo_media_id)
+      : null,
     type: text("type"),
+    price: text("price"),
     note: text("note"),
   };
 }
@@ -22,7 +26,7 @@ export function normalizeAccommodation(value) {
 
 export function hasAccommodation(value) {
   const accommodation = normalizeAccommodation(value);
-  return Boolean(accommodation.name || accommodation.url || accommodation.photo);
+  return Boolean(accommodation.name || accommodation.url || accommodation.photo || accommodation.photoMediaId || accommodation.type || accommodation.price || accommodation.note);
 }
 
 export function primaryAccommodationFromStage(stage) {
@@ -30,7 +34,9 @@ export function primaryAccommodationFromStage(stage) {
     name: stage?.accommodation_name,
     url: stage?.accommodation_url,
     photo: stage?.accommodation_photo,
+    photoMediaId: stage?.metadata?.accommodationPhotoMediaId,
     type: stage?.accommodation_type,
+    price: stage?.metadata?.accommodationPrice,
     note: stage?.metadata?.accommodationNote,
   }, false);
 }
@@ -41,11 +47,17 @@ export function alternativesFromStage(stage) {
     : [];
 }
 
-function metadataWithAccommodationNote(metadata, note) {
+function metadataWithAccommodation(metadata, accommodation) {
   const nextMetadata = { ...(metadata ?? {}) };
-  const cleanNote = String(note ?? "").trim();
+  const cleanNote = String(accommodation.note ?? "").trim();
+  const cleanPrice = String(accommodation.price ?? "").trim();
+  const photoMediaId = Number(accommodation.photoMediaId);
   if (cleanNote) nextMetadata.accommodationNote = cleanNote;
   else delete nextMetadata.accommodationNote;
+  if (cleanPrice) nextMetadata.accommodationPrice = cleanPrice;
+  else delete nextMetadata.accommodationPrice;
+  if (Number.isInteger(photoMediaId) && photoMediaId > 0) nextMetadata.accommodationPhotoMediaId = photoMediaId;
+  else delete nextMetadata.accommodationPhotoMediaId;
   return nextMetadata;
 }
 
@@ -56,7 +68,7 @@ export function buildPrimaryAccommodationUpdate(stage, value) {
     accommodation_url: accommodation.url || null,
     accommodation_photo: accommodation.photo || null,
     accommodation_type: accommodation.type || null,
-    metadata: metadataWithAccommodationNote(stage?.metadata, accommodation.note),
+    metadata: metadataWithAccommodation(stage?.metadata, accommodation),
   };
 }
 

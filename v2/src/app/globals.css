@@ -1010,6 +1010,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-accommodation__map { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-height: 48px; padding: 10px 14px; border: 1px solid rgba(46, 125, 50, .3); border-radius: 9px; color: var(--primary-dark); font-weight: 750; text-decoration: none; }
 .stage-detail-accommodation__map:hover { background: rgba(46, 125, 50, .08); }
 .stage-detail-accommodation__note { margin: 0; color: var(--text-light); font-size: .875rem; line-height: 1.5; }
+.stage-detail-accommodation__price { margin: 0; color: var(--primary-dark); font-size: .875rem; font-weight: 750; line-height: 1.5; }
 .stage-detail-accommodation--compact .stage-detail-accommodation__image,
 .stage-detail-accommodation--compact .stage-detail-accommodation__placeholder { height: 150px; }
 

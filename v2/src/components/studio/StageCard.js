@@ -20,8 +20,10 @@ export default function StageCard({
   draggingStageId,
   dragOverStageId,
   stagePhotoMedia,
+  images,
   onStageChange,
   onUploadStagePhoto,
+  onUploadAccommodationPhoto,
   onVariantChange,
   onUploadVariantPhoto,
   uploadLoading,
@@ -155,6 +157,9 @@ export default function StageCard({
             stageId={stage.id}
             stage={stage}
             onChange={change}
+            images={images}
+            onUploadPhoto={onUploadAccommodationPhoto}
+            uploadLoading={uploadLoading}
           />
 
           <NoteForm
@@ -178,6 +183,8 @@ export default function StageCard({
       poisByVariant={poisByVariant}
       onVariantChange={onVariantChange}
       onUploadVariantPhoto={onUploadVariantPhoto}
+      images={images}
+      onUploadAccommodationPhoto={onUploadAccommodationPhoto}
       uploadLoading={uploadLoading}
     />
     </>
