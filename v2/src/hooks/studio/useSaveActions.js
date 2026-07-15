@@ -3,7 +3,7 @@ import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
 import { deleteRoadbook, updatePois, updateStages, updateVariants } from "@/lib/roadbooks/writers";
 import { buildEditableStageUpdate, buildEditableVariantUpdate, normalizeNumber } from "@/lib/roadbooks/validators";
 import { calculateTotals } from "@/lib/roadbooks/mutations";
-import { synchronizeStagePresentation } from "@/lib/roadbooks/stage-order";
+import { synchronizeStagePresentation, synchronizeVariantPresentation } from "@/lib/roadbooks/stage-order";
 
 export default function useSaveActions({
   supabase, id, roadbook, setRoadbook,
@@ -34,7 +34,7 @@ export default function useSaveActions({
       startPointAutomation.report.warnings.push(error?.message ?? String(error));
     }
     const completedStages = synchronizeStagePresentation(automation.stages ?? stages);
-    const completedVariantsByStage = automation.variantsByStage ?? variantsByStage;
+    const completedVariantsByStage = synchronizeVariantPresentation(automation.variantsByStage ?? variantsByStage, completedStages);
     const completedPois = automation.poisByStage ?? poisByStage;
     const completedVariantPois = automation.poisByVariant ?? poisByVariant;
     if (completedStages.some(stage => !normalizeNumber(stage.stage_number))) {

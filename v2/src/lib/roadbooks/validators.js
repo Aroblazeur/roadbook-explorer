@@ -1,5 +1,5 @@
 import { normalizeAccommodation } from "./accommodations.js";
-import { buildStageTitle, stageDisplayLabel } from "./stage-order.js";
+import { buildStageTitle, buildVariantTitle, resolveStageTitle, resolveVariantTitle, stageDisplayLabel } from "./stage-order.js";
 
 export function validateGpx(file) {
   const name = file.name.toLowerCase();
@@ -150,7 +150,7 @@ export function buildEditableStageUpdate(stage, index = 0, allStages = [stage]) 
   return {
     stage_number: normalizeNumber(stage.stage_number),
     sort_order: normalizeNumber(stage.sort_order) ?? index + 1,
-    title: buildStageTitle(stage, stageDisplayLabel(allStages, index)),
+    title: resolveStageTitle(stage, stageDisplayLabel(allStages, index)),
     departure: stage.departure?.trim() || null,
     arrival: stage.arrival?.trim() || null,
     distance_km: normalizeNumber(stage.distance_km),
@@ -164,21 +164,24 @@ export function buildEditableStageUpdate(stage, index = 0, allStages = [stage]) 
     alternatives: Array.isArray(stage.alternatives) ? stage.alternatives.map(normalizeAccommodation) : [],
     map_embed_url: stage.map_embed_url?.trim() || null,
     day: stage.day?.trim() || null,
-    stage_label: stage.stage_label?.trim() || null,
+    stage_label: null,
     duration: stage.duration?.trim() || null,
     metadata: { ...(stage.metadata ?? {}) },
   };
 }
 
 export function buildVariantRecord(variantForm) {
-  const meta = {};
+  const customTitle = variantForm.title.trim();
+  const meta = { titleMode: customTitle ? "custom" : "auto" };
   if (variantForm.type) meta.type = variantForm.type;
   const notesArr = variantForm.notes
     ? variantForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }))
     : [];
   return {
     stage_id: variantForm.stage_id,
-    label: variantForm.title.trim(),
+    label: customTitle
+      ? resolveVariantTitle({ ...variantForm, label: customTitle, metadata: meta }, variantForm.parent_stage_label)
+      : buildVariantTitle(variantForm, variantForm.parent_stage_label),
     sort_order: normalizeNumber(variantForm.sort_order) ?? 0,
     description: variantForm.description || null,
     distance_km: normalizeNumber(variantForm.distance_km),
@@ -232,7 +235,7 @@ export function groupByVariantId(rows) {
 
 export function buildEditableVariantUpdate(variant) {
   return {
-    label: variant.label?.trim() || "Variante",
+    label: variant.label?.trim() || resolveVariantTitle(variant),
     departure: variant.departure?.trim() || null,
     arrival: variant.arrival?.trim() || null,
     distance_km: normalizeNumber(variant.distance_km),

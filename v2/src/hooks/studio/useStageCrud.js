@@ -12,6 +12,7 @@ import { buildStageTitle } from "@/lib/roadbooks/stage-order";
 
 const EMPTY_VARIANT_FORM = {
   stage_id: null,
+  parent_stage_label: "",
   title: "",
   type: "",
   sort_order: "",
@@ -55,11 +56,11 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     const dayNumber = Number(stageForm.dayNumber);
     if (!dayNumber) { setStageError("Le numéro d'étape est obligatoire."); return; }
     const notes = stageForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
-    const metadata = {};
+    const metadata = { titleMode: stageForm.title.trim() ? "custom" : "auto" };
     if (stageForm.description) metadata.description = stageForm.description;
     const record = {
       roadbook_id: Number(roadbookId), stage_number: dayNumber,
-      title: buildStageTitle({ departure: stageForm.start, arrival: stageForm.end }, dayNumber),
+      title: stageForm.title.trim() || buildStageTitle({ departure: stageForm.start, arrival: stageForm.end }, dayNumber),
       sort_order: Math.max(0, ...stages.map(stage => Number(stage.sort_order) || 0)) + 1,
       departure: stageForm.start || null, arrival: stageForm.end || null,
       distance_km: stageForm.dist ? Number(stageForm.dist) : null,
@@ -122,7 +123,6 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     e.preventDefault();
     setStageError(null); setStageSuccess(null);
     if (!variantForm.stage_id) { setStageError("L'étape parente est obligatoire."); return; }
-    if (!variantForm.title.trim()) { setStageError("Le titre de la variante est obligatoire."); return; }
     if (!Number(variantForm.sort_order) || Number(variantForm.sort_order) < 1) { setStageError("Le numéro de variante est obligatoire."); return; }
     const record = buildVariantRecord(variantForm);
     if (variantForm.editing) {

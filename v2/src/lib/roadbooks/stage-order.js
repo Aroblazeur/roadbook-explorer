@@ -20,11 +20,46 @@ export function buildStageTitle(stage, displayLabel) {
   return route ? `${prefix} - ${route}` : prefix;
 }
 
+export function hasCustomStageTitle(stage) {
+  return stage?.metadata?.titleMode === "custom" && String(stage?.title ?? "").trim() !== "";
+}
+
+export function resolveStageTitle(stage, displayLabel) {
+  return hasCustomStageTitle(stage)
+    ? String(stage.title).trim()
+    : buildStageTitle(stage, displayLabel);
+}
+
+function ensureVariantMarker(value) {
+  const title = String(value ?? "").trim();
+  if (!title) return "";
+  return /\bvariante\b/iu.test(title) ? title : `Variante - ${title}`;
+}
+
+export function buildVariantTitle(variant, parentDisplayLabel) {
+  const route = [variant?.departure, variant?.arrival]
+    .map(value => String(value ?? "").trim())
+    .filter(Boolean)
+    .join(" → ");
+  const number = Number(variant?.sort_order);
+  const variantLabel = Number.isInteger(number) && number > 0 ? `Variante ${number}` : "Variante";
+  const prefix = parentDisplayLabel ? `Étape ${parentDisplayLabel} - ${variantLabel}` : variantLabel;
+  return route ? `${prefix} - ${route}` : prefix;
+}
+
+export function resolveVariantTitle(variant, parentDisplayLabel) {
+  if (variant?.metadata?.titleMode === "auto" || !String(variant?.label ?? "").trim()) {
+    return buildVariantTitle(variant, parentDisplayLabel);
+  }
+  return ensureVariantMarker(variant.label);
+}
+
 export function synchronizeStagePresentation(stages, { normalizePositions = true } = {}) {
   const ordered = normalizePositions ? normalizeStagePositions(stages) : (stages ?? []).map(stage => ({ ...stage }));
   return ordered.map((stage, index, all) => ({
     ...stage,
-    title: buildStageTitle(stage, stageDisplayLabel(all, index)),
+    stage_label: null,
+    title: resolveStageTitle(stage, stageDisplayLabel(all, index)),
   }));
 }
 
@@ -62,7 +97,11 @@ export function reorderStage(stages, sourceId, targetId, placement = "before") {
   const remaining = stages.filter(stage => !sameStageId(stage.id, sourceId));
   const remainingTargetIndex = remaining.findIndex(stage => sameStageId(stage.id, targetId));
   const insertionIndex = remainingTargetIndex + (placement === "after" ? 1 : 0);
-  const moved = { ...source, stage_number: target.stage_number };
+  const followingStage = remaining[insertionIndex];
+  const movedNumber = placement === "after" && followingStage
+    ? followingStage.stage_number
+    : target.stage_number;
+  const moved = { ...source, stage_number: movedNumber };
   remaining.splice(insertionIndex, 0, moved);
   return synchronizeStagePresentation(remaining);
 }
@@ -92,7 +131,33 @@ export function withStageDisplayLabels(stages) {
     return {
       ...stage,
       stage_display_label: stageDisplay,
-      title: buildStageTitle(stage, stageDisplay),
+      stage_label: null,
+      title: resolveStageTitle(stage, stageDisplay),
     };
   });
+}
+
+export function synchronizeVariantPresentation(variantsByStage, stages) {
+  const stageLabels = new Map((stages ?? []).map((stage, index, all) => [
+    String(stage.id),
+    stageDisplayLabel(all, index),
+  ]));
+  return Object.fromEntries(Object.entries(variantsByStage ?? {}).map(([stageId, variants]) => [
+    stageId,
+    (variants ?? []).map(variant => ({
+      ...variant,
+      label: resolveVariantTitle(variant, stageLabels.get(String(stageId))),
+    })),
+  ]));
+}
+
+export function withVariantDisplayTitles(stages, variants) {
+  const stageLabels = new Map((stages ?? []).map((stage, index, all) => [
+    String(stage.id),
+    stageDisplayLabel(all, index),
+  ]));
+  return (variants ?? []).map(variant => ({
+    ...variant,
+    label: resolveVariantTitle(variant, stageLabels.get(String(variant.stage_id))),
+  }));
 }

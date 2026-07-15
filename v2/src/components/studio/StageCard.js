@@ -5,7 +5,7 @@ import PoiForm from "./PoiForm";
 import AccommSection from "./AccommSection";
 import NoteForm from "./NoteForm";
 import VariantForm from "./VariantForm";
-import { buildStageTitle } from "@/lib/roadbooks/stage-order";
+import { buildStageTitle, resolveStageTitle } from "@/lib/roadbooks/stage-order";
 
 export default function StageCard({
   stage,
@@ -53,6 +53,14 @@ export default function StageCard({
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
   const generatedTitle = buildStageTitle(stage, displayLabel);
+  const displayedTitle = resolveStageTitle(stage, displayLabel);
+  const changeTitle = (value) => {
+    const custom = value.trim() !== "";
+    change({
+      title: custom ? value : generatedTitle,
+      metadata: { ...meta, titleMode: custom ? "custom" : "auto" },
+    });
+  };
 
   const isDragging = draggingStageId === stage.id;
   const isDragOver = dragOverStageId === stage.id && !isDragging;
@@ -74,7 +82,7 @@ export default function StageCard({
           {stage.distance_km != null && <span className="studio-badge">{stage.distance_km} km</span>}
         </div>
         <div className="studio-stage-card__header-info">
-          <h3 className="studio-stage-card__title">{generatedTitle}</h3>
+          <h3 className="studio-stage-card__title">{displayedTitle}</h3>
           <p className="studio-stage-card__summary">
             {[stage.departure, stage.arrival].filter(Boolean).join(" → ") || (stage.departure || stage.arrival) || ""}
           </p>
@@ -96,7 +104,7 @@ export default function StageCard({
             e.stopPropagation();
             clearVariantForm();
             const nextSortOrder = Math.max(0, ...stageVariants.map(variant => Number(variant.sort_order) || 0)) + 1;
-            setVariantForm(current => ({ ...current, stage_id: stage.id, sort_order: String(nextSortOrder) }));
+            setVariantForm(current => ({ ...current, stage_id: stage.id, parent_stage_label: displayLabel, sort_order: String(nextSortOrder) }));
           }}>Ajouter une variante</button>
           <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }} disabled={deleting === stage.id}>Supprimer</button>
         </div>
@@ -110,7 +118,8 @@ export default function StageCard({
             <div className="studio-form-grid studio-form-grid--compact">
               <label>Numéro<input type="number" min="1" step="1" value={stage.stage_number ?? ""} onChange={e => onStageNumberChange?.(e.target.value)} onBlur={e => onStageNumberChange?.(e.target.value)} /></label>
               <label>Jour<input type="text" value={stage.day ?? ""} onChange={e => change({ day: e.target.value })} /></label>
-              <label className="studio-form-grid__full">Titre (généré automatiquement)<input type="text" value={generatedTitle} readOnly /></label>
+              <label className="studio-form-grid__full">Titre (généré, mais personnalisable)<input type="text" value={displayedTitle} onChange={e => changeTitle(e.target.value)} /></label>
+              {meta.titleMode === "custom" && <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => changeTitle("")}>Rétablir le titre généré</button>}
               <label>Départ<input type="text" value={stage.departure ?? ""} onChange={e => change({ departure: e.target.value })} /></label>
               <label>Arrivée<input type="text" value={stage.arrival ?? ""} onChange={e => change({ arrival: e.target.value })} /></label>
               <label>Distance (km)<input type="number" step="0.1" value={stage.distance_km ?? ""} onChange={e => change({ distance_km: e.target.value })} /></label>
@@ -196,6 +205,7 @@ export default function StageCard({
     </article>
     <VariantForm
       stageId={stage.id}
+      stageDisplayLabel={displayLabel}
       stageVariants={stageVariants}
       stageCrud={stageCrud}
       gpx={gpx}

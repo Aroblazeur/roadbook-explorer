@@ -5,9 +5,11 @@ import AccommSection from "./AccommSection";
 import GpxBlock from "./GpxBlock";
 import NoteForm from "./NoteForm";
 import PoiForm from "./PoiForm";
+import { buildVariantTitle, resolveVariantTitle } from "@/lib/roadbooks/stage-order";
 
 export default function VariantForm({
   stageId,
+  stageDisplayLabel,
   stageVariants,
   stageCrud,
   gpx,
@@ -47,6 +49,14 @@ export default function VariantForm({
         const change = updates => onVariantChange(variant.id, updates);
         const changeMeta = updates => change({ metadata: { ...meta, ...updates } });
         const variantGpx = gpxByVariant?.[stageId]?.[variant.id] ?? null;
+        const displayedTitle = resolveVariantTitle(variant, stageDisplayLabel);
+        const changeTitle = value => {
+          const custom = value.trim() !== "";
+          change({
+            label: custom ? value : buildVariantTitle(variant, stageDisplayLabel),
+            metadata: { ...meta, titleMode: custom ? "custom" : "auto" },
+          });
+        };
 
         return (
           <article key={variant.id} className="studio-variant-card" data-expanded={expanded ? "true" : "false"}>
@@ -56,7 +66,7 @@ export default function VariantForm({
                 {variant.distance_km != null && <span className="studio-badge">{variant.distance_km} km</span>}
               </div>
               <div className="studio-variant-card__header-info">
-                <h3 className="studio-variant-card__title">{variant.label || "Variante"}</h3>
+                <h3 className="studio-variant-card__title">{displayedTitle}</h3>
                 <p className="studio-stage-card__summary">
                   {[variant.departure, variant.arrival].filter(Boolean).join(" → ") || meta.type || "Variante"}
                 </p>
@@ -73,7 +83,8 @@ export default function VariantForm({
                   <div className="studio-form-grid studio-form-grid--compact">
                     <label>Numéro<input type="text" value={`↳ ${variant.sort_order ?? 1}`} readOnly className="studio-input--readonly" /></label>
                     <label>Jour<input type="text" value={variant.day ?? ""} onChange={event => change({ day: event.target.value })} /></label>
-                    <label className="studio-form-grid__full">Titre<input type="text" value={variant.label ?? ""} onChange={event => change({ label: event.target.value })} /></label>
+                    <label className="studio-form-grid__full">Titre (avec la mention Variante)<input type="text" value={variant.label ?? ""} placeholder={buildVariantTitle(variant, stageDisplayLabel)} onChange={event => changeTitle(event.target.value)} /></label>
+                    {meta.titleMode === "custom" && <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => changeTitle("")}>Rétablir le titre généré</button>}
                     <label>Départ<input type="text" value={variant.departure ?? ""} onChange={event => change({ departure: event.target.value })} /></label>
                     <label>Arrivée<input type="text" value={variant.arrival ?? ""} onChange={event => change({ arrival: event.target.value })} /></label>
                     <label>Distance (km)<input type="number" step="0.1" value={variant.distance_km ?? ""} onChange={event => change({ distance_km: event.target.value })} /></label>
@@ -165,7 +176,7 @@ export default function VariantForm({
           <h4>Nouvelle variante</h4>
           <div className="studio-form-grid studio-form-grid--compact">
             <label>N° variante<input type="number" min="1" value={variantForm.sort_order} onChange={event => setVariantForm(current => ({ ...current, sort_order: event.target.value }))} required /></label>
-            <label>Titre<input type="text" value={variantForm.title} onChange={event => setVariantForm(current => ({ ...current, title: event.target.value }))} required /></label>
+            <label>Titre personnalisé (facultatif)<input type="text" value={variantForm.title} placeholder={buildVariantTitle({ ...variantForm, sort_order: variantForm.sort_order }, stageDisplayLabel)} onChange={event => setVariantForm(current => ({ ...current, title: event.target.value }))} /></label>
             <label>Départ<input type="text" value={variantForm.departure} onChange={event => setVariantForm(current => ({ ...current, departure: event.target.value }))} /></label>
             <label>Arrivée<input type="text" value={variantForm.arrival} onChange={event => setVariantForm(current => ({ ...current, arrival: event.target.value }))} /></label>
             <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={event => setVariantForm(current => ({ ...current, distance_km: event.target.value }))} /></label>

@@ -7,7 +7,7 @@ import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
 import { resolveMapDisplay } from "@/lib/google-map-links";
-import { withStageDisplayLabels } from "@/lib/roadbooks/stage-order";
+import { withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -47,7 +47,7 @@ async function getRoadbook(slug) {
     const { data: p } = await supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true });
     const { data: v } = await supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true });
     pois = p ?? [];
-    variants = v ?? [];
+    variants = withVariantDisplayTitles(stages, v ?? []);
   }
 
   const { data: mediaRows } = await supabase
@@ -388,9 +388,8 @@ function StageOverviewList({ roadbookSlug, stages, variantsByStage }) {
 function StageOverviewCard({ roadbookSlug, stage, index }) {
   const metadata = stage.metadata ?? {};
   const isSubstep = Boolean(stage.is_substep ?? metadata.isSubstep ?? metadata.is_substep);
-  const route = [stage.departure, stage.arrival].filter(Boolean).join(" → ")
-    || stage.title
-    || stage.stage_label
+  const route = stage.title
+    || [stage.departure, stage.arrival].filter(Boolean).join(" → ")
     || `Étape ${index + 1}`;
 
   return (
@@ -519,8 +518,8 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
     : null;
   const stageNumber = currentEntry.parentStage?.stage_display_label ?? currentEntry.parentStage?.stage_number ?? currentEntry.item.stage_display_label ?? currentEntry.item.stage_number ?? currentEntry.stageIndex + 1;
   const currentLabel = currentEntry.type === "variant"
-    ? `Variante – ${currentEntry.item.label || `étape ${stageNumber}`}`
-    : currentEntry.item.stage_label || (currentEntry.item.day ? String(currentEntry.item.day) : `Étape ${stageNumber}`);
+    ? currentEntry.item.label || `Variante de l'étape ${stageNumber}`
+    : currentEntry.item.title || (currentEntry.item.day ? String(currentEntry.item.day) : `Étape ${stageNumber}`);
 
   return (
     <nav className="stage-detail-navigation card" aria-label="Navigation entre les étapes">
@@ -690,7 +689,7 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
 function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_display_label ?? stage.stage_number ?? stageIndex + 1;
-  const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
+  const stageLabel = stage.day ? String(stage.day) : `Étape ${stageNumber}`;
   const title = stageHeadingTitle(stage, stageNumber, stageLabel);
   const photoUrl = safeResourceUrl(stagePhotoUrl || stage.stage_photo_url);
   const stageGpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: stageGpx, fallbackUrl: stage.gpx_url }).url);
