@@ -104,7 +104,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages, onMu
       return;
     }
     const targetClass = classifyGpxMedia({ ...mediaRow, metadata: built.record.metadata });
-    if (targetClass.status !== "canonical" && targetClass.status !== "legacy-compatible") {
+    if (targetClass.status !== "canonical") {
       setGpxError("Impossible de remplacer ce GPX : la cible métier est contradictoire.");
       return;
     }

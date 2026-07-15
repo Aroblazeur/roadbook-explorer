@@ -511,21 +511,14 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
   const gpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: variantGpx, fallbackUrl: variant.gpx_url }).url);
   const photoUrl = safeResourceUrl(variantPhotoUrl || variant.stage_photo_url || meta.stagePhoto);
   const notes = normalizeNoteItems(variant.notes ?? meta.notes);
-  const legacyAccommodation = normalizeAccommodation(meta.accommodation ?? meta.legacyAccommodation);
   const accommodation = normalizeAccommodation({
-    name: variant.accommodation_name ?? legacyAccommodation.name,
-    url: variant.accommodation_url ?? legacyAccommodation.url,
-    photo: variant.accommodation_photo ?? legacyAccommodation.photo,
-    type: variant.accommodation_type ?? legacyAccommodation.type,
-    note: meta.accommodationNote ?? legacyAccommodation.note,
+    name: variant.accommodation_name,
+    url: variant.accommodation_url,
+    photo: variant.accommodation_photo,
+    type: variant.accommodation_type,
+    note: meta.accommodationNote,
   });
-  const alternatives = normalizeAlternatives(variant.alternatives ?? meta.accommodation?.alternatives);
-  if (meta.alternativeAccommodationName || meta.alternativeAccommodationPhoto) {
-    alternatives.push(normalizeAccommodation({
-      name: meta.alternativeAccommodationName,
-      photo: meta.alternativeAccommodationPhoto,
-    }));
-  }
+  const alternatives = normalizeAlternatives(variant.alternatives);
 
   return (
     <article className="stage-detail-card stage-detail-card--primary stage-detail-variant card">
@@ -644,15 +637,9 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl }) {
     url: stage.accommodation_url,
     photo: stage.accommodation_photo,
     type: stage.accommodation_type,
-    note: meta.accommodationNote ?? meta.accommodation?.note,
+    note: meta.accommodationNote,
   });
   const alternatives = normalizeAlternatives(stage.alternatives);
-  if (meta.alternativeAccommodationName || meta.alternativeAccommodationPhoto) {
-    alternatives.push(normalizeAccommodation({
-      name: meta.alternativeAccommodationName,
-      photo: meta.alternativeAccommodationPhoto,
-    }));
-  }
   const contextCity = stage.arrival || stage.departure || "";
 
   return (
@@ -885,11 +872,11 @@ function normalizeAccommodation(value) {
   if (typeof value === "string") return { name: textValue(value), url: "", photo: "", type: "", note: "" };
   const source = value && typeof value === "object" ? value : {};
   return {
-    name: textValue(source.displayName ?? source.name),
-    url: textValue(source.website ?? source.url),
+    name: textValue(source.name),
+    url: textValue(source.url),
     photo: textValue(source.photo),
     type: textValue(source.type),
-    note: textValue(source.comment ?? source.note),
+    note: textValue(source.note),
   };
 }
 

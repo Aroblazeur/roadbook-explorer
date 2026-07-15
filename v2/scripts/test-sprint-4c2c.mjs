@@ -342,18 +342,18 @@ test("classifyGpxMedia variant sans stage_id → échec", () => {
   assert.ok(c.reason.includes("variant"));
 });
 
-test("classifyGpxMedia legacy gpx-role → legacy-compatible", () => {
+test("classifyGpxMedia gpx_role seul sans role → invalide", () => {
   const m = makeMedia(6, { metadata: { gpx_role: "official", scope: "roadbook" } });
   const c = classifyGpxMedia(m);
-  assert.equal(c.status, "legacy-compatible");
-  assert.equal(c.source, "legacy-gpx-role");
+  assert.equal(c.status, "invalid");
+  assert.equal(c.reason, "scope-and-role-are-required");
 });
 
-test("classifyGpxMedia legacy role string → legacy-compatible", () => {
+test("classifyGpxMedia legacy role string gpx-stage → invalide", () => {
   const m = makeMedia(7, { metadata: { role: "gpx-stage", gpx_role: "official", scope: "stage" }, stage_id: sid });
   const c = classifyGpxMedia(m);
-  assert.equal(c.status, "legacy-compatible");
-  assert.equal(c.scope, "stage");
+  assert.equal(c.status, "invalid");
+  assert.equal(c.reason, "unknown-role");
 });
 
 test("buildGpxBusinessIdentity canonical → identité", () => {

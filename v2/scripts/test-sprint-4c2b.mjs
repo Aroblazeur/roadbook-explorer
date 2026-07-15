@@ -249,31 +249,28 @@ test("classifie variant/official canonique", () => {
   assert.equal(r.variantId, 34);
 });
 
-test("reconnaît gpx-official legacy", () => {
+test("refuse rôle legacy gpx-official", () => {
   const r = classifyGpxMedia(media({ metadata: { role: "gpx-official" } }));
-  assert.deepEqual([r.status, r.scope, r.role, r.source], ["legacy-compatible", "roadbook", "official", "legacy-role"]);
-});
-
-test("reconnaît gpx-total legacy", () => {
-  const r = classifyGpxMedia(media({ metadata: { role: "gpx-total" } }));
-  assert.deepEqual([r.status, r.scope, r.role], ["legacy-compatible", "roadbook", "custom"]);
-});
-
-test("reconnaît gpx-stage legacy avec stage_id", () => {
-  const r = classifyGpxMedia(media({ stage_id: 9, metadata: { role: "gpx-stage" } }));
-  assert.deepEqual([r.status, r.scope, r.role, r.stageId], ["legacy-compatible", "stage", "official", 9]);
-});
-
-test("refuse gpx-stage legacy sans stage_id", () => {
-  const r = classifyGpxMedia(media({ metadata: { role: "gpx-stage" } }));
   assert.equal(r.status, "invalid");
-  assert.equal(r.reason, "stage-id-is-required");
+  assert.equal(r.reason, "unknown-role");
 });
 
-test("reste compatible avec scope + gpx_role du Studio V2 existant", () => {
+test("refuse rôle legacy gpx-total", () => {
+  const r = classifyGpxMedia(media({ metadata: { role: "gpx-total" } }));
+  assert.equal(r.status, "invalid");
+  assert.equal(r.reason, "unknown-role");
+});
+
+test("refuse rôle legacy gpx-stage", () => {
+  const r = classifyGpxMedia(media({ stage_id: 9, metadata: { role: "gpx-stage" } }));
+  assert.equal(r.status, "invalid");
+  assert.equal(r.reason, "unknown-role");
+});
+
+test("refuse gpx_role sans role canonique", () => {
   const r = classifyGpxMedia(media({ stage_id: 7, metadata: { scope: "stage", gpx_role: "official" } }));
-  assert.equal(r.status, "legacy-compatible");
-  assert.equal(r.source, "legacy-gpx-role");
+  assert.equal(r.status, "invalid");
+  assert.equal(r.reason, "scope-and-role-are-required");
 });
 
 test("refuse un scope canonique inconnu", () => {
@@ -282,16 +279,16 @@ test("refuse un scope canonique inconnu", () => {
   assert.equal(r.reason, "unknown-scope");
 });
 
-test("détecte une contradiction canonique et legacy", () => {
+test("refuse rôle legacy gpx-official avec scope stage", () => {
   const r = classifyGpxMedia(media({ stage_id: 3, metadata: { scope: "stage", role: "gpx-official" } }));
   assert.equal(r.status, "invalid");
-  assert.equal(r.reason, "canonical-legacy-scope-contradiction");
+  assert.equal(r.reason, "unknown-role");
 });
 
-test("détecte une contradiction role et gpx_role", () => {
+test("ignore gpx_role quand role canonique est présent", () => {
   const r = classifyGpxMedia(media({ metadata: { scope: "roadbook", role: "official", gpx_role: "custom" } }));
-  assert.equal(r.status, "invalid");
-  assert.equal(r.reason, "canonical-role-contradiction");
+  assert.equal(r.status, "canonical");
+  assert.equal(r.role, "official");
 });
 
 test("refuse variant_id hors scope variant", () => {
@@ -312,11 +309,11 @@ test("construit les trois identités métier", () => {
 // ===================== 6.7 Protection média ambigu =====================
 console.log("\n=== 6.7 Protection du média ambigu ===");
 
-test("media.id=41 reste ambiguous avec legacy-variant-target-is-incomplete", () => {
+test("media.id=41 est refusé (rôle legacy non canonique)", () => {
   const row = media({ id: 41, metadata: { role: "gpx-variant" } });
   const classification = classifyGpxMedia(row);
-  assert.equal(classification.status, "ambiguous");
-  assert.equal(classification.reason, "legacy-variant-target-is-incomplete");
+  assert.equal(classification.status, "invalid");
+  assert.equal(classification.reason, "unknown-role");
   assert.equal(isExplorerUsableGpx(classification), false);
 });
 

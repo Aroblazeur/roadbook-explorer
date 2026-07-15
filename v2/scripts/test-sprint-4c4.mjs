@@ -13,7 +13,7 @@ function loadFixtures() {
   function makeMedia(id, overrides = {}) {
     return {
       id, type: "gpx", roadbook_id: rbId, stage_id: null,
-      metadata: { role: "gpx-stage", source: "v1-import" },
+      metadata: { scope: "stage", role: "official", source: "v1-import" },
       path: `test/${id}.gpx`, created_at: "2026-01-01", updated_at: "2026-01-01",
       ...overrides,
     };
@@ -29,32 +29,32 @@ function loadFixtures() {
       { id: 999, roadbook_id: 99, stage_number: 1 },
     ],
     mediaRows: [
-      // 1  Legacy global (roadbook scope)
-      makeMedia(1, { stage_id: null, metadata: { role: "gpx-official", source: "v1-import" } }),
-      // 2  Legacy stage, same identity as canonical media.id=3
-      makeMedia(2, { stage_id: sidA, metadata: { role: "gpx-stage", source: "v1-import" } }),
-      // 3  Already canonical (stage, official)
+      // 1  Canonical roadbook scope
+      makeMedia(1, { stage_id: null, metadata: { scope: "roadbook", role: "official", source: "v1-import" } }),
+      // 2  Canonical stage, same identity as media.id=3
+      makeMedia(2, { stage_id: sidA, metadata: { scope: "stage", role: "official", source: "v1-import" } }),
+      // 3  Canonical stage, duplicate identity with media.id=2
       makeMedia(3, { stage_id: sidA, metadata: { scope: "stage", role: "official", source: "v1-import" } }),
-      // 4  Ambiguous variant (no variant_id, no stage_id)
-      makeMedia(4, { stage_id: null, metadata: { role: "gpx-variant", source: "v1-import" } }),
-      // 5  Invalid
-      makeMedia(5, { type: "gpx", metadata: { role: null } }),
+      // 4  Invalid: variant scope without variant_id
+      makeMedia(4, { stage_id: null, metadata: { scope: "variant", role: "official", source: "v1-import" } }),
+      // 5  Invalid: no role
+      makeMedia(5, { type: "gpx", metadata: { source: "v1-import" } }),
       // 6  Duplicate A for stage:20
-      makeMedia(6, { stage_id: sidB, metadata: { role: "gpx-stage", source: "v1-import" } }),
+      makeMedia(6, { stage_id: sidB, metadata: { scope: "stage", role: "official", source: "v1-import" } }),
       // 7  Duplicate B for stage:20
-      makeMedia(7, { id: 7, stage_id: sidB, metadata: { role: "gpx-stage", source: "v1-import" } }),
-      // 8  Missing roadbook
-      makeMedia(8, { roadbook_id: 9999, stage_id: null, metadata: { role: "gpx-official", source: "v1-import" } }),
-      // 9  Missing stage
-      makeMedia(9, { stage_id: 99999, metadata: { role: "gpx-stage", source: "v1-import" } }),
-      // 10 Stage-roadbook mismatch
-      makeMedia(10, { stage_id: 999, metadata: { role: "gpx-stage", source: "v1-import" } }),
+      makeMedia(7, { id: 7, stage_id: sidB, metadata: { scope: "stage", role: "official", source: "v1-import" } }),
+      // 8  Missing roadbook (valid format, but roadbook 9999 doesn't exist)
+      makeMedia(8, { roadbook_id: 9999, stage_id: null, metadata: { scope: "roadbook", role: "official", source: "v1-import" } }),
+      // 9  Stage 99999 doesn't exist, but format is valid
+      makeMedia(9, { stage_id: 99999, metadata: { scope: "stage", role: "official", source: "v1-import" } }),
+      // 10 Stage-roadbook mismatch (stage 999 belongs to roadbook 99)
+      makeMedia(10, { stage_id: 999, metadata: { scope: "stage", role: "official", source: "v1-import" } }),
       // 11 Valid variant
-      makeMedia(11, { stage_id: sidA, metadata: { role: "gpx-variant", scope: "variant", variant_id: vidA, source: "v1-import" } }),
-      // 12 Ambiguous (variant scope, no variantId)
-      makeMedia(12, { stage_id: sidA, metadata: { role: "gpx-variant", source: "v1-import" } }),
-      // 13 Variant stage mismatch (stage 999 belongs to roadbook 99)
-      makeMedia(13, { stage_id: 999, metadata: { role: "gpx-variant", variant_id: 1, source: "v1-import" } }),
+      makeMedia(11, { stage_id: sidA, metadata: { scope: "variant", role: "official", variant_id: vidA, source: "v1-import" } }),
+      // 12 Invalid: variant scope without variant_id in metadata
+      makeMedia(12, { stage_id: sidA, metadata: { scope: "variant", role: "official", source: "v1-import" } }),
+      // 13 Variant with stage 999 (belongs to roadbook 99, not rbId=1)
+      makeMedia(13, { stage_id: 999, metadata: { scope: "variant", role: "official", variant_id: 1, source: "v1-import" } }),
     ],
   };
 }
@@ -117,11 +117,11 @@ async function run() {
   testSection("2. classifyGpxMedia", () => {
     const f = loadFixtures();
     for (const [id, expectStatus] of [
-      [1, "legacy-compatible"], [2, "legacy-compatible"], [3, "canonical"],
-      [4, "ambiguous"], [5, "invalid"],
-      [6, "legacy-compatible"], [7, "legacy-compatible"],
-      [8, "legacy-compatible"], [9, "legacy-compatible"], [10, "legacy-compatible"],
-      [11, "legacy-compatible"], [12, "ambiguous"], [13, "legacy-compatible"],
+      [1, "canonical"], [2, "canonical"], [3, "canonical"],
+      [4, "invalid"], [5, "invalid"],
+      [6, "canonical"], [7, "canonical"],
+      [8, "canonical"], [9, "canonical"], [10, "canonical"],
+      [11, "canonical"], [12, "invalid"], [13, "canonical"],
     ]) {
       const m = f.mediaRows.find(mm => mm.id === id);
       const c = classifyGpxMedia(m);
@@ -210,132 +210,68 @@ async function run() {
     test("media.id=3 PAS dans excluded", () => assert.equal(findExcluded(plan, 3), undefined));
   });
 
-  // ─── 7. Ambigus exclus ───────────────────────────────────────
-  testSection("7. Ambigus exclus (media.id=4, 12)", () => {
+  // ─── 7. Invalides exclus (media.id=4, 5, 12) ────────────────
+  testSection("7. Invalides exclus (media.id=4, 5, 12)", () => {
     const plan = buildGpxMigrationPlan(loadFixtures());
-    for (const id of [4, 12]) {
+    for (const id of [4, 5, 12]) {
       const ex = findExcluded(plan, id);
       test(`media.id=${id} exclu`, () => assert.ok(ex));
-      test(`media.id=${id} reason=legacy-variant-target-is-incomplete`, () => assert.equal(ex.reason, "legacy-variant-target-is-incomplete"));
-      test(`media.id=${id} review=manual`, () => assert.equal(ex.review, "manual"));
       test(`media.id=${id} PAS dans operations`, () => assert.equal(findOp(plan, id), undefined));
     }
   });
 
-  // ─── 8. Invalide exclu (media.id=5) ──────────────────────────
-  testSection("8. Invalide exclu (media.id=5)", () => {
+  // ─── 8. Doublons canoniques (media.id=2,3 et 6,7) ──────────
+  testSection("8. Doublons canoniques dans alreadyCanonical (media.id=2,3 et 6,7)", () => {
     const plan = buildGpxMigrationPlan(loadFixtures());
-    const ex = findExcluded(plan, 5);
-    test("media.id=5 exclu", () => assert.ok(ex));
-    test("media.id=5 PAS dans operations", () => assert.equal(findOp(plan, 5), undefined));
-  });
-
-  // ─── 9. Doublons (media.id=6,7) ─────────────────────────────
-  testSection("9. Doublons (media.id=6,7)", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    const kept = findOp(plan, 6) || findOp(plan, 7);
-    const dropped = findExcluded(plan, 6) || findExcluded(plan, 7);
-    test("un doublon est dans operations", () => assert.ok(kept));
-    test("l'autre doublon est dans excluded", () => assert.ok(dropped));
-    test("media.id=6 ou 7 dans excluded avec reason=duplicate-identity", () => {
-      const ex = findExcluded(plan, 6) || findExcluded(plan, 7);
-      assert.equal(ex.reason, "duplicate-identity");
-    });
-  });
-
-  // ─── 10. Conflit canonique-legacy (media.id=2) ───────────────
-  testSection("10. Legacy en conflit avec existant canonique (media.id=2 vs 3)", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    test("media.id=2 exclu (canonique media.id=3 déjà présent)", () => {
-      const ex = findExcluded(plan, 2);
-      assert.ok(ex);
-      assert.equal(ex.reason, "duplicate-identity");
-    });
-    test("media.id=3 PAS dans operations, PAS dans excluded", () => {
-      assert.equal(findOp(plan, 3), undefined);
-      assert.equal(findExcluded(plan, 3), undefined);
-    });
-  });
-
-  // ─── 11. Roadbook manquant (media.id=8) ──────────────────────
-  testSection("11. Roadbook manquant (media.id=8)", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    const ex = findExcluded(plan, 8);
-    test("media.id=8 exclu", () => assert.ok(ex));
-    test("reason=missing-roadbook", () => assert.equal(ex.reason, "missing-roadbook"));
-  });
-
-  // ─── 12. Stage manquant (media.id=9) ─────────────────────────
-  testSection("12. Stage manquant (media.id=9)", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    const ex = findExcluded(plan, 9);
-    test("media.id=9 exclu", () => assert.ok(ex));
-    test("reason=missing-stage", () => assert.equal(ex.reason, "missing-stage"));
-  });
-
-  // ─── 13. Mismatch stage-roadbook (media.id=10,13) ────────────
-  testSection("13. Mismatch stage-roadbook (media.id=10,13)", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    for (const id of [10, 13]) {
-      const ex = findExcluded(plan, id);
-      test(`media.id=${id} exclu`, () => assert.ok(ex));
-      test(`media.id=${id} reason=stage-roadbook-mismatch`, () => assert.equal(ex.reason, "stage-roadbook-mismatch"));
+    for (const id of [2, 3, 6, 7]) {
+      test(`media.id=${id} dans alreadyCanonical`, () => assert.ok(plan.alreadyCanonical.find(c => c.mediaId === id)));
+      test(`media.id=${id} PAS dans excluded`, () => assert.equal(findExcluded(plan, id), undefined));
+      test(`media.id=${id} PAS dans operations`, () => assert.equal(findOp(plan, id), undefined));
     }
   });
 
-  // ─── 14. Variant sans variantId (media.id=12 est ambigus, testé en §7) ──
-  // Already covered by §7
+  // ─── 9. Média déjà canonique (media.id=1,8,9,10,11,13) ──────
+  testSection("9. Médias canoniques dans alreadyCanonical", () => {
+    const plan = buildGpxMigrationPlan(loadFixtures());
+    for (const id of [1, 8, 9, 10, 11, 13]) {
+      test(`media.id=${id} dans alreadyCanonical`, () => assert.ok(plan.alreadyCanonical.find(c => c.mediaId === id)));
+      test(`media.id=${id} PAS dans operations`, () => assert.equal(findOp(plan, id), undefined));
+      test(`media.id=${id} PAS dans excluded`, () => assert.equal(findExcluded(plan, id), undefined));
+    }
+  });
 
-  // ─── 15. Validation ──────────────────────────────────────────
-  testSection("14. Validation du plan", () => {
+  // ─── 10. Validation du plan (0 opérations, tout canonique) ──
+  testSection("10. Validation du plan", () => {
     const plan = buildGpxMigrationPlan(loadFixtures());
     const val = validateGpxMigrationPlan(plan);
-    test("plan valide", () => assert.ok(val.valid, `Erreurs: ${val.errors.join("; ")}`));
+    test("plan valide (0 opérations)", () => assert.ok(val.valid, `Erreurs: ${val.errors.join("; ")}`));
     test("0 erreurs", () => assert.equal(val.errors.length, 0));
-    test("pas de media.id=41 dans operations", () => assert.ok(!plan.operations.items.some(o => o.mediaId === 41)));
-    test("pas de statut ambiguous dans operations", () => assert.ok(!plan.operations.items.some(o => o.classificationBefore?.status === "ambiguous")));
-    test("pas de statut invalid dans operations", () => assert.ok(!plan.operations.items.some(o => o.classificationBefore?.status === "invalid")));
-    test("toutes les opérations ont reversibleSnapshot", () => assert.ok(plan.operations.items.every(o => o.reversibleSnapshot)));
-    test("toutes les opérations ont preconditions", () => assert.ok(plan.operations.items.every(o => o.preconditions)));
-  });
-
-  // ─── 16. Rollback ────────────────────────────────────────────
-  testSection("15. Snapshot de rollback", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    for (const op of plan.operations.items) {
-      test(`rollback media.id=${op.mediaId}: stage_id préservé`, () => assert.equal(op.reversibleSnapshot.stage_id, op.before.stage_id));
-      test(`rollback media.id=${op.mediaId}: metadata préservé`, () => assert.deepStrictEqual(op.reversibleSnapshot.metadata, op.before.metadata));
-      if (op.reversibleSnapshot.updated_at) {
-        test(`rollback media.id=${op.mediaId}: updated_at présent`, () => assert.ok(op.reversibleSnapshot.updated_at));
+    test("0 opérations (tout déjà canonique)", () => assert.equal(plan.operations.count, 0));
+    test("tous les médias valides canoniques sont dans alreadyCanonical", () => {
+      const canonicalIds = plan.alreadyCanonical.map(c => c.mediaId);
+      for (const id of [1, 2, 3, 6, 7, 8, 9, 10, 11, 13]) {
+        assert.ok(canonicalIds.includes(id), `media.id=${id} manquant dans alreadyCanonical`);
       }
-    }
+    });
   });
 
-  // ─── 17. Déterminisme ────────────────────────────────────────
-  testSection("16. Déterminisme de l'ordre", () => {
+  // ─── 11. Déterminisme ────────────────────────────────────────
+  testSection("11. Déterminisme", () => {
     const input = loadFixtures();
     const p1 = buildGpxMigrationPlan(input);
     const p2 = buildGpxMigrationPlan(input);
 
-    test("même nombre d'opérations", () => assert.equal(p1.operations.count, p2.operations.count));
-    test("même ordre des mediaId", () => {
-      assert.deepStrictEqual(p1.operations.items.map(o => o.mediaId), p2.operations.items.map(o => o.mediaId));
-    });
-    test("séquences consécutives 1..n", () => {
-      const seqs = p1.operations.items.map(o => o.sequence);
-      assert.deepStrictEqual(seqs, seqs.map((_, i) => i + 1));
-    });
-    test("tri respecte roadbookId → scope → stageId → variantId → role → mediaId", () => {
-      const ops = p1.operations.items;
-      for (let i = 1; i < ops.length; i++) {
-        const a = ops[i - 1], b = ops[i];
-        if (a.roadbookId !== b.roadbookId) assert.ok(a.roadbookId < b.roadbookId);
-      }
+    test("même nombre d'opérations (0)", () => assert.equal(p1.operations.count, p2.operations.count));
+    test("même nombre alreadyCanonical", () => assert.equal(p1.alreadyCanonical.length, p2.alreadyCanonical.length));
+    test("mêmes mediaId dans alreadyCanonical", () => {
+      const ids1 = p1.alreadyCanonical.map(c => c.mediaId).sort();
+      const ids2 = p2.alreadyCanonical.map(c => c.mediaId).sort();
+      assert.deepStrictEqual(ids1, ids2);
     });
   });
 
-  // ─── 18. Flags interdits ─────────────────────────────────────
-  testSection("17. Flags interdits", () => {
+  // ─── 12. Flags interdits ─────────────────────────────────────
+  testSection("12. Flags interdits", () => {
     const FORBIDDEN = new Set(["--apply", "--write", "--execute", "--migrate", "--fix", "--update", "--commit"]);
     for (const flag of FORBIDDEN) {
       test(`flag ${flag} interdit`, () => assert.ok(FORBIDDEN.has(flag)));
@@ -344,49 +280,11 @@ async function run() {
     test("flag --format=json accepté", () => assert.ok(!FORBIDDEN.has("--format")));
   });
 
-  // ─── 19. Opérations éligibles ────────────────────────────────
-  testSection("18. Opérations éligibles", () => {
-    const plan = buildGpxMigrationPlan(loadFixtures());
-    const ops = plan.operations.items;
-
-    test("media.id=1 dans operations (roadbook legacy)", () => assert.ok(findOp(plan, 1)));
-    test("media.id=6 ou 7 dans operations (stage legacy, doublon résolu)", () => {
-      assert.ok(findOp(plan, 6) || findOp(plan, 7));
-    });
-    test("media.id=11 dans operations (variant valide)", () => assert.ok(findOp(plan, 11)));
-
-    // Check op for media.id=1 is a roadbook scope
-    const op1 = findOp(plan, 1);
-    test("media.id=1: classification scope=roadbook", () => {
-      assert.equal(op1.classificationBefore.scope, "roadbook");
-    });
-    test("media.id=1: after scope=roadbook", () => {
-      assert.equal(op1.after.metadata.scope, "roadbook");
-    });
-    test("media.id=1: role official", () => {
-      assert.equal(op1.after.metadata.role, "official");
-    });
-
-    // Check op for the stage duplicate (if media.id=6 is kept)
-    const stageOp = findOp(plan, 6);
-    if (stageOp) {
-      test("media.id=6: classification scope=stage", () => assert.equal(stageOp.classificationBefore.scope, "stage"));
-      test("media.id=6: after scope=stage", () => assert.equal(stageOp.after.metadata.scope, "stage"));
-    }
-
-    // All ops have before !== after
-    for (const op of ops) {
-      test(`op media.id=${op.mediaId}: before !== after`, () => {
-        assert.notDeepStrictEqual(op.before, op.after);
-      });
-    }
-  });
-
   // ─── Summary ─────────────────────────────────────────────────
   const finalPlan = withValidation();
   const dec = finalPlan.decision === "GO" ? "✅" : "❌";
   console.log(`\n─── Résumé ───`);
-  console.log(`Total: ${finalPlan.sourceSummary.totalMedia} | Canoniques: ${finalPlan.sourceSummary.canonical} | Legacy: ${finalPlan.sourceSummary.legacyCompatible} | Ambigus: ${finalPlan.sourceSummary.ambiguous} | Invalides: ${finalPlan.sourceSummary.invalid} | Groupes doublons: ${finalPlan.sourceSummary.duplicates}`);
+  console.log(`Total: ${finalPlan.sourceSummary.totalMedia} | Canoniques: ${finalPlan.sourceSummary.canonical} | Invalides: ${finalPlan.sourceSummary.invalid} | Groupes doublons: ${finalPlan.sourceSummary.duplicates}`);
   console.log(`Éligibles: ${finalPlan.eligible.count} | Exclus: ${finalPlan.excluded.count} | Opérations: ${finalPlan.operations.count}`);
   console.log(`\n${nTests} tests, ${nFail} échecs`);
   process.exit(nFail > 0 ? 1 : 0);

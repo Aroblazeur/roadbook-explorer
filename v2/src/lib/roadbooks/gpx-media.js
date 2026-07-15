@@ -1,13 +1,6 @@
 const GPX_SCOPES = new Set(["roadbook", "stage", "variant"]);
 const GPX_ROLES = new Set(["official", "custom"]);
 
-const LEGACY_ROLES = {
-  "gpx-official": { scope: "roadbook", role: "official" },
-  "gpx-total": { scope: "roadbook", role: "custom" },
-  "gpx-stage": { scope: "stage", role: "official" },
-  "gpx-variant": { scope: "variant", role: "official" },
-};
-
 function isPositiveInteger(value) {
   return Number.isInteger(value) && value > 0;
 }
@@ -40,7 +33,6 @@ export function classifyGpxMedia(media) {
   const metadata = media.metadata && typeof media.metadata === "object" ? media.metadata : {};
   const rawScope = metadata.scope ?? null;
   const rawRole = metadata.role ?? null;
-  const compatibilityRole = metadata.gpx_role ?? null;
   const variantId = metadata.variant_id ?? null;
   const variantIdPresent = hasOwn(metadata, "variant_id");
 
@@ -51,44 +43,20 @@ export function classifyGpxMedia(media) {
   if (rawScope != null && !GPX_SCOPES.has(rawScope)) {
     return result(media, { roadbookId, stageId, variantId, reason: "unknown-scope" });
   }
-  if (compatibilityRole != null && !GPX_ROLES.has(compatibilityRole)) {
-    return result(media, { roadbookId, stageId, variantId, reason: "unknown-gpx-role" });
-  }
 
-  const legacy = LEGACY_ROLES[rawRole] ?? null;
   const canonicalRole = GPX_ROLES.has(rawRole) ? rawRole : null;
   let status;
   let scope;
   let role;
   let source;
 
-  if (legacy) {
-    scope = legacy.scope;
-    role = legacy.role;
-    source = "legacy-role";
-    status = "legacy-compatible";
-    if (rawScope != null && rawScope !== scope) {
-      return result(media, { roadbookId, stageId, variantId, source, reason: "canonical-legacy-scope-contradiction" });
-    }
-    if (compatibilityRole != null && compatibilityRole !== role) {
-      return result(media, { roadbookId, stageId, variantId, source, reason: "canonical-legacy-role-contradiction" });
-    }
-  } else if (canonicalRole) {
+  if (canonicalRole) {
     scope = rawScope;
     role = canonicalRole;
     source = "canonical";
     status = "canonical";
-    if (compatibilityRole != null && compatibilityRole !== role) {
-      return result(media, { roadbookId, stageId, variantId, source, reason: "canonical-role-contradiction" });
-    }
   } else if (rawRole != null) {
     return result(media, { roadbookId, stageId, variantId, reason: "unknown-role" });
-  } else if (compatibilityRole != null) {
-    // Compatibilité avec les lignes déjà créées par le Studio V2 avant 4C2.
-    scope = rawScope;
-    role = compatibilityRole;
-    source = "legacy-gpx-role";
-    status = "legacy-compatible";
   } else {
     return result(media, { roadbookId, stageId, variantId, reason: "scope-and-role-are-required" });
   }
@@ -116,18 +84,6 @@ export function classifyGpxMedia(media) {
       return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "variant-id-must-be-positive-integer" });
     }
     if (!isPositiveInteger(stageId) || !isPositiveInteger(variantId)) {
-      if (source === "legacy-role") {
-        return result(media, {
-          status: "ambiguous",
-          roadbookId,
-          stageId,
-          variantId,
-          source,
-          scope,
-          role,
-          reason: "legacy-variant-target-is-incomplete",
-        });
-      }
       return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "variant-scope-requires-stage-and-variant-id" });
     }
   }
@@ -177,7 +133,7 @@ export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, sc
 }
 
 export function buildGpxBusinessIdentity(classification) {
-  if (!classification || !["canonical", "legacy-compatible"].includes(classification.status)) return null;
+  if (!classification || classification.status !== "canonical") return null;
   const { roadbookId, stageId, variantId, scope, role } = classification;
   if (!isPositiveInteger(roadbookId) || !GPX_SCOPES.has(scope) || !GPX_ROLES.has(role)) return null;
   if (scope === "roadbook") return `roadbook:${roadbookId}:${scope}:${role}`;

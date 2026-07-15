@@ -74,31 +74,28 @@ test("classifie variant/official canonique", () => {
   assert.equal(result.variantId, 34);
 });
 
-test("reconnaît gpx-official legacy", () => {
+test("refuse un rôle legacy gpx-official", () => {
   const result = classifyGpxMedia(media({ metadata: { role: "gpx-official" } }));
-  assert.deepEqual([result.status, result.scope, result.role, result.source], ["legacy-compatible", "roadbook", "official", "legacy-role"]);
-});
-
-test("reconnaît gpx-total legacy", () => {
-  const result = classifyGpxMedia(media({ metadata: { role: "gpx-total" } }));
-  assert.deepEqual([result.status, result.scope, result.role], ["legacy-compatible", "roadbook", "custom"]);
-});
-
-test("reconnaît gpx-stage legacy avec stage_id", () => {
-  const result = classifyGpxMedia(media({ stage_id: 9, metadata: { role: "gpx-stage" } }));
-  assert.deepEqual([result.status, result.scope, result.role, result.stageId], ["legacy-compatible", "stage", "official", 9]);
-});
-
-test("refuse gpx-stage legacy sans stage_id", () => {
-  const result = classifyGpxMedia(media({ metadata: { role: "gpx-stage" } }));
   assert.equal(result.status, "invalid");
-  assert.equal(result.reason, "stage-id-is-required");
+  assert.equal(result.reason, "unknown-role");
 });
 
-test("gpx-variant legacy incomplet reste ambigu", () => {
+test("refuse un rôle legacy gpx-total", () => {
+  const result = classifyGpxMedia(media({ metadata: { role: "gpx-total" } }));
+  assert.equal(result.status, "invalid");
+  assert.equal(result.reason, "unknown-role");
+});
+
+test("refuse un rôle legacy gpx-stage", () => {
+  const result = classifyGpxMedia(media({ stage_id: 9, metadata: { role: "gpx-stage" } }));
+  assert.equal(result.status, "invalid");
+  assert.equal(result.reason, "unknown-role");
+});
+
+test("refuse gpx-variant legacy sans info", () => {
   const result = classifyGpxMedia(media({ id: 41, metadata: { role: "gpx-variant" } }));
-  assert.equal(result.status, "ambiguous");
-  assert.equal(result.reason, "legacy-variant-target-is-incomplete");
+  assert.equal(result.status, "invalid");
+  assert.equal(result.reason, "unknown-role");
   assert.equal(isExplorerUsableGpx(result), false);
 });
 
@@ -108,10 +105,10 @@ test("refuse un rôle legacy inconnu", () => {
   assert.equal(result.reason, "unknown-role");
 });
 
-test("reste compatible avec scope + gpx_role du Studio V2 existant", () => {
+test("refuse metadata sans role canonique malgré gpx_role", () => {
   const result = classifyGpxMedia(media({ stage_id: 7, metadata: { scope: "stage", gpx_role: "official" } }));
-  assert.equal(result.status, "legacy-compatible");
-  assert.equal(result.source, "legacy-gpx-role");
+  assert.equal(result.status, "invalid");
+  assert.equal(result.reason, "scope-and-role-are-required");
 });
 
 test("refuse un scope canonique inconnu", () => {
@@ -120,16 +117,16 @@ test("refuse un scope canonique inconnu", () => {
   assert.equal(result.reason, "unknown-scope");
 });
 
-test("détecte une contradiction canonique et legacy", () => {
+test("refuse un rôle legacy gpx-official avec scope stage", () => {
   const result = classifyGpxMedia(media({ stage_id: 3, metadata: { scope: "stage", role: "gpx-official" } }));
   assert.equal(result.status, "invalid");
-  assert.equal(result.reason, "canonical-legacy-scope-contradiction");
+  assert.equal(result.reason, "unknown-role");
 });
 
-test("détecte une contradiction role et gpx_role", () => {
+test("ignore gpx_role quand role canonique est présent", () => {
   const result = classifyGpxMedia(media({ metadata: { scope: "roadbook", role: "official", gpx_role: "custom" } }));
-  assert.equal(result.status, "invalid");
-  assert.equal(result.reason, "canonical-role-contradiction");
+  assert.equal(result.status, "canonical");
+  assert.equal(result.role, "official");
 });
 
 test("refuse un média non GPX", () => {
@@ -208,7 +205,7 @@ test("conserve un ancien fallback Storage", () => {
 });
 
 test("le loader signe une sélection unique et la classe par étape", async () => {
-  const row = media({ id: 7, stage_id: 12, path: "media-7.gpx", metadata: { role: "gpx-stage" } });
+  const row = media({ id: 7, stage_id: 12, path: "media-7.gpx", metadata: { scope: "stage", role: "official" } });
   const loaded = await loadExplorerGpxMedia(fakeSupabase(), [row], { logger: () => {} });
   assert.equal(loaded.gpxByStage[12].id, 7);
   assert.match(loaded.gpxByStage[12].signedUrl, /media-7\.gpx/);
@@ -216,7 +213,7 @@ test("le loader signe une sélection unique et la classe par étape", async () =
 
 test("signature inaccessible journalisée et fallback encore utilisable", async () => {
   const logs = [];
-  const row = media({ id: 8, stage_id: 12, path: "media-8.gpx", metadata: { role: "gpx-stage" } });
+  const row = media({ id: 8, stage_id: 12, path: "media-8.gpx", metadata: { scope: "stage", role: "official" } });
   const loaded = await loadExplorerGpxMedia(fakeSupabase({ inaccessibleIds: [8] }), [row], { logger: (...args) => logs.push(args) });
   assert.equal(loaded.gpxByStage[12].signedUrl, null);
   assert.equal(resolveExplorerGpxUrl({ media: loaded.gpxByStage[12], fallbackUrl: "legacy/stage.gpx" }).source, "legacy-relative-url");
@@ -227,8 +224,8 @@ test("signature inaccessible journalisée et fallback encore utilisable", async 
 test("identité dupliquée non sélectionnée et fallback conservé", async () => {
   const logs = [];
   const rows = [
-    media({ id: 10, stage_id: 12, path: "media-10.gpx", metadata: { role: "gpx-stage" } }),
-    media({ id: 11, stage_id: 12, path: "media-11.gpx", metadata: { role: "gpx-stage" } }),
+    media({ id: 10, stage_id: 12, path: "media-10.gpx", metadata: { scope: "stage", role: "official" } }),
+    media({ id: 11, stage_id: 12, path: "media-11.gpx", metadata: { scope: "stage", role: "official" } }),
   ];
   const loaded = await loadExplorerGpxMedia(fakeSupabase(), rows, { logger: (...args) => logs.push(args) });
   assert.equal(loaded.gpxByStage[12], undefined);
@@ -236,20 +233,20 @@ test("identité dupliquée non sélectionnée et fallback conservé", async () =
   assert.equal(resolveExplorerGpxUrl({ fallbackUrl: "legacy/stage.gpx" }).url, "legacy/stage.gpx");
 });
 
-test("media.id 41 reste ambigu, non signé et non sélectionné", async () => {
+test("media.id 41 non canonique est ignoré", async () => {
   const logs = [];
   const row = media({ id: 41, path: "media-41.gpx", metadata: { role: "gpx-variant" } });
   const loaded = await loadExplorerGpxMedia(fakeSupabase(), [row], { logger: (...args) => logs.push(args) });
   assert.deepEqual(loaded.gpxByVariant, {});
-  assert.equal(logs[0][0], "[gpx-media] ambiguous");
+  assert.equal(logs[0][0], "[gpx-media] invalid");
   assert.equal(resolveExplorerGpxUrl({ fallbackUrl: "legacy/variant.gpx" }).url, "legacy/variant.gpx");
 });
 
-test("les 19 lignes historiques non ambiguës sont classifiables", () => {
+test("les 19 lignes historiques seraient désormais refusées sans migration canonique", () => {
   const stageIds = [13, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 17, 18];
   const rows = stageIds.map((stageId, index) => media({ id: 100 + index, roadbook_id: index < 2 ? 5 : index < 12 ? 3 : 4, stage_id: stageId, metadata: { role: "gpx-stage" } }));
   rows.push(media({ id: 43, roadbook_id: 4, metadata: { role: "gpx-official" } }));
   const results = rows.map(classifyGpxMedia);
   assert.equal(results.length, 19);
-  assert.equal(results.every(item => item.status === "legacy-compatible" && isExplorerUsableGpx(item)), true);
+  assert.equal(results.every(item => item.status === "invalid"), true);
 });

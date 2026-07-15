@@ -4,11 +4,11 @@ export function normalizeAccommodation(value) {
   }
   const source = value && typeof value === "object" ? value : {};
   return {
-    name: String(source.displayName ?? source.name ?? "").trim(),
-    url: String(source.website ?? source.url ?? "").trim(),
+    name: String(source.name ?? "").trim(),
+    url: String(source.url ?? "").trim(),
     photo: String(source.photo ?? "").trim(),
     type: String(source.type ?? "").trim(),
-    note: String(source.comment ?? source.note ?? "").trim(),
+    note: String(source.note ?? "").trim(),
   };
 }
 
@@ -23,7 +23,7 @@ export function primaryAccommodationFromStage(stage) {
     url: stage?.accommodation_url,
     photo: stage?.accommodation_photo,
     type: stage?.accommodation_type,
-    note: stage?.metadata?.accommodationNote ?? stage?.metadata?.accommodation?.note,
+    note: stage?.metadata?.accommodationNote,
   });
 }
 
