@@ -26,7 +26,10 @@ cp .env.example .env.local
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
+GOOGLE_MAPS_API_KEY=AIza...
 ```
+
+`GOOGLE_MAPS_API_KEY` reste côté serveur. Elle est nécessaire uniquement au calcul automatique de la distance et de la durée du « point de départ » ; le lien d’itinéraire Google Maps reste disponible sans cette clé. Activez l’API Routes dans le projet Google Cloud associé.
 
 ## Lancer en local
 

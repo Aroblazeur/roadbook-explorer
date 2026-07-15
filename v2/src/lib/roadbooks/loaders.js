@@ -231,3 +231,8 @@ export async function loadStudioData(supabase, roadbookId) {
   ]);
   return { roadbook, stages, pois, variants, media, gpxRows };
 }
+export async function loadStartPoint(supabase, roadbookId) {
+  const { data, error } = await supabase.from("roadbook_start_points").select("*").eq("roadbook_id", roadbookId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}

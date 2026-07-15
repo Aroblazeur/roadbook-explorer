@@ -14,7 +14,7 @@ function groupBy(items, key) {
   }, {});
 }
 
-export default function DuplicateRoadbookButton({ roadbook, stages, pois, variants }) {
+export default function DuplicateRoadbookButton({ roadbook, stages, pois, variants, startPoint }) {
   const { user, supabase } = useAuth();
   const router = useRouter();
   const [duplicating, setDuplicating] = useState(false);
@@ -31,7 +31,7 @@ export default function DuplicateRoadbookButton({ roadbook, stages, pois, varian
       const variantsByStage = groupBy(variants, "stage_id");
       const newId = await duplicateRoadbook(
         supabase, roadbook, stages, poisByStage, variantsByStage,
-        `${roadbook.slug}-copie-${Date.now()}`, user.id, poisByVariant,
+        `${roadbook.slug}-copie-${Date.now()}`, user.id, poisByVariant, startPoint,
       );
       router.push(`/dashboard/roadbooks/${newId}`);
     } catch (caught) {

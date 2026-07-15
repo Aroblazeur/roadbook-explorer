@@ -12,6 +12,7 @@ export default function useSaveActions({
   coverMode, coverUrl, coverMediaId,
   stages, setStages, poisByStage, setPoisByStage, variantsByStage, setVariantsByStage, setTraceRoute,
   prepareAutomaticCompletion,
+  prepareStartPointForSave, persistStartPoint, setStartPoint,
   setError, setSuccess, markRemoteConflict,
   saveWithLock,
   clearDraft, onDeleted,
@@ -24,6 +25,12 @@ export default function useSaveActions({
       automation = await prepareAutomaticCompletion?.() ?? automation;
     } catch (error) {
       automation.report.warnings.push(error?.message ?? String(error));
+    }
+    let startPointAutomation = { value: null, report: { fields: 0, warnings: [] } };
+    try {
+      startPointAutomation = await prepareStartPointForSave?.() ?? startPointAutomation;
+    } catch (error) {
+      startPointAutomation.report.warnings.push(error?.message ?? String(error));
     }
     const completedStages = automation.stages ?? stages;
     const completedVariantsByStage = automation.variantsByStage ?? variantsByStage;
@@ -58,8 +65,8 @@ export default function useSaveActions({
       cover_image_url: coverMode === "url" ? coverUrl.trim() || null : null,
       cover_media_id: coverMode === "media" ? coverMediaId : null,
     };
-    const warningCount = automation.report?.warnings?.length ?? 0;
-    const automatedFields = automation.report?.fields ?? 0;
+    const warningCount = (automation.report?.warnings?.length ?? 0) + (startPointAutomation.report?.warnings?.length ?? 0);
+    const automatedFields = (automation.report?.fields ?? 0) + (startPointAutomation.report?.fields ?? 0);
     const saved = await saveWithLock({
       getUpdateFields: () => updateFields,
       getUpdatedRoadbook: (prev, data) => ({ ...prev, ...updateFields, updated_at: data.updated_at }),
@@ -67,6 +74,7 @@ export default function useSaveActions({
         updateStages(supabase, completedStages, buildEditableStageUpdate),
         updateVariants(supabase, completedVariantsByStage, buildEditableVariantUpdate),
         updatePois(supabase, automation.poiUpdates ?? []),
+        startPointAutomation.value ? persistStartPoint?.(startPointAutomation.value) : Promise.resolve(),
       ]),
       successMessage: `Toutes les modifications ont été enregistrées.${automatedFields ? ` ${automatedFields} champ(s) complété(s) automatiquement.` : ""}${warningCount ? ` ${warningCount} automatisation(s) indisponible(s).` : ""}`,
     });
@@ -80,9 +88,10 @@ export default function useSaveActions({
         traceGain: traceGain != null ? String(traceGain) : "",
         traceLoss: traceLoss != null ? String(traceLoss) : "",
       }));
+      if (startPointAutomation.value) setStartPoint?.(startPointAutomation.value);
     }
     return saved;
-  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, variantsByStage, supabase, saveWithLock, setError, setStages, setVariantsByStage, setPoisByStage, setTraceRoute, prepareAutomaticCompletion]);
+  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, variantsByStage, supabase, saveWithLock, setError, setStages, setVariantsByStage, setPoisByStage, setTraceRoute, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint]);
 
   const handleToggleVisibility = useCallback(async () => {
     const result = await conditionalUpdateRoadbook(supabase, id, { is_public: !isPublic }, roadbook?.updated_at);

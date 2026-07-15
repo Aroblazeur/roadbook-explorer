@@ -10,6 +10,7 @@ export default function useLoadData({
   loadEnrichmentIndices, reloadMedia, reloadGpx,
   setRoadbook, setStages, setPoisByStage, setVariantsByStage,
   setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant,
+  setStartPoint,
 }) {
   const [officialRoute, setOfficialRoute] = useState({ officialDist: "", officialGain: "", officialLoss: "", officialGpx: "", officialMap: "" });
   const [traceRoute, setTraceRoute] = useState({ traceDist: "", traceGain: "", traceLoss: "", traceGpx: "", traceMap: "" });
@@ -85,7 +86,8 @@ export default function useLoadData({
     if (p.coverMode !== undefined) setCoverMode(p.coverMode);
     if (p.coverUrl != null) setCoverUrl(p.coverUrl);
     if (p.coverMediaId !== undefined) setCoverMediaId(p.coverMediaId);
-  }, [setTitle, setDescription, setIsPublic, setActivity, setDestination, setProject, setRoadbook, setStages, setPoisByStage, setVariantsByStage, setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant, setCoverMode, setCoverUrl, setCoverMediaId]);
+    if (p.startPoint) setStartPoint(p.startPoint);
+  }, [setTitle, setDescription, setIsPublic, setActivity, setDestination, setProject, setRoadbook, setStages, setPoisByStage, setVariantsByStage, setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant, setCoverMode, setCoverUrl, setCoverMediaId, setStartPoint]);
 
   return { officialRoute, setOfficialRoute, traceRoute, setTraceRoute, restoreDraft };
 }

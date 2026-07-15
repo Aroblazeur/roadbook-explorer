@@ -42,6 +42,7 @@ export function useStudioDraft({
   coverMode,
   coverUrl,
   coverMediaId,
+  startPoint,
   loaded,
 }) {
   const tabId = useRef(null);
@@ -91,6 +92,7 @@ export function useStudioDraft({
     coverMode,
     coverUrl,
     coverMediaId,
+    startPoint,
   };
 
   const stateRef = useRef(currentState);
@@ -196,6 +198,7 @@ export function useStudioDraft({
     stages, poisByStage, variantsByStage,
     coverMode, coverUrl, coverMediaId,
     images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant,
+    startPoint,
     scheduleSave,
   ]);
 

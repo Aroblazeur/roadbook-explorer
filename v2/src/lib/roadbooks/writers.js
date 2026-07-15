@@ -1,3 +1,5 @@
+import { buildStartPointRecord, hasStartPoint } from "./start-point.js";
+
 export async function insertStage(supabase, record) {
   const { error } = await supabase.from("stages").insert(record);
   if (error) throw new Error(error.message);
@@ -29,6 +31,16 @@ export async function updatePoi(supabase, poiId, updates) {
 
 export async function updatePois(supabase, operations) {
   await Promise.all(operations.map(operation => updatePoi(supabase, operation.id, operation.updates)));
+}
+
+export async function saveStartPoint(supabase, roadbookId, record, present) {
+  if (!present) {
+    const { error } = await supabase.from("roadbook_start_points").delete().eq("roadbook_id", roadbookId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  const { error } = await supabase.from("roadbook_start_points").upsert(record, { onConflict: "roadbook_id" });
+  if (error) throw new Error(error.message);
 }
 
 export async function deletePoi(supabase, poiId) {
@@ -252,7 +264,7 @@ export async function deleteRoadbook(supabase, roadbookId) {
   if (error) throw new Error(error.message);
 }
 
-export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, slug, userId, poisByVariant = {}) {
+export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, slug, userId, poisByVariant = {}, startPoint = null) {
   const newRb = await insertRoadbook(supabase, {
     slug, owner_id: userId,
     title: `${roadbook.title} (copie)`,
@@ -266,6 +278,10 @@ export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage,
   });
 
   const newStageIds = [];
+  if (hasStartPoint(startPoint)) {
+    const { error: startPointError } = await supabase.from("roadbook_start_points").insert(buildStartPointRecord(startPoint, newRb.id));
+    if (startPointError) throw new Error(startPointError.message);
+  }
   for (const stage of stages) {
     const { data: newStage, error: sError } = await supabase.from("stages").insert({
       roadbook_id: newRb.id, stage_number: stage.stage_number, title: stage.title,

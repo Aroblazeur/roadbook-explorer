@@ -147,6 +147,7 @@ export function buildDraftPayload(state) {
       coverMode: state.coverMode,
       coverUrl: state.coverUrl,
       coverMediaId: state.coverMediaId,
+      startPoint: state.startPoint,
     },
   };
 }

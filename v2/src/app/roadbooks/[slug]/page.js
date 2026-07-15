@@ -5,6 +5,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { getSignedMediaAccess, loadExplorerGpxMedia } from "@/lib/roadbooks/loaders";
 import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
+import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -29,6 +30,12 @@ async function getRoadbook(slug) {
     .select("*")
     .eq("roadbook_id", roadbook.id)
     .order("stage_number", { ascending: true });
+
+  const { data: startPoint } = await supabase
+    .from("roadbook_start_points")
+    .select("*")
+    .eq("roadbook_id", roadbook.id)
+    .maybeSingle();
 
   const stageIds = (stages ?? []).map(s => s.id);
   let pois = [], variants = [];
@@ -89,7 +96,7 @@ async function getRoadbook(slug) {
   const totalElevationGain = (stages ?? []).reduce((sum, s) => sum + (s.elevation_gain_m ?? 0), 0);
   const totalElevationLoss = (stages ?? []).reduce((sum, s) => sum + (s.elevation_loss_m ?? 0), 0);
 
-  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false, user, canEdit };
+  return { roadbook, startPoint, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false, user, canEdit };
 }
 
 export default async function RoadbookViewPage({ params, searchParams: sp }) {
@@ -105,7 +112,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
     return <TechnicalError message={result.error} />;
   }
 
-  const { roadbook, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, totals } = result;
+  const { roadbook, startPoint, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, totals } = result;
   const stageParam = searchParams?.stage ? Number(searchParams.stage) : null;
   const variantParam = searchParams?.variant ? String(searchParams.variant) : null;
 
@@ -137,12 +144,13 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
 
   return (
     <>
-      <RoadbookHeader roadbook={roadbook} stages={stages} pois={pois} variants={variants} user={result.user} canEdit={result.canEdit} />
+      <RoadbookHeader roadbook={roadbook} startPoint={startPoint} stages={stages} pois={pois} variants={variants} user={result.user} canEdit={result.canEdit} />
       <main className="container">
       {currentEntry == null ? (
         <>
           <RoadbookOverview
             roadbook={roadbook}
+            startPoint={startPoint}
             stages={stages}
             variantsByStage={variantsByStage}
             totals={totals}
@@ -187,7 +195,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   );
 }
 
-function RoadbookHeader({ roadbook, stages, pois, variants, user, canEdit }) {
+function RoadbookHeader({ roadbook, startPoint, stages, pois, variants, user, canEdit }) {
   return (
     <header className="header roadbook-header">
       <div className="container">
@@ -227,7 +235,7 @@ function RoadbookHeader({ roadbook, stages, pois, variants, user, canEdit }) {
           <Link href="/explore">Retour aux roadbooks</Link>
           {canEdit && <Link href={`/dashboard/roadbooks/${roadbook.id}`}>✏️ Studio</Link>}
           {user ? (
-            <DuplicateRoadbookButton roadbook={roadbook} stages={stages} pois={pois} variants={variants} />
+            <DuplicateRoadbookButton roadbook={roadbook} stages={stages} pois={pois} variants={variants} startPoint={startPoint} />
           ) : (
             <Link href={`/login?next=${encodeURIComponent(`/roadbooks/${roadbook.slug}`)}`}>Se connecter pour dupliquer</Link>
           )}
@@ -237,7 +245,7 @@ function RoadbookHeader({ roadbook, stages, pois, variants, user, canEdit }) {
   );
 }
 
-function RoadbookOverview({ roadbook, stages, variantsByStage, totals, gpxOfficial, gpxCustom }) {
+function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, totals, gpxOfficial, gpxCustom }) {
   const metadata = roadbook.metadata ?? {};
   const official = metadata.official ?? {};
   const savedCurrent = metadata.stagesTotal ?? {};
@@ -259,6 +267,7 @@ function RoadbookOverview({ roadbook, stages, variantsByStage, totals, gpxOffici
         mapTitle="Carte interactive de l'itinéraire officiel"
         downloadLabel="Télécharger le tracé officiel"
       />
+      <StartPointOverview value={startPoint} />
       <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} variantsByStage={variantsByStage} />
       <RouteSummary
         className="roadbook-current-summary"
@@ -270,6 +279,29 @@ function RoadbookOverview({ roadbook, stages, variantsByStage, totals, gpxOffici
       />
     </section>
   );
+}
+
+function StartPointOverview({ value }) {
+  if (!hasStartPoint(value)) return null;
+  const point = normalizeStartPoint(value);
+  const mapsUrl = safeResourceUrl(point.google_maps_url || buildGoogleMapsDirectionsUrl(point), { relative: false });
+  const routeCities = [point.departure_city, ...point.waypoints.filter(Boolean), point.arrival_city].filter(Boolean);
+  const transport = ({ car: "Voiture", train: "Train / transports en commun", transit: "Transports en commun", bicycle: "Vélo", walk: "À pied", motorcycle: "Moto", other: "Autre" })[point.transport_mode] || point.transport_mode;
+  return <section className="roadbook-start-point" aria-labelledby="roadbook-start-point-title">
+    <div className="roadbook-start-point__header">
+      <div><span className="roadbook-start-point__eyebrow">Avant la première étape</span><h2 id="roadbook-start-point-title">Point de départ</h2></div>
+      {mapsUrl && <a className="terrain-button terrain-button--secondary" href={mapsUrl} target="_blank" rel="noreferrer">Ouvrir dans Google Maps</a>}
+    </div>
+    {routeCities.length > 0 && <p className="roadbook-start-point__route">{routeCities.join(" → ")}</p>}
+    <div className="roadbook-start-point__stats">
+      {transport && <span><strong>Transport</strong>{transport}</span>}
+      {point.distance_km !== "" && <span><strong>Distance</strong>{point.distance_km} km</span>}
+      {point.duration && <span><strong>Durée</strong>{point.duration}</span>}
+    </div>
+    {point.description && <p className="roadbook-start-point__description">{point.description}</p>}
+    {point.accommodations.length > 0 && <div className="roadbook-start-point__resources"><h3>Hébergements</h3><div className="stage-detail-accommodation-list">{point.accommodations.map((item, index) => <AccommodationResource key={`${item.name}-${index}`} accommodation={item} contextCity={point.arrival_city || point.departure_city} compact />)}</div></div>}
+    {point.pois.length > 0 && <div className="roadbook-start-point__resources"><h3>Points d’intérêt</h3><div className="stage-detail-pois">{point.pois.map((poi, index) => <PoiCard key={`${poi.name}-${index}`} poi={poi} />)}</div></div>}
+  </section>;
 }
 
 function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabel }) {
