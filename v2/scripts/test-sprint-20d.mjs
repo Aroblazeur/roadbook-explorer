@@ -259,6 +259,20 @@ test("le brouillon conserve aussi les GPX des variantes", () => {
   assert.ok(content.includes("gpxByVariant: state.gpxByVariant"));
 });
 
+test("seule la poignee d'une etape est deplacable afin de laisser les champs selectionnables", () => {
+  const content = readFileSync("src/components/studio/StageCard.js", "utf-8");
+  assert.ok(!content.match(/<article[\s\S]*?draggable="true"[\s\S]*?<div className="studio-stage-card__header"/));
+  assert.ok(content.includes("studio-stage-card__drag-handle"));
+  assert.ok(content.includes('aria-label={`Déplacer l\'étape'));
+});
+
+test("Retour arriere ne peut pas quitter accidentellement le Studio", () => {
+  const content = readFileSync("src/hooks/useStudioDraft.js", "utf-8");
+  assert.ok(content.includes('event.key !== "Backspace"'));
+  assert.ok(content.includes('document.addEventListener("keydown", handleBackspaceNavigation)'));
+  assert.ok(content.includes("if (!isEditable) event.preventDefault()"));
+});
+
 // ===================== Synchronisation helpers check =====================
 console.log("\n=== 4. Vérification sync-helpers ===");
 

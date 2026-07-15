@@ -219,6 +219,23 @@ export function useStudioDraft({
   }, [roadbookId, saveImmediate]);
 
   useEffect(() => {
+    function handleBackspaceNavigation(event) {
+      if (event.key !== "Backspace" || event.defaultPrevented) return;
+
+      const target = event.target;
+      const isEditable = target instanceof HTMLElement && (
+        target.isContentEditable ||
+        target.matches('input:not([readonly]):not([disabled]), textarea:not([readonly]):not([disabled])')
+      );
+
+      if (!isEditable) event.preventDefault();
+    }
+
+    document.addEventListener("keydown", handleBackspaceNavigation);
+    return () => document.removeEventListener("keydown", handleBackspaceNavigation);
+  }, []);
+
+  useEffect(() => {
     function handleVisibilityChange() {
       if (document.visibilityState === "hidden") {
         saveImmediate();

@@ -52,11 +52,8 @@ export default function StageCard({
       key={stage.id}
       className={`studio-stage-card ${isDragOver ? "studio-stage-card--drag-over" : ""}`}
       data-expanded={expanded ? "true" : "false"}
-      draggable="true"
       style={{ opacity: isDragging ? 0.5 : 1 }}
-      onDragStart={(e) => { dragHandlers?.handleDragStart(e, stage.id); }}
       onDragOver={(e) => { dragHandlers?.handleDragOver(e, stage.id); }}
-      onDragEnd={dragHandlers?.handleDragEnd}
       onDrop={(e) => { dragHandlers?.handleDrop(e, stage.id); }}
     >
       {/* Stage header */}
@@ -72,6 +69,16 @@ export default function StageCard({
           </p>
         </div>
         <div className="studio-stage-card__actions">
+          <button
+            type="button"
+            className="terrain-button--secondary studio-action-button--compact studio-stage-card__drag-handle"
+            draggable="true"
+            aria-label={`Déplacer l'étape ${stage.stage_number}`}
+            title="Maintenir et déplacer pour réordonner"
+            onClick={(e) => e.stopPropagation()}
+            onDragStart={(e) => dragHandlers?.handleDragStart(e, stage.id)}
+            onDragEnd={dragHandlers?.handleDragEnd}
+          >↕ Déplacer</button>
           <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); clearVariantForm(); setVariantForm(current => ({ ...current, stage_id: stage.id })); }}>Ajouter une variante</button>
           <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }} disabled={deleting === stage.id}>Supprimer</button>
         </div>

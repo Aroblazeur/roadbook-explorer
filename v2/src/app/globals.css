@@ -364,6 +364,11 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+.studio-stage-card__drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+.studio-stage-card__drag-handle:active { cursor: grabbing; }
 .studio-roadbook-list,
 .studio-stage-list,
 .studio-variant-list {
