@@ -15,6 +15,7 @@ import { strict as assert } from "node:assert";
 import {
   validateGpx, normalizeNumber, buildGpxPath, resizeImage,
   defaultStageFormState, stageToFormValues, buildStageRecord,
+  buildEditableStageUpdate,
   buildPoiRecord, buildVariantRecord, buildNotePayload, removeNote,
   groupByStageId, validateStageForm,
 } from "../src/lib/roadbooks/validators.js";
@@ -33,6 +34,8 @@ import {
   buildDemotePrimaryUpdate,
   buildPrimaryAccommodationUpdate,
   buildPromoteAlternativeUpdate,
+  primaryAccommodationFromStage,
+  alternativesFromStage,
 } from "../src/lib/roadbooks/accommodations.js";
 import { estimateGpxHours, getActivityDurationProfile } from "../src/lib/gpx-metrics.js";
 
@@ -245,6 +248,22 @@ test("rétrograder le principal le déplace dans les alternatives", () => {
   assert.equal(update.alternatives.length, 2);
   assert.equal(update.alternatives[1].name, "Principal");
   assert.equal(update.alternatives[1].note, "Informations");
+});
+
+test("les valeurs d'hebergement conservent les espaces pendant la saisie", () => {
+  const primary = primaryAccommodationFromStage({
+    accommodation_name: "Hotel du Lac ",
+    metadata: { accommodationNote: "Repas du soir " },
+  });
+  const alternatives = alternativesFromStage({
+    alternatives: [{ name: "Gite rural ", note: "Deux chambres " }],
+  });
+  assert.equal(primary.name, "Hotel du Lac ");
+  assert.equal(primary.note, "Repas du soir ");
+  assert.equal(alternatives[0].name, "Gite rural ");
+  assert.equal(alternatives[0].note, "Deux chambres ");
+  assert.equal(buildPrimaryAccommodationUpdate({}, primary).accommodation_name, "Hotel du Lac");
+  assert.equal(buildEditableStageUpdate({ alternatives }).alternatives[0].name, "Gite rural");
 });
 
 test("groupByStageId groupe les lignes par stage_id", () => {

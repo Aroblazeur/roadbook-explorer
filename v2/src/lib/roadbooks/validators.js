@@ -1,3 +1,5 @@
+import { normalizeAccommodation } from "./accommodations.js";
+
 export function validateGpx(file) {
   const name = file.name.toLowerCase();
   const accept = name.endsWith(".gpx") || ["application/gpx+xml", "application/xml", "text/xml"].includes(file.type);
@@ -149,7 +151,7 @@ export function buildEditableStageUpdate(stage) {
     accommodation_name: stage.accommodation_name?.trim() || null,
     accommodation_url: stage.accommodation_url?.trim() || null,
     accommodation_photo: stage.accommodation_photo?.trim() || null,
-    alternatives: Array.isArray(stage.alternatives) ? stage.alternatives : [],
+    alternatives: Array.isArray(stage.alternatives) ? stage.alternatives.map(normalizeAccommodation) : [],
     map_embed_url: stage.map_embed_url?.trim() || null,
     day: stage.day?.trim() || null,
     stage_label: stage.stage_label?.trim() || null,
@@ -227,7 +229,7 @@ export function buildEditableVariantUpdate(variant) {
     accommodation_name: variant.accommodation_name?.trim() || null,
     accommodation_url: variant.accommodation_url?.trim() || null,
     accommodation_photo: variant.accommodation_photo?.trim() || null,
-    alternatives: Array.isArray(variant.alternatives) ? variant.alternatives : [],
+    alternatives: Array.isArray(variant.alternatives) ? variant.alternatives.map(normalizeAccommodation) : [],
     map_embed_url: variant.map_embed_url?.trim() || null,
     day: variant.day?.trim() || null,
     stage_label: variant.stage_label?.trim() || null,

@@ -13,6 +13,13 @@ export default function RouteForm({
   embedded = false,
 }) {
   const isOfficial = mode === "official";
+  const role = isOfficial ? "official" : "custom";
+  const accept = ".gpx,application/gpx+xml,application/xml,text/xml";
+  const selectFile = async (event, action) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await action(file);
+  };
   const title = isOfficial ? "Itinéraire officiel" : "Tracé actuel";
   return (
     <div className={embedded ? "studio-section-block studio-section-block--route" : "studio-card"}>
@@ -32,13 +39,17 @@ export default function RouteForm({
                 <>
                   <span className="studio-resource-field__file" title={mediaRow.file_name}>{mediaRow.file_name}</span>
                   <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxDownload(mediaRow)} disabled={!!gpxUploading}>Télécharger</button>
-                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxReplace(mediaRow, "roadbook", isOfficial ? "official" : "custom", null)} disabled={!!gpxUploading}>Remplacer</button>
+                  <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
+                    {gpxUploading === role ? "Remplacement..." : "Remplacer"}
+                    <input type="file" accept={accept} disabled={!!gpxUploading} onChange={event => selectFile(event, file => handleGpxReplace(file, mediaRow, "roadbook", role, null))} />
+                  </label>
                   <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => handleGpxDelete(mediaRow)} disabled={!!gpxUploading}>Supprimer</button>
                 </>
               ) : (
-                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxUpload("roadbook", isOfficial ? "official" : "custom", null)} disabled={!!gpxUploading}>
+                <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
                   {gpxUploading === (isOfficial ? "official" : "custom") ? "Import…" : "Importer"}
-                </button>
+                  <input type="file" accept={accept} disabled={!!gpxUploading} onChange={event => selectFile(event, file => handleGpxUpload(file, "roadbook", role, null))} />
+                </label>
               )}
             </div>
           </div>

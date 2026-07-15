@@ -1,15 +1,23 @@
-export function normalizeAccommodation(value) {
+function accommodationValue(value, trim = true) {
   if (typeof value === "string") {
-    return { name: value.trim(), url: "", photo: "", type: "", note: "" };
+    return { name: trim ? value.trim() : value, url: "", photo: "", type: "", note: "" };
   }
   const source = value && typeof value === "object" ? value : {};
-  return {
-    name: String(source.name ?? "").trim(),
-    url: String(source.url ?? "").trim(),
-    photo: String(source.photo ?? "").trim(),
-    type: String(source.type ?? "").trim(),
-    note: String(source.note ?? "").trim(),
+  const text = (field) => {
+    const result = String(source[field] ?? "");
+    return trim ? result.trim() : result;
   };
+  return {
+    name: text("name"),
+    url: text("url"),
+    photo: text("photo"),
+    type: text("type"),
+    note: text("note"),
+  };
+}
+
+export function normalizeAccommodation(value) {
+  return accommodationValue(value, true);
 }
 
 export function hasAccommodation(value) {
@@ -18,18 +26,18 @@ export function hasAccommodation(value) {
 }
 
 export function primaryAccommodationFromStage(stage) {
-  return normalizeAccommodation({
+  return accommodationValue({
     name: stage?.accommodation_name,
     url: stage?.accommodation_url,
     photo: stage?.accommodation_photo,
     type: stage?.accommodation_type,
     note: stage?.metadata?.accommodationNote,
-  });
+  }, false);
 }
 
 export function alternativesFromStage(stage) {
   return Array.isArray(stage?.alternatives)
-    ? stage.alternatives.map(normalizeAccommodation)
+    ? stage.alternatives.map(value => accommodationValue(value, false))
     : [];
 }
 

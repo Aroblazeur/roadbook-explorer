@@ -278,6 +278,16 @@ test("l'upload GPX convertit l'identifiant de route en entier", () => {
   assert.ok(content.includes("buildGpxPath(userId, Number(roadbookId)"));
 });
 
+test("les GPX utilisent des champs fichier persistants dans le DOM", () => {
+  const block = readFileSync("src/components/studio/GpxBlock.js", "utf-8");
+  const route = readFileSync("src/components/studio/RouteForm.js", "utf-8");
+  assert.ok(block.includes('input type="file"'));
+  assert.ok(route.includes('input type="file"'));
+  assert.ok(block.includes("handleGpxUpload(file, scope"));
+  assert.ok(route.includes('handleGpxUpload(file, "roadbook"'));
+  assert.ok(!pageSrc.includes('document.createElement("input")'));
+});
+
 test("les uploads photo affichent leur resultat et retournent un apercu signe", () => {
   const manager = readFileSync("src/hooks/studio/useMediaManager.js", "utf-8");
   assert.ok(manager.includes('onSuccess?.("Image importée.")'));
