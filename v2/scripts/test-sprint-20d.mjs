@@ -273,6 +273,19 @@ test("Retour arriere ne peut pas quitter accidentellement le Studio", () => {
   assert.ok(content.includes("if (!isEditable) event.preventDefault()"));
 });
 
+test("l'upload GPX convertit l'identifiant de route en entier", () => {
+  const content = readFileSync("src/hooks/studio/useGpxManager.js", "utf-8");
+  assert.ok(content.includes("buildGpxPath(userId, Number(roadbookId)"));
+});
+
+test("les uploads photo affichent leur resultat et retournent un apercu signe", () => {
+  const manager = readFileSync("src/hooks/studio/useMediaManager.js", "utf-8");
+  assert.ok(manager.includes('onSuccess?.("Image importée.")'));
+  assert.ok(manager.includes("{ ...result.media, signedUrl }"));
+  assert.ok(pageSrc.includes("onError: setError, onSuccess: setSuccess"));
+  assert.ok(pageSrc.includes("setCoverPreview(media.signedUrl ?? null)"));
+});
+
 // ===================== Synchronisation helpers check =====================
 console.log("\n=== 4. Vérification sync-helpers ===");
 

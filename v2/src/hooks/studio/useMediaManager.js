@@ -39,10 +39,13 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
         metadata: { original_name: file.name, original_size: file.size, resized_width: width, resized_height: height, final_size: size, format: "jpeg", ...(variantId ? { variant_id: Number(variantId) } : {}) },
       };
       const result = await uploadImage(supabase, userId, roadbookId, file, blob, record, { returnMedia: true });
-      onSuccess?.("");
+      const signedUrl = result?.media?.path
+        ? await handleSignedUrl(result.media.path)
+        : null;
       await reloadMedia();
       await onMutation?.();
-      return result?.media ?? null;
+      onSuccess?.("Image importée.");
+      return result?.media ? { ...result.media, signedUrl } : null;
     } catch (err) {
       setUploadError(err.message);
       onError?.(err.message);
@@ -50,7 +53,7 @@ export function useMediaManager({ supabase, roadbookId, userId, onError, onSucce
       setUploadLoading(false);
     }
     return null;
-  }, [supabase, roadbookId, userId, onError, onSuccess, reloadMedia, onMutation]);
+  }, [supabase, roadbookId, userId, onError, onSuccess, reloadMedia, onMutation, handleSignedUrl]);
 
   const removeMedia = useCallback(async (mediaRow) => {
     setDeleteLoading(mediaRow.id);

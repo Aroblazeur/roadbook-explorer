@@ -77,7 +77,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     try {
       let path;
       try {
-        path = buildGpxPath(userId, roadbookId, scope, role, stageId, variantId);
+        path = buildGpxPath(userId, Number(roadbookId), scope, role, stageId, variantId);
       } catch (pathErr) {
         setGpxError(formatGpxUserError(pathErr, "Impossible de construire le chemin de stockage."));
         setGpxUploading(null);
