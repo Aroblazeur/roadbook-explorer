@@ -11,7 +11,7 @@ export async function updateStage(supabase, stageId, updates) {
 }
 
 export async function updateStages(supabase, stages, buildUpdates) {
-  await Promise.all(stages.map((stage, index) => updateStage(supabase, stage.id, buildUpdates(stage, index))));
+  await Promise.all(stages.map((stage, index) => updateStage(supabase, stage.id, buildUpdates(stage, index, stages))));
 }
 
 export async function deleteStage(supabase, stageId) {

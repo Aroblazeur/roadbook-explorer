@@ -1,4 +1,5 @@
 import { normalizeAccommodation } from "./accommodations.js";
+import { buildStageTitle, stageDisplayLabel } from "./stage-order.js";
 
 export function validateGpx(file) {
   const name = file.name.toLowerCase();
@@ -145,11 +146,11 @@ export function buildPoiRecord(poiForm) {
   };
 }
 
-export function buildEditableStageUpdate(stage, index = 0) {
+export function buildEditableStageUpdate(stage, index = 0, allStages = [stage]) {
   return {
     stage_number: normalizeNumber(stage.stage_number),
     sort_order: normalizeNumber(stage.sort_order) ?? index + 1,
-    title: stage.title?.trim() || null,
+    title: buildStageTitle(stage, stageDisplayLabel(allStages, index)),
     departure: stage.departure?.trim() || null,
     arrival: stage.arrival?.trim() || null,
     distance_km: normalizeNumber(stage.distance_km),

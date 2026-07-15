@@ -26,8 +26,8 @@ export default function useStageDragDrop({ stages, setStages }) {
 
   const handleDrop = useCallback((e, targetStageId) => {
     e.preventDefault();
-    const sourceId = Number(e.dataTransfer.getData("text/plain"));
-    if (!sourceId || sourceId === targetStageId) {
+    const sourceId = e.dataTransfer.getData("text/plain");
+    if (!sourceId || String(sourceId) === String(targetStageId)) {
       setDraggingStageId(null);
       setDragOverStageId(null);
       return;

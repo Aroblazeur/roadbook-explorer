@@ -5,6 +5,7 @@ import PoiForm from "./PoiForm";
 import AccommSection from "./AccommSection";
 import NoteForm from "./NoteForm";
 import VariantForm from "./VariantForm";
+import { buildStageTitle } from "@/lib/roadbooks/stage-order";
 
 export default function StageCard({
   stage,
@@ -51,6 +52,7 @@ export default function StageCard({
   const change = (updates) => onStageChange(stage.id, updates);
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
+  const generatedTitle = buildStageTitle(stage, displayLabel);
 
   const isDragging = draggingStageId === stage.id;
   const isDragOver = dragOverStageId === stage.id && !isDragging;
@@ -72,7 +74,7 @@ export default function StageCard({
           {stage.distance_km != null && <span className="studio-badge">{stage.distance_km} km</span>}
         </div>
         <div className="studio-stage-card__header-info">
-          <h3 className="studio-stage-card__title">{stage.title || `Étape ${displayLabel}`}</h3>
+          <h3 className="studio-stage-card__title">{generatedTitle}</h3>
           <p className="studio-stage-card__summary">
             {[stage.departure, stage.arrival].filter(Boolean).join(" → ") || (stage.departure || stage.arrival) || ""}
           </p>
@@ -106,9 +108,9 @@ export default function StageCard({
           <div className="studio-zone studio-zone--info">
             <h4 className="studio-zone__title">Infos étape</h4>
             <div className="studio-form-grid studio-form-grid--compact">
-              <label>Numéro<input type="number" min="1" step="1" value={stage.stage_number ?? ""} onChange={e => onStageNumberChange?.(e.target.value)} /></label>
+              <label>Numéro<input type="number" min="1" step="1" value={stage.stage_number ?? ""} onChange={e => onStageNumberChange?.(e.target.value)} onBlur={e => onStageNumberChange?.(e.target.value)} /></label>
               <label>Jour<input type="text" value={stage.day ?? ""} onChange={e => change({ day: e.target.value })} /></label>
-              <label className="studio-form-grid__full">Titre<input type="text" value={stage.title ?? ""} onChange={e => change({ title: e.target.value })} /></label>
+              <label className="studio-form-grid__full">Titre (généré automatiquement)<input type="text" value={generatedTitle} readOnly /></label>
               <label>Départ<input type="text" value={stage.departure ?? ""} onChange={e => change({ departure: e.target.value })} /></label>
               <label>Arrivée<input type="text" value={stage.arrival ?? ""} onChange={e => change({ arrival: e.target.value })} /></label>
               <label>Distance (km)<input type="number" step="0.1" value={stage.distance_km ?? ""} onChange={e => change({ distance_km: e.target.value })} /></label>

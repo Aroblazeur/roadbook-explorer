@@ -8,6 +8,7 @@ import {
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
 import { buildPoiRecord, buildVariantRecord } from "@/lib/roadbooks/validators";
+import { buildStageTitle } from "@/lib/roadbooks/stage-order";
 
 const EMPTY_VARIANT_FORM = {
   stage_id: null,
@@ -57,7 +58,8 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     const metadata = {};
     if (stageForm.description) metadata.description = stageForm.description;
     const record = {
-      roadbook_id: Number(roadbookId), stage_number: dayNumber, title: stageForm.title || null,
+      roadbook_id: Number(roadbookId), stage_number: dayNumber,
+      title: buildStageTitle({ departure: stageForm.start, arrival: stageForm.end }, dayNumber),
       sort_order: Math.max(0, ...stages.map(stage => Number(stage.sort_order) || 0)) + 1,
       departure: stageForm.start || null, arrival: stageForm.end || null,
       distance_km: stageForm.dist ? Number(stageForm.dist) : null,
