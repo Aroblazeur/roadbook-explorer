@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { conditionalUpdateRoadbook, takeSnapshot, acquireSyncLockWithTabId, releaseSyncLock, verifyAfterSync } from "@/lib/sync-helpers";
+import { conditionalUpdateRoadbook, takeSnapshot, acquireSyncLockWithTabId, releaseSyncLock, verifyAfterSync, getRemoteUpdatedAt } from "@/lib/sync-helpers";
 
 export function useSaveWithLock({ supabase, id, tabId, roadbook, stages, poisByStage, variantsByStage, setRoadbook, onError, onSuccess, markRemoteConflict, markSynced, saveImmediate }) {
   const [saving, setSaving] = useState(false);
@@ -30,6 +30,8 @@ export function useSaveWithLock({ supabase, id, tabId, roadbook, stages, poisByS
       return true;
     } catch (error) {
       saveImmediate();
+      const remoteUpdatedAt = await getRemoteUpdatedAt(supabase, id);
+      if (remoteUpdatedAt) setRoadbook(previous => ({ ...previous, updated_at: remoteUpdatedAt }));
       onError(error?.message ?? String(error));
       return false;
     } finally {

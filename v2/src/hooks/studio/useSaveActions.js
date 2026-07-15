@@ -69,20 +69,34 @@ export default function useSaveActions({
     };
     const warningCount = (automation.report?.warnings?.length ?? 0) + (startPointAutomation.report?.warnings?.length ?? 0);
     const automatedFields = (automation.report?.fields ?? 0) + (startPointAutomation.report?.fields ?? 0);
+    let persistedStages = null;
+    let persistedVariants = null;
     const saved = await saveWithLock({
       getUpdateFields: () => updateFields,
       getUpdatedRoadbook: (prev, data) => ({ ...prev, ...updateFields, updated_at: data.updated_at }),
-      persistRelated: () => Promise.all([
-        updateStages(supabase, completedStages, buildEditableStageUpdate),
-        updateVariants(supabase, completedVariantsByStage, buildEditableVariantUpdate),
-        updatePois(supabase, automation.poiUpdates ?? []),
-        startPointAutomation.value ? persistStartPoint?.(startPointAutomation.value) : Promise.resolve(),
-      ]),
+      persistRelated: async () => {
+        const [stageRows, variantRows] = await Promise.all([
+          updateStages(supabase, completedStages, buildEditableStageUpdate),
+          updateVariants(supabase, completedVariantsByStage, buildEditableVariantUpdate),
+          updatePois(supabase, automation.poiUpdates ?? []),
+          startPointAutomation.value ? persistStartPoint?.(startPointAutomation.value) : Promise.resolve(),
+        ]);
+        persistedStages = stageRows;
+        persistedVariants = variantRows;
+      },
       successMessage: `Toutes les modifications ont été enregistrées.${automatedFields ? ` ${automatedFields} champ(s) complété(s) automatiquement.` : ""}${warningCount ? ` ${warningCount} automatisation(s) indisponible(s).` : ""}`,
     });
     if (saved) {
-      setStages(completedStages);
-      setVariantsByStage(completedVariantsByStage);
+      setStages(persistedStages ?? completedStages);
+      if (persistedVariants) {
+        const persistedById = new Map(persistedVariants.map(variant => [String(variant.id), variant]));
+        setVariantsByStage(Object.fromEntries(Object.entries(completedVariantsByStage).map(([stageId, variants]) => [
+          stageId,
+          variants.map(variant => persistedById.get(String(variant.id)) ?? variant),
+        ])));
+      } else {
+        setVariantsByStage(completedVariantsByStage);
+      }
       setPoisByStage(completedPois);
       setPoisByVariant?.(completedVariantPois);
       setTraceRoute(previous => ({

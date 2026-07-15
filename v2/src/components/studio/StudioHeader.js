@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export default function StudioHeader({
   roadbook,
   isPublic,
@@ -14,6 +12,7 @@ export default function StudioHeader({
   onDeleteRoadbook,
   onAddStage,
   onToggleVisibility,
+  onView,
   canManage,
 }) {
   return (
@@ -36,7 +35,9 @@ export default function StudioHeader({
         </button>
         <button type="button" onClick={onAddStage}>Ajouter une étape</button>
         {canManage && <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Rendre public"}</button>}
-        <Link href={`/roadbooks/${roadbook?.slug}`} className="terrain-button--secondary studio-action-button--compact">Voir</Link>
+        <button type="button" onClick={onView} disabled={saving || deletingRoadbook} className="terrain-button--secondary studio-action-button--compact">
+          {saving ? "Enregistrement…" : "Enregistrer et voir"}
+        </button>
         <button type="button" onClick={handleDuplicate} disabled={duplicating} className="terrain-button--secondary studio-action-button--compact">
           {duplicating ? "..." : "Dupliquer"}
         </button>

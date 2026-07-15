@@ -1,9 +1,9 @@
 const STATUS_LABELS = {
   idle: "",
-  unsaved: "Modifications non enregistrées",
-  saving: "Enregistrement local…",
-  saved: "Enregistré localement",
-  synced: "Synchronisé",
+  unsaved: "Modifications à enregistrer sur le serveur",
+  saving: "Protection du brouillon local…",
+  saved: "Brouillon local protégé — cliquez sur « Enregistrer les modifications » pour publier ces données",
+  synced: "Toutes les modifications sont enregistrées sur le serveur",
   error: "Erreur de sauvegarde locale",
   conflict: "Conflit détecté",
 };
@@ -12,7 +12,7 @@ const STATUS_COLORS = {
   idle: "inherit",
   unsaved: "#e67e22",
   saving: "#3498db",
-  saved: "#27ae60",
+  saved: "#e67e22",
   synced: "#27ae60",
   error: "#e74c3c",
   conflict: "#e74c3c",

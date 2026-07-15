@@ -6,12 +6,14 @@ export async function insertStage(supabase, record) {
 }
 
 export async function updateStage(supabase, stageId, updates) {
-  const { error } = await supabase.from("stages").update(updates).eq("id", stageId);
+  const { data, error } = await supabase.from("stages").update(updates).eq("id", stageId).select("*").single();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error(`L'étape ${stageId} n'a pas été enregistrée.`);
+  return data;
 }
 
 export async function updateStages(supabase, stages, buildUpdates) {
-  await Promise.all(stages.map((stage, index) => updateStage(supabase, stage.id, buildUpdates(stage, index, stages))));
+  return Promise.all(stages.map((stage, index) => updateStage(supabase, stage.id, buildUpdates(stage, index, stages))));
 }
 
 export async function deleteStage(supabase, stageId) {
@@ -54,13 +56,15 @@ export async function insertVariant(supabase, record) {
 }
 
 export async function updateVariant(supabase, variantId, updates) {
-  const { error } = await supabase.from("stage_variants").update(updates).eq("id", variantId);
+  const { data, error } = await supabase.from("stage_variants").update(updates).eq("id", variantId).select("*").single();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error(`La variante ${variantId} n'a pas été enregistrée.`);
+  return data;
 }
 
 export async function updateVariants(supabase, variantsByStage, buildUpdates) {
   const variants = Object.values(variantsByStage ?? {}).flat();
-  await Promise.all(variants.map(variant => updateVariant(supabase, variant.id, buildUpdates(variant))));
+  return Promise.all(variants.map(variant => updateVariant(supabase, variant.id, buildUpdates(variant))));
 }
 
 export async function updateVariantNotes(supabase, variantId, notes) {
