@@ -689,7 +689,8 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
 function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_display_label ?? stage.stage_number ?? stageIndex + 1;
-  const stageLabel = stage.day ? String(stage.day) : `Étape ${stageNumber}`;
+  const stageDay = textValue(stage.day);
+  const stageLabel = `Étape ${stageNumber}`;
   const title = stageHeadingTitle(stage, stageNumber, stageLabel);
   const photoUrl = safeResourceUrl(stagePhotoUrl || stage.stage_photo_url);
   const stageGpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: stageGpx, fallbackUrl: stage.gpx_url }).url);
@@ -718,7 +719,10 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
         <header className="stage-detail-heading">
           <span className="stage-detail-heading__number" aria-hidden="true">{stage.is_substep ? "↳" : stageNumber}</span>
           <div>
-            <h2>{title || `Étape ${stageNumber}`}</h2>
+            <h2>
+              {title || `Étape ${stageNumber}`}
+              {stageDay && <span className="stage-detail-heading__day"> — {stageDay}</span>}
+            </h2>
             {(stage.departure || stage.arrival) && <StageRoute departure={stage.departure} arrival={stage.arrival} />}
           </div>
         </header>
