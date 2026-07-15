@@ -5,7 +5,6 @@ import {
   insertPoi, updatePoi, deletePoi,
   insertVariant, updateVariant, deleteVariant,
   updateStageNotes, updateVariantNotes,
-  swapStageNumbers,
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
 import { buildPoiRecord, buildVariantRecord } from "@/lib/roadbooks/validators";
@@ -59,6 +58,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     if (stageForm.description) metadata.description = stageForm.description;
     const record = {
       roadbook_id: Number(roadbookId), stage_number: dayNumber, title: stageForm.title || null,
+      sort_order: Math.max(0, ...stages.map(stage => Number(stage.sort_order) || 0)) + 1,
       departure: stageForm.start || null, arrival: stageForm.end || null,
       distance_km: stageForm.dist ? Number(stageForm.dist) : null,
       elevation_gain_m: stageForm.gain ? Number(stageForm.gain) : null,
@@ -186,19 +186,6 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     } catch (err) { setStageError(err.message ?? String(err)); }
   }, [supabase, roadbookId, stages, setStages, findVariant, reloadPoisVariants]);
 
-  const handleMoveStage = useCallback(async (stage, direction) => {
-    const index = stages.indexOf(stage);
-    if (index < 0) return;
-    const otherIndex = direction === "up" ? index - 1 : index + 1;
-    if (otherIndex < 0 || otherIndex >= stages.length) return;
-    const other = stages[otherIndex];
-    try {
-      await swapStageNumbers(supabase, stage.id, other.id);
-      const stagesData = await loadStages(supabase, roadbookId);
-      setStages(stagesData);
-    } catch (err) { setStageError(err.message); }
-  }, [supabase, roadbookId, stages, setStages]);
-
   return {
     stageForm, stageFormDispatch,
     stageError, setStageError,
@@ -217,6 +204,5 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     noteForm, setNoteForm, clearNoteForm,
     handleNoteSubmit, handleDeleteNote,
 
-    handleMoveStage,
   };
 }

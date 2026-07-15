@@ -100,11 +100,12 @@ export function stageToFormValues(stage) {
 export function buildStageRecord(id, form, editingStage) {
   const dayNumber = Number(form.dayNumber);
   const notes = form.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
-  const metadata = { ...(poiForm.metadata ?? {}) };
+  const metadata = {};
   if (form.description) metadata.description = form.description;
   const record = {
     roadbook_id: Number(id),
     stage_number: dayNumber,
+    sort_order: normalizeNumber(editingStage?.sort_order),
     title: form.title || null,
     departure: form.start || null,
     arrival: form.end || null,
@@ -123,7 +124,7 @@ export function buildStageRecord(id, form, editingStage) {
 
 export function buildPoiRecord(poiForm) {
   const mapQuery = [poiForm.name, poiForm.region].map(value => value?.trim()).filter(Boolean).join(", ");
-  const metadata = {};
+  const metadata = { ...(poiForm.metadata ?? {}) };
   const photoMediaId = Number(poiForm.photoMediaId);
   if (Number.isInteger(photoMediaId) && photoMediaId > 0) metadata.poiPhotoMediaId = photoMediaId;
   if (poiForm.preview) metadata.linkPreview = poiForm.preview;
@@ -144,9 +145,10 @@ export function buildPoiRecord(poiForm) {
   };
 }
 
-export function buildEditableStageUpdate(stage) {
+export function buildEditableStageUpdate(stage, index = 0) {
   return {
     stage_number: normalizeNumber(stage.stage_number),
+    sort_order: normalizeNumber(stage.sort_order) ?? index + 1,
     title: stage.title?.trim() || null,
     departure: stage.departure?.trim() || null,
     arrival: stage.arrival?.trim() || null,

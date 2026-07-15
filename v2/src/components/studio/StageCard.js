@@ -9,6 +9,12 @@ import VariantForm from "./VariantForm";
 export default function StageCard({
   stage,
   index,
+  displayLabel,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  onStageNumberChange,
   expanded,
   onToggleExpand,
   stageCrud,
@@ -62,11 +68,11 @@ export default function StageCard({
       {/* Stage header */}
       <div className="studio-stage-card__header" onClick={onToggleExpand}>
         <div className="studio-stage-card__eyebrow">
-          <span className="studio-badge">Jour {stage.stage_number}</span>
+          <span className="studio-badge">Étape {displayLabel}</span>
           {stage.distance_km != null && <span className="studio-badge">{stage.distance_km} km</span>}
         </div>
         <div className="studio-stage-card__header-info">
-          <h3 className="studio-stage-card__title">{stage.title || `Jour ${stage.stage_number}`}</h3>
+          <h3 className="studio-stage-card__title">{stage.title || `Étape ${displayLabel}`}</h3>
           <p className="studio-stage-card__summary">
             {[stage.departure, stage.arrival].filter(Boolean).join(" → ") || (stage.departure || stage.arrival) || ""}
           </p>
@@ -76,12 +82,14 @@ export default function StageCard({
             type="button"
             className="terrain-button--secondary studio-action-button--compact studio-stage-card__drag-handle"
             draggable="true"
-            aria-label={`Déplacer l'étape ${stage.stage_number}`}
-            title="Maintenir et déplacer pour réordonner"
+            aria-label={`Glisser l'étape ${displayLabel}`}
+            title="Maintenir puis glisser au-dessus ou en dessous d'une autre étape"
             onClick={(e) => e.stopPropagation()}
             onDragStart={(e) => dragHandlers?.handleDragStart(e, stage.id)}
             onDragEnd={dragHandlers?.handleDragEnd}
-          >↕ Déplacer</button>
+          >☰ Glisser</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!canMoveUp} aria-label={`Monter l'étape ${displayLabel}`} title="Monter d'une position" onClick={(event) => { event.stopPropagation(); onMoveUp?.(); }}>↑ Monter</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!canMoveDown} aria-label={`Descendre l'étape ${displayLabel}`} title="Descendre d'une position" onClick={(event) => { event.stopPropagation(); onMoveDown?.(); }}>↓ Descendre</button>
           <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => {
             e.stopPropagation();
             clearVariantForm();
@@ -98,7 +106,7 @@ export default function StageCard({
           <div className="studio-zone studio-zone--info">
             <h4 className="studio-zone__title">Infos étape</h4>
             <div className="studio-form-grid studio-form-grid--compact">
-              <label>Numéro<input type="number" min="1" value={stage.stage_number ?? ""} onChange={e => change({ stage_number: e.target.value })} /></label>
+              <label>Numéro<input type="number" min="1" step="1" value={stage.stage_number ?? ""} onChange={e => onStageNumberChange?.(e.target.value)} /></label>
               <label>Jour<input type="text" value={stage.day ?? ""} onChange={e => change({ day: e.target.value })} /></label>
               <label className="studio-form-grid__full">Titre<input type="text" value={stage.title ?? ""} onChange={e => change({ title: e.target.value })} /></label>
               <label>Départ<input type="text" value={stage.departure ?? ""} onChange={e => change({ departure: e.target.value })} /></label>

@@ -136,6 +136,7 @@ export function buildDuplicateStageInsert(stage, newRoadbookId) {
   return {
     roadbook_id: newRoadbookId,
     stage_number: stage.stage_number,
+    sort_order: stage.sort_order,
     title: stage.title,
     departure: stage.departure,
     arrival: stage.arrival,

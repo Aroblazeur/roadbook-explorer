@@ -11,7 +11,7 @@ export async function updateStage(supabase, stageId, updates) {
 }
 
 export async function updateStages(supabase, stages, buildUpdates) {
-  await Promise.all(stages.map(stage => updateStage(supabase, stage.id, buildUpdates(stage))));
+  await Promise.all(stages.map((stage, index) => updateStage(supabase, stage.id, buildUpdates(stage, index))));
 }
 
 export async function deleteStage(supabase, stageId) {
@@ -224,18 +224,6 @@ export async function deleteGpx(supabase, mediaRow, bucket) {
   if (dbError) throw new Error(dbError.message);
 }
 
-export async function swapStageNumbers(supabase, idA, idB) {
-  const { error } = await supabase.rpc("swap_stage_numbers", { id_a: idA, id_b: idB });
-  if (error) {
-    const tmpA = (await supabase.from("stages").select("stage_number").eq("id", idA).single()).data?.stage_number;
-    const tmpB = (await supabase.from("stages").select("stage_number").eq("id", idB).single()).data?.stage_number;
-    if (tmpA != null && tmpB != null) {
-      await supabase.from("stages").update({ stage_number: tmpB }).eq("id", idA);
-      await supabase.from("stages").update({ stage_number: tmpA }).eq("id", idB);
-    }
-  }
-}
-
 export async function insertRoadbook(supabase, record) {
   const { data, error } = await supabase.from("roadbooks").insert(record).select("id").single();
   if (error) throw new Error(error.message);
@@ -284,7 +272,7 @@ export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage,
   }
   for (const stage of stages) {
     const { data: newStage, error: sError } = await supabase.from("stages").insert({
-      roadbook_id: newRb.id, stage_number: stage.stage_number, title: stage.title,
+      roadbook_id: newRb.id, stage_number: stage.stage_number, sort_order: stage.sort_order, title: stage.title,
       departure: stage.departure, arrival: stage.arrival, distance_km: stage.distance_km,
       elevation_gain_m: stage.elevation_gain_m, elevation_loss_m: stage.elevation_loss_m,
       gpx_url: null, map_embed_url: stage.map_embed_url,

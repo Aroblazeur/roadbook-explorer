@@ -27,7 +27,8 @@ export async function loadStages(supabase, roadbookId) {
     .from("stages")
     .select("*")
     .eq("roadbook_id", Number(roadbookId))
-    .order("stage_number", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
 }

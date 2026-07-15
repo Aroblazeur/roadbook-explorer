@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { moveStageByOffset, reorderStage } from "@/lib/roadbooks/stage-order";
 
-export default function useStageDragDrop({ stages, handleMoveStage }) {
+export default function useStageDragDrop({ stages, setStages }) {
   const [draggingStageId, setDraggingStageId] = useState(null);
   const [dragOverStageId, setDragOverStageId] = useState(null);
 
@@ -31,10 +32,16 @@ export default function useStageDragDrop({ stages, handleMoveStage }) {
       setDragOverStageId(null);
       return;
     }
-    handleMoveStage(sourceId, targetStageId);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const placement = e.clientY > rect.top + rect.height / 2 ? "after" : "before";
+    setStages(previous => reorderStage(previous, sourceId, targetStageId, placement));
     setDraggingStageId(null);
     setDragOverStageId(null);
-  }, [handleMoveStage]);
+  }, [setStages]);
+
+  const moveByOffset = useCallback((stageId, offset) => {
+    setStages(previous => moveStageByOffset(previous, stageId, offset));
+  }, [setStages]);
 
   return {
     draggingStageId,
@@ -43,5 +50,6 @@ export default function useStageDragDrop({ stages, handleMoveStage }) {
     handleDragOver,
     handleDragEnd,
     handleDrop,
+    moveByOffset,
   };
 }

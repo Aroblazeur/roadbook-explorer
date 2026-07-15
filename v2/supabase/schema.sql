@@ -124,6 +124,7 @@ create table if not exists public.stages (
   id                   bigint generated always as identity primary key,
   roadbook_id          bigint not null references public.roadbooks(id) on delete cascade,
   stage_number         smallint not null,
+  sort_order           integer not null default 0,
   title                text,
   departure            text,
   arrival              text,
@@ -146,12 +147,11 @@ create table if not exists public.stages (
   parent_stage_number  smallint,
   metadata             jsonb not null default '{}'::jsonb,
   created_at           timestamptz not null default now(),
-  updated_at           timestamptz not null default now(),
-
-  constraint uq_stage_number unique (roadbook_id, stage_number)
+  updated_at           timestamptz not null default now()
 );
 
 create index if not exists idx_stages_roadbook on public.stages(roadbook_id);
+create index if not exists idx_stages_roadbook_sort_order on public.stages(roadbook_id, sort_order, id);
 
 alter table public.stages enable row level security;
 

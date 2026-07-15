@@ -7,6 +7,7 @@ import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
 import { resolveMapDisplay } from "@/lib/google-map-links";
+import { withStageDisplayLabels } from "@/lib/roadbooks/stage-order";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -26,11 +27,13 @@ async function getRoadbook(slug) {
     return null;
   }
 
-  const { data: stages } = await supabase
+  const { data: stageRows } = await supabase
     .from("stages")
     .select("*")
     .eq("roadbook_id", roadbook.id)
-    .order("stage_number", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
+  const stages = withStageDisplayLabels(stageRows ?? []);
 
   const { data: startPoint } = await supabase
     .from("roadbook_start_points")
@@ -394,9 +397,9 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
     <Link
       className={`home-stage-card${isSubstep ? " home-stage-card--substep" : ""}`}
       href={`/roadbooks/${roadbookSlug}?stage=${index}`}
-      aria-label={`Ouvrir l'étape ${stage.stage_number ?? index + 1} : ${route}`}
+      aria-label={`Ouvrir l'étape ${stage.stage_display_label ?? stage.stage_number ?? index + 1} : ${route}`}
     >
-      <span className="home-stage-card__number">{isSubstep ? "↳" : stage.stage_number ?? index + 1}</span>
+      <span className="home-stage-card__number">{isSubstep ? "↳" : stage.stage_display_label ?? stage.stage_number ?? index + 1}</span>
       <span className="home-stage-card__content">
         <strong className="home-stage-card__route">{route}</strong>
         {isSubstep && metadata.type && <span className="home-stage-card__substep-type">{metadata.type}</span>}
@@ -423,7 +426,7 @@ function VariantOverviewCard({ roadbookSlug, entry }) {
   const arrival = variant.arrival ?? metadata.arrival;
   const route = variant.label
     || [departure, arrival].filter(Boolean).join(" → ")
-    || `Variante de l'étape ${parentStage.stage_number ?? entry.stageIndex + 1}`;
+    || `Variante de l'étape ${parentStage.stage_display_label ?? parentStage.stage_number ?? entry.stageIndex + 1}`;
 
   return (
     <Link
@@ -514,7 +517,7 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   const nextHref = currentEntryIndex < entries.length - 1
     ? roadbookEntryHref(roadbook.slug, entries[currentEntryIndex + 1])
     : null;
-  const stageNumber = currentEntry.parentStage?.stage_number ?? currentEntry.item.stage_number ?? currentEntry.stageIndex + 1;
+  const stageNumber = currentEntry.parentStage?.stage_display_label ?? currentEntry.parentStage?.stage_number ?? currentEntry.item.stage_display_label ?? currentEntry.item.stage_number ?? currentEntry.stageIndex + 1;
   const currentLabel = currentEntry.type === "variant"
     ? `Variante – ${currentEntry.item.label || `étape ${stageNumber}`}`
     : currentEntry.item.stage_label || (currentEntry.item.day ? String(currentEntry.item.day) : `Étape ${stageNumber}`);
@@ -686,7 +689,7 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
 
 function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
   const meta = stage.metadata ?? {};
-  const stageNumber = stage.stage_number ?? stageIndex + 1;
+  const stageNumber = stage.stage_display_label ?? stage.stage_number ?? stageIndex + 1;
   const stageLabel = stage.stage_label || (stage.day ? String(stage.day) : `Étape ${stageNumber}`);
   const title = stageHeadingTitle(stage, stageNumber, stageLabel);
   const photoUrl = safeResourceUrl(stagePhotoUrl || stage.stage_photo_url);
