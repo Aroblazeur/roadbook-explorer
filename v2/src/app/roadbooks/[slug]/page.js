@@ -6,6 +6,7 @@ import { getSignedMediaAccess, loadExplorerGpxMedia } from "@/lib/roadbooks/load
 import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
+import { resolveMapDisplay } from "@/lib/google-map-links";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -321,7 +322,7 @@ function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabe
       )}
       {summary.mapEmbedUrl ? (
         <div className={`${className}__map map-embed`}>
-          <iframe src={summary.mapEmbedUrl} title={mapTitle} width="100%" height="100%" allowFullScreen loading="lazy" />
+          <GoogleMapDisplay url={summary.mapEmbedUrl} title={mapTitle} />
         </div>
       ) : traceUrl ? (
         <div className={`${className}__map map-embed`}>
@@ -640,7 +641,7 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
           <h4>Tracé de la variante</h4>
           {mapUrl ? (
             <div className="stage-detail-map">
-              <iframe src={mapUrl} title={`Carte de la variante ${variant.label || ""}`} allowFullScreen loading="lazy" />
+              <GoogleMapDisplay url={mapUrl} title={`Carte de la variante ${variant.label || ""}`} />
             </div>
           ) : (
             <div className="stage-detail-map">
@@ -760,7 +761,7 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
           <h2 id="stage-detail-map-title">Carte interactive</h2>
           {mapUrl ? (
             <div className="stage-detail-map">
-              <iframe src={mapUrl} title={`Carte de ${title || `l'étape ${stageNumber}`}`} allowFullScreen loading="lazy" />
+              <GoogleMapDisplay url={mapUrl} title={`Carte de ${title || `l'étape ${stageNumber}`}`} />
             </div>
           ) : (
             <div className="stage-detail-map">
@@ -984,6 +985,30 @@ function safeResourceUrl(value, { relative = true } = {}) {
     if (!relative || candidate.startsWith("//") || candidate.includes(":")) return null;
     return candidate;
   }
+}
+
+async function GoogleMapDisplay({ url, title }) {
+  const display = await resolveMapDisplay(url);
+  if (display.embedUrl) {
+    return (
+      <div className="google-map-display">
+        <iframe src={display.embedUrl} title={title} allowFullScreen loading="lazy" />
+        {display.converted && display.externalUrl && (
+          <a className="google-map-display__external" href={display.externalUrl} target="_blank" rel="noopener noreferrer">
+            Ouvrir dans Google Maps
+          </a>
+        )}
+      </div>
+    );
+  }
+  if (!display.externalUrl) return null;
+  return (
+    <div className="google-map-display google-map-display--link">
+      <a className="terrain-button terrain-button--secondary" href={display.externalUrl} target="_blank" rel="noopener noreferrer">
+        Ouvrir la carte dans Google Maps
+      </a>
+    </div>
+  );
 }
 
 function googleMapsSearchUrl(query) {

@@ -53,7 +53,7 @@ export default function RouteForm({
               )}
             </div>
           </div>
-          <label className="studio-form-grid__full">Carte intégrée<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} /></label>
+          <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={values.map} onChange={e => setValues(prev => ({ ...prev, map: e.target.value }))} /></label>
         </div>
       </div>
     </div>

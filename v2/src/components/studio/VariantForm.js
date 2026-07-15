@@ -99,7 +99,7 @@ export default function VariantForm({
                   <div className="studio-stage-extra">
                     <div className="studio-stage-extra__header"><h5>GPX et carte</h5></div>
                     <div className="studio-form-grid studio-form-grid--compact">
-                      <label className="studio-form-grid__full">Carte intégrée<input type="url" value={variant.map_embed_url ?? ""} onChange={event => change({ map_embed_url: event.target.value })} /></label>
+                      <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={variant.map_embed_url ?? ""} onChange={event => change({ map_embed_url: event.target.value })} /></label>
                     </div>
                   </div>
                   <div className="studio-stage-extra">
@@ -179,7 +179,7 @@ export default function VariantForm({
               <small className="text-muted">L'import de fichier sera disponible après la création de la variante.</small>
             </div>
             <label>Type de variante<input type="text" value={variantForm.type} onChange={event => setVariantForm(current => ({ ...current, type: event.target.value }))} /></label>
-            <label className="studio-form-grid__full">Carte intégrée (iframe)<input type="url" value={variantForm.map_embed_url} onChange={event => setVariantForm(current => ({ ...current, map_embed_url: event.target.value }))} /></label>
+            <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={variantForm.map_embed_url} onChange={event => setVariantForm(current => ({ ...current, map_embed_url: event.target.value }))} /></label>
           </div>
           <div className="studio-create-form__actions">
             <button type="submit" className="terrain-button">Créer la variante</button>

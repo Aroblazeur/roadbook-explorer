@@ -130,7 +130,7 @@ export default function StageCard({
                 <h5>GPX et carte</h5>
               </div>
               <div className="studio-form-grid studio-form-grid--compact">
-                <label className="studio-form-grid__full">Carte intégrée<input type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} /></label>
+                <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} /></label>
               </div>
             </div>
 
