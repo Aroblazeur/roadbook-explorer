@@ -30,7 +30,7 @@ const EMPTY_VARIANT_FORM = {
   editing: null,
 };
 
-export function useStageCrud({ supabase, roadbookId, stages, setStages, variantsByStage, reloadPoisVariants }) {
+export function useStageCrud({ supabase, roadbookId, stages, setStages, variantsByStage, reloadPoisVariants, refreshRoadbookVersion }) {
   const [stageForm, stageFormDispatch] = useReducer(stageFormReducer, { ...defaultStageForm });
   const [stageError, setStageError] = useState(null);
   const [stageSuccess, setStageSuccess] = useState(null);
@@ -78,7 +78,8 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     clearStageForm();
     const stagesData = await loadStages(supabase, roadbookId);
     setStages(stagesData);
-  }, [supabase, roadbookId, stageForm, clearStageForm, setStages]);
+    await refreshRoadbookVersion?.();
+  }, [supabase, roadbookId, stageForm, stages, clearStageForm, setStages, refreshRoadbookVersion]);
 
   const handleDeleteStage = useCallback(async (stageId) => {
     if (!window.confirm("Supprimer cette étape ?")) return;
@@ -86,10 +87,11 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     try {
       await deleteStage(supabase, stageId);
       setStages(prev => prev.filter(s => s.id !== stageId));
+      await refreshRoadbookVersion?.();
       setStageSuccess("Étape supprimée.");
     } catch (err) { setStageError(err.message); }
     setDeleting(null);
-  }, [supabase, setStages]);
+  }, [supabase, setStages, refreshRoadbookVersion]);
 
   const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", photoUrl: "", photoMediaId: null, preview: null, metadata: {}, editing: null }), []);
   const clearVariantForm = useCallback(() => setVariantForm({ ...EMPTY_VARIANT_FORM }), []);
@@ -166,9 +168,10 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
       else {
         const refreshed = await loadStages(supabase, roadbookId);
         if (refreshed) setStages(refreshed);
+        await refreshRoadbookVersion?.();
       }
     } catch (err) { setStageError(err.message ?? String(err)); }
-  }, [supabase, roadbookId, noteForm, stages, clearNoteForm, setStages, findVariant, reloadPoisVariants]);
+  }, [supabase, roadbookId, noteForm, stages, clearNoteForm, setStages, findVariant, reloadPoisVariants, refreshRoadbookVersion]);
 
   const handleDeleteNote = useCallback(async (stageId, noteIndex, variantId = null) => {
     if (!window.confirm("Supprimer cette note ?")) return;
@@ -184,9 +187,10 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
       else {
         const refreshed = await loadStages(supabase, roadbookId);
         if (refreshed) setStages(refreshed);
+        await refreshRoadbookVersion?.();
       }
     } catch (err) { setStageError(err.message ?? String(err)); }
-  }, [supabase, roadbookId, stages, setStages, findVariant, reloadPoisVariants]);
+  }, [supabase, roadbookId, stages, setStages, findVariant, reloadPoisVariants, refreshRoadbookVersion]);
 
   return {
     stageForm, stageFormDispatch,

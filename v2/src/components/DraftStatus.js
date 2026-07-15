@@ -48,7 +48,7 @@ export default function DraftStatus({ status, error, restoredInfo, onResetInfo, 
           <span style={{ color: "#e74c3c", fontSize: "0.8rem" }}>{error}</span>
           {onDismissConflict && (
             <button type="button" onClick={onDismissConflict} style={{ cursor: "pointer", background: "none", border: "1px solid #e74c3c", borderRadius: 4, padding: "2px 8px", fontSize: "0.8rem" }}>
-              Conserver ma version
+              Conserver et enregistrer ma version
             </button>
           )}
           <button type="button" onClick={() => window.location.reload()} style={{ cursor: "pointer", background: "none", border: "1px solid #3498db", borderRadius: 4, padding: "2px 8px", fontSize: "0.8rem" }}>

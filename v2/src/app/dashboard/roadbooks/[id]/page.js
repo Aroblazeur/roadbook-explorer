@@ -53,7 +53,7 @@ export default function RoadbookDetailPage() {
   const destination = formMeta.destination, setDestination = (v) => setFormMeta(p => ({ ...p, destination: v }));
   const project = formMeta.project, setProject = (v) => setFormMeta(p => ({ ...p, project: v }));
 
-  const { stageForm, stageFormDispatch, stageError, stageSuccess, setStageError, setStageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote } = useStageCrud({ supabase, roadbookId: id, stages, setStages, variantsByStage, reloadPoisVariants });
+  const { stageForm, stageFormDispatch, stageError, stageSuccess, setStageError, setStageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote } = useStageCrud({ supabase, roadbookId: id, stages, setStages, variantsByStage, reloadPoisVariants, refreshRoadbookVersion });
 
   const { draggingStageId, dragOverStageId, handleDragStart, handleDragOver, handleDragEnd, handleDrop, moveByOffset } = useStageDragDrop({ setStages });
 
@@ -99,7 +99,7 @@ export default function RoadbookDetailPage() {
     <StudioShell>
       <StudioCatalog selectedId={id} />
       <section className="card studio-panel studio-editor-panel" aria-labelledby="studio-detail-title">
-      <DraftStatus status={draftStatus} error={draftError} restoredInfo={restoredInfo} onResetInfo={resetRestoredInfo} onDismissConflict={dismissConflict} onClearDraft={clearDraft} />
+      <DraftStatus status={draftStatus} error={draftError} restoredInfo={restoredInfo} onResetInfo={resetRestoredInfo} onDismissConflict={async () => { dismissConflict(); await handleSaveAll(); }} onClearDraft={clearDraft} />
       <StudioHeader roadbook={roadbook} isPublic={isPublic} activity={activity} destination={destination} project={project} duplicating={duplicating} saving={saving} deletingRoadbook={deletingRoadbook} canManage={canManage} onSaveAll={handleSaveAll} onView={async () => { const saved = await handleSaveAll(); if (saved) router.push(`/roadbooks/${roadbook.slug}`); }} onDeleteRoadbook={handleDeleteRoadbook} onAddStage={() => { clearStageForm(); setShowStageForm(true); }} onToggleVisibility={handleToggleVisibility} handleDuplicate={async () => { if (!window.confirm("Dupliquer ce roadbook ? Les fichiers (images, GPX) ne seront pas copiés.")) return; setDuplicating(true); setError(null); try { const newId = await duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, `${roadbook.slug}-copie-${Date.now()}`, user.id, poisByVariant, startPoint); setSuccess("Roadbook dupliqué ! Redirection..."); setTimeout(() => router.push(`/dashboard/roadbooks/${newId}`), 1000); } catch (err) { setError(err.message); } finally { setDuplicating(false); } }} />
       {error && <p className="page-error">{error}</p>}
       {success && <p className="page-success">{success}</p>}

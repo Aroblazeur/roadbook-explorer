@@ -13,7 +13,14 @@ export function useSaveWithLock({ supabase, id, tabId, roadbook, stages, poisByS
       const updateFields = getUpdateFields();
       const result = await conditionalUpdateRoadbook(supabase, id, updateFields, roadbook?.updated_at);
       if (!result.ok) {
-        if (result.error === "conflict") { saveImmediate(); markRemoteConflict(); onError("Conflit de version. Sauvegarde locale conservée."); }
+        if (result.error === "conflict") {
+          saveImmediate();
+          if (result.remoteUpdatedAt) {
+            setRoadbook(previous => ({ ...previous, updated_at: result.remoteUpdatedAt }));
+          }
+          markRemoteConflict();
+          onError("Conflit de version. Sauvegarde locale conservée.");
+        }
         else onError(result.error);
         return false;
       }
