@@ -8,8 +8,9 @@ async function getRoadbooksCatalog(filterQuery) {
     .from("roadbooks")
     .select("id, slug, owner_id, creator_email, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id, metadata, is_public");
 
-  query = await filterQuery(query, supabase);
-  const { data } = await query.order("created_at", { ascending: false });
+  await filterQuery(query, supabase);
+  const { data, error } = await query.order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
 
   const roadbooks = data ?? [];
 
@@ -57,7 +58,7 @@ async function getRoadbooksCatalog(filterQuery) {
 }
 
 export function getPublicRoadbooks() {
-  return getRoadbooksCatalog(query => query.eq("is_public", true));
+  return getRoadbooksCatalog(query => { query.eq("is_public", true); });
 }
 
 export function getOwnedRoadbooks(ownerId) {
@@ -67,8 +68,7 @@ export function getOwnedRoadbooks(ownerId) {
       .select("roadbook_id")
       .eq("user_id", ownerId);
     const sharedIds = (memberships ?? []).map(item => Number(item.roadbook_id)).filter(Number.isFinite);
-    return sharedIds.length
-      ? query.or(`owner_id.eq.${ownerId},id.in.(${sharedIds.join(",")})`)
-      : query.eq("owner_id", ownerId);
+    if (sharedIds.length) query.or(`owner_id.eq.${ownerId},id.in.(${sharedIds.join(",")})`);
+    else query.eq("owner_id", ownerId);
   });
 }
