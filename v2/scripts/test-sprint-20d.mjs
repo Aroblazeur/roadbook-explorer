@@ -232,6 +232,33 @@ test("les accès Studio principaux ciblent le catalogue du Studio", () => {
   }
 });
 
+test("le Studio sauvegarde immediatement quand l'onglet passe en arriere-plan", () => {
+  const content = readFileSync("src/hooks/useStudioDraft.js", "utf-8");
+  assert.ok(content.includes('document.addEventListener("visibilitychange"'));
+  assert.ok(content.includes('document.visibilityState === "hidden"'));
+  assert.ok(content.includes("saveImmediate();"));
+});
+
+test("la restauration d'un brouillon reactive ensuite l'autosauvegarde", () => {
+  const hookContent = readFileSync("src/hooks/useStudioDraft.js", "utf-8");
+  assert.ok(hookContent.includes("const finishDraftRestore = useCallback"));
+  assert.ok(hookContent.includes("isRestoringRef.current = false"));
+  assert.ok(pageSrc.includes("finishDraftRestore();"));
+});
+
+test("le client et l'utilisateur Supabase restent stables pendant un rafraichissement de session", () => {
+  const content = readFileSync("src/lib/auth-context.js", "utf-8");
+  assert.ok(content.includes("const [supabase] = useState(createClient)"));
+  assert.ok(content.includes("keepStableUser(currentUser"));
+  const loader = readFileSync("src/hooks/studio/useLoadData.js", "utf-8");
+  assert.ok(loader.includes("[user?.id, id]"));
+});
+
+test("le brouillon conserve aussi les GPX des variantes", () => {
+  const content = readFileSync("src/lib/studio-drafts.js", "utf-8");
+  assert.ok(content.includes("gpxByVariant: state.gpxByVariant"));
+});
+
 // ===================== Synchronisation helpers check =====================
 console.log("\n=== 4. Vérification sync-helpers ===");
 

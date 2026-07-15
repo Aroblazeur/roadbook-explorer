@@ -71,8 +71,8 @@ export function useStudioDraft({
     images,
     gpxOfficial,
     gpxCustom,
-  gpxByStage,
-  gpxByVariant,
+    gpxByStage,
+    gpxByVariant,
     title,
     description,
     isPublic,
@@ -182,6 +182,11 @@ export function useStudioDraft({
     doSave();
   }, [doSave]);
 
+  const finishDraftRestore = useCallback(() => {
+    isRestoringRef.current = false;
+    setRestoredDraft(null);
+  }, []);
+
   useEffect(() => {
     if (!user?.id || !roadbookId || !loaded) return;
     restoreIfNeeded();
@@ -212,6 +217,17 @@ export function useStudioDraft({
     }
     prevIdRef.current = roadbookId;
   }, [roadbookId, saveImmediate]);
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        saveImmediate();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [saveImmediate]);
 
   useEffect(() => {
     function handleBeforeUnload(e) {
@@ -311,6 +327,7 @@ export function useStudioDraft({
     draftError,
     restoredInfo,
     restoredDraft,
+    finishDraftRestore,
     saveImmediate,
     markSynced,
     markRemoteConflict,

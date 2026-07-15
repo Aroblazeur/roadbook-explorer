@@ -61,7 +61,7 @@ export default function useLoadData({
         reloadGpx();
       } catch (err) { setFetchError(err.message); }
     })();
-  }, [user, id]);
+  }, [user?.id, id]);
 
   const restoreDraft = useCallback((draft) => {
     if (!draft) return;

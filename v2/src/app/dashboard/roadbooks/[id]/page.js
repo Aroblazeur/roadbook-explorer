@@ -69,9 +69,13 @@ export default function RoadbookDetailPage() {
 
   const { officialRoute, setOfficialRoute, traceRoute, setTraceRoute, restoreDraft } = useLoadData({ user, id, supabase, loadAll, setTitle, setDescription, setIsPublic, setActivity, setDestination, setProject, setCoverUrl, setCoverMediaId, setCoverPreview, setCoverMode, setFetchError, loadEnrichmentIndices, reloadMedia, reloadGpx, setRoadbook, setStages, setPoisByStage, setVariantsByStage, setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant, setStartPoint });
 
-  const { draftStatus, draftError, restoredInfo, restoredDraft, saveImmediate, markSynced, markRemoteConflict, dismissConflict, clearDraft, resetRestoredInfo, tabId } = useStudioDraft({ user, roadbookId: id, roadbook, stages, poisByStage, variantsByStage, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, title, description, isPublic, activity, destination, project, ...officialRoute, ...traceRoute, coverMode, coverUrl, coverMediaId, startPoint, loaded: !loading && !startPointLoading && !!roadbook });
+  const { draftStatus, draftError, restoredInfo, restoredDraft, finishDraftRestore, saveImmediate, markSynced, markRemoteConflict, dismissConflict, clearDraft, resetRestoredInfo, tabId } = useStudioDraft({ user, roadbookId: id, roadbook, stages, poisByStage, variantsByStage, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, title, description, isPublic, activity, destination, project, ...officialRoute, ...traceRoute, coverMode, coverUrl, coverMediaId, startPoint, loaded: !loading && !startPointLoading && !!roadbook });
 
-  useEffect(() => { restoreDraft(restoredDraft); }, [restoredDraft]);
+  useEffect(() => {
+    if (!restoredDraft) return;
+    restoreDraft(restoredDraft);
+    finishDraftRestore();
+  }, [restoredDraft, finishDraftRestore]);
 
   const { saveWithLock, saving } = useSaveWithLock({ supabase, id, tabId, roadbook, stages, poisByStage, variantsByStage, setRoadbook, onError: setError, onSuccess: setSuccess, markRemoteConflict, markSynced, saveImmediate });
 

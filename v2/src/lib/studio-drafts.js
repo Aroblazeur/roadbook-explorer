@@ -144,6 +144,7 @@ export function buildDraftPayload(state) {
       gpxOfficial: state.gpxOfficial,
       gpxCustom: state.gpxCustom,
       gpxByStage: state.gpxByStage,
+      gpxByVariant: state.gpxByVariant,
       coverMode: state.coverMode,
       coverUrl: state.coverUrl,
       coverMediaId: state.coverMediaId,
