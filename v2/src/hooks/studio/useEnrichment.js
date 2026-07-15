@@ -10,11 +10,12 @@ import {
 import {
   completeAccommodation,
   completePoi,
+  completeStageDuration,
   completeStageMetrics,
   isMissingAutomationValue,
 } from "@/lib/roadbooks/automation";
 
-export function useEnrichment({ roadbook, stages, poisByStage, gpxHelpers }) {
+export function useEnrichment({ roadbook, activity, stages, variantsByStage, poisByStage, gpxHelpers }) {
   const [poiIndex, setPoiIndex] = useState(null);
   const [accommodationIndex, setAccommodationIndex] = useState(null);
 
@@ -35,10 +36,16 @@ export function useEnrichment({ roadbook, stages, poisByStage, gpxHelpers }) {
 
   const prepareAutomaticCompletion = useCallback(async () => {
     const completedStages = stages.map(stage => ({ ...stage, metadata: { ...(stage.metadata ?? {}) } }));
+    const completedVariantsByStage = Object.fromEntries(
+      Object.entries(variantsByStage ?? {}).map(([stageId, variants]) => [
+        stageId,
+        variants.map(variant => ({ ...variant, metadata: { ...(variant.metadata ?? {}) } })),
+      ]),
+    );
     const completedPois = Object.fromEntries(
       Object.entries(poisByStage).map(([stageId, pois]) => [stageId, pois.map(poi => ({ ...poi }))]),
     );
-    const report = { gpxStages: 0, pois: 0, accommodations: 0, fields: 0, warnings: [] };
+    const report = { gpxStages: 0, gpxVariants: 0, pois: 0, accommodations: 0, fields: 0, warnings: [] };
     const poiUpdates = [];
 
     let activePoiIndex = poiIndex;
@@ -49,7 +56,7 @@ export function useEnrichment({ roadbook, stages, poisByStage, gpxHelpers }) {
       activeAccommodationIndex ??= loaded.accommodation;
     }
 
-    const { gpxByStage, analyzeStageGpx } = gpxHelpers ?? {};
+    const { gpxByStage, gpxByVariant, analyzeStageGpx } = gpxHelpers ?? {};
     if (gpxByStage && analyzeStageGpx) {
       for (const stage of completedStages) {
         const gpx = gpxByStage[stage.id];
@@ -65,6 +72,38 @@ export function useEnrichment({ roadbook, stages, poisByStage, gpxHelpers }) {
         Object.assign(stage, completion.value);
         const { filled } = completion;
         if (filled) { report.gpxStages++; report.fields += filled; }
+      }
+    }
+
+    if (gpxByVariant && analyzeStageGpx) {
+      for (const [stageId, variants] of Object.entries(completedVariantsByStage)) {
+        for (const variant of variants) {
+          const gpx = gpxByVariant[stageId]?.[variant.id];
+          const missingMetrics = [variant.distance_km, variant.elevation_gain_m, variant.elevation_loss_m, variant.duration]
+            .some(isMissingAutomationValue);
+          if (!gpx || !missingMetrics) continue;
+          const result = await analyzeStageGpx(gpx, variant);
+          if (!result || result.error) {
+            report.warnings.push(`Variante ${variant.label || variant.id} : ${result?.error ?? "analyse GPX impossible"}`);
+            continue;
+          }
+          const completion = completeStageMetrics(variant, result.metrics, result.durationStr);
+          Object.assign(variant, completion.value);
+          if (completion.filled) { report.gpxVariants++; report.fields += completion.filled; }
+        }
+      }
+    }
+
+    for (const stage of completedStages) {
+      const completion = completeStageDuration(stage, activity);
+      Object.assign(stage, completion.value);
+      report.fields += completion.filled;
+    }
+    for (const variants of Object.values(completedVariantsByStage)) {
+      for (const variant of variants) {
+        const completion = completeStageDuration(variant, activity);
+        Object.assign(variant, completion.value);
+        report.fields += completion.filled;
       }
     }
 
@@ -105,8 +144,8 @@ export function useEnrichment({ roadbook, stages, poisByStage, gpxHelpers }) {
       }
     }
 
-    return { stages: completedStages, poisByStage: completedPois, poiUpdates, report };
-  }, [stages, poisByStage, poiIndex, accommodationIndex, roadbook?.slug, loadEnrichmentIndices, gpxHelpers]);
+    return { stages: completedStages, variantsByStage: completedVariantsByStage, poisByStage: completedPois, poiUpdates, report };
+  }, [stages, variantsByStage, poisByStage, poiIndex, accommodationIndex, roadbook?.slug, activity, loadEnrichmentIndices, gpxHelpers]);
 
   return { loadEnrichmentIndices, prepareAutomaticCompletion };
 }

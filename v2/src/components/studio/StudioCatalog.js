@@ -43,11 +43,29 @@ export default function StudioCatalog({ selectedId = null }) {
     setFetching(true);
     setError(null);
     setStatus("Chargement du catalogue…");
-    const { data, error: fetchError } = await supabase
+    const isAdmin = user.app_metadata?.role === "admin";
+    const { data: memberships, error: membershipsError } = isAdmin
+      ? { data: [], error: null }
+      : await supabase
+          .from("roadbook_contributors")
+          .select("roadbook_id")
+          .eq("user_id", user.id);
+    if (membershipsError) {
+      setError(membershipsError.message);
+      setStatus("Catalogue indisponible.");
+      setFetching(false);
+      return;
+    }
+    const sharedIds = (memberships ?? []).map(item => Number(item.roadbook_id)).filter(Number.isFinite);
+    let query = supabase
       .from("roadbooks")
-      .select("id, slug, title, description, is_public, created_at")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false });
+      .select("id, slug, owner_id, title, description, is_public, created_at");
+    if (!isAdmin) {
+      query = sharedIds.length
+        ? query.or(`owner_id.eq.${user.id},id.in.(${sharedIds.join(",")})`)
+        : query.eq("owner_id", user.id);
+    }
+    const { data, error: fetchError } = await query.order("created_at", { ascending: false });
     if (fetchError) {
       setError(fetchError.message);
       setStatus("Catalogue indisponible.");
@@ -232,7 +250,9 @@ export default function StudioCatalog({ selectedId = null }) {
             aria-current={String(roadbook.id) === String(selectedId) ? "page" : undefined}
           >
             <p className="studio-roadbook-card__title">{roadbook.title}</p>
-            <p className="studio-roadbook-card__meta">{roadbook.slug} · {roadbook.is_public ? "public" : "privé"}</p>
+            <p className="studio-roadbook-card__meta">
+              {roadbook.slug} · {roadbook.is_public ? "public" : "privé"} · {roadbook.owner_id === user.id ? "créateur" : user.app_metadata?.role === "admin" ? "admin" : "contributeur"}
+            </p>
           </Link>
         ))}
       </div>

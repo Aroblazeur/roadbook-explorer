@@ -21,9 +21,6 @@ export default function VariantForm({
     variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant,
     poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi,
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
-    accommodationForm, setAccommodationForm, clearAccommodationForm,
-    handleAccommodationSubmit, handleClearAccommodation,
-    handleDeleteAlternative, handlePromoteAlternative, handleDemotePrimary,
   } = stageCrud;
   const {
     gpxByVariant, gpxUploading,
@@ -89,14 +86,9 @@ export default function VariantForm({
                         </label>
                       </div>
                     </div>
-                    <label>Type d&apos;hébergement<input type="text" value={variant.accommodation_type ?? ""} onChange={event => change({ accommodation_type: event.target.value })} /></label>
-                    <label>Hébergement<input type="text" value={variant.accommodation_name ?? ""} onChange={event => change({ accommodation_name: event.target.value })} /></label>
                     <label className="studio-form-grid__full">Description<textarea value={variant.description ?? ""} onChange={event => change({ description: event.target.value })} /></label>
-                    <label>Libellé<input type="text" value={variant.stage_label ?? ""} onChange={event => change({ stage_label: event.target.value })} /></label>
-                    <label>Durée<input type="text" value={variant.duration ?? ""} onChange={event => change({ duration: event.target.value })} /></label>
+                    <label>Durée (automatique si vide)<input type="text" value={variant.duration ?? ""} onChange={event => change({ duration: event.target.value })} /></label>
                     <label>Type de variante<input type="text" value={meta.type ?? ""} onChange={event => changeMeta({ type: event.target.value })} /></label>
-                    <label>Difficulté<input type="text" value={meta.difficulty ?? ""} onChange={event => changeMeta({ difficulty: event.target.value })} /></label>
-                    <label className="studio-form-grid__full">Avertissement<textarea value={meta.warning ?? ""} onChange={event => changeMeta({ warning: event.target.value })} /></label>
                   </div>
                 </div>
 
@@ -140,14 +132,7 @@ export default function VariantForm({
                   stageId={stageId}
                   variantId={variant.id}
                   stage={variant}
-                  accommodationForm={accommodationForm}
-                  setAccommodationForm={setAccommodationForm}
-                  clearAccommodationForm={clearAccommodationForm}
-                  handleAccommodationSubmit={handleAccommodationSubmit}
-                  handleClearAccommodation={handleClearAccommodation}
-                  handleDeleteAlternative={handleDeleteAlternative}
-                  handlePromoteAlternative={handlePromoteAlternative}
-                  handleDemotePrimary={handleDemotePrimary}
+                  onChange={change}
                 />
 
                 <NoteForm

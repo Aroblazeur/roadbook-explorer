@@ -1710,6 +1710,35 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   font-size: .88rem;
 }
 
+.studio-contributors {
+  display: grid;
+  gap: .8rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--studio-border);
+  border-radius: 12px;
+  background: var(--studio-surface-soft, #f7faf7);
+}
+
+.studio-contributors h3,
+.studio-contributors p { margin: 0; }
+.studio-contributors__creator { color: var(--studio-muted); font-size: .9rem; }
+.studio-contributors__list { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.studio-contributors__list li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.studio-contributors__form { display: flex; align-items: end; gap: .65rem; flex-wrap: wrap; }
+.studio-contributors__form label { flex: 1 1 260px; }
+.studio-contributors__form small { flex-basis: 100%; color: var(--studio-muted); }
+
+.roadbook-duplicate-action { display: inline-grid; gap: .25rem; }
+.roadbook-duplicate-action small { max-width: 320px; color: #fff; font-weight: 500; }
+.roadbook-creator-footer {
+  padding: 1.25rem 1rem 1.75rem;
+  color: var(--text-muted, #68736b);
+  text-align: center;
+  font-size: .78rem;
+  opacity: .8;
+}
+
 @media (max-width: 960px) {
   .studio-catalog { position: static; }
 }

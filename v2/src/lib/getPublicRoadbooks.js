@@ -6,9 +6,9 @@ async function getRoadbooksCatalog(filterQuery) {
 
   let query = supabase
     .from("roadbooks")
-    .select("id, slug, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id, metadata, is_public");
+    .select("id, slug, owner_id, creator_email, title, description, distance_km, elevation_gain_m, elevation_loss_m, created_at, cover_image_url, cover_media_id, metadata, is_public");
 
-  query = filterQuery(query);
+  query = await filterQuery(query, supabase);
   const { data } = await query.order("created_at", { ascending: false });
 
   const roadbooks = data ?? [];
@@ -61,5 +61,14 @@ export function getPublicRoadbooks() {
 }
 
 export function getOwnedRoadbooks(ownerId) {
-  return getRoadbooksCatalog(query => query.eq("owner_id", ownerId));
+  return getRoadbooksCatalog(async (query, supabase) => {
+    const { data: memberships } = await supabase
+      .from("roadbook_contributors")
+      .select("roadbook_id")
+      .eq("user_id", ownerId);
+    const sharedIds = (memberships ?? []).map(item => Number(item.roadbook_id)).filter(Number.isFinite);
+    return sharedIds.length
+      ? query.or(`owner_id.eq.${ownerId},id.in.(${sharedIds.join(",")})`)
+      : query.eq("owner_id", ownerId);
+  });
 }

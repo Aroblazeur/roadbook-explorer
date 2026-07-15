@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Mes roadbooks — RoadBook Explorer",
-  description: "Bibliothèque des roadbooks créés par l'utilisateur",
+  description: "Bibliothèque des roadbooks créés ou partagés avec l'utilisateur",
 };
 
 export default async function MyRoadbooksPage() {
@@ -24,7 +24,7 @@ export default async function MyRoadbooksPage() {
         <div className="catalog-page-heading">
           <p className="home-access-eyebrow">Ma bibliothèque</p>
           <h2>Mes roadbooks</h2>
-          <p>Tous les roadbooks que vous avez créés, qu'ils soient publics ou privés.</p>
+          <p>Les roadbooks que vous avez créés ou auxquels vous contribuez.</p>
         </div>
 
         <div className="roadbook-library-actions">
@@ -41,7 +41,7 @@ export default async function MyRoadbooksPage() {
 
         <div className="roadbook-library-grid">
           {roadbooks.map(roadbook => (
-            <PersonalRoadbookCard key={roadbook.id} roadbook={roadbook} />
+            <PersonalRoadbookCard key={roadbook.id} roadbook={roadbook} userId={user.id} />
           ))}
         </div>
       </main>
@@ -49,8 +49,9 @@ export default async function MyRoadbooksPage() {
   );
 }
 
-function PersonalRoadbookCard({ roadbook }) {
+function PersonalRoadbookCard({ roadbook, userId }) {
   const metaParts = [
+    roadbook.owner_id === userId ? "Créateur" : "Contributeur",
     roadbook.is_public ? "Public" : "Privé",
     roadbook.activity,
     roadbook.destination,

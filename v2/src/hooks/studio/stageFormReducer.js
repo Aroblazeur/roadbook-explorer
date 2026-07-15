@@ -6,15 +6,11 @@ const defaultStageForm = {
   dist: "",
   gain: "",
   loss: "",
-  difficulty: "",
-  accommodation: "",
   description: "",
   notes: "",
-  warning: "",
   mapEmbed: "",
   photoUrl: "",
   day: "",
-  label: "",
   duration: "",
 };
 

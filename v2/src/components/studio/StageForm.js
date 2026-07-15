@@ -21,14 +21,10 @@ export default function StageForm({
             <label>Distance (km)<input type="number" step="0.01" value={stageForm.dist} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "dist", value: e.target.value })} /></label>
             <label>D+ (m)<input type="number" value={stageForm.gain} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "gain", value: e.target.value })} /></label>
             <label>D- (m)<input type="number" value={stageForm.loss} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "loss", value: e.target.value })} /></label>
-            <label>Difficulté<input type="text" value={stageForm.difficulty} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "difficulty", value: e.target.value })} /></label>
-            <label>Hébergement<input type="text" value={stageForm.accommodation} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "accommodation", value: e.target.value })} /></label>
             <label>Description<textarea value={stageForm.description} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "description", value: e.target.value })} /></label>
             <label>Notes (une par ligne)<textarea value={stageForm.notes} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "notes", value: e.target.value })} /></label>
-            <label>Avertissement<input type="text" value={stageForm.warning} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "warning", value: e.target.value })} /></label>
             <label>Jour<textarea value={stageForm.day} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "day", value: e.target.value })} /></label>
-            <label>Libellé étape<input type="text" value={stageForm.label} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "label", value: e.target.value })} /></label>
-            <label>Durée<input type="text" value={stageForm.duration} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "duration", value: e.target.value })} /></label>
+            <label>Durée (automatique si vide)<input type="text" value={stageForm.duration} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "duration", value: e.target.value })} /></label>
             <div>
               <label htmlFor="stage-photo-url">Photo (URL ou fichier)</label>
               <div className="studio-resource-field">

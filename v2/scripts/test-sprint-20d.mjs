@@ -11,7 +11,7 @@
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import { stageFormReducer, defaultStageForm } from "../src/hooks/studio/stageFormReducer.js";
-import { completeAccommodation, completePoi, completeStageMetrics } from "../src/lib/roadbooks/automation.js";
+import { completeAccommodation, completePoi, completeStageDuration, completeStageMetrics } from "../src/lib/roadbooks/automation.js";
 
 let passed = 0, failed = 0;
 const failures = [];
@@ -26,7 +26,7 @@ console.log("=== 1. stageFormReducer ===");
 
 test("defaultStageForm contient tous les champs", () => {
   assert.equal(typeof defaultStageForm, "object");
-  const expected = ["dayNumber","title","start","end","dist","gain","loss","difficulty","accommodation","description","notes","warning","mapEmbed","photoUrl","day","label","duration"];
+  const expected = ["dayNumber","title","start","end","dist","gain","loss","description","notes","mapEmbed","photoUrl","day","duration"];
   for (const k of expected) assert.ok(k in defaultStageForm, `Missing field: ${k}`);
 });
 
@@ -64,11 +64,20 @@ test("les automatisations complètent uniquement les champs vides", () => {
   assert.equal(poi.value.link_url, "https://maps.example/existant");
 });
 
+test("la durée est calculée sans GPX depuis les métriques saisies", () => {
+  const completed = completeStageDuration({ distance_km: 30, elevation_gain_m: 500, duration: "" }, "vélo");
+  assert.equal(completed.filled, 1);
+  assert.match(completed.value.duration, /^\d+ h \d{2}$/);
+  const manual = completeStageDuration({ distance_km: 30, elevation_gain_m: 500, duration: "5 h 00" }, "vélo");
+  assert.equal(manual.value.duration, "5 h 00");
+  assert.equal(manual.filled, 0);
+});
+
 test("SET_FIELD ne modifie pas les autres champs", () => {
   const state = stageFormReducer(defaultStageForm, { type: "SET_FIELD", field: "title", value: "Test" });
   assert.equal(state.dayNumber, "");
   assert.equal(state.dist, "");
-  assert.equal(state.label, "");
+  assert.equal(state.duration, "");
 });
 
 test("SET_FORM remplace tous les champs", () => {

@@ -151,10 +151,28 @@ test("les hébergements principaux et alternatifs sont entièrement administrabl
   assert.ok(accommodationSrc.includes("Rendre principal"));
   assert.ok(accommodationSrc.includes("Passer en alternatif"));
   assert.ok(accommodationSrc.includes(">Note<textarea"));
-  assert.ok(crudSrc.includes("buildPromoteAlternativeUpdate"));
-  assert.ok(crudSrc.includes("buildDemotePrimaryUpdate"));
+  assert.ok(accommodationSrc.includes("AccommodationFields"));
+  assert.ok(!accommodationSrc.includes(">Modifier</button>"));
+  assert.ok(!crudSrc.includes("accommodationForm"));
   assert.ok(explorerSrc.includes("note: meta.accommodationNote"));
   assert.ok(explorerSrc.includes("stage-detail-accommodation__note"));
+});
+
+test("les informations d'étape ne dupliquent plus les hébergements ni les champs inutilisés", () => {
+  for (const file of ["StageCard", "StageForm", "VariantForm"]) {
+    const source = readFileSync(`src/components/studio/${file}.js`, "utf-8");
+    for (const label of ["Type d'hébergement", "Type d&apos;hébergement", ">Hébergement<input", ">Libellé<input", ">Difficulté<input", ">Avertissement<"]) {
+      assert.ok(!source.includes(label), `${file} contient encore ${label}`);
+    }
+  }
+});
+
+test("l'automatisation calcule aussi la durée des variantes selon l'activité", () => {
+  const enrichmentSrc = readFileSync("src/hooks/studio/useEnrichment.js", "utf-8");
+  const gpxSrc = readFileSync("src/hooks/studio/useGpxManager.js", "utf-8");
+  assert.ok(enrichmentSrc.includes("completedVariantsByStage"));
+  assert.ok(enrichmentSrc.includes("gpxByVariant"));
+  assert.ok(gpxSrc.includes("estimateGpxHours(metrics.distanceKm, metrics.elevationGainM, activity)"));
 });
 
 // ==================== Vérifications structurelles ====================

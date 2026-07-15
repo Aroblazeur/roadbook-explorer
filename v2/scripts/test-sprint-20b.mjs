@@ -34,6 +34,7 @@ import {
   buildPrimaryAccommodationUpdate,
   buildPromoteAlternativeUpdate,
 } from "../src/lib/roadbooks/accommodations.js";
+import { estimateGpxHours, getActivityDurationProfile } from "../src/lib/gpx-metrics.js";
 
 let passed = 0, failed = 0;
 
@@ -107,7 +108,8 @@ test("stageToFormValues mappe les champs", () => {
   assert.equal(form.title, "Test");
   assert.equal(form.start, "Paris");
   assert.equal(form.dist, "150");
-  assert.equal(form.difficulty, "modéré");
+  assert.equal(form.description, "Belle étape");
+  assert.ok(!("difficulty" in form));
   assert.equal(form.notes, "note1");
 });
 
@@ -120,10 +122,29 @@ test("buildStageRecord construit le record", () => {
   assert.equal(record.title, "Étape 1");
 });
 
-test("buildStageRecord inclut metadata", () => {
+test("buildStageRecord limite les métadonnées aux champs encore éditables", () => {
   const form = { dayNumber: "1", title: "", start: "", end: "", dist: "", gain: "", loss: "", difficulty: "dur", description: "Longue étape", notes: "", warning: "Prudence", mapEmbed: "", photoUrl: "", day: "", label: "", duration: "", accommodation: "" };
   const record = buildStageRecord(42, form, null);
-  assert.deepEqual(record.metadata, { difficulty: "dur", description: "Longue étape", warning: "Prudence" });
+  assert.deepEqual(record.metadata, { description: "Longue étape" });
+  assert.ok(!("accommodation_name" in record));
+  assert.ok(!("stage_label" in record));
+});
+
+test("la durée vélo utilise le profil familial bikepacking avec roulotte", () => {
+  const profile = getActivityDurationProfile("Vélo / bikepacking");
+  assert.equal(profile.flatSpeedKmh, 8);
+  assert.equal(profile.climbMetersPerHour, 300);
+  const bikeHours = estimateGpxHours(30, 500, "vélo");
+  const trailHours = estimateGpxHours(30, 500, "trail");
+  assert.ok(bikeHours > trailHours);
+  assert.ok(bikeHours > 6.5);
+});
+
+test("la durée dépend du type d'activité", () => {
+  assert.notEqual(
+    estimateGpxHours(20, 400, "randonnée pédestre"),
+    estimateGpxHours(20, 400, "trail"),
+  );
 });
 
 test("buildPoiRecord construit le record POI", () => {

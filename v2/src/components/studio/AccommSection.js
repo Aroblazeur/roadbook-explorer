@@ -2,77 +2,72 @@
 
 import {
   alternativesFromStage,
+  buildClearPrimaryAccommodationUpdate,
+  buildDemotePrimaryUpdate,
+  buildPromoteAlternativeUpdate,
   hasAccommodation,
   primaryAccommodationFromStage,
 } from "@/lib/roadbooks/accommodations";
 
-function AccommodationDetails({ accommodation }) {
+const PRIMARY_FIELDS = {
+  name: "accommodation_name",
+  type: "accommodation_type",
+  url: "accommodation_url",
+  photo: "accommodation_photo",
+};
+
+function AccommodationFields({ accommodation, onChange, idPrefix }) {
   return (
     <div className="studio-form-grid studio-form-grid--compact">
-      <label>Nom<span className="studio-input--readonly">{accommodation.name || "—"}</span></label>
-      <label>Type<span className="studio-input--readonly">{accommodation.type || "—"}</span></label>
-      <label className="studio-form-grid__full">Lien<span className="studio-input--readonly">{accommodation.url || "—"}</span></label>
-      <label className="studio-form-grid__full">Note<span className="studio-input--readonly">{accommodation.note || "—"}</span></label>
-      <label className="studio-form-grid__full">
-        Photo
-        {accommodation.photo
-          ? <img src={accommodation.photo} alt="" style={{ maxWidth: "100%", maxHeight: "160px", borderRadius: "4px", marginTop: "0.3rem" }} />
-          : <span className="studio-input--readonly">—</span>}
-      </label>
+      <label htmlFor={`${idPrefix}-name`}>Nom<input id={`${idPrefix}-name`} type="text" value={accommodation.name} onChange={event => onChange("name", event.target.value)} /></label>
+      <label htmlFor={`${idPrefix}-type`}>Type<input id={`${idPrefix}-type`} type="text" value={accommodation.type} onChange={event => onChange("type", event.target.value)} /></label>
+      <label className="studio-form-grid__full" htmlFor={`${idPrefix}-url`}>Lien<input id={`${idPrefix}-url`} type="url" value={accommodation.url} onChange={event => onChange("url", event.target.value)} /></label>
+      <label className="studio-form-grid__full" htmlFor={`${idPrefix}-photo`}>Photo<input id={`${idPrefix}-photo`} type="url" value={accommodation.photo} onChange={event => onChange("photo", event.target.value)} /></label>
+      <label className="studio-form-grid__full" htmlFor={`${idPrefix}-note`}>Note<textarea id={`${idPrefix}-note`} value={accommodation.note} onChange={event => onChange("note", event.target.value)} /></label>
     </div>
   );
 }
 
-export default function AccommSection({
-  stageId,
-  variantId = null,
-  stage,
-  accommodationForm,
-  setAccommodationForm,
-  clearAccommodationForm,
-  handleAccommodationSubmit,
-  handleClearAccommodation,
-  handleDeleteAlternative,
-  handlePromoteAlternative,
-  handleDemotePrimary,
-}) {
+export default function AccommSection({ stageId, variantId = null, stage, onChange }) {
   const primary = primaryAccommodationFromStage(stage);
   const alternatives = alternativesFromStage(stage);
-  const hasPrimary = hasAccommodation(primary);
-  const formIsOpen = accommodationForm.stage_id === stageId && (accommodationForm.variant_id ?? null) === variantId;
+  const targetPrefix = variantId == null ? `stage-${stageId}` : `variant-${variantId}`;
 
-  const openForm = (kind, accommodation = {}, editing = null) => {
-    clearAccommodationForm();
-    setAccommodationForm({
-      stage_id: stageId,
-      variant_id: variantId,
-      name: accommodation.name ?? "",
-      url: accommodation.url ?? "",
-      photo: accommodation.photo ?? "",
-      type: accommodation.type ?? "",
-      note: accommodation.note ?? "",
-      kind,
-      editing,
-    });
+  const changePrimary = (field, value) => {
+    if (field === "note") {
+      onChange({ metadata: { ...(stage.metadata ?? {}), accommodationNote: value } });
+      return;
+    }
+    onChange({ [PRIMARY_FIELDS[field]]: value });
+  };
+
+  const changeAlternative = (index, field, value) => {
+    const nextAlternatives = alternatives.map((item, itemIndex) => (
+      itemIndex === index ? { ...item, [field]: value } : item
+    ));
+    onChange({ alternatives: nextAlternatives });
+  };
+
+  const addAlternative = () => {
+    onChange({ alternatives: [...alternatives, { name: "", type: "", url: "", photo: "", note: "" }] });
+  };
+
+  const removeAlternative = (index) => {
+    if (!window.confirm("Supprimer cet hébergement alternatif ?")) return;
+    onChange({ alternatives: alternatives.filter((_, itemIndex) => itemIndex !== index) });
   };
 
   return (
     <>
       <div className="studio-zone studio-zone--accommodation">
         <h4 className="studio-zone__title">Hébergement principal</h4>
-        {hasPrimary ? (
-          <div>
-            <AccommodationDetails accommodation={primary} />
-            <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
-              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => openForm("primary", primary, "primary")}>Modifier</button>
-              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => handleDemotePrimary(stageId, variantId)}>Passer en alternatif</button>
-              <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleClearAccommodation(stageId, variantId)}>Supprimer</button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="studio-detail--empty">Aucun hébergement principal.</p>
-            <button type="button" className="terrain-button terrain-button--secondary" style={{ marginTop: "0.4rem" }} onClick={() => openForm("primary")}>Ajouter l’hébergement principal</button>
+        <AccommodationFields accommodation={primary} onChange={changePrimary} idPrefix={`${targetPrefix}-accommodation-primary`} />
+        {hasAccommodation(primary) && (
+          <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
+            <button type="button" className="terrain-button terrain-button--secondary" onClick={() => onChange(buildDemotePrimaryUpdate(stage))}>Passer en alternatif</button>
+            <button type="button" className="terrain-button terrain-button--danger" onClick={() => {
+              if (window.confirm("Supprimer l'hébergement principal ?")) onChange(buildClearPrimaryAccommodationUpdate(stage));
+            }}>Supprimer</button>
           </div>
         )}
       </div>
@@ -80,39 +75,22 @@ export default function AccommSection({
       <div className="studio-zone studio-zone--alternatives">
         <div className="studio-stage-extra__header">
           <h4 className="studio-zone__title">Hébergements alternatifs</h4>
-          <button type="button" className="terrain-button terrain-button--secondary" onClick={() => openForm("alternative")}>Ajouter un hébergement alternatif</button>
+          <button type="button" className="terrain-button terrain-button--secondary" onClick={addAlternative}>Ajouter un hébergement alternatif</button>
         </div>
         {alternatives.length ? alternatives.map((alternative, index) => (
-          <article className="studio-subitem-card" key={`${alternative.name}-${alternative.url}-${index}`}>
-            <AccommodationDetails accommodation={alternative} />
+          <article className="studio-subitem-card" key={`${targetPrefix}-alternative-${index}`}>
+            <AccommodationFields
+              accommodation={alternative}
+              onChange={(field, value) => changeAlternative(index, field, value)}
+              idPrefix={`${targetPrefix}-accommodation-alternative-${index}`}
+            />
             <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
-              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => handlePromoteAlternative(stageId, index, variantId)}>Rendre principal</button>
-              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => openForm("alternative", alternative, index)}>Modifier</button>
-              <button type="button" className="terrain-button terrain-button--danger" onClick={() => handleDeleteAlternative(stageId, index, variantId)}>Supprimer</button>
+              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => onChange(buildPromoteAlternativeUpdate(stage, index))}>Rendre principal</button>
+              <button type="button" className="terrain-button terrain-button--danger" onClick={() => removeAlternative(index)}>Supprimer</button>
             </div>
           </article>
         )) : <p className="studio-detail--empty">Aucun hébergement alternatif.</p>}
       </div>
-
-      {formIsOpen && (
-        <form onSubmit={handleAccommodationSubmit} className="studio-create-form">
-          <h4>
-            {accommodationForm.editing != null ? "Modifier" : "Ajouter"}{" "}
-            {accommodationForm.kind === "alternative" ? "un hébergement alternatif" : "l’hébergement principal"}
-          </h4>
-          <div className="studio-form-grid studio-form-grid--compact">
-            <label>Nom<input type="text" value={accommodationForm.name} onChange={e => setAccommodationForm({ ...accommodationForm, name: e.target.value })} /></label>
-            <label>Type<input type="text" value={accommodationForm.type} onChange={e => setAccommodationForm({ ...accommodationForm, type: e.target.value })} /></label>
-            <label className="studio-form-grid__full">Lien<input type="url" value={accommodationForm.url} onChange={e => setAccommodationForm({ ...accommodationForm, url: e.target.value })} /></label>
-            <label className="studio-form-grid__full">Photo<input type="url" value={accommodationForm.photo} onChange={e => setAccommodationForm({ ...accommodationForm, photo: e.target.value })} /></label>
-            <label className="studio-form-grid__full">Note<textarea value={accommodationForm.note} onChange={e => setAccommodationForm({ ...accommodationForm, note: e.target.value })} /></label>
-          </div>
-          <div className="studio-create-form__actions">
-            <button type="submit" className="terrain-button">Enregistrer l’hébergement</button>
-            <button type="button" className="terrain-button terrain-button--secondary" onClick={clearAccommodationForm}>Annuler</button>
-          </div>
-        </form>
-      )}
     </>
   );
 }

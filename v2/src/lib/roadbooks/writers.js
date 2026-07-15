@@ -258,6 +258,11 @@ export async function duplicateRoadbook(supabase, roadbook, stages, poisByStage,
     title: `${roadbook.title} (copie)`,
     description: roadbook.description,
     is_public: false,
+    distance_km: roadbook.distance_km,
+    elevation_gain_m: roadbook.elevation_gain_m,
+    elevation_loss_m: roadbook.elevation_loss_m,
+    map_embed_url: roadbook.map_embed_url,
+    metadata: roadbook.metadata ?? {},
   });
 
   const newStageIds = [];

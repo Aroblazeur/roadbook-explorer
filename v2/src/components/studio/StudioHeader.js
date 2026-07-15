@@ -14,6 +14,7 @@ export default function StudioHeader({
   onDeleteRoadbook,
   onAddStage,
   onToggleVisibility,
+  canManage,
 }) {
   return (
     <div className="studio-panel__header studio-editor-header">
@@ -34,14 +35,14 @@ export default function StudioHeader({
           {saving ? "Enregistrement…" : "Enregistrer les modifications"}
         </button>
         <button type="button" onClick={onAddStage}>Ajouter une étape</button>
-        <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Rendre public"}</button>
+        {canManage && <button type="button" onClick={onToggleVisibility}>{isPublic ? "Rendre privé" : "Rendre public"}</button>}
         <Link href={`/roadbooks/${roadbook?.slug}`} className="terrain-button--secondary studio-action-button--compact">Voir</Link>
         <button type="button" onClick={handleDuplicate} disabled={duplicating} className="terrain-button--secondary studio-action-button--compact">
           {duplicating ? "..." : "Dupliquer"}
         </button>
-        <button type="button" onClick={onDeleteRoadbook} disabled={saving || deletingRoadbook} className="terrain-button--danger studio-action-button--compact">
+        {canManage && <button type="button" onClick={onDeleteRoadbook} disabled={saving || deletingRoadbook} className="terrain-button--danger studio-action-button--compact">
           {deletingRoadbook ? "Suppression…" : "Supprimer le roadbook"}
-        </button>
+        </button>}
       </div>
     </div>
   );

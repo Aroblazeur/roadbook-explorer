@@ -1,5 +1,16 @@
+import { estimateGpxHours, formatDuration } from "../gpx-metrics.js";
+
 export function isMissingAutomationValue(value) {
   return value == null || (typeof value === "string" && value.trim() === "");
+}
+
+export function completeStageDuration(stage, activity) {
+  if (!isMissingAutomationValue(stage?.duration)) return { value: stage, filled: 0 };
+  const distance = Number(stage?.distance_km);
+  if (!Number.isFinite(distance) || distance <= 0) return { value: stage, filled: 0 };
+  const duration = formatDuration(estimateGpxHours(distance, stage?.elevation_gain_m, activity));
+  if (!duration) return { value: stage, filled: 0 };
+  return { value: { ...stage, duration }, filled: 1 };
 }
 
 export function completeStageMetrics(stage, metrics, durationStr) {

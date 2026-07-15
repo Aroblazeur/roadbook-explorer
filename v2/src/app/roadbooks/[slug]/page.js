@@ -4,6 +4,7 @@ import MapViewerClient from "@/components/MapViewerClient";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { getSignedMediaAccess, loadExplorerGpxMedia } from "@/lib/roadbooks/loaders";
 import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
+import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -51,6 +52,19 @@ async function getRoadbook(slug) {
       images.push({ ...m, signedUrl: access.signedUrl, access });
     }
   }
+
+  const isAdmin = user?.app_metadata?.role === "admin";
+  let isContributor = false;
+  if (user && roadbook.owner_id !== user.id && !isAdmin) {
+    const { data: membership } = await supabase
+      .from("roadbook_contributors")
+      .select("user_id")
+      .eq("roadbook_id", roadbook.id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    isContributor = Boolean(membership);
+  }
+  const canEdit = Boolean(user && (roadbook.owner_id === user.id || isContributor || isAdmin));
   const { gpxOfficial, gpxCustom, gpxByStage, gpxByVariant } = await loadExplorerGpxMedia(
     supabase,
     allMedia.filter(media => media.type === "gpx"),
@@ -75,7 +89,7 @@ async function getRoadbook(slug) {
   const totalElevationGain = (stages ?? []).reduce((sum, s) => sum + (s.elevation_gain_m ?? 0), 0);
   const totalElevationLoss = (stages ?? []).reduce((sum, s) => sum + (s.elevation_loss_m ?? 0), 0);
 
-  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false };
+  return { roadbook, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false, user, canEdit };
 }
 
 export default async function RoadbookViewPage({ params, searchParams: sp }) {
@@ -123,7 +137,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
 
   return (
     <>
-      <RoadbookHeader roadbook={roadbook} />
+      <RoadbookHeader roadbook={roadbook} stages={stages} pois={pois} variants={variants} user={result.user} canEdit={result.canEdit} />
       <main className="container">
       {currentEntry == null ? (
         <>
@@ -166,11 +180,14 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
         />
       )}
     </main>
+    <footer className="roadbook-creator-footer">
+      Créé par {roadbook.creator_email}
+    </footer>
     </>
   );
 }
 
-function RoadbookHeader({ roadbook }) {
+function RoadbookHeader({ roadbook, stages, pois, variants, user, canEdit }) {
   return (
     <header className="header roadbook-header">
       <div className="container">
@@ -208,7 +225,12 @@ function RoadbookHeader({ roadbook }) {
         {roadbook.description && <p className="roadbook-header__description">{roadbook.description}</p>}
         <nav className="header-nav" aria-label="Navigation du roadbook">
           <Link href="/explore">Retour aux roadbooks</Link>
-          <Link href={`/dashboard/roadbooks/${roadbook.id}`}>✏️ Studio</Link>
+          {canEdit && <Link href={`/dashboard/roadbooks/${roadbook.id}`}>✏️ Studio</Link>}
+          {user ? (
+            <DuplicateRoadbookButton roadbook={roadbook} stages={stages} pois={pois} variants={variants} />
+          ) : (
+            <Link href={`/login?next=${encodeURIComponent(`/roadbooks/${roadbook.slug}`)}`}>Se connecter pour dupliquer</Link>
+          )}
         </nav>
       </div>
     </header>

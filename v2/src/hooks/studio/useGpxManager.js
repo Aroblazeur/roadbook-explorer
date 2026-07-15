@@ -7,7 +7,7 @@ import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
 
 const GPX_BUCKET = "roadbook-gpx";
 
-export function useGpxManager({ supabase, roadbookId, userId, reloadStages, onMutation }) {
+export function useGpxManager({ supabase, roadbookId, userId, activity, reloadStages, onMutation }) {
   const [gpxError, setGpxError] = useState(null);
   const [gpxUploading, setGpxUploading] = useState(null);
   const [gpxOfficial, setGpxOfficial] = useState(null);
@@ -147,7 +147,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages, onMu
       const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
       if (!signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
       const metrics = await fetchAndComputeGpxMetrics(signedUrl);
-      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
+      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM, activity);
       const durationStr = formatDuration(hours);
       const anyExisting = stage.distance_km != null || stage.elevation_gain_m != null || stage.elevation_loss_m != null || stage.duration != null;
       return { metrics, durationStr, stage, anyExisting };
@@ -157,7 +157,7 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages, onMu
     } finally {
       setMetricsLoading(null);
     }
-  }, [supabase]);
+  }, [supabase, activity]);
 
   const analyzeStageGpx = useCallback(async (gpx, stage) => {
     if (!gpx || !stage) return null;
@@ -165,13 +165,13 @@ export function useGpxManager({ supabase, roadbookId, userId, reloadStages, onMu
       const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, gpx.path, 3600);
       if (!signedUrl) return { error: "URL signée indisponible", stageNumber: stage.stage_number };
       const metrics = await fetchAndComputeGpxMetrics(signedUrl);
-      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM);
+      const hours = estimateGpxHours(metrics.distanceKm, metrics.elevationGainM, activity);
       const durationStr = formatDuration(hours);
       return { metrics, durationStr, stage, error: null };
     } catch (err) {
       return { error: formatGpxUserError(err, "Impossible d'analyser le GPX de cette étape."), stageNumber: stage.stage_number };
     }
-  }, [supabase]);
+  }, [supabase, activity]);
 
   const applyStageMetrics = useCallback(async (metrics, durationStr, stage) => {
     if (!stage) return false;

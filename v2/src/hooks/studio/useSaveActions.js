@@ -10,7 +10,7 @@ export default function useSaveActions({
   isPublic, setIsPublic,
   officialRoute, traceRoute,
   coverMode, coverUrl, coverMediaId,
-  stages, setStages, poisByStage, setPoisByStage, variantsByStage, setTraceRoute,
+  stages, setStages, poisByStage, setPoisByStage, variantsByStage, setVariantsByStage, setTraceRoute,
   prepareAutomaticCompletion,
   setError, setSuccess, markRemoteConflict,
   saveWithLock,
@@ -19,13 +19,14 @@ export default function useSaveActions({
   const [deletingRoadbook, setDeletingRoadbook] = useState(false);
   const handleSaveAll = useCallback(async () => {
     if (!title.trim()) { setError("Le titre est obligatoire."); return false; }
-    let automation = { stages, poisByStage, poiUpdates: [], report: { fields: 0, warnings: [] } };
+    let automation = { stages, variantsByStage, poisByStage, poiUpdates: [], report: { fields: 0, warnings: [] } };
     try {
       automation = await prepareAutomaticCompletion?.() ?? automation;
     } catch (error) {
       automation.report.warnings.push(error?.message ?? String(error));
     }
     const completedStages = automation.stages ?? stages;
+    const completedVariantsByStage = automation.variantsByStage ?? variantsByStage;
     const completedPois = automation.poisByStage ?? poisByStage;
     if (completedStages.some(stage => !normalizeNumber(stage.stage_number))) {
       setError("Chaque étape doit avoir un numéro valide.");
@@ -64,13 +65,14 @@ export default function useSaveActions({
       getUpdatedRoadbook: (prev, data) => ({ ...prev, ...updateFields, updated_at: data.updated_at }),
       persistRelated: () => Promise.all([
         updateStages(supabase, completedStages, buildEditableStageUpdate),
-        updateVariants(supabase, variantsByStage, buildEditableVariantUpdate),
+        updateVariants(supabase, completedVariantsByStage, buildEditableVariantUpdate),
         updatePois(supabase, automation.poiUpdates ?? []),
       ]),
       successMessage: `Toutes les modifications ont été enregistrées.${automatedFields ? ` ${automatedFields} champ(s) complété(s) automatiquement.` : ""}${warningCount ? ` ${warningCount} automatisation(s) indisponible(s).` : ""}`,
     });
     if (saved) {
       setStages(completedStages);
+      setVariantsByStage(completedVariantsByStage);
       setPoisByStage(completedPois);
       setTraceRoute(previous => ({
         ...previous,
@@ -80,7 +82,7 @@ export default function useSaveActions({
       }));
     }
     return saved;
-  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, variantsByStage, supabase, saveWithLock, setError, setStages, setPoisByStage, setTraceRoute, prepareAutomaticCompletion]);
+  }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, variantsByStage, supabase, saveWithLock, setError, setStages, setVariantsByStage, setPoisByStage, setTraceRoute, prepareAutomaticCompletion]);
 
   const handleToggleVisibility = useCallback(async () => {
     const result = await conditionalUpdateRoadbook(supabase, id, { is_public: !isPublic }, roadbook?.updated_at);

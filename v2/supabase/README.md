@@ -147,3 +147,14 @@ create policy "Owner can update/delete own gpx"
 ## Trigger `updated_at`
 
 Les tables `profiles`, `roadbooks`, `stages`, `stage_pois`, `stage_variants` mettent automatiquement `updated_at` à jour sur chaque `UPDATE`.
+
+## Collaboration et administration
+
+Les migrations du 15 juillet 2026 ajoutent `roadbook_contributors` et les règles suivantes :
+
+- les roadbooks publics restent consultables sans connexion ;
+- un utilisateur connecté non auteur peut les consulter et les dupliquer, sans les modifier ;
+- le créateur ajoute ou retire des coauteurs par l'adresse e-mail d'un compte confirmé ;
+- les coauteurs peuvent modifier le contenu des roadbooks publics ou privés ;
+- seul le créateur (ou un compte dont `app_metadata.role` vaut `admin`) gère la visibilité, les coauteurs et la suppression ;
+- l'adresse e-mail du créateur est conservée dans `roadbooks.creator_email`.

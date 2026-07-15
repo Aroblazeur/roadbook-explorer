@@ -71,9 +71,8 @@ export function resizeImage(file, maxWidth = 1600) {
 export function defaultStageFormState() {
   return {
     dayNumber: "", title: "", start: "", end: "",
-    dist: "", gain: "", loss: "", difficulty: "",
-    accommodation: "", description: "", notes: "", warning: "",
-    mapEmbed: "", photoUrl: "", day: "", label: "", duration: "",
+    dist: "", gain: "", loss: "", description: "", notes: "",
+    mapEmbed: "", photoUrl: "", day: "", duration: "",
   };
 }
 
@@ -87,15 +86,11 @@ export function stageToFormValues(stage) {
     dist: stage.distance_km != null ? String(stage.distance_km) : "",
     gain: stage.elevation_gain_m != null ? String(stage.elevation_gain_m) : "",
     loss: stage.elevation_loss_m != null ? String(stage.elevation_loss_m) : "",
-    difficulty: meta.difficulty ?? "",
-    accommodation: stage.accommodation_name ?? "",
     description: meta.description ?? "",
     notes: stage.notes?.length ? stage.notes.map(n => n.text ?? n).join("\n") : "",
-    warning: meta.warning ?? "",
     mapEmbed: stage.map_embed_url ?? "",
     photoUrl: stage.stage_photo_url ?? "",
     day: stage.day ?? "",
-    label: stage.stage_label ?? "",
     duration: stage.duration ?? "",
   };
 }
@@ -104,9 +99,7 @@ export function buildStageRecord(id, form, editingStage) {
   const dayNumber = Number(form.dayNumber);
   const notes = form.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
   const metadata = {};
-  if (form.difficulty) metadata.difficulty = form.difficulty;
   if (form.description) metadata.description = form.description;
-  if (form.warning) metadata.warning = form.warning;
   const record = {
     roadbook_id: Number(id),
     stage_number: dayNumber,
@@ -116,11 +109,9 @@ export function buildStageRecord(id, form, editingStage) {
     distance_km: normalizeNumber(form.dist),
     elevation_gain_m: normalizeNumber(form.gain),
     elevation_loss_m: normalizeNumber(form.loss),
-    accommodation_name: form.accommodation || null,
     map_embed_url: form.mapEmbed || null,
     stage_photo_url: form.photoUrl || null,
     day: form.day || null,
-    stage_label: form.label || null,
     duration: form.duration || null,
     notes: notes.length ? notes : [],
     metadata,
@@ -156,6 +147,9 @@ export function buildEditableStageUpdate(stage) {
     stage_photo_url: stage.stage_photo_url?.trim() || null,
     accommodation_type: stage.accommodation_type?.trim() || null,
     accommodation_name: stage.accommodation_name?.trim() || null,
+    accommodation_url: stage.accommodation_url?.trim() || null,
+    accommodation_photo: stage.accommodation_photo?.trim() || null,
+    alternatives: Array.isArray(stage.alternatives) ? stage.alternatives : [],
     map_embed_url: stage.map_embed_url?.trim() || null,
     day: stage.day?.trim() || null,
     stage_label: stage.stage_label?.trim() || null,

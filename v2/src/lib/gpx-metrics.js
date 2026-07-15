@@ -1,7 +1,11 @@
-const FLAT_SPEED_KMH = 11;
-const CLIMB_METERS_PER_HOUR = 600;
-const PAUSE_HOURS = 0.5;
 const ELEVATION_NOISE_THRESHOLD_M = 3;
+
+const ACTIVITY_PROFILES = {
+  bikeFamily: { flatSpeedKmh: 8, climbMetersPerHour: 300, basePauseHours: 0.75, pauseRatio: 0.15 },
+  hiking: { flatSpeedKmh: 4, climbMetersPerHour: 350, basePauseHours: 0.5, pauseRatio: 0.1 },
+  trail: { flatSpeedKmh: 7, climbMetersPerHour: 500, basePauseHours: 0.3, pauseRatio: 0.05 },
+  default: { flatSpeedKmh: 4.5, climbMetersPerHour: 400, basePauseHours: 0.5, pauseRatio: 0.1 },
+};
 
 function finiteNumber(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -128,11 +132,24 @@ export function parseGpxMetrics(xmlText) {
   };
 }
 
-export function estimateGpxHours(distanceKm, elevationGain) {
+export function getActivityDurationProfile(activity) {
+  const normalized = String(activity ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  if (/(velo|bike|cycl|vtt|gravel)/.test(normalized)) return ACTIVITY_PROFILES.bikeFamily;
+  if (/(randon|marche|trek|pedestre)/.test(normalized)) return ACTIVITY_PROFILES.hiking;
+  if (/(trail|running|course)/.test(normalized)) return ACTIVITY_PROFILES.trail;
+  return ACTIVITY_PROFILES.default;
+}
+
+export function estimateGpxHours(distanceKm, elevationGain, activity = "") {
   const distance = finiteNumber(distanceKm);
   if (distance === null || distance < 0) return null;
   const gain = Math.max(0, finiteNumber(elevationGain) ?? 0);
-  return distance / FLAT_SPEED_KMH + gain / CLIMB_METERS_PER_HOUR + PAUSE_HOURS;
+  const profile = getActivityDurationProfile(activity);
+  const movingHours = distance / profile.flatSpeedKmh + gain / profile.climbMetersPerHour;
+  return movingHours + profile.basePauseHours + movingHours * profile.pauseRatio;
 }
 
 export function formatDuration(hours) {

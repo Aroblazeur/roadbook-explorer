@@ -31,9 +31,6 @@ export default function StageCard({
     poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi,
     variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant,
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
-    accommodationForm, setAccommodationForm, clearAccommodationForm,
-    handleAccommodationSubmit, handleClearAccommodation,
-    handleDeleteAlternative, handlePromoteAlternative, handleDemotePrimary,
   } = stageCrud;
 
   const {
@@ -105,13 +102,8 @@ export default function StageCard({
                   </label>
                 </div>
               </div>
-              <label>Type d'hébergement<input type="text" value={stage.accommodation_type ?? ""} onChange={e => change({ accommodation_type: e.target.value })} /></label>
-              <label>Hébergement<input type="text" value={stage.accommodation_name ?? ""} onChange={e => change({ accommodation_name: e.target.value })} /></label>
               <label className="studio-form-grid__full">Description<textarea value={meta.description ?? ""} onChange={e => changeMeta({ description: e.target.value })} /></label>
-              <label>Libellé<input type="text" value={stage.stage_label ?? ""} onChange={e => change({ stage_label: e.target.value })} /></label>
-              <label>Durée<input type="text" value={stage.duration ?? ""} onChange={e => change({ duration: e.target.value })} /></label>
-              <label>Difficulté<input type="text" value={meta.difficulty ?? ""} onChange={e => changeMeta({ difficulty: e.target.value })} /></label>
-              <label className="studio-form-grid__full">Avertissement<textarea value={meta.warning ?? ""} onChange={e => changeMeta({ warning: e.target.value })} /></label>
+              <label>Durée (automatique si vide)<input type="text" value={stage.duration ?? ""} onChange={e => change({ duration: e.target.value })} /></label>
             </div>
           </div>
 
@@ -155,14 +147,7 @@ export default function StageCard({
           <AccommSection
             stageId={stage.id}
             stage={stage}
-            accommodationForm={accommodationForm}
-            setAccommodationForm={setAccommodationForm}
-            clearAccommodationForm={clearAccommodationForm}
-            handleAccommodationSubmit={handleAccommodationSubmit}
-            handleClearAccommodation={handleClearAccommodation}
-            handleDeleteAlternative={handleDeleteAlternative}
-            handlePromoteAlternative={handlePromoteAlternative}
-            handleDemotePrimary={handleDemotePrimary}
+            onChange={change}
           />
 
           <NoteForm
