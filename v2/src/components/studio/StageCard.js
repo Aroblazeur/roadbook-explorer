@@ -81,7 +81,12 @@ export default function StageCard({
             onDragStart={(e) => dragHandlers?.handleDragStart(e, stage.id)}
             onDragEnd={dragHandlers?.handleDragEnd}
           >↕ Déplacer</button>
-          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); clearVariantForm(); setVariantForm(current => ({ ...current, stage_id: stage.id })); }}>Ajouter une variante</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => {
+            e.stopPropagation();
+            clearVariantForm();
+            const nextSortOrder = Math.max(0, ...stageVariants.map(variant => Number(variant.sort_order) || 0)) + 1;
+            setVariantForm(current => ({ ...current, stage_id: stage.id, sort_order: String(nextSortOrder) }));
+          }}>Ajouter une variante</button>
           <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }} disabled={deleting === stage.id}>Supprimer</button>
         </div>
       </div>

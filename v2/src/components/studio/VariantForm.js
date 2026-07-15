@@ -160,13 +160,29 @@ export default function VariantForm({
         <form onSubmit={handleVariantSubmit} className="studio-create-form studio-create-form--substep">
           <h4>Nouvelle variante</h4>
           <div className="studio-form-grid studio-form-grid--compact">
-            <label>Titre<input type="text" value={variantForm.title} onChange={event => setVariantForm({ ...variantForm, title: event.target.value })} required /></label>
-            <label>Type<input type="text" value={variantForm.type} onChange={event => setVariantForm({ ...variantForm, type: event.target.value })} /></label>
-            <label>Départ<input type="text" value={variantForm.departure} onChange={event => setVariantForm({ ...variantForm, departure: event.target.value })} /></label>
-            <label>Arrivée<input type="text" value={variantForm.arrival} onChange={event => setVariantForm({ ...variantForm, arrival: event.target.value })} /></label>
+            <label>N° variante<input type="number" min="1" value={variantForm.sort_order} onChange={event => setVariantForm(current => ({ ...current, sort_order: event.target.value }))} required /></label>
+            <label>Titre<input type="text" value={variantForm.title} onChange={event => setVariantForm(current => ({ ...current, title: event.target.value }))} required /></label>
+            <label>Départ<input type="text" value={variantForm.departure} onChange={event => setVariantForm(current => ({ ...current, departure: event.target.value }))} /></label>
+            <label>Arrivée<input type="text" value={variantForm.arrival} onChange={event => setVariantForm(current => ({ ...current, arrival: event.target.value }))} /></label>
+            <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={event => setVariantForm(current => ({ ...current, distance_km: event.target.value }))} /></label>
+            <label>D+ (m)<input type="number" value={variantForm.elevation_gain_m} onChange={event => setVariantForm(current => ({ ...current, elevation_gain_m: event.target.value }))} /></label>
+            <label>D- (m)<input type="number" value={variantForm.elevation_loss_m} onChange={event => setVariantForm(current => ({ ...current, elevation_loss_m: event.target.value }))} /></label>
+            <label>Description<textarea value={variantForm.description} onChange={event => setVariantForm(current => ({ ...current, description: event.target.value }))} /></label>
+            <label>Notes (une par ligne)<textarea value={variantForm.notes} onChange={event => setVariantForm(current => ({ ...current, notes: event.target.value }))} /></label>
+            <label>Jour<textarea value={variantForm.day} onChange={event => setVariantForm(current => ({ ...current, day: event.target.value }))} /></label>
+            <label>Durée (automatique si vide)<input type="text" value={variantForm.duration} onChange={event => setVariantForm(current => ({ ...current, duration: event.target.value }))} /></label>
+            <div>
+              <label htmlFor={`variant-create-photo-${stageId}`}>Photo (URL ou fichier)</label>
+              <div className="studio-resource-field">
+                <input id={`variant-create-photo-${stageId}`} type="url" value={variantForm.stage_photo_url} onChange={event => setVariantForm(current => ({ ...current, stage_photo_url: event.target.value }))} />
+              </div>
+              <small className="text-muted">L'import de fichier sera disponible après la création de la variante.</small>
+            </div>
+            <label>Type de variante<input type="text" value={variantForm.type} onChange={event => setVariantForm(current => ({ ...current, type: event.target.value }))} /></label>
+            <label className="studio-form-grid__full">Carte intégrée (iframe)<input type="url" value={variantForm.map_embed_url} onChange={event => setVariantForm(current => ({ ...current, map_embed_url: event.target.value }))} /></label>
           </div>
           <div className="studio-create-form__actions">
-            <button type="submit" className="terrain-button">Ajouter</button>
+            <button type="submit" className="terrain-button">Créer la variante</button>
             <button type="button" className="terrain-button terrain-button--secondary" onClick={clearVariantForm}>Annuler</button>
           </div>
         </form>

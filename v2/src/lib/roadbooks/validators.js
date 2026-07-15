@@ -168,7 +168,8 @@ export function buildVariantRecord(variantForm) {
     : [];
   return {
     stage_id: variantForm.stage_id,
-    label: variantForm.title,
+    label: variantForm.title.trim(),
+    sort_order: normalizeNumber(variantForm.sort_order) ?? 0,
     description: variantForm.description || null,
     distance_km: normalizeNumber(variantForm.distance_km),
     departure: variantForm.departure || null,
@@ -176,6 +177,9 @@ export function buildVariantRecord(variantForm) {
     elevation_gain_m: normalizeNumber(variantForm.elevation_gain_m),
     elevation_loss_m: normalizeNumber(variantForm.elevation_loss_m),
     map_embed_url: variantForm.map_embed_url || null,
+    stage_photo_url: variantForm.stage_photo_url || null,
+    day: variantForm.day || null,
+    duration: variantForm.duration || null,
     notes: notesArr.length ? notesArr : [],
     metadata: Object.keys(meta).length ? meta : {},
   };

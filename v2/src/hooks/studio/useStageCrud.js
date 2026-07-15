@@ -8,7 +8,26 @@ import {
   swapStageNumbers,
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
-import { buildPoiRecord } from "@/lib/roadbooks/validators";
+import { buildPoiRecord, buildVariantRecord } from "@/lib/roadbooks/validators";
+
+const EMPTY_VARIANT_FORM = {
+  stage_id: null,
+  title: "",
+  type: "",
+  sort_order: "",
+  departure: "",
+  arrival: "",
+  description: "",
+  distance_km: "",
+  elevation_gain_m: "",
+  elevation_loss_m: "",
+  map_embed_url: "",
+  stage_photo_url: "",
+  notes: "",
+  day: "",
+  duration: "",
+  editing: null,
+};
 
 export function useStageCrud({ supabase, roadbookId, stages, setStages, variantsByStage, reloadPoisVariants }) {
   const [stageForm, stageFormDispatch] = useReducer(stageFormReducer, { ...defaultStageForm });
@@ -18,7 +37,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
 
   // Sub-entity forms
   const [poiForm, setPoiForm] = useState({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", editing: null });
-  const [variantForm, setVariantForm] = useState({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null });
+  const [variantForm, setVariantForm] = useState({ ...EMPTY_VARIANT_FORM });
   const [noteForm, setNoteForm] = useState({ stage_id: null, variant_id: null, text: "", editing: null });
 
   const findVariant = useCallback((variantId) => {
@@ -70,7 +89,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
   }, [supabase, setStages]);
 
   const clearPoiForm = useCallback(() => setPoiForm({ stage_id: null, variant_id: null, name: "", region: "", link: "", description: "", editing: null }), []);
-  const clearVariantForm = useCallback(() => setVariantForm({ stage_id: null, title: "", type: "", departure: "", arrival: "", description: "", distance_km: "", elevation_gain_m: "", elevation_loss_m: "", map_embed_url: "", notes: "", editing: null }), []);
+  const clearVariantForm = useCallback(() => setVariantForm({ ...EMPTY_VARIANT_FORM }), []);
   const clearNoteForm = useCallback(() => setNoteForm({ stage_id: null, variant_id: null, text: "", editing: null }), []);
 
   const handlePoiSubmit = useCallback(async (e) => {
@@ -100,10 +119,10 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
   const handleVariantSubmit = useCallback(async (e) => {
     e.preventDefault();
     setStageError(null); setStageSuccess(null);
-    const meta = {};
-    if (variantForm.type) meta.type = variantForm.type;
-    const notesArr = variantForm.notes ? variantForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text })) : [];
-    const record = { stage_id: variantForm.stage_id, label: variantForm.title, description: variantForm.description || null, distance_km: variantForm.distance_km ? Number(variantForm.distance_km) : null, departure: variantForm.departure || null, arrival: variantForm.arrival || null, elevation_gain_m: variantForm.elevation_gain_m ? Number(variantForm.elevation_gain_m) : null, elevation_loss_m: variantForm.elevation_loss_m ? Number(variantForm.elevation_loss_m) : null, map_embed_url: variantForm.map_embed_url || null, notes: notesArr.length ? notesArr : [], metadata: Object.keys(meta).length ? meta : {} };
+    if (!variantForm.stage_id) { setStageError("L'étape parente est obligatoire."); return; }
+    if (!variantForm.title.trim()) { setStageError("Le titre de la variante est obligatoire."); return; }
+    if (!Number(variantForm.sort_order) || Number(variantForm.sort_order) < 1) { setStageError("Le numéro de variante est obligatoire."); return; }
+    const record = buildVariantRecord(variantForm);
     if (variantForm.editing) {
       await updateVariant(supabase, variantForm.editing, record);
       setStageSuccess("Variante mise à jour.");
