@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import MapViewerClient from "@/components/MapViewerClient";
+import FullscreenMap from "@/components/FullscreenMap";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { getSignedMediaAccess, loadExplorerGpxMedia } from "@/lib/roadbooks/loaders";
 import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
@@ -325,11 +326,11 @@ function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabe
       )}
       {summary.mapEmbedUrl ? (
         <div className={`${className}__map map-embed`}>
-          <GoogleMapDisplay url={summary.mapEmbedUrl} title={mapTitle} />
+          <FullscreenMap><GoogleMapDisplay url={summary.mapEmbedUrl} title={mapTitle} /></FullscreenMap>
         </div>
       ) : traceUrl ? (
         <div className={`${className}__map map-embed`}>
-          <MapViewerClient gpxUrl={traceUrl} height={300} />
+          <FullscreenMap><MapViewerClient gpxUrl={traceUrl} height={300} /></FullscreenMap>
         </div>
       ) : null}
       {traceUrl && (
@@ -645,11 +646,11 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
           <h4>Tracé de la variante</h4>
           {mapUrl ? (
             <div className="stage-detail-map">
-              <GoogleMapDisplay url={mapUrl} title={`Carte de la variante ${variant.label || ""}`} />
+              <FullscreenMap><GoogleMapDisplay url={mapUrl} title={`Carte de la variante ${variant.label || ""}`} /></FullscreenMap>
             </div>
           ) : (
             <div className="stage-detail-map">
-              <MapViewerClient gpxUrl={gpxUrl} height={260} />
+              <FullscreenMap><MapViewerClient gpxUrl={gpxUrl} height={260} /></FullscreenMap>
             </div>
           )}
           {gpxUrl && (
@@ -771,11 +772,11 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
           <h2 id="stage-detail-map-title">Carte interactive</h2>
           {mapUrl ? (
             <div className="stage-detail-map">
-              <GoogleMapDisplay url={mapUrl} title={`Carte de ${title || `l'étape ${stageNumber}`}`} />
+              <FullscreenMap><GoogleMapDisplay url={mapUrl} title={`Carte de ${title || `l'étape ${stageNumber}`}`} /></FullscreenMap>
             </div>
           ) : (
             <div className="stage-detail-map">
-              <MapViewerClient gpxUrl={stageGpxUrl} height={300} />
+              <FullscreenMap><MapViewerClient gpxUrl={stageGpxUrl} height={300} /></FullscreenMap>
             </div>
           )}
           {stageGpxUrl && (
