@@ -30,7 +30,7 @@ const EMPTY_VARIANT_FORM = {
   editing: null,
 };
 
-export function useStageCrud({ supabase, roadbookId, stages, setStages, variantsByStage, reloadPoisVariants, refreshRoadbookVersion }) {
+export function useStageCrud({ supabase, roadbookId, stages, setStages, variantsByStage, setVariantsByStage, reloadPoisVariants, refreshRoadbookVersion }) {
   const [stageForm, stageFormDispatch] = useReducer(stageFormReducer, { ...defaultStageForm });
   const [stageError, setStageError] = useState(null);
   const [stageSuccess, setStageSuccess] = useState(null);
@@ -174,14 +174,19 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
       else await updateStageNotes(supabase, stage_id, notes);
       setStageSuccess(editing != null ? "Note modifiée." : "Note ajoutée.");
       clearNoteForm();
-      if (variant_id != null) await reloadPoisVariants(stages.map(stage => stage.id));
-      else {
-        const refreshed = await loadStages(supabase, roadbookId);
-        if (refreshed) setStages(refreshed);
-        await refreshRoadbookVersion?.();
+      if (variant_id != null) {
+        setVariantsByStage(previous => Object.fromEntries(
+          Object.entries(previous).map(([stageId, variants]) => [
+            stageId,
+            variants.map(variant => variant.id === variant_id ? { ...variant, notes } : variant),
+          ]),
+        ));
+      } else {
+        setStages(previous => previous.map(stage => stage.id === stage_id ? { ...stage, notes } : stage));
       }
+      await refreshRoadbookVersion?.();
     } catch (err) { setStageError(err.message ?? String(err)); }
-  }, [supabase, roadbookId, noteForm, stages, clearNoteForm, setStages, findVariant, reloadPoisVariants, refreshRoadbookVersion]);
+  }, [supabase, noteForm, stages, clearNoteForm, setStages, setVariantsByStage, findVariant, refreshRoadbookVersion]);
 
   const handleDeleteNote = useCallback(async (stageId, noteIndex, variantId = null) => {
     if (!window.confirm("Supprimer cette note ?")) return;
@@ -193,14 +198,19 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
       if (variantId != null) await updateVariantNotes(supabase, variantId, notes);
       else await updateStageNotes(supabase, stageId, notes);
       setStageSuccess("Note supprimée.");
-      if (variantId != null) await reloadPoisVariants(stages.map(stage => stage.id));
-      else {
-        const refreshed = await loadStages(supabase, roadbookId);
-        if (refreshed) setStages(refreshed);
-        await refreshRoadbookVersion?.();
+      if (variantId != null) {
+        setVariantsByStage(previous => Object.fromEntries(
+          Object.entries(previous).map(([parentStageId, variants]) => [
+            parentStageId,
+            variants.map(variant => variant.id === variantId ? { ...variant, notes } : variant),
+          ]),
+        ));
+      } else {
+        setStages(previous => previous.map(stage => stage.id === stageId ? { ...stage, notes } : stage));
       }
+      await refreshRoadbookVersion?.();
     } catch (err) { setStageError(err.message ?? String(err)); }
-  }, [supabase, roadbookId, stages, setStages, findVariant, reloadPoisVariants, refreshRoadbookVersion]);
+  }, [supabase, stages, setStages, setVariantsByStage, findVariant, refreshRoadbookVersion]);
 
   return {
     stageForm, stageFormDispatch,

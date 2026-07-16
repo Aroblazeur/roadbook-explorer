@@ -53,7 +53,7 @@ export default function RoadbookDetailPage() {
   const destination = formMeta.destination, setDestination = (v) => setFormMeta(p => ({ ...p, destination: v }));
   const project = formMeta.project, setProject = (v) => setFormMeta(p => ({ ...p, project: v }));
 
-  const { stageForm, stageFormDispatch, stageError, stageSuccess, setStageError, setStageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote } = useStageCrud({ supabase, roadbookId: id, stages, setStages, variantsByStage, reloadPoisVariants, refreshRoadbookVersion });
+  const { stageForm, stageFormDispatch, stageError, stageSuccess, setStageError, setStageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote } = useStageCrud({ supabase, roadbookId: id, stages, setStages, variantsByStage, setVariantsByStage, reloadPoisVariants, refreshRoadbookVersion });
 
   const { draggingStageId, dragOverStageId, handleDragStart, handleDragOver, handleDragEnd, handleDrop, moveByOffset } = useStageDragDrop({ setStages });
 
