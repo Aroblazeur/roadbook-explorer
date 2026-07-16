@@ -32,6 +32,7 @@ import {
 import {
   buildAlternativeAccommodationUpdate,
   buildDemotePrimaryUpdate,
+  buildDuplicateAccommodationUpdate,
   buildPrimaryAccommodationUpdate,
   buildPromoteAlternativeUpdate,
   primaryAccommodationFromStage,
@@ -248,6 +249,31 @@ test("rétrograder le principal le déplace dans les alternatives", () => {
   assert.equal(update.alternatives.length, 2);
   assert.equal(update.alternatives[1].name, "Principal");
   assert.equal(update.alternatives[1].note, "Informations");
+});
+
+test("dupliquer un principal conserve son statut si la cible est libre", () => {
+  const result = buildDuplicateAccommodationUpdate(
+    { id: 2, alternatives: [], metadata: { difficulty: "facile" } },
+    { name: "Camping", note: "Accueil avant 19 h", photoMediaId: 42 },
+    "primary",
+  );
+  assert.equal(result.placement, "primary");
+  assert.equal(result.updates.accommodation_name, "Camping");
+  assert.equal(result.updates.metadata.accommodationNote, "Accueil avant 19 h");
+  assert.equal(result.updates.metadata.accommodationPhotoMediaId, 42);
+  assert.equal(result.updates.metadata.difficulty, "facile");
+});
+
+test("dupliquer vers une cible déjà occupée ajoute une alternative sans écraser", () => {
+  const target = {
+    accommodation_name: "Principal existant",
+    alternatives: [{ name: "Alternative existante" }],
+  };
+  const result = buildDuplicateAccommodationUpdate(target, { name: "Camping copié" }, "primary");
+  assert.equal(result.placement, "alternative");
+  assert.equal(result.updates.alternatives.length, 2);
+  assert.equal(result.updates.alternatives[1].name, "Camping copié");
+  assert.equal(target.accommodation_name, "Principal existant");
 });
 
 test("les valeurs d'hebergement conservent les espaces pendant la saisie", () => {

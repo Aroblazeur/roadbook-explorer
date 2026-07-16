@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   alternativesFromStage,
   buildClearPrimaryAccommodationUpdate,
@@ -8,6 +9,7 @@ import {
   hasAccommodation,
   primaryAccommodationFromStage,
 } from "@/lib/roadbooks/accommodations";
+import { resolveStageTitle, stageDisplayLabel } from "@/lib/roadbooks/stage-order";
 
 const PRIMARY_FIELDS = {
   name: "accommodation_name",
@@ -44,7 +46,39 @@ function AccommodationFields({ accommodation, onChange, idPrefix, photoMedia, on
   );
 }
 
-export default function AccommSection({ stageId, variantId = null, stage, onChange, images = [], onUploadPhoto, uploadLoading = false }) {
+function DuplicateAccommodationControl({ accommodation, sourceKind, stageId, stages, onDuplicate }) {
+  const [targetStageId, setTargetStageId] = useState("");
+  const [duplicating, setDuplicating] = useState(false);
+  const targets = stages.filter(candidate => String(candidate.id) !== String(stageId));
+  if (!targets.length) return null;
+
+  const duplicate = async () => {
+    if (!targetStageId) return;
+    setDuplicating(true);
+    try {
+      const duplicated = await onDuplicate?.(Number(targetStageId), accommodation, sourceKind);
+      if (duplicated !== false) setTargetStageId("");
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
+  return (
+    <div className="studio-actions studio-accommodation-duplicate">
+      <select value={targetStageId} onChange={event => setTargetStageId(event.target.value)} aria-label="Étape de destination">
+        <option value="">Dupliquer vers une étape…</option>
+        {targets.map(target => {
+          const index = stages.findIndex(stage => String(stage.id) === String(target.id));
+          const label = stageDisplayLabel(stages, index);
+          return <option key={target.id} value={target.id}>{resolveStageTitle(target, label)}</option>;
+        })}
+      </select>
+      <button type="button" className="terrain-button terrain-button--secondary" disabled={!targetStageId || duplicating} onClick={duplicate}>{duplicating ? "Duplication…" : "Dupliquer"}</button>
+    </div>
+  );
+}
+
+export default function AccommSection({ stageId, variantId = null, stage, onChange, stages = [], onDuplicate, images = [], onUploadPhoto, uploadLoading = false }) {
   const primary = primaryAccommodationFromStage(stage);
   const alternatives = alternativesFromStage(stage);
   const targetPrefix = variantId == null ? `stage-${stageId}` : `variant-${variantId}`;
@@ -113,12 +147,15 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
         <h4 className="studio-zone__title">Hébergement principal</h4>
         <AccommodationFields accommodation={primary} onChange={changePrimary} idPrefix={`${targetPrefix}-accommodation-primary`} photoMedia={mediaById(primary.photoMediaId)} onUploadPhoto={uploadPrimaryPhoto} uploadLoading={uploadLoading} />
         {hasAccommodation(primary) && (
-          <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
-            <button type="button" className="terrain-button terrain-button--secondary" onClick={() => onChange(buildDemotePrimaryUpdate(stage))}>Passer en alternatif</button>
-            <button type="button" className="terrain-button terrain-button--danger" onClick={() => {
-              if (window.confirm("Supprimer l'hébergement principal ?")) onChange(buildClearPrimaryAccommodationUpdate(stage));
-            }}>Supprimer</button>
-          </div>
+          <>
+            <div className="studio-actions" style={{ marginTop: "0.5rem" }}>
+              <button type="button" className="terrain-button terrain-button--secondary" onClick={() => onChange(buildDemotePrimaryUpdate(stage))}>Passer en alternatif</button>
+              <button type="button" className="terrain-button terrain-button--danger" onClick={() => {
+                if (window.confirm("Supprimer l'hébergement principal ?")) onChange(buildClearPrimaryAccommodationUpdate(stage));
+              }}>Supprimer</button>
+            </div>
+            <DuplicateAccommodationControl accommodation={primary} sourceKind="primary" stageId={stageId} stages={stages} onDuplicate={onDuplicate} />
+          </>
         )}
       </div>
 
@@ -141,6 +178,7 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
               <button type="button" className="terrain-button terrain-button--secondary" onClick={() => onChange(buildPromoteAlternativeUpdate(stage, index))}>Rendre principal</button>
               <button type="button" className="terrain-button terrain-button--danger" onClick={() => removeAlternative(index)}>Supprimer</button>
             </div>
+            {hasAccommodation(alternative) && <DuplicateAccommodationControl accommodation={alternative} sourceKind="alternative" stageId={stageId} stages={stages} onDuplicate={onDuplicate} />}
           </article>
         )) : <p className="studio-detail--empty">Aucun hébergement alternatif.</p>}
       </div>

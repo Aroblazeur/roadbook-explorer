@@ -24,6 +24,7 @@ import {
   insertVariant, updateVariant, deleteVariant,
   updateStageNotes, updateStageAccommodation, clearStageAccommodation,
   uploadImage, insertMediaRecord, deleteMedia,
+  updateMediaRecord,
   uploadGpx, removeStorageFile, insertGpxRecord, updateGpxRecord, deleteGpx,
   swapStageNumbers, insertRoadbook, duplicateRoadbook,
 } from "../src/lib/roadbooks/writers.js";
@@ -122,7 +123,9 @@ function makeMockSupabase(overrides = {}) {
           const rows = applyFilters(table, q._filters);
           rows.forEach(r => Object.assign(r, q._updates));
           q._op = null; q._updates = null;
-          return Promise.resolve(onOk({ data: rows, error: null }));
+          const data = q._single ? (rows[0] ?? null) : rows;
+          const error = q._single && rows.length === 0 ? new Error("No rows") : null;
+          return Promise.resolve(onOk({ data, error }));
         }
         // Delete mode
         if (q._op === "delete") {
@@ -417,6 +420,14 @@ test("deletePoi supprime un POI", async () => {
   supabase._tables.stage_pois = [{ id: 1 }, { id: 2 }];
   await deletePoi(supabase, 1);
   assert.equal(supabase._tables.stage_pois.length, 1);
+});
+
+test("updateMediaRecord transforme une image en média partagé", async () => {
+  const supabase = makeMockSupabase();
+  supabase._tables.media = [{ id: 42, roadbook_id: 4, stage_id: 12, type: "image" }];
+  const updated = await updateMediaRecord(supabase, 42, { stage_id: null });
+  assert.equal(updated.stage_id, null);
+  assert.equal(supabase._tables.media[0].stage_id, null);
 });
 
 test("insertVariant insère une variante", async () => {

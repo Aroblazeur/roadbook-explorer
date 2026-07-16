@@ -28,6 +28,8 @@ export default function StageCard({
   dragOverStageId,
   stagePhotoMedia,
   images,
+  stages,
+  onDuplicateAccommodation,
   onStageChange,
   onUploadStagePhoto,
   onUploadAccommodationPhoto,
@@ -185,6 +187,8 @@ export default function StageCard({
             stageId={stage.id}
             stage={stage}
             onChange={change}
+            stages={stages}
+            onDuplicate={onDuplicateAccommodation}
             images={images}
             onUploadPhoto={onUploadAccommodationPhoto}
             uploadLoading={uploadLoading}
@@ -213,6 +217,8 @@ export default function StageCard({
       onVariantChange={onVariantChange}
       onUploadVariantPhoto={onUploadVariantPhoto}
       images={images}
+      stages={stages}
+      onDuplicateAccommodation={onDuplicateAccommodation}
       onUploadAccommodationPhoto={onUploadAccommodationPhoto}
       onUploadPoiPhoto={onUploadPoiPhoto}
       uploadLoading={uploadLoading}

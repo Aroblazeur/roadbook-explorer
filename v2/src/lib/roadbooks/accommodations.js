@@ -140,3 +140,21 @@ export function buildDemotePrimaryUpdate(stage) {
 export function buildClearPrimaryAccommodationUpdate(stage) {
   return buildPrimaryAccommodationUpdate(stage, {});
 }
+
+export function buildDuplicateAccommodationUpdate(targetStage, value, sourceKind = "alternative") {
+  const accommodation = normalizeAccommodation(value);
+  if (!hasAccommodation(accommodation)) throw new Error("Hébergement à dupliquer incomplet.");
+
+  const targetHasPrimary = hasAccommodation(primaryAccommodationFromStage(targetStage));
+  if (sourceKind === "primary" && !targetHasPrimary) {
+    return {
+      placement: "primary",
+      updates: buildPrimaryAccommodationUpdate(targetStage, accommodation),
+    };
+  }
+
+  return {
+    placement: "alternative",
+    updates: buildAlternativeAccommodationUpdate(targetStage, accommodation),
+  };
+}

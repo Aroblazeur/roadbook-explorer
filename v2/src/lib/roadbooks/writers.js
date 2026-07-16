@@ -197,6 +197,18 @@ export async function deleteMediaRecordOnly(supabase, mediaId) {
   if (error) throw new Error(error.message);
 }
 
+export async function updateMediaRecord(supabase, mediaId, updates) {
+  const { data, error } = await supabase
+    .from("media")
+    .update(updates)
+    .eq("id", mediaId)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(`Le média ${mediaId} n'a pas été mis à jour.`);
+  return data;
+}
+
 export async function uploadGpx(
   supabase,
   bucket,
@@ -228,8 +240,7 @@ export async function insertGpxRecord(supabase, record) {
 }
 
 export async function updateGpxRecord(supabase, mediaId, updates) {
-  const { error } = await supabase.from("media").update(updates).eq("id", mediaId);
-  if (error) throw new Error(error.message);
+  return updateMediaRecord(supabase, mediaId, updates);
 }
 
 export async function deleteGpx(supabase, mediaRow, bucket) {

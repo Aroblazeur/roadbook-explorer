@@ -364,6 +364,14 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+.studio-accommodation-duplicate {
+  align-items: center;
+  margin-top: 0.5rem;
+}
+.studio-accommodation-duplicate select {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
 .studio-stage-card__drag-handle {
   cursor: grab;
   user-select: none;

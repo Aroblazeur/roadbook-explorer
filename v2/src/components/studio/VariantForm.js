@@ -17,6 +17,8 @@ export default function VariantForm({
   onVariantChange,
   onUploadVariantPhoto,
   images,
+  stages,
+  onDuplicateAccommodation,
   onUploadAccommodationPhoto,
   onUploadPoiPhoto,
   uploadLoading,
@@ -150,6 +152,8 @@ export default function VariantForm({
                   variantId={variant.id}
                   stage={variant}
                   onChange={change}
+                  stages={stages}
+                  onDuplicate={onDuplicateAccommodation}
                   images={images}
                   onUploadPhoto={onUploadAccommodationPhoto}
                   uploadLoading={uploadLoading}
