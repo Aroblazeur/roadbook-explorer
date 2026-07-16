@@ -31,6 +31,8 @@ import {
 
 import {
   buildAlternativeAccommodationUpdate,
+  accommodationKind,
+  accommodationKindsFromStage,
   buildDemotePrimaryUpdate,
   buildDuplicateAccommodationUpdate,
   buildPrimaryAccommodationUpdate,
@@ -206,6 +208,23 @@ test("buildPrimaryAccommodationUpdate conserve la note dans les métadonnées", 
   assert.equal(update.accommodation_type, "camping");
   assert.equal(update.metadata.accommodationNote, "Arriver avant 19 h");
   assert.equal(update.metadata.difficulty, "facile");
+});
+
+test("accommodationKind ne confond pas campagne et camping", () => {
+  assert.equal(accommodationKind({ name: "Charmant gîte rustique à la campagne", type: "gite" }), "house");
+  assert.equal(accommodationKind({ name: "Maison à la campagne" }), "house");
+  assert.equal(accommodationKind({ name: "Camping les boucles de la Moselle" }), "camping");
+});
+
+test("accommodationKindsFromStage expose les types du principal et des alternatives", () => {
+  const kinds = accommodationKindsFromStage({
+    accommodation_name: "Camping les boucles de la Moselle",
+    alternatives: [
+      { name: "Charmant gîte rustique à la campagne", type: "gite" },
+      { name: "Autre maison", type: "maison" },
+    ],
+  });
+  assert.deepEqual(kinds, ["camping", "house"]);
 });
 
 test("buildAlternativeAccommodationUpdate ajoute puis modifie une alternative", () => {

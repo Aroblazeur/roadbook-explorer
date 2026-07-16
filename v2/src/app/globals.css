@@ -705,7 +705,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .home-stage-card__route { font-size: 1rem; font-weight: 700; }
 .home-stage-card__stats { margin: 4px 0 0; }
 .home-stage-card__stats:empty { display: none; }
-.home-stage-card__accommodation { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f8f2; color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }
+.home-stage-card__accommodation { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; background: #f1f8f2; color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }
 .home-stage-card__substep-type {
   display: inline-flex; align-items: center;
   width: fit-content; max-width: 100%;

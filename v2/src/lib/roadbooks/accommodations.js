@@ -45,6 +45,31 @@ export function hasAccommodation(value) {
   return Boolean(accommodation.name || accommodation.url || accommodation.photo || accommodation.photoMediaId || accommodation.type || accommodation.price || accommodation.note || accommodation.description || accommodation.preview);
 }
 
+function accommodationKindFromText(value) {
+  const normalized = String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (/\b(?:camp|camping|campement|bivouac|tente)\b/.test(normalized)) return "camping";
+  if (/\b(?:hotel|motel)\b/.test(normalized)) return "hotel";
+  if (/\b(?:gite|maison|chalet|appartement|studio|airbnb)\b/.test(normalized)) return "house";
+  if (/\b(?:hostel|auberge|refuge|dortoir)\b/.test(normalized)) return "hostel";
+  return null;
+}
+
+export function accommodationKind(value) {
+  const accommodation = normalizeAccommodation(value);
+  return accommodationKindFromText(accommodation.type)
+    ?? accommodationKindFromText(accommodation.name)
+    ?? "generic";
+}
+
+export function accommodationKindsFromStage(stage) {
+  const accommodations = [primaryAccommodationFromStage(stage), ...alternativesFromStage(stage)];
+  return [...new Set(accommodations.filter(hasAccommodation).map(accommodationKind))];
+}
+
 export function primaryAccommodationFromStage(stage) {
   return accommodationValue({
     name: stage?.accommodation_name,

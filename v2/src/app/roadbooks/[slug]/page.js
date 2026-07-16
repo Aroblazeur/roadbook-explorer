@@ -9,6 +9,7 @@ import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
 import { resolveMapDisplay } from "@/lib/google-map-links";
 import { withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
+import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -389,6 +390,7 @@ function StageOverviewList({ roadbookSlug, stages, variantsByStage }) {
 function StageOverviewCard({ roadbookSlug, stage, index }) {
   const metadata = stage.metadata ?? {};
   const isSubstep = Boolean(stage.is_substep ?? metadata.isSubstep ?? metadata.is_substep);
+  const accommodationKinds = accommodationKindsFromStage(stage);
   const route = stage.title
     || [stage.departure, stage.arrival].filter(Boolean).join(" → ")
     || `Étape ${index + 1}`;
@@ -409,9 +411,9 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
           <OverviewStat value={stage.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
         </span>
       </span>
-      {(stage.accommodation_type || stage.accommodation_name) && (
-        <span className="home-stage-card__accommodation" aria-label={`Hébergement${stage.accommodation_name ? ` : ${stage.accommodation_name}` : ""}`}>
-          {accommodationIcon(stage.accommodation_type, stage.accommodation_name)}
+      {accommodationKinds.length > 0 && (
+        <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
+          {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
         </span>
       )}
     </Link>
@@ -421,6 +423,7 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
 function VariantOverviewCard({ roadbookSlug, entry }) {
   const { item: variant, parentStage } = entry;
   const metadata = variant.metadata ?? {};
+  const accommodationKinds = accommodationKindsFromStage(variant);
   const type = metadata.type || metadata.itemType || "Variante";
   const departure = variant.departure ?? metadata.departure;
   const arrival = variant.arrival ?? metadata.arrival;
@@ -444,6 +447,11 @@ function VariantOverviewCard({ roadbookSlug, entry }) {
           <OverviewStat value={variant.elevation_loss_m ?? metadata.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
         </span>
       </span>
+      {accommodationKinds.length > 0 && (
+        <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
+          {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
+        </span>
+      )}
     </Link>
   );
 }
@@ -460,12 +468,23 @@ function OverviewStat({ value, unit, label, icon: Icon }) {
 }
 
 function accommodationIcon(type, name) {
-  const normalized = `${type ?? ""} ${name ?? ""}`.toLowerCase();
-  if (normalized.includes("camp")) return "⛺";
-  if (normalized.includes("hotel") || normalized.includes("hôtel")) return "🏨";
-  if (normalized.includes("gite") || normalized.includes("gîte")) return "🏡";
-  if (normalized.includes("hostel") || normalized.includes("auberge")) return "🛏️";
-  return name ? "🏠" : "—";
+  return accommodationKindIcon(accommodationKind({ type, name }));
+}
+
+function accommodationKindIcon(kind) {
+  if (kind === "camping") return "⛺";
+  if (kind === "hotel") return "🏨";
+  if (kind === "house") return "🏡";
+  if (kind === "hostel") return "🛏️";
+  return "🏠";
+}
+
+function accommodationKindLabel(kind) {
+  if (kind === "camping") return "camping";
+  if (kind === "hotel") return "hôtel";
+  if (kind === "house") return "gîte ou maison";
+  if (kind === "hostel") return "auberge ou refuge";
+  return "hébergement";
 }
 
 function ImagesSection({ images }) {
