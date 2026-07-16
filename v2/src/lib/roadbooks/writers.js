@@ -22,13 +22,26 @@ export async function deleteStage(supabase, stageId) {
 }
 
 export async function insertPoi(supabase, record) {
-  const { error } = await supabase.from("stage_pois").insert(record);
+  const { data, error } = await supabase
+    .from("stage_pois")
+    .insert(record)
+    .select("*")
+    .single();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error("Le POI n'a pas été enregistré.");
+  return data;
 }
 
 export async function updatePoi(supabase, poiId, updates) {
-  const { error } = await supabase.from("stage_pois").update(updates).eq("id", poiId);
+  const { data, error } = await supabase
+    .from("stage_pois")
+    .update(updates)
+    .eq("id", poiId)
+    .select("*")
+    .single();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error(`Le POI ${poiId} n'a pas été enregistré.`);
+  return data;
 }
 
 export async function updatePois(supabase, operations) {

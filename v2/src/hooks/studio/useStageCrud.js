@@ -98,18 +98,28 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
   const clearNoteForm = useCallback(() => setNoteForm({ stage_id: null, variant_id: null, text: "", editing: null }), []);
 
   const handlePoiSubmit = useCallback(async (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     setStageError(null); setStageSuccess(null);
-    const record = buildPoiRecord(poiForm);
-    if (poiForm.editing) {
-      await updatePoi(supabase, poiForm.editing, record);
-      setStageSuccess("POI mis à jour.");
-    } else {
-      await insertPoi(supabase, record);
-      setStageSuccess("POI créé.");
+    if (!poiForm.stage_id || !poiForm.name.trim()) {
+      setStageError("Le nom du POI est obligatoire.");
+      return false;
     }
-    clearPoiForm();
-    await reloadPoisVariants(stages.map(s => s.id));
+    try {
+      const record = buildPoiRecord(poiForm);
+      if (poiForm.editing) {
+        await updatePoi(supabase, poiForm.editing, record);
+        setStageSuccess("POI mis à jour et vérifié.");
+      } else {
+        await insertPoi(supabase, record);
+        setStageSuccess("POI créé et vérifié.");
+      }
+      await reloadPoisVariants(stages.map(s => s.id));
+      clearPoiForm();
+      return true;
+    } catch (err) {
+      setStageError(`Le POI n'a pas été enregistré : ${err.message ?? String(err)}`);
+      return false;
+    }
   }, [supabase, poiForm, stages, clearPoiForm, reloadPoisVariants]);
 
   const handleDeletePoi = useCallback(async (poiId) => {

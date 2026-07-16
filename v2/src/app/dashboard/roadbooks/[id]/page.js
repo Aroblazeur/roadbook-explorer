@@ -85,6 +85,14 @@ export default function RoadbookDetailPage() {
 
   const { handleSaveAll, handleToggleVisibility, handleDeleteRoadbook, deletingRoadbook } = useSaveActions({ supabase, id, roadbook, setRoadbook, title, description, activity, destination, project, isPublic, setIsPublic, officialRoute, traceRoute, setTraceRoute, coverMode, coverUrl, coverMediaId, stages, setStages, poisByStage, setPoisByStage, poisByVariant, setPoisByVariant, variantsByStage, setVariantsByStage, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint, setError, setSuccess, markRemoteConflict, saveWithLock, clearDraft, onDeleted: () => router.replace("/dashboard/roadbooks") });
 
+  const handleSaveStudio = async () => {
+    if (poiForm.stage_id != null) {
+      const poiSaved = await handlePoiSubmit();
+      if (!poiSaved) return false;
+    }
+    return handleSaveAll();
+  };
+
   const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
   const gpx = { gpxByStage, gpxByVariant, gpxUploading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }) };
 
@@ -99,8 +107,8 @@ export default function RoadbookDetailPage() {
     <StudioShell>
       <StudioCatalog selectedId={id} />
       <section className="card studio-panel studio-editor-panel" aria-labelledby="studio-detail-title">
-      <DraftStatus status={draftStatus} error={draftError} restoredInfo={restoredInfo} onResetInfo={resetRestoredInfo} onDismissConflict={async () => { dismissConflict(); await handleSaveAll(); }} onClearDraft={clearDraft} />
-      <StudioHeader roadbook={roadbook} isPublic={isPublic} activity={activity} destination={destination} project={project} duplicating={duplicating} saving={saving} deletingRoadbook={deletingRoadbook} canManage={canManage} onSaveAll={handleSaveAll} onView={async () => { const saved = await handleSaveAll(); if (saved) router.push(`/roadbooks/${roadbook.slug}`); }} onDeleteRoadbook={handleDeleteRoadbook} onAddStage={() => { clearStageForm(); setShowStageForm(true); }} onToggleVisibility={handleToggleVisibility} handleDuplicate={async () => { if (!window.confirm("Dupliquer ce roadbook ? Les fichiers (images, GPX) ne seront pas copiés.")) return; setDuplicating(true); setError(null); try { const newId = await duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, `${roadbook.slug}-copie-${Date.now()}`, user.id, poisByVariant, startPoint); setSuccess("Roadbook dupliqué ! Redirection..."); setTimeout(() => router.push(`/dashboard/roadbooks/${newId}`), 1000); } catch (err) { setError(err.message); } finally { setDuplicating(false); } }} />
+      <DraftStatus status={draftStatus} error={draftError} restoredInfo={restoredInfo} onResetInfo={resetRestoredInfo} onDismissConflict={async () => { dismissConflict(); await handleSaveStudio(); }} onClearDraft={clearDraft} />
+      <StudioHeader roadbook={roadbook} isPublic={isPublic} activity={activity} destination={destination} project={project} duplicating={duplicating} saving={saving} deletingRoadbook={deletingRoadbook} canManage={canManage} onSaveAll={handleSaveStudio} onView={async () => { const saved = await handleSaveStudio(); if (saved) router.push(`/roadbooks/${roadbook.slug}`); }} onDeleteRoadbook={handleDeleteRoadbook} onAddStage={() => { clearStageForm(); setShowStageForm(true); }} onToggleVisibility={handleToggleVisibility} handleDuplicate={async () => { if (!window.confirm("Dupliquer ce roadbook ? Les fichiers (images, GPX) ne seront pas copiés.")) return; setDuplicating(true); setError(null); try { const newId = await duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, `${roadbook.slug}-copie-${Date.now()}`, user.id, poisByVariant, startPoint); setSuccess("Roadbook dupliqué ! Redirection..."); setTimeout(() => router.push(`/dashboard/roadbooks/${newId}`), 1000); } catch (err) { setError(err.message); } finally { setDuplicating(false); } }} />
       {error && <p className="page-error">{error}</p>}
       {success && <p className="page-success">{success}</p>}
           <details className="studio-general-info" open>

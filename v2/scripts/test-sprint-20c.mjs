@@ -398,15 +398,18 @@ test("deleteStage supprime une étape", async () => {
 
 test("insertPoi insère un POI", async () => {
   const supabase = makeMockSupabase();
-  await insertPoi(supabase, { stage_id: 1, name: "Lac" });
+  const inserted = await insertPoi(supabase, { stage_id: 1, name: "Lac" });
   assert.equal(supabase._tables.stage_pois.length, 1);
+  assert.equal(inserted.name, "Lac");
+  assert.ok(inserted.id, "l'insertion doit retourner l'identifiant Supabase");
 });
 
 test("updatePoi met à jour un POI", async () => {
   const supabase = makeMockSupabase();
   supabase._tables.stage_pois = [{ id: 1, name: "Old" }];
-  await updatePoi(supabase, 1, { name: "New" });
+  const updated = await updatePoi(supabase, 1, { name: "New" });
   assert.equal(supabase._tables.stage_pois[0].name, "New");
+  assert.equal(updated.name, "New");
 });
 
 test("deletePoi supprime un POI", async () => {
