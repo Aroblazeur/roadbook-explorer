@@ -12,6 +12,7 @@ export default function MapViewer({ gpxUrl, height = 300 }) {
     let cancelled = false;
     let mapInstance = null;
     let resizeObserver = null;
+    let fullscreenObserver = null;
 
     async function init() {
       const container = containerRef.current;
@@ -24,6 +25,21 @@ export default function MapViewer({ gpxUrl, height = 300 }) {
         tap: true,
       });
       mapRef.current = mapInstance;
+
+      const fullscreenContainer = container.closest(".map-fullscreen");
+      const syncScrollWheelZoom = () => {
+        const fullscreenActive = fullscreenContainer?.dataset.fullscreenActive === "true";
+        if (fullscreenActive) mapInstance?.scrollWheelZoom.enable();
+        else mapInstance?.scrollWheelZoom.disable();
+      };
+      syncScrollWheelZoom();
+      if (fullscreenContainer && typeof MutationObserver !== "undefined") {
+        fullscreenObserver = new MutationObserver(syncScrollWheelZoom);
+        fullscreenObserver.observe(fullscreenContainer, {
+          attributes: true,
+          attributeFilter: ["data-fullscreen-active"],
+        });
+      }
 
       if (typeof ResizeObserver !== "undefined") {
         resizeObserver = new ResizeObserver(() => mapInstance?.invalidateSize({ animate: false }));
@@ -171,6 +187,7 @@ export default function MapViewer({ gpxUrl, height = 300 }) {
     return () => {
       cancelled = true;
       resizeObserver?.disconnect();
+      fullscreenObserver?.disconnect();
       if (mapInstance) {
         mapInstance.remove();
         if (mapRef.current === mapInstance) mapRef.current = null;

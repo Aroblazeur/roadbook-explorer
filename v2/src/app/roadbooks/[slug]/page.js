@@ -10,6 +10,7 @@ import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from
 import { resolveMapDisplay } from "@/lib/google-map-links";
 import { withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
 import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
+import { shortDayLabel } from "@/lib/roadbooks/dates";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -391,6 +392,7 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
   const metadata = stage.metadata ?? {};
   const isSubstep = Boolean(stage.is_substep ?? metadata.isSubstep ?? metadata.is_substep);
   const accommodationKinds = accommodationKindsFromStage(stage);
+  const shortDay = shortDayLabel(stage.day);
   const route = stage.title
     || [stage.departure, stage.arrival].filter(Boolean).join(" → ")
     || `Étape ${index + 1}`;
@@ -411,9 +413,14 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
           <OverviewStat value={stage.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
         </span>
       </span>
-      {accommodationKinds.length > 0 && (
-        <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
-          {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
+      {(shortDay || accommodationKinds.length > 0) && (
+        <span className="home-stage-card__meta">
+          {shortDay && <span className="home-stage-card__day" aria-label={`Jour : ${stage.day}`}>{shortDay}</span>}
+          {accommodationKinds.length > 0 && (
+            <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
+              {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
+            </span>
+          )}
         </span>
       )}
     </Link>
@@ -424,6 +431,8 @@ function VariantOverviewCard({ roadbookSlug, entry }) {
   const { item: variant, parentStage } = entry;
   const metadata = variant.metadata ?? {};
   const accommodationKinds = accommodationKindsFromStage(variant);
+  const displayedDay = variant.day || parentStage?.day;
+  const shortDay = shortDayLabel(displayedDay);
   const type = metadata.type || metadata.itemType || "Variante";
   const departure = variant.departure ?? metadata.departure;
   const arrival = variant.arrival ?? metadata.arrival;
@@ -447,9 +456,14 @@ function VariantOverviewCard({ roadbookSlug, entry }) {
           <OverviewStat value={variant.elevation_loss_m ?? metadata.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
         </span>
       </span>
-      {accommodationKinds.length > 0 && (
-        <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
-          {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
+      {(shortDay || accommodationKinds.length > 0) && (
+        <span className="home-stage-card__meta">
+          {shortDay && <span className="home-stage-card__day" aria-label={`Jour : ${displayedDay}`}>{shortDay}</span>}
+          {accommodationKinds.length > 0 && (
+            <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
+              {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
+            </span>
+          )}
         </span>
       )}
     </Link>
@@ -572,6 +586,7 @@ function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, pare
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
       <VariantCard
         variant={variant}
+        day={variant.day || parentStage?.day}
         contextCity={parentStage?.arrival || parentStage?.departure || ""}
         pois={pois}
         variantGpx={variantGpx}
@@ -582,7 +597,7 @@ function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, pare
   );
 }
 
-function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhotoUrl, images }) {
+function VariantCard({ variant, day, contextCity, pois = [], variantGpx, variantPhotoUrl, images }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
   const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
@@ -605,6 +620,7 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
     preview: meta.accommodationPreview,
   });
   const alternatives = normalizeAlternatives(variant.alternatives);
+  const variantDay = textValue(day);
 
   return (
     <article className="stage-detail-card stage-detail-card--primary stage-detail-variant card">
@@ -612,7 +628,10 @@ function VariantCard({ variant, contextCity, pois = [], variantGpx, variantPhoto
         <span className="stage-detail-variant__marker" aria-hidden="true">↳</span>
         <div>
           {type && <span className="stage-detail-variant__badge">{type}</span>}
-          <h2>{variant.label || "Variante"}</h2>
+          <h2>
+            {variant.label || "Variante"}
+            {variantDay && <span className="stage-detail-heading__day"> — {variantDay}</span>}
+          </h2>
         </div>
       </header>
       {photoUrl && (

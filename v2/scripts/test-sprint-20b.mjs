@@ -40,6 +40,7 @@ import {
   primaryAccommodationFromStage,
   alternativesFromStage,
 } from "../src/lib/roadbooks/accommodations.js";
+import { shortDayLabel } from "../src/lib/roadbooks/dates.js";
 import { estimateGpxHours, getActivityDurationProfile } from "../src/lib/gpx-metrics.js";
 
 let passed = 0, failed = 0;
@@ -225,6 +226,13 @@ test("accommodationKindsFromStage expose les types du principal et des alternati
     ],
   });
   assert.deepEqual(kinds, ["camping", "house"]);
+});
+
+test("shortDayLabel masque l'année dans la liste des étapes", () => {
+  assert.equal(shortDayLabel("30/07/2026"), "30/07");
+  assert.equal(shortDayLabel("1/8/26"), "01/08");
+  assert.equal(shortDayLabel("2026-08-02"), "02/08");
+  assert.equal(shortDayLabel("Jour libre"), "Jour libre");
 });
 
 test("buildAlternativeAccommodationUpdate ajoute puis modifie une alternative", () => {

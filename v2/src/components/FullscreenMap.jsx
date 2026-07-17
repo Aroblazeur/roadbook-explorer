@@ -58,7 +58,11 @@ export default function FullscreenMap({ children, label = "Ouvrir la carte en pl
   };
 
   return (
-    <div ref={containerRef} className={`map-fullscreen${fallbackActive ? " map-fullscreen--fallback" : ""}`}>
+    <div
+      ref={containerRef}
+      className={`map-fullscreen${fallbackActive ? " map-fullscreen--fallback" : ""}`}
+      data-fullscreen-active={active ? "true" : "false"}
+    >
       {children}
       <button
         type="button"
