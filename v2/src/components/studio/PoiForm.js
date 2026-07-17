@@ -1,5 +1,7 @@
 "use client";
 
+import useRevealForm from "@/hooks/studio/useRevealForm";
+
 export default function PoiForm({
   stageId,
   variantId = null,
@@ -14,6 +16,8 @@ export default function PoiForm({
   uploadLoading = false,
 }) {
   const selectedMedia = images.find(image => Number(image.id) === Number(poiForm.photoMediaId)) ?? null;
+  const isEditingHere = poiForm.stage_id === stageId && (poiForm.variant_id ?? null) === variantId;
+  const formRef = useRevealForm(isEditingHere ? `${stageId}:${variantId ?? "stage"}:${poiForm.editing ?? "new"}` : null);
 
   return (
     <div className="studio-stage-extra">
@@ -43,11 +47,11 @@ export default function PoiForm({
           </article>
         ))}
       </div>
-      {poiForm.stage_id === stageId && (poiForm.variant_id ?? null) === variantId && (
-        <form onSubmit={handlePoiSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+      {isEditingHere && (
+        <form ref={formRef} onSubmit={handlePoiSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
           <h4>{poiForm.editing ? "Modifier le POI" : "Ajouter un POI"}</h4>
           <div className="studio-form-grid studio-form-grid--compact">
-            <label>Nom<input type="text" value={poiForm.name} onChange={e => setPoiForm({ ...poiForm, name: e.target.value })} required /></label>
+            <label>Nom<input data-form-initial-focus type="text" value={poiForm.name} onChange={e => setPoiForm({ ...poiForm, name: e.target.value })} required /></label>
             <label>Région / ville<input type="text" value={poiForm.region} onChange={e => setPoiForm({ ...poiForm, region: e.target.value })} /></label>
             <label className="studio-form-grid__full">Lien<input type="url" value={poiForm.link} onChange={e => setPoiForm({ ...poiForm, link: e.target.value, preview: null })} /></label>
             <div className="studio-form-grid__full">

@@ -10,6 +10,7 @@ import {
   primaryAccommodationFromStage,
 } from "@/lib/roadbooks/accommodations";
 import { resolveStageTitle, resolveVariantTitle, stageDisplayLabel } from "@/lib/roadbooks/stage-order";
+import useRevealForm from "@/hooks/studio/useRevealForm";
 
 const PRIMARY_FIELDS = {
   name: "accommodation_name",
@@ -104,9 +105,11 @@ function DuplicateAccommodationControl({ accommodation, sourceKind, stageId, var
 }
 
 export default function AccommSection({ stageId, variantId = null, stage, onChange, stages = [], variantsByStage = {}, onDuplicate, images = [], onUploadPhoto, uploadLoading = false }) {
+  const [newAlternative, setNewAlternative] = useState({ index: null, sequence: 0 });
   const primary = primaryAccommodationFromStage(stage);
   const alternatives = alternativesFromStage(stage);
   const targetPrefix = variantId == null ? `stage-${stageId}` : `variant-${variantId}`;
+  const newAlternativeRef = useRevealForm(newAlternative.index == null ? null : `${targetPrefix}:${newAlternative.sequence}`);
 
   const changePrimary = (field, value) => {
     if (field === "note" || field === "price" || field === "description") {
@@ -137,6 +140,7 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
   };
 
   const addAlternative = () => {
+    setNewAlternative(previous => ({ index: alternatives.length, sequence: previous.sequence + 1 }));
     onChange({ alternatives: [...alternatives, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "", description: "", preview: null }] });
   };
 
@@ -190,7 +194,7 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
           <button type="button" className="terrain-button terrain-button--secondary" onClick={addAlternative}>Ajouter un hébergement alternatif</button>
         </div>
         {alternatives.length ? alternatives.map((alternative, index) => (
-          <article className="studio-subitem-card" key={`${targetPrefix}-alternative-${index}`}>
+          <article ref={index === newAlternative.index ? newAlternativeRef : null} className="studio-subitem-card" key={`${targetPrefix}-alternative-${index}`}>
             <AccommodationFields
               accommodation={alternative}
               onChange={(field, value) => changeAlternative(index, field, value)}

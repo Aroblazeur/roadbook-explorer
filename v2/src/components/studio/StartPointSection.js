@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { START_POINT_MAX_WAYPOINTS, buildGoogleMapsDirectionsUrl, normalizeStartPoint } from "@/lib/roadbooks/start-point";
+import useRevealForm from "@/hooks/studio/useRevealForm";
 
 const TRANSPORTS = [
   ["car", "Voiture"], ["train", "Train / transports en commun"], ["bicycle", "Vélo"],
@@ -34,9 +36,12 @@ function AccommodationFields({ item, onChange, prefix, photoMedia, onUploadPhoto
 }
 
 export default function StartPointSection({ value, onChange, images = [], onUploadAccommodationPhoto, onUploadPoiPhoto, uploadLoading = false }) {
+  const [newItem, setNewItem] = useState({ type: null, index: null, sequence: 0 });
   const point = normalizeStartPoint(value);
   const update = patch => onChange(previous => ({ ...normalizeStartPoint(previous), ...patch }));
   const mapsUrl = buildGoogleMapsDirectionsUrl(point);
+  const newItemRef = useRevealForm(newItem.type ? `${newItem.type}:${newItem.sequence}` : null);
+  const revealNewItem = (type, index) => setNewItem(previous => ({ type, index, sequence: previous.sequence + 1 }));
 
   const changeArrayItem = (key, index, field, nextValue) => update({
     [key]: point[key].map((item, itemIndex) => itemIndex === index ? { ...item, [field]: nextValue, ...(key === "accommodations" && field === "photo" ? { photoMediaId: null } : {}), ...(key === "accommodations" && field === "url" ? { preview: null } : {}) } : item),
@@ -64,8 +69,8 @@ export default function StartPointSection({ value, onChange, images = [], onUplo
       </div>
 
       <section className="studio-section-block">
-        <div className="studio-stage-extra__header"><h4>Villes étapes</h4><button type="button" className="terrain-button terrain-button--secondary" disabled={point.waypoints.length >= START_POINT_MAX_WAYPOINTS} onClick={() => update({ waypoints: [...point.waypoints, ""] })}>Ajouter une ville étape</button></div>
-        {point.waypoints.map((city, index) => <div className="studio-inline-row" key={`waypoint-${index}`}>
+        <div className="studio-stage-extra__header"><h4>Villes étapes</h4><button type="button" className="terrain-button terrain-button--secondary" disabled={point.waypoints.length >= START_POINT_MAX_WAYPOINTS} onClick={() => { revealNewItem("waypoint", point.waypoints.length); update({ waypoints: [...point.waypoints, ""] }); }}>Ajouter une ville étape</button></div>
+        {point.waypoints.map((city, index) => <div ref={newItem.type === "waypoint" && newItem.index === index ? newItemRef : null} className="studio-inline-row" key={`waypoint-${index}`}>
           <label className="studio-inline-row__field">Ville étape {index + 1}<input value={city} onChange={e => update({ waypoints: point.waypoints.map((item, itemIndex) => itemIndex === index ? e.target.value : item) })} /></label>
           <button type="button" className="terrain-button terrain-button--danger" onClick={() => update({ waypoints: point.waypoints.filter((_, itemIndex) => itemIndex !== index) })}>Supprimer</button>
         </div>)}
@@ -81,8 +86,8 @@ export default function StartPointSection({ value, onChange, images = [], onUplo
       {mapsUrl && <p className="studio-generated-link"><a href={mapsUrl} target="_blank" rel="noreferrer">Ouvrir l’itinéraire complet dans Google Maps</a></p>}
 
       <section className="studio-section-block">
-        <div className="studio-stage-extra__header"><h4>Hébergements</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => update({ accommodations: [...point.accommodations, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "", description: "", preview: null }] })}>Ajouter un hébergement</button></div>
-        {point.accommodations.map((item, index) => <article className="studio-subitem-card" key={`start-accommodation-${index}`}>
+        <div className="studio-stage-extra__header"><h4>Hébergements</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("accommodation", point.accommodations.length); update({ accommodations: [...point.accommodations, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "", description: "", preview: null }] }); }}>Ajouter un hébergement</button></div>
+        {point.accommodations.map((item, index) => <article ref={newItem.type === "accommodation" && newItem.index === index ? newItemRef : null} className="studio-subitem-card" key={`start-accommodation-${index}`}>
           <AccommodationFields item={item} prefix={`start-accommodation-${index}`} onChange={(field, nextValue) => changeArrayItem("accommodations", index, field, nextValue)} photoMedia={images.find(image => Number(image.id) === Number(item.photoMediaId)) ?? null} onUploadPhoto={file => uploadAccommodationPhoto(file, index)} uploadLoading={uploadLoading} />
           <button type="button" className="terrain-button terrain-button--danger" onClick={() => update({ accommodations: point.accommodations.filter((_, itemIndex) => itemIndex !== index) })}>Supprimer</button>
         </article>)}
@@ -90,8 +95,8 @@ export default function StartPointSection({ value, onChange, images = [], onUplo
       </section>
 
       <section className="studio-section-block">
-        <div className="studio-stage-extra__header"><h4>Points d’intérêt</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => update({ pois: [...point.pois, { name: "", region: "", link_url: "", description: "", photo_url: "", photoMediaId: null, preview: null }] })}>Ajouter un POI</button></div>
-        {point.pois.map((item, index) => <article className="studio-subitem-card" key={`start-poi-${index}`}>
+        <div className="studio-stage-extra__header"><h4>Points d’intérêt</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("poi", point.pois.length); update({ pois: [...point.pois, { name: "", region: "", link_url: "", description: "", photo_url: "", photoMediaId: null, preview: null }] }); }}>Ajouter un POI</button></div>
+        {point.pois.map((item, index) => <article ref={newItem.type === "poi" && newItem.index === index ? newItemRef : null} className="studio-subitem-card" key={`start-poi-${index}`}>
           <div className="studio-form-grid studio-form-grid--compact">
             <label>Nom<input value={item.name} onChange={e => changeArrayItem("pois", index, "name", e.target.value)} /></label>
             <label>Région / ville<input value={item.region} onChange={e => changeArrayItem("pois", index, "region", e.target.value)} /></label>

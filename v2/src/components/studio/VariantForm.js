@@ -6,6 +6,7 @@ import GpxBlock from "./GpxBlock";
 import NoteForm from "./NoteForm";
 import PoiForm from "./PoiForm";
 import { buildVariantTitle, resolveVariantTitle } from "@/lib/roadbooks/stage-order";
+import useRevealForm from "@/hooks/studio/useRevealForm";
 
 export default function VariantForm({
   stageId,
@@ -35,6 +36,8 @@ export default function VariantForm({
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
     handleGpxRecalculate,
   } = gpx;
+  const isCreatingHere = variantForm.stage_id === stageId;
+  const createFormRef = useRevealForm(isCreatingHere ? `${stageId}:${variantForm.editing ?? "new"}` : null);
 
   const toggleVariant = (variantId) => {
     setExpandedVariants(previous => {
@@ -181,12 +184,12 @@ export default function VariantForm({
         );
       })}
 
-      {variantForm.stage_id === stageId && (
-        <form onSubmit={handleVariantSubmit} className="studio-create-form studio-create-form--substep">
+      {isCreatingHere && (
+        <form ref={createFormRef} onSubmit={handleVariantSubmit} className="studio-create-form studio-create-form--substep">
           <h4>Nouvelle variante</h4>
           <div className="studio-form-grid studio-form-grid--compact">
             <label>N° variante<input type="number" min="1" value={variantForm.sort_order} onChange={event => setVariantForm(current => ({ ...current, sort_order: event.target.value }))} required /></label>
-            <label>Titre personnalisé (facultatif)<input type="text" value={variantForm.title} placeholder={buildVariantTitle({ ...variantForm, sort_order: variantForm.sort_order }, stageDisplayLabel)} onChange={event => setVariantForm(current => ({ ...current, title: event.target.value }))} /></label>
+            <label>Titre personnalisé (facultatif)<input data-form-initial-focus type="text" value={variantForm.title} placeholder={buildVariantTitle({ ...variantForm, sort_order: variantForm.sort_order }, stageDisplayLabel)} onChange={event => setVariantForm(current => ({ ...current, title: event.target.value }))} /></label>
             <label>Départ<input type="text" value={variantForm.departure} onChange={event => setVariantForm(current => ({ ...current, departure: event.target.value }))} /></label>
             <label>Arrivée<input type="text" value={variantForm.arrival} onChange={event => setVariantForm(current => ({ ...current, arrival: event.target.value }))} /></label>
             <label>Distance (km)<input type="number" step="0.01" value={variantForm.distance_km} onChange={event => setVariantForm(current => ({ ...current, distance_km: event.target.value }))} /></label>

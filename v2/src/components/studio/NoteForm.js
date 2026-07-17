@@ -1,5 +1,7 @@
 "use client";
 
+import useRevealForm from "@/hooks/studio/useRevealForm";
+
 export default function NoteForm({
   stageId,
   variantId = null,
@@ -11,6 +13,8 @@ export default function NoteForm({
   handleDeleteNote,
 }) {
   const notes = Array.isArray(stage.notes) ? stage.notes : [];
+  const isEditingHere = noteForm.stage_id === stageId && (noteForm.variant_id ?? null) === variantId;
+  const formRef = useRevealForm(isEditingHere ? `${stageId}:${variantId ?? "stage"}:${noteForm.editing ?? "new"}` : null);
   return (
     <div className="studio-stage-extra">
       <div className="studio-stage-extra__header">
@@ -34,11 +38,11 @@ export default function NoteForm({
           </article>
         )) : <p className="studio-detail--empty">Aucune note.</p>}
       </div>
-      {noteForm.stage_id === stageId && (noteForm.variant_id ?? null) === variantId && (
-        <form onSubmit={handleNoteSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
+      {isEditingHere && (
+        <form ref={formRef} onSubmit={handleNoteSubmit} className="studio-create-form" style={{ marginTop: "0.5rem" }}>
           <h4>{noteForm.editing != null ? "Modifier la note" : "Ajouter une note"}</h4>
           <div className="studio-form-grid studio-form-grid--compact">
-            <label className="studio-form-grid__full">Texte<textarea value={noteForm.text} onChange={e => setNoteForm({ ...noteForm, text: e.target.value })} required /></label>
+            <label className="studio-form-grid__full">Texte<textarea data-form-initial-focus value={noteForm.text} onChange={e => setNoteForm({ ...noteForm, text: e.target.value })} required /></label>
           </div>
           <div className="studio-create-form__actions">
             <button type="submit" className="terrain-button">Enregistrer la note</button>

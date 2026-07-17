@@ -1,6 +1,7 @@
 "use client";
 
 import { buildStageTitle } from "@/lib/roadbooks/stage-order";
+import useRevealForm from "@/hooks/studio/useRevealForm";
 
 export default function StageForm({
   showStageForm,
@@ -10,17 +11,19 @@ export default function StageForm({
   clearStageForm,
   handleStageSubmit,
 }) {
+  const formRef = useRevealForm(showStageForm ? "new-stage" : null);
+
   if (showStageForm) {
     const generatedTitle = buildStageTitle(
       { departure: stageForm.start, arrival: stageForm.end },
       stageForm.dayNumber || "…",
     );
     return (
-      <div className="studio-create-form">
+      <div className="studio-create-form" ref={formRef}>
         <h3>Nouvelle étape</h3>
         <form onSubmit={handleStageSubmit}>
           <div className="studio-form-grid studio-form-grid--compact">
-            <label>N° étape<input type="number" value={stageForm.dayNumber} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "dayNumber", value: e.target.value })} required /></label>
+            <label>N° étape<input data-form-initial-focus type="number" value={stageForm.dayNumber} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "dayNumber", value: e.target.value })} required /></label>
             <label>Titre personnalisé (facultatif)<input type="text" value={stageForm.title} placeholder={generatedTitle} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "title", value: e.target.value })} /></label>
             <label>Départ<input type="text" value={stageForm.start} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "start", value: e.target.value })} /></label>
             <label>Arrivée<input type="text" value={stageForm.end} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "end", value: e.target.value })} /></label>
