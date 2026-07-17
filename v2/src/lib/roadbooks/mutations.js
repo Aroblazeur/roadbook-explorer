@@ -95,7 +95,7 @@ export function buildExistingFieldsList(stage) {
   return parts;
 }
 
-export function buildGpxConfirmMessage(stage, metrics, durationStr) {
+export function buildGpxConfirmMessage(stage, metrics, durationStr, entityLabel = "Cette étape") {
   const existing = buildExistingFieldsList(stage);
   const newVals = [
     `• Distance : ${metrics.distanceKm.toFixed(1)} km`,
@@ -105,7 +105,7 @@ export function buildGpxConfirmMessage(stage, metrics, durationStr) {
   ].filter(Boolean).join("\n");
 
   if (existing.length) {
-    return `Cette étape a déjà des valeurs de ${existing.join(", ")}.\n\nNouvelles valeurs calculées :\n${newVals}\n\nÉcraser les valeurs existantes ?`;
+    return `${entityLabel} a déjà des valeurs de ${existing.join(", ")}.\n\nNouvelles valeurs calculées :\n${newVals}\n\nÉcraser les valeurs existantes ?`;
   }
   return `Aucune valeur existante.\n\nValeurs calculées :\n${newVals}\n\nAppliquer ?`;
 }

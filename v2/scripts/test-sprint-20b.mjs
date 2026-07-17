@@ -326,6 +326,17 @@ test("dupliquer vers une cible déjà occupée ajoute une alternative sans écra
   assert.equal(target.accommodation_name, "Principal existant");
 });
 
+test("le recalcul GPX adapte la confirmation aux variantes", () => {
+  const message = buildGpxConfirmMessage(
+    { distance_km: 12 },
+    { distanceKm: 14.5, elevationGainM: 320, elevationLossM: 280 },
+    "2 h 10",
+    "Cette variante",
+  );
+  assert.ok(message.startsWith("Cette variante a déjà des valeurs"));
+  assert.ok(message.includes("Écraser les valeurs existantes ?"));
+});
+
 test("les valeurs d'hebergement conservent les espaces pendant la saisie", () => {
   const primary = primaryAccommodationFromStage({
     accommodation_name: "Hotel du Lac ",

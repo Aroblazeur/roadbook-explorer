@@ -7,13 +7,17 @@ export default function GpxBlock({
   role,
   stageId,
   variantId,
+  target,
   gpxUploading,
+  metricsLoading,
   handleGpxDownload,
   handleGpxReplace,
   handleGpxDelete,
   handleGpxUpload,
+  handleGpxRecalculate,
 }) {
   const isUploading = gpxUploading === (role ?? stageId);
+  const isRecalculating = metricsLoading === `${scope}:${target?.id}`;
   const loadingLabel = gpxUploading === "delete" ? "Suppression..." : isUploading ? "Upload..." : null;
   const accept = ".gpx,application/gpx+xml,application/xml,text/xml";
   const selectFile = async (event, action) => {
@@ -28,6 +32,7 @@ export default function GpxBlock({
         <span>
           {mediaRow.file_name}
           <button type="button" onClick={() => handleGpxDownload(mediaRow)} disabled={!!gpxUploading}>Télécharger</button>
+          {target && ["stage", "variant"].includes(scope) && <button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxRecalculate(mediaRow, target, scope)} disabled={!!gpxUploading || metricsLoading != null}>{isRecalculating ? "Recalcul…" : "Recalculer"}</button>}
           <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
             {isUploading ? "Remplacement..." : "Remplacer"}
             <input type="file" accept={accept} disabled={!!gpxUploading} onChange={event => selectFile(event, file => handleGpxReplace(file, mediaRow, scope, role, stageId, variantId))} />

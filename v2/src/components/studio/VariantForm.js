@@ -31,8 +31,9 @@ export default function VariantForm({
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
   } = stageCrud;
   const {
-    gpxByVariant, gpxUploading,
+    gpxByVariant, gpxUploading, metricsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
+    handleGpxRecalculate,
   } = gpx;
 
   const toggleVariant = (variantId) => {
@@ -126,11 +127,14 @@ export default function VariantForm({
                       role="official"
                       stageId={stageId}
                       variantId={variant.id}
+                      target={variant}
                       gpxUploading={gpxUploading}
+                      metricsLoading={metricsLoading}
                       handleGpxDownload={handleGpxDownload}
                       handleGpxReplace={handleGpxReplace}
                       handleGpxDelete={handleGpxDelete}
                       handleGpxUpload={handleGpxUpload}
+                      handleGpxRecalculate={handleGpxRecalculate}
                     />
                   </div>
                   <PoiForm

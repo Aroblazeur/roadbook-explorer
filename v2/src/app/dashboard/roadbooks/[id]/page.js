@@ -33,6 +33,7 @@ import StartPointSection from "@/components/studio/StartPointSection";
 import useStartPoint from "@/hooks/studio/useStartPoint";
 import { duplicateRoadbook, updateMediaRecord } from "@/lib/roadbooks/writers";
 import { buildDuplicateAccommodationUpdate } from "@/lib/roadbooks/accommodations";
+import { buildGpxConfirmMessage, buildGpxMetricsSuccessMessage, buildGpxStageUpdate } from "@/lib/roadbooks/mutations";
 import { stageDisplayLabel, updateStageFields, updateStageNumberAndOrder } from "@/lib/roadbooks/stage-order";
 
 export default function RoadbookDetailPage() {
@@ -60,7 +61,7 @@ export default function RoadbookDetailPage() {
 
   const { images, setImages, uploadLoading, reloadMedia, uploadMedia } = useMediaManager({ supabase, roadbookId: id, userId: user?.id, onError: setError, onSuccess: setSuccess, onMutation: refreshRoadbookVersion });
 
-  const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, analyzeStageGpx } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
+  const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, metricsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, computeStageMetrics, analyzeStageGpx } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
 
   const { coverUrl, setCoverUrl, coverMediaId, setCoverMediaId, coverPreview, setCoverPreview, coverMode, setCoverMode } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
   const { startPoint, setStartPoint, startPointLoading, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
@@ -134,8 +135,27 @@ export default function RoadbookDetailPage() {
     }
   };
 
+  const handleRecalculateGpxMetrics = async (mediaRow, target, scope) => {
+    const result = await computeStageMetrics(mediaRow, target, `${scope}:${target.id}`);
+    if (!result) return false;
+    const entityLabel = scope === "variant" ? "Cette variante" : "Cette étape";
+    if (!window.confirm(buildGpxConfirmMessage(target, result.metrics, result.durationStr, entityLabel))) return false;
+    const updates = buildGpxStageUpdate(result.metrics, result.durationStr);
+    if (scope === "variant") {
+      setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => String(variant.id) === String(target.id)
+        ? { ...variant, ...updates }
+        : variant)])));
+    } else {
+      setStages(previous => previous.map(stage => String(stage.id) === String(target.id)
+        ? { ...stage, ...updates }
+        : stage));
+    }
+    setSuccess(`Valeurs recalculées depuis le GPX : ${buildGpxMetricsSuccessMessage(result.metrics, result.durationStr)}. Enregistrez les modifications pour les conserver.`);
+    return true;
+  };
+
   const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
-  const gpx = { gpxByStage, gpxByVariant, gpxUploading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }) };
+  const gpx = { gpxByStage, gpxByVariant, gpxUploading, metricsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }), handleGpxRecalculate: handleRecalculateGpxMetrics };
 
   if (authLoading || loading || startPointLoading || (roadbook && editorAccess == null)) return <StudioShell><StudioCatalog selectedId={id} /><section className="card studio-panel"><p>Chargement du roadbook...</p></section></StudioShell>;
   if (!user) return null;

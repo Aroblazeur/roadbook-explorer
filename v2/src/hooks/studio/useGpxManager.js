@@ -159,9 +159,9 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     }
   }, [supabase]);
 
-  const computeStageMetrics = useCallback(async (mediaRow, stage) => {
+  const computeStageMetrics = useCallback(async (mediaRow, stage, loadingKey = stage?.id) => {
     if (!mediaRow || !stage) return null;
-    setMetricsLoading(stage.id);
+    setMetricsLoading(loadingKey);
     setGpxError(null);
     try {
       const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);

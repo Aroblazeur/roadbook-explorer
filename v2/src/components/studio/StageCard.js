@@ -47,8 +47,9 @@ export default function StageCard({
   } = stageCrud;
 
   const {
-    gpxByStage, gpxUploading,
+    gpxByStage, gpxUploading, metricsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
+    handleGpxRecalculate,
   } = gpx;
 
   const meta = stage.metadata ?? {};
@@ -162,11 +163,14 @@ export default function StageCard({
               <GpxBlock
                 label="GPX" mediaRow={stageGpx}
                 scope="stage" role="official" stageId={stage.id}
+                target={stage}
                 gpxUploading={gpxUploading}
+                metricsLoading={metricsLoading}
                 handleGpxDownload={handleGpxDownload}
                 handleGpxReplace={handleGpxReplace}
                 handleGpxDelete={handleGpxDelete}
                 handleGpxUpload={handleGpxUpload}
+                handleGpxRecalculate={handleGpxRecalculate}
               />
             </div>
 
