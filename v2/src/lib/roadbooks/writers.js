@@ -111,6 +111,10 @@ export function moveStageVariant(supabase, variantId, parentStageId) {
   return runLifecycleRpc(supabase, "move_stage_variant", { p_variant_id: Number(variantId), p_parent_stage_id: Number(parentStageId) });
 }
 
+export function setStageDraft(supabase, stageId, draft) {
+  return runLifecycleRpc(supabase, "set_stage_draft", { p_stage_id: Number(stageId), p_draft: Boolean(draft) });
+}
+
 export async function updateStageNotes(supabase, stageId, notes) {
   return updateStage(supabase, stageId, { notes });
 }

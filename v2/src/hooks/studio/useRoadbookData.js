@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { loadPois, loadRoadbookSafe, loadStages, loadVariants } from "@/lib/roadbooks/loaders";
 import { groupByStageId, groupByVariantId } from "@/lib/roadbooks/validators";
 import { getRemoteUpdatedAt } from "@/lib/sync-helpers";
+import { synchronizeStagePresentation } from "@/lib/roadbooks/stage-order";
 
 export function useRoadbookData({ supabase, roadbookId, user }) {
   const [roadbook, setRoadbook] = useState(null);
@@ -35,7 +36,7 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
       if (!cancelledRef.current) setRoadbook(data);
       const stagesData = await loadStages(supabase, roadbookId);
       if (cancelledRef.current) return null;
-      setStages(stagesData);
+      setStages(synchronizeStagePresentation(stagesData));
       const stageIds = stagesData.map(s => s.id);
       if (stageIds.length) {
         const [pois, variants] = await Promise.all([
@@ -62,7 +63,7 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
 
   const reloadStages = useCallback(async () => {
     const stagesData = await loadStages(supabase, roadbookId);
-    setStages(stagesData);
+    setStages(synchronizeStagePresentation(stagesData));
     const stageIds = stagesData.map(s => s.id);
     if (stageIds.length) {
       const [pois, variants] = await Promise.all([

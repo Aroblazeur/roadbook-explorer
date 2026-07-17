@@ -33,7 +33,7 @@ import StudioShell from "@/components/studio/StudioShell";
 import ContributorsSection from "@/components/studio/ContributorsSection";
 import StartPointSection from "@/components/studio/StartPointSection";
 import useStartPoint from "@/hooks/studio/useStartPoint";
-import { demoteStageToVariant, duplicateRoadbook, moveStageVariant, promoteStageVariant, updateMediaRecord } from "@/lib/roadbooks/writers";
+import { demoteStageToVariant, duplicateRoadbook, moveStageVariant, promoteStageVariant, setStageDraft, updateMediaRecord } from "@/lib/roadbooks/writers";
 import { buildDuplicateAccommodationUpdate } from "@/lib/roadbooks/accommodations";
 import { buildGpxConfirmMessage, buildGpxMetricsSuccessMessage, buildGpxStageUpdate } from "@/lib/roadbooks/mutations";
 import { isRoadbookItemDraft, stageDisplayLabel, updateStageFields, updateStageNumberAndOrder, withDraftStatus } from "@/lib/roadbooks/stage-order";
@@ -137,14 +137,21 @@ export default function RoadbookDetailPage() {
     } catch (moveError) { setError(moveError.message ?? String(moveError)); }
   };
 
-  const handleToggleDraft = (item) => {
+  const handleToggleDraft = async (item) => {
     const draft = !isRoadbookItemDraft(item);
     if (Object.prototype.hasOwnProperty.call(item, "stage_id")) {
       setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => variant.id === item.id ? withDraftStatus(variant, draft) : variant)])));
-    } else {
-      setStages(previous => previous.map(stage => stage.id === item.id ? withDraftStatus(stage, draft) : stage));
+      setSuccess(draft ? "Variante placée en brouillon. Enregistrez les modifications." : "Variante republiée. Enregistrez les modifications.");
+      return;
     }
-    setSuccess(draft ? "Élément placé en brouillon. Enregistrez les modifications." : "Élément republié. Enregistrez les modifications.");
+    try {
+      if (!(await handleSaveStudio())) return;
+      await setStageDraft(supabase, item.id, draft);
+      await reloadLifecycleData();
+      setSuccess(draft
+        ? "Étape placée en brouillon. Ses variantes restent attachées à l'étape qui reprend son numéro."
+        : "Étape republiée à la suite des étapes actives.");
+    } catch (draftError) { setError(draftError.message ?? String(draftError)); }
   };
 
   const handleDuplicateAccommodation = async (target, accommodation, sourceKind) => {

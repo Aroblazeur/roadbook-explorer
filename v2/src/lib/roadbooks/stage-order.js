@@ -8,7 +8,16 @@ function sameStageId(left, right) {
 }
 
 export function normalizeStagePositions(stages) {
-  return (stages ?? []).map((stage, index) => ({ ...stage, sort_order: index + 1 }));
+  const source = stages ?? [];
+  const ordered = [
+    ...source.filter(stage => !isRoadbookItemDraft(stage)),
+    ...source.filter(isRoadbookItemDraft),
+  ];
+  return ordered.map((stage, index) => ({
+    ...stage,
+    sort_order: index + 1,
+    stage_number: index + 1,
+  }));
 }
 
 export function isRoadbookItemDraft(item) {
@@ -146,9 +155,13 @@ export function reorderStage(stages, sourceId, targetId, placement = "before") {
 
 export function moveStageByOffset(stages, stageId, offset) {
   const sourceIndex = stages.findIndex(stage => sameStageId(stage.id, stageId));
-  const targetIndex = sourceIndex + offset;
-  if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= stages.length) return stages;
-  return reorderStage(stages, stageId, stages[targetIndex].id, offset > 0 ? "after" : "before");
+  if (sourceIndex < 0) return stages;
+  const source = stages[sourceIndex];
+  const siblings = stages.filter(stage => isRoadbookItemDraft(stage) === isRoadbookItemDraft(source));
+  const siblingIndex = siblings.findIndex(stage => sameStageId(stage.id, stageId));
+  const targetIndex = siblingIndex + offset;
+  if (targetIndex < 0 || targetIndex >= siblings.length) return stages;
+  return reorderStage(stages, stageId, siblings[targetIndex].id, offset > 0 ? "after" : "before");
 }
 
 const DUPLICATE_SUFFIXES = ["", " bis", " ter", " quater", " quinquies"];
@@ -164,7 +177,7 @@ export function stageDisplayLabel(stages, index) {
 }
 
 export function withStageDisplayLabels(stages) {
-  return (stages ?? []).map((stage, index, all) => {
+  return normalizeStagePositions(stages).map((stage, index, all) => {
     const stageDisplay = stageDisplayLabel(all, index);
     return {
       ...stage,

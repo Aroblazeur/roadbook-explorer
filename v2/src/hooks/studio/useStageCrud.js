@@ -8,7 +8,7 @@ import {
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
 import { buildPoiRecord, buildVariantRecord } from "@/lib/roadbooks/validators";
-import { buildStageTitle } from "@/lib/roadbooks/stage-order";
+import { buildStageTitle, synchronizeStagePresentation } from "@/lib/roadbooks/stage-order";
 
 const EMPTY_VARIANT_FORM = {
   stage_id: null,
@@ -86,7 +86,7 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     setDeleting(stageId);
     try {
       await deleteStage(supabase, stageId);
-      setStages(prev => prev.filter(s => s.id !== stageId));
+      setStages(prev => synchronizeStagePresentation(prev.filter(s => s.id !== stageId)));
       await refreshRoadbookVersion?.();
       setStageSuccess("Étape supprimée.");
     } catch (err) { setStageError(err.message); }

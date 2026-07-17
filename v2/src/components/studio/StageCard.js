@@ -5,7 +5,7 @@ import PoiForm from "./PoiForm";
 import AccommSection from "./AccommSection";
 import NoteForm from "./NoteForm";
 import VariantForm from "./VariantForm";
-import { buildStageTitle, resolveStageTitle } from "@/lib/roadbooks/stage-order";
+import { buildStageTitle, isRoadbookItemDraft, resolveStageTitle } from "@/lib/roadbooks/stage-order";
 
 export default function StageCard({
   stage,
@@ -64,6 +64,10 @@ export default function StageCard({
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
   const stageHasVariants = hasChildVariants ?? (variantsByStage?.[stage.id]?.length > 0);
+  const movableStages = stages.filter(item => isRoadbookItemDraft(item) === isDraft);
+  const movableIndex = movableStages.findIndex(item => String(item.id) === String(stage.id));
+  const effectiveCanMoveUp = movableIndex > 0;
+  const effectiveCanMoveDown = movableIndex >= 0 && movableIndex < movableStages.length - 1;
   const generatedTitle = buildStageTitle(stage, displayLabel);
   const displayedTitle = resolveStageTitle(stage, displayLabel);
   const changeTitle = (value) => {
@@ -115,8 +119,8 @@ export default function StageCard({
             onDragStart={(e) => dragHandlers?.handleDragStart(e, stage.id)}
             onDragEnd={dragHandlers?.handleDragEnd}
           >☰ Glisser</span>
-          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!canMoveUp} aria-label={`Monter l'étape ${displayLabel}`} title="Monter d'une position" onClick={(event) => { event.stopPropagation(); onMoveUp?.(); }}>↑ Monter</button>
-          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!canMoveDown} aria-label={`Descendre l'étape ${displayLabel}`} title="Descendre d'une position" onClick={(event) => { event.stopPropagation(); onMoveDown?.(); }}>↓ Descendre</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!effectiveCanMoveUp} aria-label={`Monter l'étape ${displayLabel}`} title="Monter d'une position" onClick={(event) => { event.stopPropagation(); onMoveUp?.(); }}>↑ Monter</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!effectiveCanMoveDown} aria-label={`Descendre l'étape ${displayLabel}`} title="Descendre d'une position" onClick={(event) => { event.stopPropagation(); onMoveDown?.(); }}>↓ Descendre</button>
           <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => {
             e.stopPropagation();
             clearVariantForm();
