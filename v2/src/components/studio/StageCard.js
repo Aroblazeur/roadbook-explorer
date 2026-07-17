@@ -38,6 +38,12 @@ export default function StageCard({
   onVariantChange,
   onUploadVariantPhoto,
   uploadLoading,
+  onToggleDraft,
+  onConvertToVariant,
+  variantDragHandlers,
+  onConvertVariantToStage,
+  onMoveVariantToStage,
+  hasChildVariants,
 }) {
   const {
     handleDeleteStage, deleting,
@@ -53,9 +59,11 @@ export default function StageCard({
   } = gpx;
 
   const meta = stage.metadata ?? {};
+  const isDraft = meta.status === "draft" || meta.isDraft === true;
   const change = (updates) => onStageChange(stage.id, updates);
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
+  const stageHasVariants = hasChildVariants ?? (variantsByStage?.[stage.id]?.length > 0);
   const generatedTitle = buildStageTitle(stage, displayLabel);
   const displayedTitle = resolveStageTitle(stage, displayLabel);
   const changeTitle = (value) => {
@@ -80,9 +88,13 @@ export default function StageCard({
       onDrop={(e) => { dragHandlers?.handleDrop(e, stage.id); }}
     >
       {/* Stage header */}
-      <div className="studio-stage-card__header" onClick={onToggleExpand}>
+      <div
+        className="studio-stage-card__header"
+        onClick={onToggleExpand}
+      >
         <div className="studio-stage-card__eyebrow">
           <span className="studio-badge">Étape {displayLabel}</span>
+          {isDraft && <span className="studio-badge">Brouillon</span>}
           {stage.distance_km != null && <span className="studio-badge">{stage.distance_km} km</span>}
         </div>
         <div className="studio-stage-card__header-info">
@@ -92,16 +104,17 @@ export default function StageCard({
           </p>
         </div>
         <div className="studio-stage-card__actions">
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={0}
             className="terrain-button--secondary studio-action-button--compact studio-stage-card__drag-handle"
-            draggable="true"
+            draggable={true}
             aria-label={`Glisser l'étape ${displayLabel}`}
             title="Maintenir puis glisser au-dessus ou en dessous d'une autre étape"
             onClick={(e) => e.stopPropagation()}
             onDragStart={(e) => dragHandlers?.handleDragStart(e, stage.id)}
             onDragEnd={dragHandlers?.handleDragEnd}
-          >☰ Glisser</button>
+          >☰ Glisser</span>
           <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!canMoveUp} aria-label={`Monter l'étape ${displayLabel}`} title="Monter d'une position" onClick={(event) => { event.stopPropagation(); onMoveUp?.(); }}>↑ Monter</button>
           <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={!canMoveDown} aria-label={`Descendre l'étape ${displayLabel}`} title="Descendre d'une position" onClick={(event) => { event.stopPropagation(); onMoveDown?.(); }}>↓ Descendre</button>
           <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => {
@@ -110,6 +123,12 @@ export default function StageCard({
             const nextSortOrder = Math.max(0, ...stageVariants.map(variant => Number(variant.sort_order) || 0)) + 1;
             setVariantForm(current => ({ ...current, stage_id: stage.id, parent_stage_label: displayLabel, sort_order: String(nextSortOrder) }));
           }}>Ajouter une variante</button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={(e) => { e.stopPropagation(); onToggleDraft?.(stage); }}>
+            {isDraft ? "Publier" : "Brouillon"}
+          </button>
+          <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={stageHasVariants || stages.length < 2} title={stageHasVariants ? "Déplacez d'abord les variantes de cette étape" : "Convertir en variante"} onClick={(e) => { e.stopPropagation(); onConvertToVariant?.(stage); }}>
+            Convertir en variante
+          </button>
           <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }} disabled={deleting === stage.id}>Supprimer</button>
         </div>
       </div>
@@ -229,6 +248,10 @@ export default function StageCard({
       onUploadAccommodationPhoto={onUploadAccommodationPhoto}
       onUploadPoiPhoto={onUploadPoiPhoto}
       uploadLoading={uploadLoading}
+      dragHandlers={variantDragHandlers}
+      onToggleDraft={onToggleDraft}
+      onConvertToStage={onConvertVariantToStage}
+      onMoveToStage={onMoveVariantToStage}
     />
     </>
   );

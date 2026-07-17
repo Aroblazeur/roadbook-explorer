@@ -11,6 +11,44 @@ export function normalizeStagePositions(stages) {
   return (stages ?? []).map((stage, index) => ({ ...stage, sort_order: index + 1 }));
 }
 
+export function isRoadbookItemDraft(item) {
+  return item?.metadata?.status === "draft" || item?.metadata?.isDraft === true;
+}
+
+export function withDraftStatus(item, draft) {
+  const metadata = { ...(item?.metadata ?? {}) };
+  if (draft) metadata.status = "draft";
+  else {
+    delete metadata.status;
+    delete metadata.isDraft;
+  }
+  return { ...item, metadata };
+}
+
+export function normalizeVariantPositions(variants) {
+  return (variants ?? []).map((variant, index) => ({ ...variant, sort_order: index + 1 }));
+}
+
+export function moveVariantByOffset(variants, variantId, offset) {
+  const sourceIndex = (variants ?? []).findIndex(variant => sameStageId(variant.id, variantId));
+  const targetIndex = sourceIndex + offset;
+  if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= variants.length) return variants;
+  const next = [...variants];
+  const [moved] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return normalizeVariantPositions(next);
+}
+
+export function reorderVariant(variants, sourceId, targetId, placement = "before") {
+  const sourceIndex = (variants ?? []).findIndex(variant => sameStageId(variant.id, sourceId));
+  const targetIndex = (variants ?? []).findIndex(variant => sameStageId(variant.id, targetId));
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return variants;
+  const next = variants.filter(variant => !sameStageId(variant.id, sourceId));
+  const remainingTargetIndex = next.findIndex(variant => sameStageId(variant.id, targetId));
+  next.splice(remainingTargetIndex + (placement === "after" ? 1 : 0), 0, variants[sourceIndex]);
+  return normalizeVariantPositions(next);
+}
+
 export function buildStageTitle(stage, displayLabel) {
   const route = [stage?.departure, stage?.arrival]
     .map(value => String(value ?? "").trim())

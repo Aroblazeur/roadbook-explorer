@@ -3,7 +3,7 @@ import { conditionalUpdateRoadbook } from "@/lib/sync-helpers";
 import { deleteRoadbook, updatePois, updateStages, updateVariants } from "@/lib/roadbooks/writers";
 import { buildEditableStageUpdate, buildEditableVariantUpdate, normalizeNumber } from "@/lib/roadbooks/validators";
 import { calculateTotals } from "@/lib/roadbooks/mutations";
-import { synchronizeStagePresentation, synchronizeVariantPresentation } from "@/lib/roadbooks/stage-order";
+import { isRoadbookItemDraft, synchronizeStagePresentation, synchronizeVariantPresentation } from "@/lib/roadbooks/stage-order";
 
 export default function useSaveActions({
   supabase, id, roadbook, setRoadbook,
@@ -41,7 +41,7 @@ export default function useSaveActions({
       setError("Chaque étape doit avoir un numéro valide.");
       return false;
     }
-    const totals = calculateTotals(completedStages);
+    const totals = calculateTotals(completedStages.filter(stage => !isRoadbookItemDraft(stage)));
     const traceDistance = normalizeNumber(traceRoute.traceDist) ?? totals.totalDist;
     const traceGain = normalizeNumber(traceRoute.traceGain) ?? totals.totalGain;
     const traceLoss = normalizeNumber(traceRoute.traceLoss) ?? totals.totalLoss;

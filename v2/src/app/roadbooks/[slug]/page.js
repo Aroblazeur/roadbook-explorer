@@ -8,7 +8,7 @@ import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
 import { googleMapsEmbedUrl, resolveMapDisplay } from "@/lib/google-map-links";
-import { withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
+import { isRoadbookItemDraft, withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
 import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
 import { shortDayLabel } from "@/lib/roadbooks/dates";
 import QuickAddEditor from "@/components/QuickAddEditor";
@@ -37,7 +37,7 @@ async function getRoadbook(slug) {
     .eq("roadbook_id", roadbook.id)
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
-  const stages = withStageDisplayLabels(stageRows ?? []);
+  const stages = withStageDisplayLabels((stageRows ?? []).filter(stage => !isRoadbookItemDraft(stage)));
 
   const { data: startPoint } = await supabase
     .from("roadbook_start_points")
@@ -51,7 +51,7 @@ async function getRoadbook(slug) {
     const { data: p } = await supabase.from("stage_pois").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true });
     const { data: v } = await supabase.from("stage_variants").select("*").in("stage_id", stageIds).order("sort_order", { ascending: true });
     pois = p ?? [];
-    variants = withVariantDisplayTitles(stages, v ?? []);
+    variants = withVariantDisplayTitles(stages, (v ?? []).filter(variant => !isRoadbookItemDraft(variant)));
   }
 
   const { data: mediaRows } = await supabase

@@ -24,6 +24,10 @@ export default function VariantForm({
   onUploadAccommodationPhoto,
   onUploadPoiPhoto,
   uploadLoading,
+  dragHandlers,
+  onToggleDraft,
+  onConvertToStage,
+  onMoveToStage,
 }) {
   const [expandedVariants, setExpandedVariants] = useState(() => new Set());
   const {
@@ -52,11 +56,15 @@ export default function VariantForm({
     <>
       {stageVariants.map(variant => {
         const meta = variant.metadata ?? {};
+        const isDraft = meta.status === "draft" || meta.isDraft === true;
         const expanded = expandedVariants.has(variant.id);
         const change = updates => onVariantChange(variant.id, updates);
         const changeMeta = updates => change({ metadata: { ...meta, ...updates } });
         const variantGpx = gpxByVariant?.[stageId]?.[variant.id] ?? null;
         const displayedTitle = resolveVariantTitle(variant, stageDisplayLabel);
+        const variantIndex = stageVariants.findIndex(item => item.id === variant.id);
+        const isDragging = dragHandlers?.draggingVariantId === variant.id;
+        const isDragOver = dragHandlers?.dragOverVariantId === variant.id && !isDragging;
         const changeTitle = value => {
           const custom = value.trim() !== "";
           change({
@@ -66,10 +74,21 @@ export default function VariantForm({
         };
 
         return (
-          <article key={variant.id} className="studio-variant-card" data-expanded={expanded ? "true" : "false"}>
-            <div className="studio-variant-card__header" onClick={() => toggleVariant(variant.id)}>
+          <article
+            key={variant.id}
+            className={`studio-variant-card ${isDragOver ? "studio-stage-card--drag-over" : ""}`}
+            data-expanded={expanded ? "true" : "false"}
+            style={{ opacity: isDragging ? 0.5 : 1 }}
+            onDragOver={event => dragHandlers?.handleDragOver(event, variant.id)}
+            onDrop={event => dragHandlers?.handleDrop(event, stageId, variant.id)}
+          >
+            <div
+              className="studio-variant-card__header"
+              onClick={() => toggleVariant(variant.id)}
+            >
               <div className="studio-stage-card__eyebrow">
                 <span className="studio-badge">Sous-étape</span>
+                {isDraft && <span className="studio-badge">Brouillon</span>}
                 {variant.distance_km != null && <span className="studio-badge">{variant.distance_km} km</span>}
               </div>
               <div className="studio-variant-card__header-info">
@@ -79,6 +98,15 @@ export default function VariantForm({
                 </p>
               </div>
               <div className="studio-stage-card__actions">
+                <span role="button" tabIndex={0} draggable={true} className="terrain-button--secondary studio-action-button--compact studio-stage-card__drag-handle" onClick={event => event.stopPropagation()} onDragStart={event => dragHandlers?.handleDragStart(event, stageId, variant.id)} onDragEnd={dragHandlers?.handleDragEnd}>☰ Glisser</span>
+                <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={variantIndex <= 0} onClick={event => { event.stopPropagation(); dragHandlers?.moveByOffset(stageId, variant.id, -1); }}>↑</button>
+                <button type="button" className="terrain-button--secondary studio-action-button--compact" disabled={variantIndex >= stageVariants.length - 1} onClick={event => { event.stopPropagation(); dragHandlers?.moveByOffset(stageId, variant.id, 1); }}>↓</button>
+                <select className="studio-action-select" defaultValue="" aria-label="Déplacer la variante vers une autre étape" onClick={event => event.stopPropagation()} onChange={event => { onMoveToStage?.(variant, event.target.value); event.target.value = ""; }}>
+                  <option value="">Déplacer vers…</option>
+                  {stages.filter(stage => String(stage.id) !== String(stageId)).map((stage, index) => <option key={stage.id} value={stage.id}>Étape {stage.stage_number ?? index + 1}</option>)}
+                </select>
+                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={event => { event.stopPropagation(); onToggleDraft?.(variant); }}>{isDraft ? "Publier" : "Brouillon"}</button>
+                <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={event => { event.stopPropagation(); onConvertToStage?.(variant); }}>Convertir en étape</button>
                 <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={event => { event.stopPropagation(); handleDeleteVariant(variant.id); }}>Supprimer</button>
               </div>
             </div>

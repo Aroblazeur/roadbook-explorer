@@ -93,6 +93,24 @@ export async function deleteVariant(supabase, variantId) {
   if (error) throw new Error(error.message);
 }
 
+async function runLifecycleRpc(supabase, name, args) {
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export function promoteStageVariant(supabase, variantId) {
+  return runLifecycleRpc(supabase, "promote_stage_variant", { p_variant_id: Number(variantId) });
+}
+
+export function demoteStageToVariant(supabase, stageId, parentStageId) {
+  return runLifecycleRpc(supabase, "demote_stage_to_variant", { p_stage_id: Number(stageId), p_parent_stage_id: Number(parentStageId) });
+}
+
+export function moveStageVariant(supabase, variantId, parentStageId) {
+  return runLifecycleRpc(supabase, "move_stage_variant", { p_variant_id: Number(variantId), p_parent_stage_id: Number(parentStageId) });
+}
+
 export async function updateStageNotes(supabase, stageId, notes) {
   return updateStage(supabase, stageId, { notes });
 }
