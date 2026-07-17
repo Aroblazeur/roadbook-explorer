@@ -15,6 +15,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
   const [gpxByStage, setGpxByStage] = useState({});
   const [gpxByVariant, setGpxByVariant] = useState({});
   const [metricsLoading, setMetricsLoading] = useState(null);
+  const [locationsLoading, setLocationsLoading] = useState(null);
 
   const reloadGpx = useCallback(async () => {
     if (!userId || !roadbookId) return;
@@ -193,6 +194,30 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     }
   }, [supabase, activity]);
 
+  const extractStageLocations = useCallback(async (mediaRow, loadingKey) => {
+    if (!mediaRow) return null;
+    setLocationsLoading(loadingKey);
+    setGpxError(null);
+    try {
+      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
+      if (!signedUrl) throw new Error("Impossible d'obtenir l'URL signée du GPX");
+      const metrics = await fetchAndComputeGpxMetrics(signedUrl);
+      const response = await fetch("/api/google-maps/reverse-geocode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roadbookId: Number(roadbookId), start: metrics.startPoint, end: metrics.endPoint }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || "Extraction des villes impossible.");
+      return { departure: result.departure || "", arrival: result.arrival || "" };
+    } catch (err) {
+      setGpxError(formatGpxUserError(err, "Impossible d'extraire les villes du GPX."));
+      return null;
+    } finally {
+      setLocationsLoading(null);
+    }
+  }, [supabase, roadbookId]);
+
   const applyStageMetrics = useCallback(async (metrics, durationStr, stage) => {
     if (!stage) return false;
     try {
@@ -212,7 +237,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
 
   return {
     gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant,
-    gpxUploading, metricsLoading,
+    gpxUploading, metricsLoading, locationsLoading,
     gpxError, setGpxError,
     reloadGpx,
     uploadGpx,
@@ -221,6 +246,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     downloadGpx,
     computeStageMetrics,
     analyzeStageGpx,
+    extractStageLocations,
     applyStageMetrics,
     GPX_BUCKET,
   };

@@ -103,6 +103,8 @@ export function parseGpxMetrics(xmlText) {
 
   const points = sequences.flat();
   if (points.length < 2) throw new Error("GPX sans trace exploitable");
+  const startPoint = points[0];
+  const endPoint = points[points.length - 1];
   const elevationPointCount = points.filter(point => point.elevation !== null).length;
 
   let distanceKm = 0;
@@ -128,7 +130,9 @@ export function parseGpxMetrics(xmlText) {
     pointCount: points.length,
     elevationPointCount,
     hasElevation: elevationPointCount > 0,
-    hasCompleteElevation
+    hasCompleteElevation,
+    startPoint: { lat: startPoint.lat, lng: startPoint.lng },
+    endPoint: { lat: endPoint.lat, lng: endPoint.lng },
   };
 }
 

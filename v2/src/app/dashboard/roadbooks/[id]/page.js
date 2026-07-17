@@ -64,7 +64,7 @@ export default function RoadbookDetailPage() {
 
   const { images, setImages, uploadLoading, reloadMedia, uploadMedia } = useMediaManager({ supabase, roadbookId: id, userId: user?.id, onError: setError, onSuccess: setSuccess, onMutation: refreshRoadbookVersion });
 
-  const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, metricsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, computeStageMetrics, analyzeStageGpx } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
+  const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, metricsLoading, locationsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, computeStageMetrics, analyzeStageGpx, extractStageLocations } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
 
   const { coverUrl, setCoverUrl, coverMediaId, setCoverMediaId, coverPreview, setCoverPreview, coverMode, setCoverMode } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
   const { startPoint, setStartPoint, startPointLoading, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
@@ -213,8 +213,29 @@ export default function RoadbookDetailPage() {
     return true;
   };
 
+  const handleExtractGpxLocations = async (mediaRow, target, scope) => {
+    const result = await extractStageLocations(mediaRow, `${scope}:${target.id}`);
+    if (!result) return false;
+    const updates = {};
+    if (result.departure) updates.departure = result.departure;
+    if (result.arrival) updates.arrival = result.arrival;
+    if (!Object.keys(updates).length) { setError("Aucune ville n'a été trouvée aux extrémités de la trace."); return false; }
+    const replacements = [
+      updates.departure ? `Départ : ${target.departure || "—"} → ${updates.departure}` : null,
+      updates.arrival ? `Arrivée : ${target.arrival || "—"} → ${updates.arrival}` : null,
+    ].filter(Boolean).join("\n");
+    if ((target.departure || target.arrival) && !window.confirm(`Remplacer les villes actuelles ?\n\n${replacements}`)) return false;
+    if (scope === "variant") {
+      setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => String(variant.id) === String(target.id) ? { ...variant, ...updates } : variant)])));
+    } else {
+      setStages(previous => updateStageFields(previous, target.id, updates));
+    }
+    setSuccess(`Villes extraites du GPX : ${updates.departure || "?"} → ${updates.arrival || "?"}. Enregistrez les modifications pour les conserver.`);
+    return true;
+  };
+
   const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
-  const gpx = { gpxByStage, gpxByVariant, gpxUploading, metricsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }), handleGpxRecalculate: handleRecalculateGpxMetrics };
+  const gpx = { gpxByStage, gpxByVariant, gpxUploading, metricsLoading, locationsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }), handleGpxRecalculate: handleRecalculateGpxMetrics, handleGpxExtractLocations: handleExtractGpxLocations };
 
   const activeStages = stages.filter(stage => !isRoadbookItemDraft(stage));
   const draftStages = stages.filter(isRoadbookItemDraft);

@@ -36,9 +36,9 @@ export default function VariantForm({
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
   } = stageCrud;
   const {
-    gpxByVariant, gpxUploading, metricsLoading,
+    gpxByVariant, gpxUploading, metricsLoading, locationsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
-    handleGpxRecalculate,
+    handleGpxRecalculate, handleGpxExtractLocations,
   } = gpx;
   const isCreatingHere = variantForm.stage_id === stageId;
   const createFormRef = useRevealForm(isCreatingHere ? `${stageId}:${variantForm.editing ?? "new"}` : null);
@@ -61,6 +61,7 @@ export default function VariantForm({
         const change = updates => onVariantChange(variant.id, updates);
         const changeMeta = updates => change({ metadata: { ...meta, ...updates } });
         const variantGpx = gpxByVariant?.[stageId]?.[variant.id] ?? null;
+        const isExtractingLocations = locationsLoading === `variant:${variant.id}`;
         const displayedTitle = resolveVariantTitle(variant, stageDisplayLabel);
         const variantIndex = stageVariants.findIndex(item => item.id === variant.id);
         const isDragging = dragHandlers?.draggingVariantId === variant.id;
@@ -120,8 +121,11 @@ export default function VariantForm({
                     <label>Jour<input type="text" value={variant.day ?? ""} onChange={event => change({ day: event.target.value })} /></label>
                     <label className="studio-form-grid__full">Titre (avec la mention Variante)<input type="text" value={variant.label ?? ""} placeholder={buildVariantTitle(variant, stageDisplayLabel)} onChange={event => changeTitle(event.target.value)} /></label>
                     {meta.titleMode === "custom" && <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => changeTitle("")}>Rétablir le titre généré</button>}
-                    <label>Départ<input type="text" value={variant.departure ?? ""} onChange={event => change({ departure: event.target.value })} /></label>
-                    <label>Arrivée<input type="text" value={variant.arrival ?? ""} onChange={event => change({ arrival: event.target.value })} /></label>
+                    <div className="studio-city-fields studio-form-grid__full">
+                      <label>Départ<input type="text" value={variant.departure ?? ""} onChange={event => change({ departure: event.target.value })} /></label>
+                      <label>Arrivée<input type="text" value={variant.arrival ?? ""} onChange={event => change({ arrival: event.target.value })} /></label>
+                      {variantGpx && <button type="button" className="terrain-button--secondary studio-action-button--compact studio-location-extract" title="Extraire le départ et l’arrivée depuis les extrémités du GPX" aria-label="Extraire les villes depuis le GPX" onClick={() => handleGpxExtractLocations(variantGpx, variant, "variant")} disabled={locationsLoading != null}>{isExtractingLocations ? "…" : "⌖ GPX"}</button>}
+                    </div>
                     <label>Distance (km)<input type="number" step="0.1" value={variant.distance_km ?? ""} onChange={event => change({ distance_km: event.target.value })} /></label>
                     <label>D+ (m)<input type="number" value={variant.elevation_gain_m ?? ""} onChange={event => change({ elevation_gain_m: event.target.value })} /></label>
                     <label>D− (m)<input type="number" value={variant.elevation_loss_m ?? ""} onChange={event => change({ elevation_loss_m: event.target.value })} /></label>

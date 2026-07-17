@@ -53,9 +53,9 @@ export default function StageCard({
   } = stageCrud;
 
   const {
-    gpxByStage, gpxUploading, metricsLoading,
+    gpxByStage, gpxUploading, metricsLoading, locationsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
-    handleGpxRecalculate,
+    handleGpxRecalculate, handleGpxExtractLocations,
   } = gpx;
 
   const meta = stage.metadata ?? {};
@@ -63,6 +63,7 @@ export default function StageCard({
   const change = (updates) => onStageChange(stage.id, updates);
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
+  const isExtractingLocations = locationsLoading === `stage:${stage.id}`;
   const stageHasVariants = hasChildVariants ?? (variantsByStage?.[stage.id]?.length > 0);
   const movableStages = stages.filter(item => isRoadbookItemDraft(item) === isDraft);
   const movableIndex = movableStages.findIndex(item => String(item.id) === String(stage.id));
@@ -147,8 +148,11 @@ export default function StageCard({
               <label>Jour<input type="text" value={stage.day ?? ""} onChange={e => change({ day: e.target.value })} /></label>
               <label className="studio-form-grid__full">Titre (généré, mais personnalisable)<input type="text" value={displayedTitle} onChange={e => changeTitle(e.target.value)} /></label>
               {meta.titleMode === "custom" && <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => changeTitle("")}>Rétablir le titre généré</button>}
-              <label>Départ<input type="text" value={stage.departure ?? ""} onChange={e => change({ departure: e.target.value })} /></label>
-              <label>Arrivée<input type="text" value={stage.arrival ?? ""} onChange={e => change({ arrival: e.target.value })} /></label>
+              <div className="studio-city-fields studio-form-grid__full">
+                <label>Départ<input type="text" value={stage.departure ?? ""} onChange={e => change({ departure: e.target.value })} /></label>
+                <label>Arrivée<input type="text" value={stage.arrival ?? ""} onChange={e => change({ arrival: e.target.value })} /></label>
+                {stageGpx && <button type="button" className="terrain-button--secondary studio-action-button--compact studio-location-extract" title="Extraire le départ et l’arrivée depuis les extrémités du GPX" aria-label="Extraire les villes depuis le GPX" onClick={() => handleGpxExtractLocations(stageGpx, stage, "stage")} disabled={locationsLoading != null}>{isExtractingLocations ? "…" : "⌖ GPX"}</button>}
+              </div>
               <label>Distance (km)<input type="number" step="0.1" value={stage.distance_km ?? ""} onChange={e => change({ distance_km: e.target.value })} /></label>
               <label>D+ (m)<input type="number" value={stage.elevation_gain_m ?? ""} onChange={e => change({ elevation_gain_m: e.target.value })} /></label>
               <label>D− (m)<input type="number" value={stage.elevation_loss_m ?? ""} onChange={e => change({ elevation_loss_m: e.target.value })} /></label>

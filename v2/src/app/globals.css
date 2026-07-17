@@ -507,6 +507,13 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .studio-form-grid--variant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .studio-form-grid--compact { margin-top: 0; }
 .studio-form-grid__full { grid-column: 1 / -1; }
+.studio-city-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+.studio-location-extract { margin-bottom: 0.05rem; }
 
 .studio-input--readonly {
   color: var(--studio-muted);
@@ -1490,6 +1497,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .studio-detail__summary,
   .studio-form-grid,
   .studio-form-grid--variant { grid-template-columns: 1fr; }
+  .studio-city-fields { grid-template-columns: 1fr; }
+  .studio-location-extract { justify-self: start; }
   .studio-variant-card { margin-left: 0.75rem; }
   .poi-card { grid-template-columns: 1fr; gap: 12px; }
   .poi-card__image { height: 160px; }
