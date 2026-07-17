@@ -737,6 +737,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .home-stage-card__route { font-size: 1rem; font-weight: 700; }
 .home-stage-card__stats { margin: 4px 0 0; }
 .home-stage-card__stats:empty { display: none; }
+.home-stage-card__accommodation-name { min-width: 0; max-width: 34rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .78rem; line-height: 1.25; }
 .home-stage-card__meta { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .home-stage-card__day { color: var(--text-light); font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .home-stage-card__accommodation { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; background: #f1f8f2; color: var(--primary); font-size: 1.1rem; flex-shrink: 0; }

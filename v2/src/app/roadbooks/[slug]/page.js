@@ -439,6 +439,11 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
           <OverviewStat value={stage.elevation_gain_m} unit="m" label="D+" icon={StatIconElevationGain} />
           <OverviewStat value={stage.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
         </span>
+        {stage.accommodation_name && (
+          <span className="home-stage-card__accommodation-name" title={stage.accommodation_name}>
+            <span aria-hidden="true">⌂</span> {stage.accommodation_name}
+          </span>
+        )}
       </span>
       {(shortDay || accommodationKinds.length > 0) && (
         <span className="home-stage-card__meta">
@@ -482,6 +487,11 @@ function VariantOverviewCard({ roadbookSlug, entry }) {
           <OverviewStat value={variant.elevation_gain_m ?? metadata.elevation_gain_m} unit="m" label="D+" icon={StatIconElevationGain} />
           <OverviewStat value={variant.elevation_loss_m ?? metadata.elevation_loss_m} unit="m" label="D−" icon={StatIconElevationLoss} />
         </span>
+        {variant.accommodation_name && (
+          <span className="home-stage-card__accommodation-name" title={variant.accommodation_name}>
+            <span aria-hidden="true">⌂</span> {variant.accommodation_name}
+          </span>
+        )}
       </span>
       {(shortDay || accommodationKinds.length > 0) && (
         <span className="home-stage-card__meta">
