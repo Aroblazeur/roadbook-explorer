@@ -34,6 +34,10 @@ function routeSegments(url) {
 }
 
 function directionFlag(url) {
+  const travelMode = url.searchParams.get("travelmode");
+  if (travelMode === "bicycling") return "b";
+  if (travelMode === "walking") return "w";
+  if (travelMode === "transit") return "r";
   const source = `${url.pathname}${url.search}`;
   if (source.includes("!3e1")) return "b";
   if (source.includes("!3e2")) return "w";
@@ -52,6 +56,18 @@ export function googleMapsEmbedUrl(value) {
     embed.searchParams.set("output", "embed");
     embed.searchParams.set("saddr", locations[0]);
     embed.searchParams.set("daddr", locations.at(-1));
+    embed.searchParams.set("dirflg", directionFlag(url));
+    return embed.toString();
+  }
+
+  const origin = url.searchParams.get("origin");
+  const destination = url.searchParams.get("destination");
+  if (origin && destination) {
+    const waypoints = (url.searchParams.get("waypoints") || "").split("|").filter(Boolean);
+    const embed = new URL("https://www.google.com/maps");
+    embed.searchParams.set("output", "embed");
+    embed.searchParams.set("saddr", origin);
+    embed.searchParams.set("daddr", [...waypoints, destination].join(" to:"));
     embed.searchParams.set("dirflg", directionFlag(url));
     return embed.toString();
   }
