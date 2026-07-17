@@ -11,6 +11,7 @@ import { resolveMapDisplay } from "@/lib/google-map-links";
 import { withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
 import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
 import { shortDayLabel } from "@/lib/roadbooks/dates";
+import QuickAddEditor from "@/components/QuickAddEditor";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -183,6 +184,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           stageGpx={gpxByStage[currentEntry.item.id] ?? null}
           stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.metadata?.variant_id == null && !["accommodation", "poi"].includes(image.metadata?.purpose) && image.signedUrl)?.signedUrl ?? null}
           images={images}
+          canEdit={result.canEdit}
         />
       ) : (
         <VariantDetailPage
@@ -195,6 +197,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           variantGpx={gpxByVariant[currentEntry.item.id] ?? null}
           variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && !["accommodation", "poi"].includes(image.metadata?.purpose) && image.signedUrl)?.signedUrl ?? null}
           images={images}
+          canEdit={result.canEdit}
         />
       )}
     </main>
@@ -525,7 +528,7 @@ function ImagesSection({ images }) {
   );
 }
 
-function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
+function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpx, stagePhotoUrl, images, canEdit }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
@@ -536,6 +539,7 @@ function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageInd
         stageGpx={stageGpx}
         stagePhotoUrl={stagePhotoUrl}
         images={images}
+        canEdit={canEdit}
       />
     </section>
   );
@@ -580,7 +584,7 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   );
 }
 
-function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpx, variantPhotoUrl, images }) {
+function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpx, variantPhotoUrl, images, canEdit }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de la variante">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
@@ -592,12 +596,14 @@ function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, pare
         variantGpx={variantGpx}
         variantPhotoUrl={variantPhotoUrl}
         images={images}
+        stageId={parentStage?.id ?? variant.stage_id}
+        canEdit={canEdit}
       />
     </section>
   );
 }
 
-function VariantCard({ variant, day, contextCity, pois = [], variantGpx, variantPhotoUrl, images }) {
+function VariantCard({ variant, stageId, day, contextCity, pois = [], variantGpx, variantPhotoUrl, images, canEdit }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
   const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
@@ -648,7 +654,10 @@ function VariantCard({ variant, day, contextCity, pois = [], variantGpx, variant
       </div>
       {variant.description && <p className="stage-detail-variant__description">{variant.description}</p>}
       <div className="stage-detail-variant__pois">
-        <h4>Points d&apos;intérêt</h4>
+        <div className="stage-detail-section-heading">
+          <h4>Points d&apos;intérêt</h4>
+          {canEdit && <QuickAddEditor kind="poi" stageId={stageId} variantId={variant.id} />}
+        </div>
         {pois.length > 0 ? (
           <ul className="stage-detail-poi-list">
             {pois.map(poi => <PoiCard key={poi.id} poi={poi} images={images} />)}
@@ -657,10 +666,13 @@ function VariantCard({ variant, day, contextCity, pois = [], variantGpx, variant
           <p className="stage-detail-empty">Non renseigné</p>
         )}
       </div>
-      {notes.length > 0 && (
+      {(notes.length > 0 || canEdit) && (
         <div className="stage-detail-variant__notes">
-          <h4>Notes</h4>
-          <NoteList notes={notes} imageAlt="Photo associée à la variante" />
+          <div className="stage-detail-section-heading">
+            <h4>Notes</h4>
+            {canEdit && <QuickAddEditor kind="note" stageId={stageId} variantId={variant.id} />}
+          </div>
+          {notes.length > 0 ? <NoteList notes={notes} imageAlt="Photo associée à la variante" /> : <p className="stage-detail-empty">Aucune note.</p>}
         </div>
       )}
       {hasAccommodation(accommodation) && (
@@ -669,14 +681,19 @@ function VariantCard({ variant, day, contextCity, pois = [], variantGpx, variant
           <AccommodationResource accommodation={accommodation} contextCity={arrival || departure || contextCity} images={images} compact />
         </div>
       )}
-      {alternatives.filter(hasAccommodation).length > 0 && (
+      {(alternatives.filter(hasAccommodation).length > 0 || canEdit) && (
         <div className="stage-detail-variant__accommodation">
-          <h4>Hébergements alternatifs</h4>
-          <div className="stage-detail-accommodation-list">
-            {alternatives.filter(hasAccommodation).map((item, index) => (
-              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={arrival || departure || contextCity} images={images} compact />
-            ))}
+          <div className="stage-detail-section-heading">
+            <h4>Hébergements alternatifs</h4>
+            {canEdit && <QuickAddEditor kind="accommodation" stageId={stageId} variantId={variant.id} />}
           </div>
+          {alternatives.filter(hasAccommodation).length > 0 ? (
+            <div className="stage-detail-accommodation-list">
+              {alternatives.filter(hasAccommodation).map((item, index) => (
+                <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={arrival || departure || contextCity} images={images} compact />
+              ))}
+            </div>
+          ) : <p className="stage-detail-empty">Aucun hébergement alternatif.</p>}
         </div>
       )}
       {(mapUrl || gpxUrl) && (
@@ -725,7 +742,7 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images }) {
+function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images, canEdit }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_display_label ?? stage.stage_number ?? stageIndex + 1;
   const stageDay = textValue(stage.day);
@@ -783,12 +800,18 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
       </article>
 
       <section className="stage-detail-card stage-detail-notes card" aria-labelledby="stage-detail-notes-title">
-        <h2 id="stage-detail-notes-title">Notes ({notes.length})</h2>
-        {notes.length > 0 && <NoteList notes={notes} imageAlt="Photo associée à la note" />}
+        <div className="stage-detail-section-heading">
+          <h2 id="stage-detail-notes-title">Notes ({notes.length})</h2>
+          {canEdit && <QuickAddEditor kind="note" stageId={stage.id} />}
+        </div>
+        {notes.length > 0 ? <NoteList notes={notes} imageAlt="Photo associée à la note" /> : <p className="stage-detail-empty">Aucune note.</p>}
       </section>
 
       <section className="stage-detail-card stage-detail-pois card" aria-labelledby="stage-detail-pois-title">
-        <h2 id="stage-detail-pois-title">Points d&apos;intérêt</h2>
+        <div className="stage-detail-section-heading">
+          <h2 id="stage-detail-pois-title">Points d&apos;intérêt</h2>
+          {canEdit && <QuickAddEditor kind="poi" stageId={stage.id} />}
+        </div>
         {pois.length > 0 ? (
           <ul className="stage-detail-poi-list">
             {pois.map(poi => <PoiCard key={poi.id} poi={poi} images={images} />)}
@@ -831,14 +854,19 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images })
         </section>
       )}
 
-      {alternatives.filter(hasAccommodation).length > 0 && (
+      {(alternatives.filter(hasAccommodation).length > 0 || canEdit) && (
         <section className="stage-detail-card stage-detail-accommodations card" aria-labelledby="stage-detail-alternatives-title">
-          <h2 id="stage-detail-alternatives-title">Hébergements alternatifs</h2>
-          <div className="stage-detail-accommodation-list">
-            {alternatives.filter(hasAccommodation).map((item, index) => (
-              <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} images={images} />
-            ))}
+          <div className="stage-detail-section-heading">
+            <h2 id="stage-detail-alternatives-title">Hébergements alternatifs</h2>
+            {canEdit && <QuickAddEditor kind="accommodation" stageId={stage.id} />}
           </div>
+          {alternatives.filter(hasAccommodation).length > 0 ? (
+            <div className="stage-detail-accommodation-list">
+              {alternatives.filter(hasAccommodation).map((item, index) => (
+                <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} images={images} />
+              ))}
+            </div>
+          ) : <p className="stage-detail-empty">Aucun hébergement alternatif.</p>}
         </section>
       )}
 

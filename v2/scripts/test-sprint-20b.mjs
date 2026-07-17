@@ -41,6 +41,11 @@ import {
   alternativesFromStage,
 } from "../src/lib/roadbooks/accommodations.js";
 import { shortDayLabel } from "../src/lib/roadbooks/dates.js";
+import {
+  buildQuickAccommodationUpdate,
+  buildQuickNoteUpdate,
+  buildQuickPoiRecord,
+} from "../src/lib/roadbooks/quick-add.js";
 import { estimateGpxHours, getActivityDurationProfile } from "../src/lib/gpx-metrics.js";
 
 let passed = 0, failed = 0;
@@ -233,6 +238,24 @@ test("shortDayLabel masque l'année dans la liste des étapes", () => {
   assert.equal(shortDayLabel("1/8/26"), "01/08");
   assert.equal(shortDayLabel("2026-08-02"), "02/08");
   assert.equal(shortDayLabel("Jour libre"), "Jour libre");
+});
+
+test("les ajouts rapides construisent les mêmes données que le studio", () => {
+  const note = buildQuickNoteUpdate({ notes: [{ text: "Existante" }] }, " Nouvelle note ");
+  assert.deepEqual(note.notes, [{ text: "Existante" }, { text: "Nouvelle note" }]);
+
+  const accommodation = buildQuickAccommodationUpdate(
+    { alternatives: [{ name: "Camping" }] },
+    { name: " Gîte ", type: "gite", url: "https://example.com", note: "Calme" },
+  );
+  assert.equal(accommodation.alternatives.length, 2);
+  assert.equal(accommodation.alternatives[1].name, "Gîte");
+
+  const poi = buildQuickPoiRecord(12, 34, { name: " Zoo ", region: "Amnéville", link: "", description: "Visite" });
+  assert.equal(poi.stage_id, 12);
+  assert.equal(poi.variant_id, 34);
+  assert.equal(poi.name, "Zoo");
+  assert.match(poi.link_url, /google\.com\/maps\/search/);
 });
 
 test("buildAlternativeAccommodationUpdate ajoute puis modifie une alternative", () => {

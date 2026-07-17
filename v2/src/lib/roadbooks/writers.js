@@ -94,13 +94,11 @@ export async function deleteVariant(supabase, variantId) {
 }
 
 export async function updateStageNotes(supabase, stageId, notes) {
-  const { error } = await supabase.from("stages").update({ notes }).eq("id", stageId);
-  if (error) throw new Error(error.message);
+  return updateStage(supabase, stageId, { notes });
 }
 
 export async function updateStageAccommodation(supabase, stageId, payload) {
-  const { error } = await supabase.from("stages").update(payload).eq("id", stageId);
-  if (error) throw new Error(error.message);
+  return updateStage(supabase, stageId, payload);
 }
 
 export async function clearStageAccommodation(supabase, stageId) {

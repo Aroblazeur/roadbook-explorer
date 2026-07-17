@@ -965,6 +965,26 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 
 .stage-detail-card { overflow: hidden; }
 .stage-detail-card > h2 { margin-bottom: 20px; }
+.stage-detail-section-heading { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.stage-detail-section-heading > h2,
+.stage-detail-section-heading > h4 { margin: 0; }
+.stage-detail-variant__notes .stage-detail-section-heading,
+.stage-detail-variant__pois .stage-detail-section-heading,
+.stage-detail-variant__accommodation .stage-detail-section-heading { margin-bottom: 9px; }
+.quick-add { position: relative; display: flex; align-items: center; gap: 8px; }
+.quick-add__toggle { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1px solid rgba(46, 125, 50, .35); border-radius: 50%; background: #e8f5e9; color: var(--primary-dark); cursor: pointer; }
+.quick-add__toggle:hover { background: #c8e6c9; }
+.quick-add__toggle:focus-visible { outline: 3px solid rgba(46, 125, 50, .25); outline-offset: 2px; }
+.quick-add__toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.quick-add__form { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; display: grid; gap: 10px; width: min(360px, calc(100vw - 48px)); padding: 16px; border: 1px solid rgba(46, 125, 50, .25); border-radius: 12px; background: var(--card-bg); box-shadow: 0 12px 34px rgba(20, 45, 25, .2); }
+.quick-add__form label { display: grid; gap: 5px; }
+.quick-add__form input,
+.quick-add__form textarea { width: 100%; }
+.quick-add__form textarea { min-height: 80px; resize: vertical; }
+.quick-add__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.quick-add__actions .stage-detail-button { min-height: 40px; padding: 8px 12px; }
+.quick-add__feedback { color: var(--primary-dark); font-size: .78rem; }
+.quick-add__feedback--error { margin: 0; color: #b42318; }
 .stage-detail-heading { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
 .stage-detail-heading > div { min-width: 0; }
 .stage-detail-heading h2 { margin: 2px 0 0; overflow-wrap: anywhere; }
