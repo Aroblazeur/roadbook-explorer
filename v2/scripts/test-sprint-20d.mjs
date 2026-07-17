@@ -250,8 +250,17 @@ test("le client et l'utilisateur Supabase restent stables pendant un rafraichiss
   const content = readFileSync("src/lib/auth-context.js", "utf-8");
   assert.ok(content.includes("const [supabase] = useState(createClient)"));
   assert.ok(content.includes("keepStableUser(currentUser"));
+  assert.ok(!content.includes("previousUser.updated_at"));
   const loader = readFileSync("src/hooks/studio/useLoadData.js", "utf-8");
   assert.ok(loader.includes("[user?.id, id]"));
+  const roadbookData = readFileSync("src/hooks/studio/useRoadbookData.js", "utf-8");
+  const startPoint = readFileSync("src/hooks/studio/useStartPoint.js", "utf-8");
+  const access = readFileSync("src/hooks/studio/useRoadbookAccess.js", "utf-8");
+  const catalog = readFileSync("src/components/studio/StudioCatalog.js", "utf-8");
+  assert.ok(roadbookData.includes("[supabase, roadbookId, user?.id]"));
+  assert.ok(startPoint.includes("[supabase, roadbookId, user?.id]"));
+  assert.ok(!access.includes("[user, roadbook, supabase"));
+  assert.ok(catalog.includes("[userId, userRole, supabase]"));
 });
 
 test("le brouillon conserve aussi les GPX des variantes", () => {
@@ -263,7 +272,7 @@ test("seule la poignee d'une etape est deplacable afin de laisser les champs sel
   const content = readFileSync("src/components/studio/StageCard.js", "utf-8");
   assert.ok(!content.match(/<article[\s\S]*?draggable="true"[\s\S]*?<div className="studio-stage-card__header"/));
   assert.ok(content.includes("studio-stage-card__drag-handle"));
-  assert.ok(content.includes('aria-label={`Déplacer l\'étape'));
+  assert.ok(content.includes('aria-label={`Glisser l\'étape'));
 });
 
 test("Retour arriere ne peut pas quitter accidentellement le Studio", () => {

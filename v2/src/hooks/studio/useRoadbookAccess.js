@@ -4,10 +4,14 @@ import { useRouter } from "next/navigation";
 export function useRoadbookAccess({ user, roadbook, supabase, roadbookId }) {
   const router = useRouter();
   const [editorAccess, setEditorAccess] = useState(null);
+  const userId = user?.id;
+  const isAdmin = user?.app_metadata?.role === "admin";
+  const ownerId = roadbook?.owner_id;
+  const roadbookSlug = roadbook?.slug;
 
   useEffect(() => {
-    if (!user || !roadbook) return;
-    if (roadbook.owner_id === user.id || user.app_metadata?.role === "admin") {
+    if (!userId || !ownerId) return;
+    if (ownerId === userId || isAdmin) {
       setEditorAccess(true);
       return;
     }
@@ -16,16 +20,16 @@ export function useRoadbookAccess({ user, roadbook, supabase, roadbookId }) {
       .from("roadbook_contributors")
       .select("user_id")
       .eq("roadbook_id", Number(roadbookId))
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled) return;
         const allowed = Boolean(data);
         setEditorAccess(allowed);
-        if (!allowed) router.replace(`/roadbooks/${roadbook.slug}`);
+        if (!allowed) router.replace(`/roadbooks/${roadbookSlug}`);
       });
     return () => { cancelled = true; };
-  }, [user, roadbook, supabase, roadbookId, router]);
+  }, [userId, isAdmin, ownerId, roadbookSlug, supabase, roadbookId, router]);
 
   return editorAccess;
 }

@@ -85,7 +85,7 @@ export default function RoadbookDetailPage() {
 
   const { saveWithLock, saving } = useSaveWithLock({ supabase, id, tabId, roadbook, stages, poisByStage, variantsByStage, setRoadbook, onError: setError, onSuccess: setSuccess, markRemoteConflict, markSynced, saveImmediate });
 
-  useEffect(() => { if (!authLoading && !user) router.replace("/login"); }, [user, authLoading]);
+  useEffect(() => { if (!authLoading && !user) router.replace("/login"); }, [user?.id, authLoading, router]);
   const editorAccess = useRoadbookAccess({ user, roadbook, supabase, roadbookId: id });
 
   const { handleSaveAll, handleToggleVisibility, handleDeleteRoadbook, deletingRoadbook } = useSaveActions({ supabase, id, roadbook, setRoadbook, title, description, activity, destination, project, isPublic, setIsPublic, officialRoute, traceRoute, setTraceRoute, coverMode, coverUrl, coverMediaId, stages, setStages, poisByStage, setPoisByStage, poisByVariant, setPoisByVariant, variantsByStage, setVariantsByStage, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint, setError, setSuccess, markRemoteConflict, saveWithLock, clearDraft, onDeleted: () => router.replace("/dashboard/roadbooks") });

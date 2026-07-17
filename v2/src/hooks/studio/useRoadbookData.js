@@ -59,7 +59,7 @@ export function useRoadbookData({ supabase, roadbookId, user }) {
       if (!cancelledRef.current) setLoading(false);
       return null;
     }
-  }, [supabase, roadbookId, user]);
+  }, [supabase, roadbookId, user?.id]);
 
   const reloadStages = useCallback(async () => {
     const stagesData = await loadStages(supabase, roadbookId);

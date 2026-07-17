@@ -12,7 +12,6 @@ function keepStableUser(previousUser, nextUser) {
   const isSameUserState =
     previousUser.id === nextUser.id &&
     previousUser.email === nextUser.email &&
-    previousUser.updated_at === nextUser.updated_at &&
     previousUser.app_metadata?.role === nextUser.app_metadata?.role;
 
   return isSameUserState ? previousUser : nextUser;

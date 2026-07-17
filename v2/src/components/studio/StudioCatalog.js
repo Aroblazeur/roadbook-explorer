@@ -34,6 +34,8 @@ export default function StudioCatalog({ selectedId = null }) {
   const [pendingDraft, setPendingDraft] = useState(null);
   const localDraftIdRef = useRef(null);
   const tabIdRef = useRef(null);
+  const userId = user?.id;
+  const userRole = user?.app_metadata?.role;
 
   if (!localDraftIdRef.current) localDraftIdRef.current = generateLocalDraftId();
   if (!tabIdRef.current) tabIdRef.current = crypto.randomUUID?.() ?? `tab-${Date.now()}`;
@@ -81,9 +83,9 @@ export default function StudioCatalog({ selectedId = null }) {
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     loadRoadbooks();
-    const restored = loadNewDraft(user.id, localDraftIdRef.current);
+    const restored = loadNewDraft(userId, localDraftIdRef.current);
     if (restored) {
       const payload = restored.payload;
       setPendingDraft(restored);
@@ -98,7 +100,7 @@ export default function StudioCatalog({ selectedId = null }) {
       setCurrentGpx(payload.currentGpx ?? "");
       setShowCreate(true);
     }
-  }, [user]);
+  }, [userId, userRole, supabase]);
 
   function saveFormDraft() {
     if (!user?.id || !localDraftIdRef.current) return;

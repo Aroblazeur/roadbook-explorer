@@ -21,7 +21,7 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
       .catch(() => { if (active) setStartPoint(createEmptyStartPoint()); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [supabase, roadbookId, user]);
+  }, [supabase, roadbookId, user?.id]);
 
   const prepareForSave = useCallback(async () => {
     let completed = { ...normalizeStartPoint(startPoint), google_maps_url: buildGoogleMapsDirectionsUrl(startPoint) };
