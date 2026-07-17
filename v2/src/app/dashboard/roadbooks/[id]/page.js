@@ -94,14 +94,16 @@ export default function RoadbookDetailPage() {
     return handleSaveAll();
   };
 
-  const handleDuplicateAccommodation = async (targetStageId, accommodation, sourceKind) => {
-    const targetStage = stages.find(stage => String(stage.id) === String(targetStageId));
-    if (!targetStage) {
-      setError("Étape de destination introuvable.");
+  const handleDuplicateAccommodation = async (target, accommodation, sourceKind) => {
+    const targetRecord = target?.type === "variant"
+      ? Object.values(variantsByStage).flat().find(variant => String(variant.id) === String(target.id))
+      : stages.find(stage => String(stage.id) === String(target?.id));
+    if (!targetRecord) {
+      setError(target?.type === "variant" ? "Variante de destination introuvable." : "Étape de destination introuvable.");
       return false;
     }
     try {
-      const duplicate = buildDuplicateAccommodationUpdate(targetStage, accommodation, sourceKind);
+      const duplicate = buildDuplicateAccommodationUpdate(targetRecord, accommodation, sourceKind);
       const photoMediaId = Number(accommodation.photoMediaId);
       if (Number.isInteger(photoMediaId) && photoMediaId > 0) {
         const photoMedia = images.find(image => Number(image.id) === photoMediaId);
@@ -112,12 +114,19 @@ export default function RoadbookDetailPage() {
             : image));
         }
       }
-      setStages(previous => previous.map(stage => String(stage.id) === String(targetStageId)
-        ? { ...stage, ...duplicate.updates }
-        : stage));
+      if (target.type === "variant") {
+        setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => String(variant.id) === String(target.id)
+          ? { ...variant, ...duplicate.updates }
+          : variant)])));
+      } else {
+        setStages(previous => previous.map(stage => String(stage.id) === String(target.id)
+          ? { ...stage, ...duplicate.updates }
+          : stage));
+      }
+      const destinationLabel = target.type === "variant" ? "sur la variante" : "sur l'étape";
       setSuccess(duplicate.placement === "primary"
-        ? "Hébergement dupliqué comme hébergement principal."
-        : "Hébergement dupliqué comme hébergement alternatif.");
+        ? `Hébergement dupliqué comme hébergement principal ${destinationLabel}.`
+        : `Hébergement dupliqué comme hébergement alternatif ${destinationLabel}.`);
       return true;
     } catch (duplicateError) {
       setError(duplicateError.message ?? String(duplicateError));
@@ -169,7 +178,7 @@ export default function RoadbookDetailPage() {
                 {stages.map((stage, index) => {
                 const stagePois = poisByStage[stage.id] ?? [];
                 const stageVariants = variantsByStage[stage.id] ?? [];
-                return <StageCard key={stage.id} stage={stage} index={index} displayLabel={stageDisplayLabel(stages, index)} canMoveUp={index > 0} canMoveDown={index < stages.length - 1} onMoveUp={() => moveByOffset(stage.id, -1)} onMoveDown={() => moveByOffset(stage.id, 1)} onStageNumberChange={(value) => setStages(previous => updateStageNumberAndOrder(previous, stage.id, value))} expanded={isStageExpanded(stage.id)} onToggleExpand={() => toggleStage(stage.id)} stageCrud={stageCrud} gpx={gpx} stagePois={stagePois} stageVariants={stageVariants} poisByVariant={poisByVariant} dragHandlers={{ handleDragStart, handleDragOver, handleDragEnd, handleDrop }} draggingStageId={draggingStageId} dragOverStageId={dragOverStageId} stagePhotoMedia={images.find(image => image.stage_id === stage.id && image.metadata?.variant_id == null && !["accommodation", "poi"].includes(image.metadata?.purpose)) ?? null} images={images} stages={stages} onDuplicateAccommodation={handleDuplicateAccommodation} onStageChange={(stageId, updates) => setStages(previous => updateStageFields(previous, stageId, updates))} onVariantChange={(variantId, updates) => setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => variant.id === variantId ? { ...variant, ...updates } : variant)])))} onUploadStagePhoto={async (event, stageId) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await uploadMedia(file, { stageId, metadata: { purpose: "stage-photo" } }); }} onUploadVariantPhoto={async (event, stageId, variantId) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await uploadMedia(file, { stageId, variantId, metadata: { purpose: "stage-photo" } }); }} onUploadAccommodationPhoto={(file, target) => uploadMedia(file, { stageId: target.stageId, variantId: target.variantId, metadata: { purpose: "accommodation" } })} onUploadPoiPhoto={(file, target) => uploadMedia(file, { stageId: target.stageId, variantId: target.variantId, metadata: { purpose: "poi" } })} uploadLoading={uploadLoading} />;
+                return <StageCard key={stage.id} stage={stage} index={index} displayLabel={stageDisplayLabel(stages, index)} canMoveUp={index > 0} canMoveDown={index < stages.length - 1} onMoveUp={() => moveByOffset(stage.id, -1)} onMoveDown={() => moveByOffset(stage.id, 1)} onStageNumberChange={(value) => setStages(previous => updateStageNumberAndOrder(previous, stage.id, value))} expanded={isStageExpanded(stage.id)} onToggleExpand={() => toggleStage(stage.id)} stageCrud={stageCrud} gpx={gpx} stagePois={stagePois} stageVariants={stageVariants} variantsByStage={variantsByStage} poisByVariant={poisByVariant} dragHandlers={{ handleDragStart, handleDragOver, handleDragEnd, handleDrop }} draggingStageId={draggingStageId} dragOverStageId={dragOverStageId} stagePhotoMedia={images.find(image => image.stage_id === stage.id && image.metadata?.variant_id == null && !["accommodation", "poi"].includes(image.metadata?.purpose)) ?? null} images={images} stages={stages} onDuplicateAccommodation={handleDuplicateAccommodation} onStageChange={(stageId, updates) => setStages(previous => updateStageFields(previous, stageId, updates))} onVariantChange={(variantId, updates) => setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => variant.id === variantId ? { ...variant, ...updates } : variant)])))} onUploadStagePhoto={async (event, stageId) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await uploadMedia(file, { stageId, metadata: { purpose: "stage-photo" } }); }} onUploadVariantPhoto={async (event, stageId, variantId) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await uploadMedia(file, { stageId, variantId, metadata: { purpose: "stage-photo" } }); }} onUploadAccommodationPhoto={(file, target) => uploadMedia(file, { stageId: target.stageId, variantId: target.variantId, metadata: { purpose: "accommodation" } })} onUploadPoiPhoto={(file, target) => uploadMedia(file, { stageId: target.stageId, variantId: target.variantId, metadata: { purpose: "poi" } })} uploadLoading={uploadLoading} />;
               })}
               </div>
             </div>
