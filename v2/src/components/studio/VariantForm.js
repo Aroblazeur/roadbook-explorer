@@ -36,9 +36,9 @@ export default function VariantForm({
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
   } = stageCrud;
   const {
-    gpxByVariant, gpxUploading, metricsLoading, locationsLoading,
+    gpxByVariant, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
-    handleGpxRecalculate, handleGpxExtractLocations,
+    handleGpxRecalculate, handleGpxExtractLocations, handleGoogleMapsRecalculate,
   } = gpx;
   const isCreatingHere = variantForm.stage_id === stageId;
   const createFormRef = useRevealForm(isCreatingHere ? `${stageId}:${variantForm.editing ?? "new"}` : null);
@@ -62,6 +62,7 @@ export default function VariantForm({
         const changeMeta = updates => change({ metadata: { ...meta, ...updates } });
         const variantGpx = gpxByVariant?.[stageId]?.[variant.id] ?? null;
         const isExtractingLocations = locationsLoading === `variant:${variant.id}`;
+        const isCalculatingGoogleMetrics = googleMetricsLoading === `variant:${variant.id}`;
         const displayedTitle = resolveVariantTitle(variant, stageDisplayLabel);
         const variantIndex = stageVariants.findIndex(item => item.id === variant.id);
         const isDragging = dragHandlers?.draggingVariantId === variant.id;
@@ -150,7 +151,15 @@ export default function VariantForm({
                   <div className="studio-stage-extra">
                     <div className="studio-stage-extra__header"><h5>GPX et carte</h5></div>
                     <div className="studio-form-grid studio-form-grid--compact">
-                      <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={variant.map_embed_url ?? ""} onChange={event => change({ map_embed_url: event.target.value })} /></label>
+                      <div className="studio-form-grid__full">
+                        <label htmlFor={`variant-map-${variant.id}`}>Carte (lien Google Maps ou intégration)</label>
+                        <div className="studio-resource-field">
+                          <input id={`variant-map-${variant.id}`} type="url" value={variant.map_embed_url ?? ""} onChange={event => change({ map_embed_url: event.target.value })} />
+                          <button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" onClick={() => handleGoogleMapsRecalculate(variant, "variant")} disabled={googleMetricsLoading != null || (!variant.map_embed_url && !(variant.departure && variant.arrival))}>
+                            {isCalculatingGoogleMetrics ? "Calcul…" : "Calculer l’itinéraire"}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="studio-stage-extra">

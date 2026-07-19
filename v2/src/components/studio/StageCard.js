@@ -53,9 +53,9 @@ export default function StageCard({
   } = stageCrud;
 
   const {
-    gpxByStage, gpxUploading, metricsLoading, locationsLoading,
+    gpxByStage, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
-    handleGpxRecalculate, handleGpxExtractLocations,
+    handleGpxRecalculate, handleGpxExtractLocations, handleGoogleMapsRecalculate,
   } = gpx;
 
   const meta = stage.metadata ?? {};
@@ -64,6 +64,7 @@ export default function StageCard({
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
   const stageGpx = gpxByStage[stage.id] ?? null;
   const isExtractingLocations = locationsLoading === `stage:${stage.id}`;
+  const isCalculatingGoogleMetrics = googleMetricsLoading === `stage:${stage.id}`;
   const stageHasVariants = hasChildVariants ?? (variantsByStage?.[stage.id]?.length > 0);
   const movableStages = stages.filter(item => isRoadbookItemDraft(item) === isDraft);
   const movableIndex = movableStages.findIndex(item => String(item.id) === String(stage.id));
@@ -181,7 +182,15 @@ export default function StageCard({
                 <h5>GPX et carte</h5>
               </div>
               <div className="studio-form-grid studio-form-grid--compact">
-                <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} /></label>
+                <div className="studio-form-grid__full">
+                  <label htmlFor={`stage-map-${stage.id}`}>Carte (lien Google Maps ou intégration)</label>
+                  <div className="studio-resource-field">
+                    <input id={`stage-map-${stage.id}`} type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} />
+                    <button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" onClick={() => handleGoogleMapsRecalculate(stage, "stage")} disabled={googleMetricsLoading != null || (!stage.map_embed_url && !(stage.departure && stage.arrival))}>
+                      {isCalculatingGoogleMetrics ? "Calcul…" : "Calculer l’itinéraire"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 

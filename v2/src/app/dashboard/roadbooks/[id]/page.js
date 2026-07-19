@@ -53,6 +53,7 @@ export default function RoadbookDetailPage() {
   const { error, setError, success, setSuccess } = useNotifications();
 
   const [formMeta, setFormMeta] = useState({ activity: "", destination: "", project: "" });
+  const [googleMetricsLoading, setGoogleMetricsLoading] = useState(null);
   const activity = formMeta.activity, setActivity = (v) => setFormMeta(p => ({ ...p, activity: v }));
   const destination = formMeta.destination, setDestination = (v) => setFormMeta(p => ({ ...p, destination: v }));
   const project = formMeta.project, setProject = (v) => setFormMeta(p => ({ ...p, project: v }));
@@ -234,8 +235,51 @@ export default function RoadbookDetailPage() {
     return true;
   };
 
+  const handleRecalculateGoogleMapsMetrics = async (target, scope) => {
+    setGoogleMetricsLoading(`${scope}:${target.id}`);
+    setError(null);
+    try {
+      const normalizedActivity = String(activity ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const fallbackTravelMode = /marche|randonnee|pedestre/.test(normalizedActivity)
+        ? "WALK"
+        : /moto/.test(normalizedActivity)
+          ? "TWO_WHEELER"
+          : /voiture|auto/.test(normalizedActivity)
+            ? "DRIVE"
+            : "BICYCLE";
+      const response = await fetch("/api/google-maps/stage-metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roadbookId: Number(id), mapUrl: target.map_embed_url, origin: target.departure, destination: target.arrival, fallbackTravelMode }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.error || "Calcul Google Maps impossible.");
+      const metrics = {
+        distanceKm: Number(result.distanceKm) || 0,
+        elevationGainM: result.elevationGainM == null ? null : Number(result.elevationGainM),
+        elevationLossM: result.elevationLossM == null ? null : Number(result.elevationLossM),
+      };
+      const entityLabel = scope === "variant" ? "Cette variante" : "Cette étape";
+      if (!window.confirm(buildGpxConfirmMessage(target, metrics, result.duration, entityLabel))) return false;
+      const updates = buildGpxStageUpdate(metrics, result.duration);
+      if (scope === "variant") {
+        setVariantsByStage(previous => Object.fromEntries(Object.entries(previous).map(([parentId, variants]) => [parentId, variants.map(variant => String(variant.id) === String(target.id) ? { ...variant, ...updates } : variant)])));
+      } else {
+        setStages(previous => updateStageFields(previous, target.id, updates));
+      }
+      const warning = result.warning ? ` ${result.warning}` : "";
+      setSuccess(`Valeurs calculées depuis Google Maps : ${buildGpxMetricsSuccessMessage(metrics, result.duration)}. Enregistrez les modifications pour les conserver.${warning}`);
+      return true;
+    } catch (googleError) {
+      setError(googleError.message ?? String(googleError));
+      return false;
+    } finally {
+      setGoogleMetricsLoading(null);
+    }
+  };
+
   const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
-  const gpx = { gpxByStage, gpxByVariant, gpxUploading, metricsLoading, locationsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }), handleGpxRecalculate: handleRecalculateGpxMetrics, handleGpxExtractLocations: handleExtractGpxLocations };
+  const gpx = { gpxByStage, gpxByVariant, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxDownload: (row) => downloadGpx(row), handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId) => uploadGpxFile(file, { scope, role, stageId, variantId }), handleGpxRecalculate: handleRecalculateGpxMetrics, handleGpxExtractLocations: handleExtractGpxLocations, handleGoogleMapsRecalculate: handleRecalculateGoogleMapsMetrics };
 
   const activeStages = stages.filter(stage => !isRoadbookItemDraft(stage));
   const draftStages = stages.filter(isRoadbookItemDraft);
