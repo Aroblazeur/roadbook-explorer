@@ -1033,7 +1033,8 @@ function PoiCard({ poi, images = [] }) {
   const photoMedia = images.find(image => Number(image.id) === Number(poi.metadata?.poiPhotoMediaId));
   const photoUrl = safeResourceUrl(photoMedia?.signedUrl || poi.photo_url);
   const poiType = poi.poi_type || poi.type;
-  const linkUrl = safeResourceUrl(poi.link_url, { relative: false }) || poiMapUrl(poi);
+  const linkUrl = safeResourceUrl(poi.link_url, { relative: false });
+  const mapUrl = poiMapUrl(poi);
 
   return (
     <li className={`stage-detail-poi${photoUrl || linkUrl ? "" : " stage-detail-poi--without-image"}`}>
@@ -1042,14 +1043,28 @@ function PoiCard({ poi, images = [] }) {
         <strong className="stage-detail-poi__name">{poiType && <span>[{poiType}] </span>}{poi.name || "Point d'intérêt"}</strong>
         {poi.region && <p className="stage-detail-poi__region">{poi.region}</p>}
         {poi.description && <p className="stage-detail-poi__description">{poi.description}</p>}
-        {linkUrl && (
-          <a className="stage-detail-poi__link" href={linkUrl} target="_blank" rel="noopener noreferrer">
-            {poi.link_url ? "Ouvrir le lien" : "Voir sur la carte"} →
-          </a>
-        )}
+        {(linkUrl || mapUrl) && <div className="stage-detail-poi__actions">
+          {linkUrl && (
+            <a className="stage-detail-poi__link" href={linkUrl} target="_blank" rel="noopener noreferrer">
+              Ouvrir le lien →
+            </a>
+          )}
+          {mapUrl && (
+            <a className="stage-detail-poi__map" href={mapUrl} target="_blank" rel="noopener noreferrer" aria-label={`Afficher ${poi.name || "ce point d'intérêt"} sur la carte`} title="Afficher sur la carte">
+              <PoiMapIcon />
+            </a>
+          )}
+        </div>}
       </div>
     </li>
   );
+}
+
+function PoiMapIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" />
+    <circle cx="12" cy="10" r="2.2" />
+  </svg>;
 }
 
 function AccommodationResource({ accommodation, contextCity, images = [], compact = false }) {
@@ -1218,7 +1233,8 @@ function poiMapUrl(poi) {
   if (Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180) {
     return googleMapsSearchUrl(`${latitude},${longitude}`);
   }
-  return poi.name ? googleMapsSearchUrl(poi.name) : null;
+  const query = [poi.name, poi.region].map(textValue).filter(Boolean).join(" ");
+  return query ? googleMapsSearchUrl(query) : null;
 }
 
 function formatNumber(value) {

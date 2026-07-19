@@ -986,6 +986,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-navigation__current a:focus-visible,
 .stage-detail-route a:focus-visible,
 .stage-detail-poi__link:focus-visible,
+.stage-detail-poi__map:focus-visible,
 .stage-detail-accommodation__map:focus-visible {
   outline: 3px solid rgba(46, 125, 50, .34);
   outline-offset: 3px;
@@ -1101,8 +1102,13 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-poi__name span { color: var(--primary); }
 .stage-detail-poi__region { margin: 0 0 4px; color: var(--text-light); font-size: .82rem; }
 .stage-detail-poi__description { margin: 0; color: var(--text-light); font-size: .88rem; line-height: 1.5; }
+.stage-detail-poi__actions { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
 .stage-detail-poi__link { display: inline-flex; margin-top: 9px; padding: 6px 12px; border: 1px solid rgba(46, 125, 50, .24); border-radius: 999px; color: var(--primary); font-size: .82rem; font-weight: 750; text-decoration: none; }
+.stage-detail-poi__actions .stage-detail-poi__link { margin-top: 0; }
 .stage-detail-poi__link:hover { background: rgba(46, 125, 50, .08); color: var(--primary-dark); }
+.stage-detail-poi__map { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex: 0 0 34px; border: 1px solid rgba(46, 125, 50, .3); border-radius: 50%; color: var(--primary); text-decoration: none; }
+.stage-detail-poi__map svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.stage-detail-poi__map:hover { background: rgba(46, 125, 50, .08); color: var(--primary-dark); }
 
 .stage-detail-accommodation-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
 .stage-detail-accommodation { display: grid; align-content: start; gap: 10px; min-width: 0; }
@@ -1955,6 +1961,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .stage-detail-button--secondary:hover { background: #2e7d32; color: #fff; }
   .stage-detail-navigation__current a,
   .stage-detail-poi__link,
+  .stage-detail-poi__map,
   .stage-detail-accommodation__map { color: #81c784; }
   .stage-detail-photo,
   .stage-detail-map,
@@ -1966,7 +1973,9 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .stage-detail-variant { border-color: #3a3a3a; background: #141414; }
   .stage-detail-poi__link { border-color: rgba(129, 199, 132, .35); }
   .stage-detail-poi__link:hover,
+  .stage-detail-poi__map:hover,
   .stage-detail-accommodation__map:hover { background: rgba(129, 199, 132, .12); color: #a5d6a7; }
+  .stage-detail-poi__map { border-color: rgba(129, 199, 132, .35); }
   .stage-detail-accommodation__placeholder { border-color: rgba(129, 199, 132, .2); background: linear-gradient(135deg, #1a2a1a, #141414); color: #8a9a8e; }
   .stage-detail-accommodation__placeholder span:first-child { background: rgba(129, 199, 132, .12); color: #81c784; }
   .stage-detail-accommodation__map { border-color: rgba(129, 199, 132, .3); }
