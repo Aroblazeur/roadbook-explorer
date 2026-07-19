@@ -1,5 +1,7 @@
 "use client";
 
+import ZoomableImage from "@/components/ZoomableImage";
+
 import useRevealForm from "@/hooks/studio/useRevealForm";
 
 export default function NoteForm({
@@ -33,7 +35,7 @@ export default function NoteForm({
             </div>
             <div className="studio-form-grid studio-form-grid--compact" style={{ marginTop: "0.3rem" }}>
               {(note.text ?? note) && <label className="studio-form-grid__full" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{(note.text ?? note)}</label>}
-              {note.photo && <label className="studio-form-grid__full" style={{ margin: 0 }}><img src={note.photo} alt="" style={{ maxWidth: "100%", maxHeight: "200px", borderRadius: "4px" }} /></label>}
+              {note.photo && <div className="studio-form-grid__full studio-note-photo-preview"><ZoomableImage src={note.photo} alt="Photo associée à la note" /></div>}
             </div>
           </article>
         )) : <p className="studio-detail--empty">Aucune note.</p>}

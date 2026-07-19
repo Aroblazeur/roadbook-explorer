@@ -11,6 +11,7 @@ import {
 import useRevealForm from "@/hooks/studio/useRevealForm";
 import GpxBlock from "./GpxBlock";
 import RouteMapFields from "./RouteMapFields";
+import ZoomableImage from "@/components/ZoomableImage";
 
 function AccommodationFields({ item, onChange, prefix, photoMedia, onUploadPhoto, uploadLoading }) {
   return <div className="studio-form-grid studio-form-grid--compact">
@@ -60,7 +61,7 @@ function TransportSegment({ segment, index, scope, onChange, onRemove, initialRe
 function JourneyPhotoFields({ item, index, scope, media, onChange, onUpload, onRemove, uploadLoading, initialRef }) {
   const previewUrl = media?.signedUrl || item.url;
   return <article ref={initialRef} className="studio-subitem-card studio-journey-photo">
-    {previewUrl && <img className="studio-journey-photo__preview" src={previewUrl} alt={item.caption || `Photo ${index + 1}`} />}
+    {previewUrl && <ZoomableImage className="studio-journey-photo__preview" src={previewUrl} alt={item.caption || `Photo ${index + 1}`} />}
     <div className="studio-form-grid studio-form-grid--compact">
       <label className="studio-form-grid__full" htmlFor={`${scope}-photo-url-${index}`}>Adresse de l’image
         <input id={`${scope}-photo-url-${index}`} data-form-initial-focus type="url" value={item.url} placeholder="https://…" onChange={event => onChange({ url: event.target.value, photoMediaId: null })} />

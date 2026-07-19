@@ -12,6 +12,7 @@ import { isRoadbookItemDraft, withStageDisplayLabels, withVariantDisplayTitles }
 import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
 import { shortDayLabel } from "@/lib/roadbooks/dates";
 import QuickAddEditor from "@/components/QuickAddEditor";
+import ZoomableImage from "@/components/ZoomableImage";
 
 async function getRoadbook(slug) {
   const supabase = await createServerSupabase();
@@ -359,7 +360,7 @@ function JourneyOverview({ value, roadbookSlug, kind, hasGpx = false, images = [
         <span className="roadbook-start-point__map-label">Google Maps <span aria-hidden="true">↗</span></span>
       </a>}
       {photos.length > 0 && <div className="roadbook-start-point__photos" aria-label={`${photos.length} photo${photos.length > 1 ? "s" : ""}`}>
-        {photos.slice(0, 4).map(photo => <img key={`${photo.photoMediaId ?? photo.url}-${photo.index}`} src={photo.url} alt={photo.caption || `${isReturn ? "Retour" : "Point de départ"}, photo ${photo.index + 1}`} loading="lazy" />)}
+        {photos.slice(0, 4).map(photo => <ZoomableImage key={`${photo.photoMediaId ?? photo.url}-${photo.index}`} src={photo.url} alt={photo.caption || `${isReturn ? "Retour" : "Point de départ"}, photo ${photo.index + 1}`} loading="lazy" />)}
         {photos.length > 4 && <span className="roadbook-start-point__photo-count">+{photos.length - 4}</span>}
       </div>}
     </div>
@@ -589,7 +590,7 @@ function ImagesSection({ images }) {
       {availableImages.length > 0 && <div className="flex flex-wrap gap-1">
         {availableImages.map(img => (
           <div key={img.id} style={{ width: 180 }}>
-            <img src={img.signedUrl} alt={img.file_name ?? "image"} style={{ width: "100%", height: 135, objectFit: "cover", borderRadius: 8 }} />
+            <ZoomableImage src={img.signedUrl} alt={img.file_name ?? "image"} buttonClassName="roadbook-image-gallery__photo" loading="lazy" />
             <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.2rem" }}>{img.file_name}</div>
           </div>
         ))}
@@ -677,7 +678,7 @@ function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, 
         {point.description && <p className="stage-detail-description">{point.description}</p>}
         {photos.length > 0 && <div className="journey-photo-gallery">
           {photos.map(photo => <figure key={`${photo.photoMediaId ?? photo.url}-${photo.index}`}>
-            <img src={photo.url} alt={photo.caption || `${title}, photo ${photo.index + 1}`} loading="lazy" />
+            <ZoomableImage src={photo.url} alt={photo.caption || `${title}, photo ${photo.index + 1}`} loading="lazy" />
             {photo.caption && <figcaption>{photo.caption}</figcaption>}
           </figure>)}
         </div>}
@@ -770,7 +771,7 @@ function VariantCard({ variant, stageId, day, contextCity, pois = [], variantGpx
       </header>
       {photoUrl && (
         <figure className="stage-detail-photo">
-          <img src={photoUrl} alt={`Photo de ${variant.label || "la variante"}`} loading="lazy" />
+          <ZoomableImage src={photoUrl} alt={`Photo de ${variant.label || "la variante"}`} loading="lazy" />
         </figure>
       )}
       {(departure || arrival) && <StageRoute departure={departure} arrival={arrival} />}
@@ -895,7 +896,7 @@ function StageCard({ stage, stageIndex, pois, stageGpxRoutes = [], stagePhotoUrl
 
         {photoUrl && (
           <figure className="stage-detail-photo">
-            <img src={photoUrl} alt={`Photo de ${stage.title || stageLabel}`} loading="lazy" />
+            <ZoomableImage src={photoUrl} alt={`Photo de ${stage.title || stageLabel}`} loading="lazy" />
           </figure>
         )}
 
@@ -1051,7 +1052,7 @@ function NoteList({ notes, imageAlt }) {
       {notes.map((note, index) => (
         <li className="stage-detail-note" key={`${note.text}-${index}`}>
           <p>{note.text}</p>
-          {note.photo && <img src={note.photo} alt={imageAlt} loading="lazy" />}
+          {note.photo && <ZoomableImage src={note.photo} alt={imageAlt} loading="lazy" />}
         </li>
       ))}
     </ul>
@@ -1067,7 +1068,7 @@ function PoiCard({ poi, images = [] }) {
 
   return (
     <li className={`stage-detail-poi${photoUrl || linkUrl ? "" : " stage-detail-poi--without-image"}`}>
-      {photoUrl ? <img src={photoUrl} alt={`Photo de ${poi.name || "ce point d'intérêt"}`} loading="lazy" /> : linkUrl ? <LinkPreviewCard preview={poi.metadata?.linkPreview ?? poi.preview} url={linkUrl} title={poi.name} /> : null}
+      {photoUrl ? <ZoomableImage src={photoUrl} alt={`Photo de ${poi.name || "ce point d'intérêt"}`} loading="lazy" /> : linkUrl ? <LinkPreviewCard preview={poi.metadata?.linkPreview ?? poi.preview} url={linkUrl} title={poi.name} /> : null}
       <div className="stage-detail-poi__content">
         <strong className="stage-detail-poi__name">{poiType && <span>[{poiType}] </span>}{poi.name || "Point d'intérêt"}</strong>
         {poi.region && <p className="stage-detail-poi__region">{poi.region}</p>}
@@ -1106,7 +1107,7 @@ function AccommodationResource({ accommodation, contextCity, images = [], compac
   return (
     <article className={`stage-detail-accommodation${compact ? " stage-detail-accommodation--compact" : ""}`}>
       {photoUrl ? (
-        <img className="stage-detail-accommodation__image" src={photoUrl} alt={`Photo de ${name}`} loading="lazy" />
+        <ZoomableImage buttonClassName="stage-detail-accommodation__image-wrap" className="stage-detail-accommodation__image" src={photoUrl} alt={`Photo de ${name}`} loading="lazy" />
       ) : websiteUrl ? (
         <LinkPreviewCard preview={accommodation.preview} url={websiteUrl} title={name} />
       ) : (
