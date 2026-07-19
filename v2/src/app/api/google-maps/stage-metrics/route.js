@@ -91,8 +91,13 @@ export async function POST(request) {
 
     const requestedMode = String(mapRoute?.travelMode || body.fallbackTravelMode || "BICYCLE").toUpperCase();
     const travelMode = ALLOWED_TRAVEL_MODES.has(requestedMode) ? requestedMode : "BICYCLE";
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
     if (!apiKey) return NextResponse.json({ error: "La clé Google Maps n'est pas configurée." }, { status: 503 });
+    if (!apiKey.startsWith("AIza") || apiKey.length < 30) {
+      return NextResponse.json({
+        error: "GOOGLE_MAPS_API_KEY ne contient pas une clé Google Maps valide. Remplacez sa valeur dans Vercel par la clé API complète, puis redéployez.",
+      }, { status: 503 });
+    }
 
     const route = await computeRoute(apiKey, locations, travelMode);
     const distanceMeters = Number(route.distanceMeters) || 0;

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useNotifications } from "@/hooks/studio/useNotifications";
 import useStudioEditing from "@/hooks/studio/useStudioEditing";
@@ -70,7 +70,34 @@ export default function RoadbookDetailPage() {
   const { coverUrl, setCoverUrl, coverMediaId, setCoverMediaId, coverPreview, setCoverPreview, coverMode, setCoverMode } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
   const { startPoint, setStartPoint, startPointLoading, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
 
-  const { loadEnrichmentIndices, prepareAutomaticCompletion } = useEnrichment({ roadbook, activity, stages, variantsByStage, poisByStage, poisByVariant, gpxHelpers: { gpxByStage, gpxByVariant, analyzeStageGpx } });
+  const analyzeGoogleMapsRoute = useCallback(async target => {
+    const normalizedActivity = String(activity ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const fallbackTravelMode = /marche|randonnee|pedestre/.test(normalizedActivity)
+      ? "WALK"
+      : /moto/.test(normalizedActivity)
+        ? "TWO_WHEELER"
+        : /voiture|auto/.test(normalizedActivity)
+          ? "DRIVE"
+          : "BICYCLE";
+    const response = await fetch("/api/google-maps/stage-metrics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roadbookId: Number(id), mapUrl: target.map_embed_url, origin: target.departure, destination: target.arrival, fallbackTravelMode }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result?.error || "Calcul Google Maps impossible.");
+    return {
+      metrics: {
+        distanceKm: Number(result.distanceKm) || 0,
+        elevationGainM: result.elevationGainM == null ? null : Number(result.elevationGainM),
+        elevationLossM: result.elevationLossM == null ? null : Number(result.elevationLossM),
+      },
+      duration: result.duration,
+      warning: result.warning,
+    };
+  }, [activity, id]);
+
+  const { loadEnrichmentIndices, prepareAutomaticCompletion } = useEnrichment({ roadbook, activity, stages, variantsByStage, poisByStage, poisByVariant, gpxHelpers: { gpxByStage, gpxByVariant, analyzeStageGpx }, analyzeGoogleMapsRoute });
 
   const { expandedStages, setExpandedStages, showStageForm, setShowStageForm, duplicating, setDuplicating, isStageExpanded, toggleStage } = useStudioEditing();
 
@@ -239,26 +266,8 @@ export default function RoadbookDetailPage() {
     setGoogleMetricsLoading(`${scope}:${target.id}`);
     setError(null);
     try {
-      const normalizedActivity = String(activity ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const fallbackTravelMode = /marche|randonnee|pedestre/.test(normalizedActivity)
-        ? "WALK"
-        : /moto/.test(normalizedActivity)
-          ? "TWO_WHEELER"
-          : /voiture|auto/.test(normalizedActivity)
-            ? "DRIVE"
-            : "BICYCLE";
-      const response = await fetch("/api/google-maps/stage-metrics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roadbookId: Number(id), mapUrl: target.map_embed_url, origin: target.departure, destination: target.arrival, fallbackTravelMode }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result?.error || "Calcul Google Maps impossible.");
-      const metrics = {
-        distanceKm: Number(result.distanceKm) || 0,
-        elevationGainM: result.elevationGainM == null ? null : Number(result.elevationGainM),
-        elevationLossM: result.elevationLossM == null ? null : Number(result.elevationLossM),
-      };
+      const result = await analyzeGoogleMapsRoute(target);
+      const metrics = result.metrics;
       const entityLabel = scope === "variant" ? "Cette variante" : "Cette étape";
       if (!window.confirm(buildGpxConfirmMessage(target, metrics, result.duration, entityLabel))) return false;
       const updates = buildGpxStageUpdate(metrics, result.duration);

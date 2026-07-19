@@ -18,7 +18,7 @@ import {
 } from "@/lib/roadbooks/automation";
 import { alternativesFromStage, primaryAccommodationFromStage } from "@/lib/roadbooks/accommodations";
 
-export function useEnrichment({ roadbook, activity, stages, variantsByStage, poisByStage, poisByVariant = {}, gpxHelpers }) {
+export function useEnrichment({ roadbook, activity, stages, variantsByStage, poisByStage, poisByVariant = {}, gpxHelpers, analyzeGoogleMapsRoute }) {
   const [poiIndex, setPoiIndex] = useState(null);
   const [accommodationIndex, setAccommodationIndex] = useState(null);
 
@@ -106,6 +106,23 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
           const completion = completeStageMetrics(variant, result.metrics, result.durationStr);
           Object.assign(variant, completion.value);
           if (completion.filled) { report.gpxVariants++; report.fields += completion.filled; }
+        }
+      }
+    }
+
+    if (analyzeGoogleMapsRoute) {
+      for (const entity of [...completedStages, ...Object.values(completedVariantsByStage).flat()]) {
+        const missingMetrics = [entity.distance_km, entity.elevation_gain_m, entity.elevation_loss_m]
+          .some(isMissingAutomationValue);
+        if (!entity.map_embed_url || !missingMetrics) continue;
+        try {
+          const result = await analyzeGoogleMapsRoute(entity);
+          const completion = completeStageMetrics(entity, result.metrics, result.duration);
+          Object.assign(entity, completion.value);
+          if (completion.filled) report.fields += completion.filled;
+          if (result.warning) report.warnings.push(`${entity.label || entity.title || "Itinéraire"} : ${result.warning}`);
+        } catch (error) {
+          report.warnings.push(`${entity.label || entity.title || "Itinéraire"} : ${error?.message ?? String(error)}`);
         }
       }
     }
@@ -218,7 +235,7 @@ export function useEnrichment({ roadbook, activity, stages, variantsByStage, poi
     }
 
     return { stages: completedStages, variantsByStage: completedVariantsByStage, poisByStage: completedPois, poisByVariant: completedVariantPois, poiUpdates: [...poiUpdates.values()], report };
-  }, [stages, variantsByStage, poisByStage, poisByVariant, poiIndex, accommodationIndex, roadbook?.slug, activity, loadEnrichmentIndices, gpxHelpers]);
+  }, [stages, variantsByStage, poisByStage, poisByVariant, poiIndex, accommodationIndex, roadbook?.slug, activity, loadEnrichmentIndices, gpxHelpers, analyzeGoogleMapsRoute]);
 
   return { loadEnrichmentIndices, prepareAutomaticCompletion };
 }
