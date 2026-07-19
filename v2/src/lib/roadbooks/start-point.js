@@ -42,7 +42,7 @@ export function normalizeTransportSegment(value) {
 }
 
 export function createEmptyJourney() {
-  return { transport_segments: [], route_maps: [], description: "", accommodations: [], pois: [] };
+  return { transport_segments: [], route_maps: [], photos: [], description: "", accommodations: [], pois: [] };
 }
 
 function normalizeRouteMaps(value) {
@@ -50,6 +50,17 @@ function normalizeRouteMaps(value) {
   return value.map(item => typeof item === "string"
     ? { label: "", url: String(item) }
     : { label: String(item?.label ?? ""), url: String(item?.url ?? "") });
+}
+
+function normalizeJourneyPhotos(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => typeof item === "string"
+    ? { url: String(item), photoMediaId: null, caption: "" }
+    : {
+        url: String(item?.url ?? item?.photo_url ?? ""),
+        photoMediaId: Number(item?.photoMediaId ?? item?.photo_media_id) || null,
+        caption: String(item?.caption ?? ""),
+      });
 }
 
 function normalizeStartPointPoi(value) {
@@ -85,6 +96,7 @@ export function normalizeJourney(value, { acceptLegacy = true } = {}) {
     ...createEmptyJourney(),
     transport_segments: segments,
     route_maps: normalizeRouteMaps(source.route_maps ?? source.routeMaps),
+    photos: normalizeJourneyPhotos(source.photos),
     description: String(source.description ?? ""),
     accommodations: Array.isArray(source.accommodations) ? source.accommodations.map(normalizeAccommodation) : [],
     pois: Array.isArray(source.pois) ? source.pois.map(normalizeStartPointPoi) : [],
@@ -148,7 +160,8 @@ export function hasJourney(value) {
   const journey = normalizeJourney(value);
   return Boolean(
     journey.transport_segments.some(segment => hasLegacyRoute(segment)) || journey.description.trim() ||
-    journey.route_maps.some(item => item.url.trim()) || journey.accommodations.length || journey.pois.length
+    journey.route_maps.some(item => item.url.trim()) || journey.photos.some(item => item.url.trim() || item.photoMediaId) ||
+    journey.accommodations.length || journey.pois.length
   );
 }
 
@@ -177,6 +190,7 @@ function buildJourneyValue(value) {
       google_maps_url: buildGoogleMapsDirectionsUrl(segment) || null,
     })).filter(segment => hasLegacyRoute(segment)),
     route_maps: journey.route_maps.map(item => ({ label: item.label.trim(), url: item.url.trim() })).filter(item => item.url),
+    photos: journey.photos.map(item => ({ url: item.url.trim(), photoMediaId: item.photoMediaId, caption: item.caption.trim() })).filter(item => item.url || item.photoMediaId),
     description: journey.description.trim() || null,
     accommodations: journey.accommodations.map(normalizeAccommodation).filter(item => item.name || item.url || item.photo || item.photoMediaId || item.type || item.price || item.note || item.description),
     pois: journey.pois.map(normalizeStartPointPoi).filter(item => item.name || item.region || item.link_url || item.description || item.photo_url || item.photoMediaId).map(item => ({
@@ -204,6 +218,7 @@ export function buildStartPointRecord(value, roadbookId) {
     duration: start.transport_segments.length === 1 ? start.transport_segments[0].duration || null : null,
     google_maps_url: start.transport_segments.length === 1 ? start.transport_segments[0].google_maps_url : null,
     route_maps: start.route_maps,
+    photos: start.photos,
     accommodations: start.accommodations,
     pois: start.pois,
     transport_segments: start.transport_segments,

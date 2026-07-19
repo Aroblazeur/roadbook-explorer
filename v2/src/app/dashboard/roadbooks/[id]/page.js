@@ -63,7 +63,7 @@ export default function RoadbookDetailPage() {
   const { draggingStageId, dragOverStageId, handleDragStart, handleDragOver, handleDragEnd, handleDrop, moveByOffset } = useStageDragDrop({ setStages });
   const variantDragHandlers = useVariantDragDrop({ setVariantsByStage });
 
-  const { images, setImages, uploadLoading, reloadMedia, uploadMedia } = useMediaManager({ supabase, roadbookId: id, userId: user?.id, onError: setError, onSuccess: setSuccess, onMutation: refreshRoadbookVersion });
+  const { images, setImages, uploadLoading, reloadMedia, uploadMedia, removeMedia } = useMediaManager({ supabase, roadbookId: id, userId: user?.id, onError: setError, onSuccess: setSuccess, onMutation: refreshRoadbookVersion });
 
   const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes, gpxUploading, metricsLoading, locationsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, computeStageMetrics, analyzeStageGpx, extractStageLocations } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
 
@@ -331,7 +331,7 @@ export default function RoadbookDetailPage() {
               <RouteForm embedded mode="trace" values={{ dist: traceRoute.traceDist, gain: traceRoute.traceGain, loss: traceRoute.traceLoss, gpx: traceRoute.traceGpx, map: traceRoute.traceMap }} setValues={fn => setTraceRoute(previous => { const next = fn({ dist: previous.traceDist, gain: previous.traceGain, loss: previous.traceLoss, gpx: previous.traceGpx, map: previous.traceMap }); return { traceDist: next.dist, traceGain: next.gain, traceLoss: next.loss, traceGpx: next.gpx, traceMap: next.map }; })} mediaRow={gpxCustom} gpxUploading={gpxUploading} handleGpxDownload={gpx.handleGpxDownload} handleGpxReplace={gpx.handleGpxReplace} handleGpxDelete={gpx.handleGpxDelete} handleGpxUpload={gpx.handleGpxUpload} />
             </div>
           </details>
-          <StartPointSection value={startPoint} onChange={setStartPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "start-point" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "start-point" } })} />
+          <StartPointSection value={startPoint} onChange={setStartPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadJourneyPhoto={(file) => uploadMedia(file, { metadata: { purpose: "journey-photo", journey_scope: "start" } })} onRemoveJourneyPhoto={removeMedia} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "start-point" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "start-point" } })} />
           {gpxError && <p className="page-error">{gpxError}</p>}
           <StudioInfoCard roadbook={roadbook} />
           <div className="studio-card">
@@ -351,7 +351,7 @@ export default function RoadbookDetailPage() {
               </div>
             </div>
           </div>
-          <StartPointSection kind="return" value={returnPoint} onChange={setReturnPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "return" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "return" } })} />
+          <StartPointSection kind="return" value={returnPoint} onChange={setReturnPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadJourneyPhoto={(file) => uploadMedia(file, { metadata: { purpose: "journey-photo", journey_scope: "return" } })} onRemoveJourneyPhoto={removeMedia} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "return" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "return" } })} />
       </section>
     </StudioShell>
   );

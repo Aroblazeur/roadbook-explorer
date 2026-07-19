@@ -57,6 +57,29 @@ function TransportSegment({ segment, index, scope, onChange, onRemove, initialRe
   </article>;
 }
 
+function JourneyPhotoFields({ item, index, scope, media, onChange, onUpload, onRemove, uploadLoading, initialRef }) {
+  const previewUrl = media?.signedUrl || item.url;
+  return <article ref={initialRef} className="studio-subitem-card studio-journey-photo">
+    {previewUrl && <img className="studio-journey-photo__preview" src={previewUrl} alt={item.caption || `Photo ${index + 1}`} />}
+    <div className="studio-form-grid studio-form-grid--compact">
+      <label className="studio-form-grid__full" htmlFor={`${scope}-photo-url-${index}`}>Adresse de l’image
+        <input id={`${scope}-photo-url-${index}`} data-form-initial-focus type="url" value={item.url} placeholder="https://…" onChange={event => onChange({ url: event.target.value, photoMediaId: null })} />
+      </label>
+      <label className="studio-form-grid__full" htmlFor={`${scope}-photo-caption-${index}`}>Légende (facultative)
+        <input id={`${scope}-photo-caption-${index}`} value={item.caption} onChange={event => onChange({ caption: event.target.value })} />
+      </label>
+    </div>
+    <div className="studio-journey-photo__actions">
+      <label className="terrain-button terrain-button--secondary studio-action-button--compact studio-file-button">
+        {uploadLoading ? "Import…" : media ? "Remplacer le fichier" : "Importer un fichier"}
+        <input type="file" accept="image/*" disabled={uploadLoading} onChange={async event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) await onUpload(file); }} />
+      </label>
+      {media && <span className="studio-resource-field__file">{media.file_name}</span>}
+      <button type="button" className="terrain-button terrain-button--danger" onClick={onRemove}>Supprimer</button>
+    </div>
+  </article>;
+}
+
 export default function StartPointSection({
   value,
   onChange,
@@ -64,6 +87,8 @@ export default function StartPointSection({
   images = [],
   onUploadAccommodationPhoto,
   onUploadPoiPhoto,
+  onUploadJourneyPhoto,
+  onRemoveJourneyPhoto,
   uploadLoading = false,
   gpx,
 }) {
@@ -86,6 +111,26 @@ export default function StartPointSection({
     const media = await onUploadPoiPhoto?.(file);
     if (media?.id) update({ pois: point.pois.map((item, itemIndex) => itemIndex === index ? { ...item, photo_url: "", photoMediaId: media.id } : item) });
   };
+  const uploadJourneyPhoto = async (file, index) => {
+    const previousMedia = images.find(image => Number(image.id) === Number(point.photos[index]?.photoMediaId)) ?? null;
+    const media = await onUploadJourneyPhoto?.(file);
+    if (!media?.id) return;
+    onChange(previous => {
+      const journey = normalizeJourney(previous);
+      return { ...journey, photos: journey.photos.map((item, itemIndex) => itemIndex === index ? { ...item, url: "", photoMediaId: media.id } : item) };
+    });
+    if (previousMedia) await onRemoveJourneyPhoto?.(previousMedia);
+  };
+  const removeJourneyPhoto = async index => {
+    const media = images.find(image => Number(image.id) === Number(point.photos[index]?.photoMediaId)) ?? null;
+    update({ photos: point.photos.filter((_, itemIndex) => itemIndex !== index) });
+    if (media) await onRemoveJourneyPhoto?.(media);
+  };
+  const changeJourneyPhoto = async (index, patch) => {
+    const media = images.find(image => Number(image.id) === Number(point.photos[index]?.photoMediaId)) ?? null;
+    update({ photos: point.photos.map((photo, itemIndex) => itemIndex === index ? { ...photo, ...patch } : photo) });
+    if (Object.hasOwn(patch, "url") && media) await onRemoveJourneyPhoto?.(media);
+  };
 
   return <details className="studio-general-info studio-start-point">
     <summary className="studio-general-info__header"><span className="studio-general-info__title" role="heading" aria-level="3">{isReturn ? "Retour" : "Point de départ"}</span></summary>
@@ -105,6 +150,17 @@ export default function StartPointSection({
       </section>
 
       <label className="studio-form-grid__full">Description<textarea value={point.description} onChange={e => update({ description: e.target.value })} /></label>
+
+      <section className="studio-section-block">
+        <div className="studio-stage-extra__header"><h4>Photos</h4><div className="studio-journey-photo__add-actions">
+          <button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("photo", point.photos.length); update({ photos: [...point.photos, { url: "", photoMediaId: null, caption: "" }] }); }}>Ajouter par URL</button>
+          <label className="terrain-button terrain-button--secondary studio-file-button">{uploadLoading ? "Import…" : "Importer des photos"}<input type="file" accept="image/*" multiple disabled={uploadLoading} onChange={async event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; for (const file of files) { const media = await onUploadJourneyPhoto?.(file); if (media?.id) onChange(previous => { const journey = normalizeJourney(previous); return { ...journey, photos: [...journey.photos, { url: "", photoMediaId: media.id, caption: "" }] }; }); } }} /></label>
+        </div></div>
+        <div className="studio-journey-photo-list">
+          {point.photos.map((item, index) => <JourneyPhotoFields key={`${scope}-photo-${item.photoMediaId ?? "url"}-${index}`} item={item} index={index} scope={scope} media={images.find(image => Number(image.id) === Number(item.photoMediaId)) ?? null} initialRef={newItem.type === "photo" && newItem.index === index ? newItemRef : null} uploadLoading={uploadLoading} onChange={patch => changeJourneyPhoto(index, patch)} onUpload={file => uploadJourneyPhoto(file, index)} onRemove={() => removeJourneyPhoto(index)} />)}
+        </div>
+        {!point.photos.length && <p className="studio-detail--empty">Aucune photo.</p>}
+      </section>
 
       <section className="studio-section-block">
         <div className="studio-stage-extra__header"><h4>Hébergements</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("accommodation", point.accommodations.length); update({ accommodations: [...point.accommodations, { name: "", type: "", url: "", photo: "", photoMediaId: null, price: "", note: "", description: "", preview: null }] }); }}>Ajouter un hébergement</button></div>

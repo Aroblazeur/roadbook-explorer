@@ -174,7 +174,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             startGpxRoutes={startGpxRoutes}
             returnGpxRoutes={returnGpxRoutes}
           />
-          {images.some(image => !["accommodation", "poi"].includes(image.metadata?.purpose)) && <ImagesSection images={images} />}
+          {images.some(image => !["accommodation", "poi", "journey-photo"].includes(image.metadata?.purpose)) && <ImagesSection images={images} />}
           <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
             <span />
             <Link href="/explore">Retour aux roadbooks</Link>
@@ -298,9 +298,9 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
         mapTitle="Carte interactive de l'itinéraire officiel"
         downloadLabel="Télécharger le tracé officiel"
       />
-      <JourneyOverview value={startPoint} roadbookSlug={roadbook.slug} kind="start" hasGpx={startGpxRoutes.length > 0} />
+      <JourneyOverview value={startPoint} roadbookSlug={roadbook.slug} kind="start" hasGpx={startGpxRoutes.length > 0} images={images} />
       <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} variantsByStage={variantsByStage} />
-      <JourneyOverview value={normalizeStartPoint(startPoint).return_trip} roadbookSlug={roadbook.slug} kind="return" hasGpx={returnGpxRoutes.length > 0} />
+      <JourneyOverview value={normalizeStartPoint(startPoint).return_trip} roadbookSlug={roadbook.slug} kind="return" hasGpx={returnGpxRoutes.length > 0} images={images} />
       <RouteSummary
         className="roadbook-current-summary"
         heading="Tracé total actuel"
@@ -313,7 +313,15 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
   );
 }
 
-function JourneyOverview({ value, roadbookSlug, kind, hasGpx = false }) {
+function resolveJourneyPhotos(value, images) {
+  return normalizeJourney(value).photos.map((photo, index) => {
+    const media = photo.photoMediaId ? images.find(image => Number(image.id) === Number(photo.photoMediaId)) : null;
+    const url = safeResourceUrl(media?.signedUrl || photo.url);
+    return url ? { ...photo, url, index } : null;
+  }).filter(Boolean);
+}
+
+function JourneyOverview({ value, roadbookSlug, kind, hasGpx = false, images = [] }) {
   const point = normalizeJourney(value);
   if (!hasJourney(point) && !hasGpx) return null;
   const isReturn = kind === "return";
@@ -327,6 +335,7 @@ function JourneyOverview({ value, roadbookSlug, kind, hasGpx = false }) {
   const distance = journeyDistance(point);
   const duration = point.transport_segments.map(segment => segment.duration).filter(Boolean).join(" + ");
   const titleId = `roadbook-${kind}-point-title`;
+  const photos = resolveJourneyPhotos(point, images);
   return <section className="roadbook-start-point" aria-labelledby={titleId}>
     <Link className="roadbook-start-point__detail-link" href={`/roadbooks/${roadbookSlug}?${isReturn ? "return" : "start"}=1`} aria-label={`Consulter ${isReturn ? "le retour" : "le point de départ"}`} />
     <div className={`roadbook-start-point__summary${mapsUrl ? " roadbook-start-point__summary--with-map" : ""}`}>
@@ -349,6 +358,10 @@ function JourneyOverview({ value, roadbookSlug, kind, hasGpx = false }) {
           : <span className="roadbook-start-point__map-placeholder" aria-hidden="true">⌁</span>}
         <span className="roadbook-start-point__map-label">Google Maps <span aria-hidden="true">↗</span></span>
       </a>}
+      {photos.length > 0 && <div className="roadbook-start-point__photos" aria-label={`${photos.length} photo${photos.length > 1 ? "s" : ""}`}>
+        {photos.slice(0, 4).map(photo => <img key={`${photo.photoMediaId ?? photo.url}-${photo.index}`} src={photo.url} alt={photo.caption || `${isReturn ? "Retour" : "Point de départ"}, photo ${photo.index + 1}`} loading="lazy" />)}
+        {photos.length > 4 && <span className="roadbook-start-point__photo-count">+{photos.length - 4}</span>}
+      </div>}
     </div>
   </section>;
 }
@@ -561,8 +574,9 @@ function accommodationKindLabel(kind) {
 }
 
 function ImagesSection({ images }) {
-  const availableImages = images.filter(img => !["accommodation", "poi"].includes(img.metadata?.purpose) && img.access?.status === "available" && img.signedUrl);
-  const inaccessibleCount = images.filter(img => img.access?.status === "inaccessible").length;
+  const generalImages = images.filter(img => !["accommodation", "poi", "journey-photo"].includes(img.metadata?.purpose));
+  const availableImages = generalImages.filter(img => img.access?.status === "available" && img.signedUrl);
+  const inaccessibleCount = generalImages.filter(img => img.access?.status === "inaccessible").length;
 
   return (
     <div className="card">
@@ -650,6 +664,7 @@ function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, 
   const title = isReturn ? "Retour" : "Point de départ";
   const routeCities = journeyCities(point);
   const contextCity = point.transport_segments.at(-1)?.arrival_city || point.transport_segments[0]?.departure_city || "";
+  const photos = resolveJourneyPhotos(point, images);
 
   return (
     <section className="stage-detail-page" aria-label={`Fiche détaillée : ${title}`}>
@@ -660,6 +675,12 @@ function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, 
           <div><h2>{title}</h2>{routeCities.length > 0 && <p className="stage-detail-route">{routeCities.join(" → ")}</p>}</div>
         </header>
         {point.description && <p className="stage-detail-description">{point.description}</p>}
+        {photos.length > 0 && <div className="journey-photo-gallery">
+          {photos.map(photo => <figure key={`${photo.photoMediaId ?? photo.url}-${photo.index}`}>
+            <img src={photo.url} alt={photo.caption || `${title}, photo ${photo.index + 1}`} loading="lazy" />
+            {photo.caption && <figcaption>{photo.caption}</figcaption>}
+          </figure>)}
+        </div>}
       </article>
 
       {point.transport_segments.map((segment, index) => {
