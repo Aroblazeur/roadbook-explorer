@@ -237,6 +237,13 @@ test("shortDayLabel masque l'année dans la liste des étapes", () => {
   assert.equal(shortDayLabel("30/07/2026"), "30/07");
   assert.equal(shortDayLabel("1/8/26"), "01/08");
   assert.equal(shortDayLabel("2026-08-02"), "02/08");
+  assert.equal(shortDayLabel("06/08/2026 - 08/08/2026"), "06-08/08");
+  assert.equal(shortDayLabel("6/8 au 8/8"), "06-08/08");
+  assert.equal(shortDayLabel("06/08/2026 et 08/08/2026"), "06-08/08");
+  assert.equal(shortDayLabel("06/08/2026-08/08/2026"), "06-08/08");
+  assert.equal(shortDayLabel("30/07/2026 - 02/08/2026"), "30/07-02/08");
+  assert.equal(shortDayLabel("2026-08-06 - 2026-08-08"), "06-08/08");
+  assert.equal(shortDayLabel("06-08/08"), "06-08/08");
   assert.equal(shortDayLabel("Jour libre"), "Jour libre");
 });
 
