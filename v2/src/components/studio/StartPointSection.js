@@ -9,6 +9,8 @@ import {
   normalizeJourney,
 } from "@/lib/roadbooks/start-point";
 import useRevealForm from "@/hooks/studio/useRevealForm";
+import GpxBlock from "./GpxBlock";
+import RouteMapFields from "./RouteMapFields";
 
 function AccommodationFields({ item, onChange, prefix, photoMedia, onUploadPhoto, uploadLoading }) {
   return <div className="studio-form-grid studio-form-grid--compact">
@@ -63,6 +65,7 @@ export default function StartPointSection({
   onUploadAccommodationPhoto,
   onUploadPoiPhoto,
   uploadLoading = false,
+  gpx,
 }) {
   const isReturn = kind === "return";
   const scope = isReturn ? "return" : "start";
@@ -93,6 +96,12 @@ export default function StartPointSection({
         <div className="studio-stage-extra__header"><h4>Trajets et modes de transport</h4><button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("segment", point.transport_segments.length); update({ transport_segments: [...point.transport_segments, createEmptyTransportSegment()] }); }}>Ajouter un trajet</button></div>
         {point.transport_segments.map((segment, index) => <TransportSegment key={`${scope}-segment-${index}`} scope={scope} segment={segment} index={index} initialRef={newItem.type === "segment" && newItem.index === index ? newItemRef : null} onChange={next => update({ transport_segments: point.transport_segments.map((item, itemIndex) => itemIndex === index ? next : item) })} onRemove={() => update({ transport_segments: point.transport_segments.filter((_, itemIndex) => itemIndex !== index) })} />)}
         {!point.transport_segments.length && <p className="studio-detail--empty">Aucun trajet. Ajoutez-en un pour choisir un mode de transport.</p>}
+      </section>
+
+      <section className="studio-section-block">
+        <div className="studio-stage-extra__header"><h4>Cartes et fichiers GPX</h4></div>
+        <RouteMapFields maps={point.route_maps} onChange={maps => update({ route_maps: maps })} idPrefix={`${scope}-route-map`} />
+        {gpx && <GpxBlock label="GPX" mediaRows={isReturn ? gpx.returnGpxRoutes : gpx.startGpxRoutes} scope={scope} role="official" gpxUploading={gpx.gpxUploading} metricsLoading={gpx.metricsLoading} handleGpxDownload={gpx.handleGpxDownload} handleGpxReplace={gpx.handleGpxReplace} handleGpxDelete={gpx.handleGpxDelete} handleGpxUpload={gpx.handleGpxUpload} />}
       </section>
 
       <label className="studio-form-grid__full">Description<textarea value={point.description} onChange={e => update({ description: e.target.value })} /></label>

@@ -7,6 +7,7 @@ import NoteForm from "./NoteForm";
 import PoiForm from "./PoiForm";
 import { buildVariantTitle, resolveVariantTitle } from "@/lib/roadbooks/stage-order";
 import useRevealForm from "@/hooks/studio/useRevealForm";
+import RouteMapFields, { normalizeRouteMaps } from "./RouteMapFields";
 
 export default function VariantForm({
   stageId,
@@ -36,7 +37,7 @@ export default function VariantForm({
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
   } = stageCrud;
   const {
-    gpxByVariant, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
+    gpxByVariant, gpxRoutesByVariant, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
     handleGpxRecalculate, handleGpxExtractLocations, handleGoogleMapsRecalculate,
   } = gpx;
@@ -60,7 +61,10 @@ export default function VariantForm({
         const expanded = expandedVariants.has(variant.id);
         const change = updates => onVariantChange(variant.id, updates);
         const changeMeta = updates => change({ metadata: { ...meta, ...updates } });
+        const routeMaps = normalizeRouteMaps(meta.route_maps, variant.map_embed_url);
+        const changeRouteMaps = maps => change({ map_embed_url: maps[0]?.url || null, metadata: { ...meta, route_maps: maps } });
         const variantGpx = gpxByVariant?.[stageId]?.[variant.id] ?? null;
+        const variantGpxRoutes = gpxRoutesByVariant?.[variant.id] ?? (variantGpx ? [variantGpx] : []);
         const isExtractingLocations = locationsLoading === `variant:${variant.id}`;
         const isCalculatingGoogleMetrics = googleMetricsLoading === `variant:${variant.id}`;
         const displayedTitle = resolveVariantTitle(variant, stageDisplayLabel);
@@ -150,23 +154,13 @@ export default function VariantForm({
                   <h4 className="studio-zone__title">Tracé · Carte · Points d&apos;intérêt</h4>
                   <div className="studio-stage-extra">
                     <div className="studio-stage-extra__header"><h5>GPX et carte</h5></div>
-                    <div className="studio-form-grid studio-form-grid--compact">
-                      <div className="studio-form-grid__full">
-                        <label htmlFor={`variant-map-${variant.id}`}>Carte (lien Google Maps ou intégration)</label>
-                        <div className="studio-resource-field">
-                          <input id={`variant-map-${variant.id}`} type="url" value={variant.map_embed_url ?? ""} onChange={event => change({ map_embed_url: event.target.value })} />
-                          <button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" onClick={() => handleGoogleMapsRecalculate(variant, "variant")} disabled={googleMetricsLoading != null || (!variant.map_embed_url && !(variant.departure && variant.arrival))}>
-                            {isCalculatingGoogleMetrics ? "Calcul…" : "Calculer l’itinéraire"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <RouteMapFields maps={routeMaps} onChange={changeRouteMaps} idPrefix={`variant-map-${variant.id}`} onRecalculate={() => handleGoogleMapsRecalculate({ ...variant, map_embed_url: routeMaps[0]?.url }, "variant")} recalculating={googleMetricsLoading != null || isCalculatingGoogleMetrics} />
                   </div>
                   <div className="studio-stage-extra">
                     <h5>GPX de sous-étape</h5>
                     <GpxBlock
                       label="GPX"
-                      mediaRow={variantGpx}
+                      mediaRows={variantGpxRoutes}
                       scope="variant"
                       role="official"
                       stageId={stageId}

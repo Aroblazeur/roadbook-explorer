@@ -80,7 +80,7 @@ async function getRoadbook(slug) {
     isContributor = Boolean(membership);
   }
   const canEdit = Boolean(user && (roadbook.owner_id === user.id || isContributor || isAdmin));
-  const { gpxOfficial, gpxCustom, gpxByStage, gpxByVariant } = await loadExplorerGpxMedia(
+  const { gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes } = await loadExplorerGpxMedia(
     supabase,
     allMedia.filter(media => media.type === "gpx"),
   );
@@ -104,7 +104,7 @@ async function getRoadbook(slug) {
   const totalElevationGain = (stages ?? []).reduce((sum, s) => sum + (s.elevation_gain_m ?? 0), 0);
   const totalElevationLoss = (stages ?? []).reduce((sum, s) => sum + (s.elevation_loss_m ?? 0), 0);
 
-  return { roadbook, startPoint, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false, user, canEdit };
+  return { roadbook, startPoint, stages: stages ?? [], pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes, coverSignedUrl, coverMediaAccess, totals: { distance: totalDistance, elevationGain: totalElevationGain, elevationLoss: totalElevationLoss }, private: false, user, canEdit };
 }
 
 export default async function RoadbookViewPage({ params, searchParams: sp }) {
@@ -120,7 +120,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
     return <TechnicalError message={result.error} />;
   }
 
-  const { roadbook, startPoint, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, totals } = result;
+  const { roadbook, startPoint, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes, coverSignedUrl, totals } = result;
   const startParam = searchParams?.start === "1";
   const returnParam = searchParams?.return === "1";
   const stageParam = searchParams?.stage ? Number(searchParams.stage) : null;
@@ -140,14 +140,14 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const variantsByStage = {};
   variants.forEach(v => { if (!variantsByStage[v.stage_id]) variantsByStage[v.stage_id] = []; variantsByStage[v.stage_id].push(v); });
 
-  const entries = buildRoadbookEntries(stages, variantsByStage, startPoint);
+  const entries = buildRoadbookEntries(stages, variantsByStage, startPoint, { hasStartGpx: startGpxRoutes.length > 0, hasReturnGpx: returnGpxRoutes.length > 0 });
   const currentStageIdx = Number.isInteger(stageParam) && stageParam >= 0 && stageParam < stages.length ? stageParam : null;
   const currentVariant = variantParam == null
     ? null
     : variants.find(variant => String(variant.id) === variantParam) ?? null;
-  const currentEntryIndex = startParam && hasStartJourney(startPoint)
+  const currentEntryIndex = startParam && (hasStartJourney(startPoint) || startGpxRoutes.length > 0)
     ? entries.findIndex(entry => entry.type === "start")
-    : returnParam && hasReturnTrip(startPoint)
+    : returnParam && (hasReturnTrip(startPoint) || returnGpxRoutes.length > 0)
       ? entries.findIndex(entry => entry.type === "return")
     : currentVariant
       ? entries.findIndex(entry => entry.type === "variant" && entry.item.id === currentVariant.id)
@@ -171,6 +171,8 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             gpxOfficial={gpxOfficial}
             gpxCustom={gpxCustom}
             images={images}
+            startGpxRoutes={startGpxRoutes}
+            returnGpxRoutes={returnGpxRoutes}
           />
           {images.some(image => !["accommodation", "poi"].includes(image.metadata?.purpose)) && <ImagesSection images={images} />}
           <nav id="day-navigation" style={{ marginTop: "1.5rem" }}>
@@ -187,6 +189,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           value={currentEntry.item}
           kind={currentEntry.type}
           images={images}
+          gpxRoutes={currentEntry.type === "return" ? returnGpxRoutes : startGpxRoutes}
         />
       ) : currentEntry.type === "stage" ? (
         <StageDetailPage
@@ -196,7 +199,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           stage={currentEntry.item}
           stageIndex={currentEntry.stageIndex}
           pois={poisByStage[currentEntry.item.id] ?? []}
-          stageGpx={gpxByStage[currentEntry.item.id] ?? null}
+          stageGpxRoutes={gpxRoutesByStage[currentEntry.item.id] ?? (gpxByStage[currentEntry.item.id] ? [gpxByStage[currentEntry.item.id]] : [])}
           stagePhotoUrl={images.find(image => image.stage_id === currentEntry.item.id && image.metadata?.variant_id == null && !["accommodation", "poi"].includes(image.metadata?.purpose) && image.signedUrl)?.signedUrl ?? null}
           images={images}
           canEdit={result.canEdit}
@@ -209,7 +212,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
           variant={currentEntry.item}
           parentStage={currentEntry.parentStage}
           pois={poisByVariant[currentEntry.item.id] ?? []}
-          variantGpx={gpxByVariant[currentEntry.item.id] ?? null}
+          variantGpxRoutes={gpxRoutesByVariant[currentEntry.item.id] ?? (gpxByVariant[currentEntry.item.id] ? [gpxByVariant[currentEntry.item.id]] : [])}
           variantPhotoUrl={images.find(image => String(image.metadata?.variant_id) === String(currentEntry.item.id) && !["accommodation", "poi"].includes(image.metadata?.purpose) && image.signedUrl)?.signedUrl ?? null}
           images={images}
           canEdit={result.canEdit}
@@ -273,7 +276,7 @@ function RoadbookHeader({ roadbook, startPoint, stages, pois, variants, user, ca
   );
 }
 
-function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, totals, gpxOfficial, gpxCustom, images }) {
+function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, totals, gpxOfficial, gpxCustom, images, startGpxRoutes = [], returnGpxRoutes = [] }) {
   const metadata = roadbook.metadata ?? {};
   const official = metadata.official ?? {};
   const savedCurrent = metadata.stagesTotal ?? {};
@@ -295,9 +298,9 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
         mapTitle="Carte interactive de l'itinéraire officiel"
         downloadLabel="Télécharger le tracé officiel"
       />
-      <JourneyOverview value={startPoint} roadbookSlug={roadbook.slug} kind="start" />
+      <JourneyOverview value={startPoint} roadbookSlug={roadbook.slug} kind="start" hasGpx={startGpxRoutes.length > 0} />
       <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} variantsByStage={variantsByStage} />
-      <JourneyOverview value={normalizeStartPoint(startPoint).return_trip} roadbookSlug={roadbook.slug} kind="return" />
+      <JourneyOverview value={normalizeStartPoint(startPoint).return_trip} roadbookSlug={roadbook.slug} kind="return" hasGpx={returnGpxRoutes.length > 0} />
       <RouteSummary
         className="roadbook-current-summary"
         heading="Tracé total actuel"
@@ -310,12 +313,14 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
   );
 }
 
-function JourneyOverview({ value, roadbookSlug, kind }) {
+function JourneyOverview({ value, roadbookSlug, kind, hasGpx = false }) {
   const point = normalizeJourney(value);
-  if (!hasJourney(point)) return null;
+  if (!hasJourney(point) && !hasGpx) return null;
   const isReturn = kind === "return";
   const firstSegment = point.transport_segments[0];
-  const mapsUrl = firstSegment ? safeResourceUrl(firstSegment.google_maps_url || buildGoogleMapsDirectionsUrl(firstSegment), { relative: false }) : null;
+  const mapsUrl = firstSegment
+    ? safeResourceUrl(firstSegment.google_maps_url || buildGoogleMapsDirectionsUrl(firstSegment), { relative: false })
+    : safeResourceUrl(point.route_maps[0]?.url, { relative: false });
   const mapPreviewUrl = mapsUrl ? googleMapsEmbedUrl(mapsUrl) : null;
   const routeCities = journeyCities(point);
   const transport = journeyTransportModes(point).map(transportLabel).join(" + ");
@@ -380,7 +385,7 @@ function RouteSummary({ className, heading, summary, gpx, mapTitle, downloadLabe
   );
 }
 
-function buildRoadbookEntries(stages, variantsByStage, startPoint = null) {
+function buildRoadbookEntries(stages, variantsByStage, startPoint = null, { hasStartGpx = false, hasReturnGpx = false } = {}) {
   const stageEntries = stages.flatMap((stage, stageIndex) => [
     { type: "stage", item: stage, stageIndex },
     ...(variantsByStage[stage.id] ?? []).map((variant, variantIndex) => ({
@@ -393,9 +398,9 @@ function buildRoadbookEntries(stages, variantsByStage, startPoint = null) {
   ]);
   const point = normalizeStartPoint(startPoint);
   return [
-    ...(hasStartJourney(point) ? [{ type: "start", item: point }] : []),
+    ...(hasStartJourney(point) || hasStartGpx ? [{ type: "start", item: point }] : []),
     ...stageEntries,
-    ...(hasReturnTrip(point) ? [{ type: "return", item: point.return_trip }] : []),
+    ...(hasReturnTrip(point) || hasReturnGpx ? [{ type: "return", item: point.return_trip }] : []),
   ];
 }
 
@@ -579,7 +584,7 @@ function ImagesSection({ images }) {
   );
 }
 
-function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpx, stagePhotoUrl, images, canEdit }) {
+function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageIndex, pois, stageGpxRoutes, stagePhotoUrl, images, canEdit }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de l'étape">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
@@ -587,7 +592,7 @@ function StageDetailPage({ roadbook, entries, currentEntryIndex, stage, stageInd
         stage={stage}
         stageIndex={stageIndex}
         pois={pois}
-        stageGpx={stageGpx}
+        stageGpxRoutes={stageGpxRoutes}
         stagePhotoUrl={stagePhotoUrl}
         images={images}
         canEdit={canEdit}
@@ -639,7 +644,7 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   );
 }
 
-function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, images }) {
+function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, images, gpxRoutes = [] }) {
   const point = normalizeJourney(value);
   const isReturn = kind === "return";
   const title = isReturn ? "Retour" : "Point de départ";
@@ -671,6 +676,8 @@ function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, 
         </section>;
       })}
 
+      <RouteResources maps={point.route_maps} gpxRoutes={gpxRoutes} title={`Itinéraires ${isReturn ? "de retour" : "du point de départ"}`} mapHeight={300} />
+
       <section className="stage-detail-card stage-detail-accommodations card">
         <h2>Hébergements</h2>
         {point.accommodations.filter(hasAccommodation).length > 0 ? <div className="stage-detail-accommodation-list">{point.accommodations.filter(hasAccommodation).map((item, index) => <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} images={images} />)}</div> : <p className="stage-detail-empty">Aucun hébergement renseigné.</p>}
@@ -684,7 +691,7 @@ function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, 
   );
 }
 
-function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpx, variantPhotoUrl, images, canEdit }) {
+function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, parentStage, pois, variantGpxRoutes, variantPhotoUrl, images, canEdit }) {
   return (
     <section className="stage-detail-page" aria-label="Fiche détaillée de la variante">
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
@@ -693,7 +700,7 @@ function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, pare
         day={variant.day || parentStage?.day}
         contextCity={parentStage?.arrival || parentStage?.departure || ""}
         pois={pois}
-        variantGpx={variantGpx}
+        variantGpxRoutes={variantGpxRoutes}
         variantPhotoUrl={variantPhotoUrl}
         images={images}
         stageId={parentStage?.id ?? variant.stage_id}
@@ -703,15 +710,15 @@ function VariantDetailPage({ roadbook, entries, currentEntryIndex, variant, pare
   );
 }
 
-function VariantCard({ variant, stageId, day, contextCity, pois = [], variantGpx, variantPhotoUrl, images, canEdit }) {
+function VariantCard({ variant, stageId, day, contextCity, pois = [], variantGpxRoutes = [], variantPhotoUrl, images, canEdit }) {
   const meta = variant.metadata ?? {};
   const type = meta.type || meta.itemType;
   const gain = variant.elevation_gain_m ?? meta.elevation_gain_m;
   const loss = variant.elevation_loss_m ?? meta.elevation_loss_m;
   const departure = variant.departure ?? meta.departure;
   const arrival = variant.arrival ?? meta.arrival;
-  const mapUrl = safeResourceUrl(variant.map_embed_url ?? meta.map_embed_url, { relative: false });
-  const gpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: variantGpx, fallbackUrl: variant.gpx_url }).url);
+  const routeMaps = normalizeRouteMaps(meta.route_maps, variant.map_embed_url ?? meta.map_embed_url);
+  const routeGpx = withLegacyGpxFallback(variantGpxRoutes, variant.gpx_url);
   const photoUrl = safeResourceUrl(variantPhotoUrl || variant.stage_photo_url || meta.stagePhoto);
   const notes = normalizeNoteItems(variant.notes ?? meta.notes);
   const accommodation = normalizeAccommodation({
@@ -796,25 +803,7 @@ function VariantCard({ variant, stageId, day, contextCity, pois = [], variantGpx
           ) : <p className="stage-detail-empty">Aucun hébergement alternatif.</p>}
         </div>
       )}
-      {(mapUrl || gpxUrl) && (
-        <div className="stage-detail-variant__map">
-          <h4>Tracé de la variante</h4>
-          {mapUrl ? (
-            <div className="stage-detail-map">
-              <FullscreenMap><GoogleMapDisplay url={mapUrl} title={`Carte de la variante ${variant.label || ""}`} /></FullscreenMap>
-            </div>
-          ) : (
-            <div className="stage-detail-map">
-              <FullscreenMap><MapViewerClient gpxUrl={gpxUrl} height={260} /></FullscreenMap>
-            </div>
-          )}
-          {gpxUrl && (
-            <a className="stage-detail-button stage-detail-button--secondary" href={gpxUrl} download>
-              Télécharger le GPX de la variante
-            </a>
-          )}
-        </div>
-      )}
+      <RouteResources maps={routeMaps} gpxRoutes={routeGpx} title="Tracés de la variante" mapHeight={260} className="stage-detail-variant__map" compact />
     </article>
   );
 }
@@ -842,15 +831,15 @@ function Pills({ distanceKm, elevationGain, elevationLoss, duration }) {
   );
 }
 
-function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images, canEdit }) {
+function StageCard({ stage, stageIndex, pois, stageGpxRoutes = [], stagePhotoUrl, images, canEdit }) {
   const meta = stage.metadata ?? {};
   const stageNumber = stage.stage_display_label ?? stage.stage_number ?? stageIndex + 1;
   const stageDay = textValue(stage.day);
   const stageLabel = `Étape ${stageNumber}`;
   const title = stageHeadingTitle(stage, stageNumber, stageLabel);
   const photoUrl = safeResourceUrl(stagePhotoUrl || stage.stage_photo_url);
-  const stageGpxUrl = safeResourceUrl(resolveExplorerGpxUrl({ media: stageGpx, fallbackUrl: stage.gpx_url }).url);
-  const mapUrl = safeResourceUrl(stage.map_embed_url, { relative: false });
+  const routeMaps = normalizeRouteMaps(meta.route_maps, stage.map_embed_url);
+  const routeGpx = withLegacyGpxFallback(stageGpxRoutes, stage.gpx_url);
   const normalizedNotes = normalizeNoteItems(stage.notes);
   const warningNotes = normalizedNotes.filter(note => note.type === "warning");
   const notes = normalizedNotes.filter(note => note.type !== "warning");
@@ -928,31 +917,7 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images, c
         </section>
       )}
 
-      {(mapUrl || stageGpxUrl) && (
-        <section className="stage-detail-card stage-detail-map-card card" aria-labelledby="stage-detail-map-title">
-          <h2 id="stage-detail-map-title">Carte interactive</h2>
-          {mapUrl ? (
-            <div className="stage-detail-map">
-              <FullscreenMap><GoogleMapDisplay url={mapUrl} title={`Carte de ${title || `l'étape ${stageNumber}`}`} /></FullscreenMap>
-            </div>
-          ) : (
-            <div className="stage-detail-map">
-              <FullscreenMap><MapViewerClient gpxUrl={stageGpxUrl} height={300} /></FullscreenMap>
-            </div>
-          )}
-          {stageGpxUrl && (
-            <div className="stage-detail-map-card__actions">
-              <a
-                className="stage-detail-button stage-detail-button--secondary"
-                href={stageGpxUrl}
-                download={stageGpx?.file_name ?? `etape-${stageNumber}.gpx`}
-              >
-                Télécharger le GPX de l&apos;étape
-              </a>
-            </div>
-          )}
-        </section>
-      )}
+      <RouteResources maps={routeMaps} gpxRoutes={routeGpx} title="Cartes et tracés" mapHeight={300} headingId="stage-detail-map-title" />
 
       {(alternatives.filter(hasAccommodation).length > 0 || canEdit) && (
         <section className="stage-detail-card stage-detail-accommodations card" aria-labelledby="stage-detail-alternatives-title">
@@ -972,6 +937,49 @@ function StageCard({ stage, stageIndex, pois, stageGpx, stagePhotoUrl, images, c
 
     </>
   );
+}
+
+function normalizeRouteMaps(value, legacyUrl = "") {
+  const maps = Array.isArray(value)
+    ? value.map(item => typeof item === "string" ? { label: "", url: item } : { label: textValue(item?.label), url: textValue(item?.url) })
+    : [];
+  const legacy = textValue(legacyUrl);
+  if (legacy && !maps.some(item => item.url === legacy)) maps.unshift({ label: "", url: legacy });
+  return maps.filter(item => safeResourceUrl(item.url, { relative: false }));
+}
+
+function withLegacyGpxFallback(routes, fallbackUrl) {
+  const rows = Array.isArray(routes) ? routes.filter(Boolean) : [];
+  return rows.length ? rows : fallbackUrl ? [{ fallbackUrl }] : [];
+}
+
+function RouteResources({ maps = [], gpxRoutes = [], title, mapHeight = 300, headingId, className = "", compact = false }) {
+  const safeMaps = normalizeRouteMaps(maps);
+  const gpxItems = gpxRoutes.map((media, index) => ({
+    media,
+    url: safeResourceUrl(resolveExplorerGpxUrl({ media: media?.fallbackUrl ? null : media, fallbackUrl: media?.fallbackUrl }).url),
+    label: media?.metadata?.caption || media?.file_name || `GPX ${index + 1}`,
+  })).filter(item => item.url);
+  if (!safeMaps.length && !gpxItems.length) return null;
+  const Tag = compact ? "div" : "section";
+  const wrapperClass = compact ? className : `stage-detail-card stage-detail-map-card card ${className}`.trim();
+  return <Tag className={wrapperClass} aria-labelledby={headingId}>
+    {compact ? <h4 id={headingId}>{title}</h4> : <h2 id={headingId}>{title}</h2>}
+    <div className="stage-detail-route-resources">
+      {safeMaps.map((item, index) => {
+        const url = safeResourceUrl(item.url, { relative: false });
+        return <article className="stage-detail-route-resource" key={`map-${url}-${index}`}>
+          <h3>{item.label || `Carte ${index + 1}`}</h3>
+          <div className="stage-detail-map"><FullscreenMap><GoogleMapDisplay url={url} title={item.label || `Carte ${index + 1}`} /></FullscreenMap></div>
+        </article>;
+      })}
+      {gpxItems.map((item, index) => <article className="stage-detail-route-resource" key={`gpx-${item.media?.id ?? item.url}-${index}`}>
+        <h3>{item.label}</h3>
+        <div className="stage-detail-map"><FullscreenMap><MapViewerClient gpxUrl={item.url} height={mapHeight} /></FullscreenMap></div>
+        <a className="stage-detail-button stage-detail-button--secondary" href={item.url} download={item.media?.file_name || `itineraire-${index + 1}.gpx`}>Télécharger le GPX</a>
+      </article>)}
+    </div>
+  </Tag>;
 }
 
 function StageRoute({ departure, arrival }) {

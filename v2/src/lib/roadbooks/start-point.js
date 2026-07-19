@@ -42,7 +42,14 @@ export function normalizeTransportSegment(value) {
 }
 
 export function createEmptyJourney() {
-  return { transport_segments: [], description: "", accommodations: [], pois: [] };
+  return { transport_segments: [], route_maps: [], description: "", accommodations: [], pois: [] };
+}
+
+function normalizeRouteMaps(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => typeof item === "string"
+    ? { label: "", url: String(item) }
+    : { label: String(item?.label ?? ""), url: String(item?.url ?? "") });
 }
 
 function normalizeStartPointPoi(value) {
@@ -77,6 +84,7 @@ export function normalizeJourney(value, { acceptLegacy = true } = {}) {
   return {
     ...createEmptyJourney(),
     transport_segments: segments,
+    route_maps: normalizeRouteMaps(source.route_maps ?? source.routeMaps),
     description: String(source.description ?? ""),
     accommodations: Array.isArray(source.accommodations) ? source.accommodations.map(normalizeAccommodation) : [],
     pois: Array.isArray(source.pois) ? source.pois.map(normalizeStartPointPoi) : [],
@@ -140,7 +148,7 @@ export function hasJourney(value) {
   const journey = normalizeJourney(value);
   return Boolean(
     journey.transport_segments.some(segment => hasLegacyRoute(segment)) || journey.description.trim() ||
-    journey.accommodations.length || journey.pois.length
+    journey.route_maps.some(item => item.url.trim()) || journey.accommodations.length || journey.pois.length
   );
 }
 
@@ -168,6 +176,7 @@ function buildJourneyValue(value) {
       distance_km: String(segment.distance_km).trim() === "" || !Number.isFinite(Number(segment.distance_km)) ? null : Number(segment.distance_km),
       google_maps_url: buildGoogleMapsDirectionsUrl(segment) || null,
     })).filter(segment => hasLegacyRoute(segment)),
+    route_maps: journey.route_maps.map(item => ({ label: item.label.trim(), url: item.url.trim() })).filter(item => item.url),
     description: journey.description.trim() || null,
     accommodations: journey.accommodations.map(normalizeAccommodation).filter(item => item.name || item.url || item.photo || item.photoMediaId || item.type || item.price || item.note || item.description),
     pois: journey.pois.map(normalizeStartPointPoi).filter(item => item.name || item.region || item.link_url || item.description || item.photo_url || item.photoMediaId).map(item => ({
@@ -194,6 +203,7 @@ export function buildStartPointRecord(value, roadbookId) {
     distance_km: distance === "" ? null : distance,
     duration: start.transport_segments.length === 1 ? start.transport_segments[0].duration || null : null,
     google_maps_url: start.transport_segments.length === 1 ? start.transport_segments[0].google_maps_url : null,
+    route_maps: start.route_maps,
     accommodations: start.accommodations,
     pois: start.pois,
     transport_segments: start.transport_segments,

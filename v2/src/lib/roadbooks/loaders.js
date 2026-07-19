@@ -181,11 +181,23 @@ export async function loadExplorerGpxMedia(
   let gpxCustom = null;
   const gpxByStage = {};
   const gpxByVariant = {};
+  const gpxRoutesByStage = {};
+  const gpxRoutesByVariant = {};
+  const startGpxRoutes = [];
+  const returnGpxRoutes = [];
   for (const { media, classification } of signedRows) {
     if (classification.scope === "roadbook" && classification.role === "official") gpxOfficial = media;
     else if (classification.scope === "roadbook" && classification.role === "custom") gpxCustom = media;
-    else if (classification.scope === "stage") gpxByStage[classification.stageId] = media;
-    else if (classification.scope === "variant") gpxByVariant[classification.variantId] = media;
+    else if (classification.scope === "stage") {
+      if (!gpxRoutesByStage[classification.stageId]) gpxRoutesByStage[classification.stageId] = [];
+      gpxRoutesByStage[classification.stageId].push(media);
+      if (!gpxByStage[classification.stageId]) gpxByStage[classification.stageId] = media;
+    } else if (classification.scope === "variant") {
+      if (!gpxRoutesByVariant[classification.variantId]) gpxRoutesByVariant[classification.variantId] = [];
+      gpxRoutesByVariant[classification.variantId].push(media);
+      if (!gpxByVariant[classification.variantId]) gpxByVariant[classification.variantId] = media;
+    } else if (classification.scope === "start") startGpxRoutes.push(media);
+    else if (classification.scope === "return") returnGpxRoutes.push(media);
   }
 
   return {
@@ -193,6 +205,10 @@ export async function loadExplorerGpxMedia(
     gpxCustom,
     gpxByStage,
     gpxByVariant,
+    gpxRoutesByStage,
+    gpxRoutesByVariant,
+    startGpxRoutes,
+    returnGpxRoutes,
     diagnostics: {
       classified: selection.classified,
       duplicates: selection.duplicates,

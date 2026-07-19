@@ -1109,6 +1109,10 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .stage-detail-poi__map { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex: 0 0 34px; border: 1px solid rgba(46, 125, 50, .3); border-radius: 50%; color: var(--primary); text-decoration: none; }
 .stage-detail-poi__map svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .stage-detail-poi__map:hover { background: rgba(46, 125, 50, .08); color: var(--primary-dark); }
+.stage-detail-route-resources { display: grid; gap: 18px; }
+.stage-detail-route-resource { display: grid; gap: 10px; min-width: 0; }
+.stage-detail-route-resource h3 { margin: 0; font-size: .95rem; color: var(--text-light); }
+.stage-detail-route-resource + .stage-detail-route-resource { padding-top: 18px; border-top: 1px solid var(--border); }
 
 .stage-detail-accommodation-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
 .stage-detail-accommodation { display: grid; align-content: start; gap: 10px; min-width: 0; }
@@ -1514,6 +1518,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 }
 
 @media (max-width: 700px) {
+  .studio-route-map-list__item { grid-template-columns: 1fr; align-items: stretch; }
+  .studio-route-map-list__actions { justify-content: flex-start; }
   .header h1 { font-size: 1.7rem; }
   .card { margin: 16px 0; padding: 18px; }
   .stats { gap: 8px; }
@@ -1845,6 +1851,12 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   flex-wrap: wrap;
   gap: .45rem;
 }
+.studio-route-map-list, .studio-gpx-list { display: grid; gap: 10px; }
+.studio-route-map-list__item { display: grid; grid-template-columns: minmax(0, .55fr) minmax(0, 1.45fr) auto; gap: 10px; align-items: end; padding: 10px; border: 1px solid var(--studio-border, var(--border)); border-radius: 10px; }
+.studio-route-map-list__actions, .studio-gpx-list__item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.studio-gpx-list__item { padding: 9px 10px; border: 1px solid var(--studio-border, var(--border)); border-radius: 9px; }
+.studio-gpx-list__item > span { min-width: min(220px, 100%); overflow-wrap: anywhere; font-weight: 700; }
+.studio-gpx-list__add { justify-self: start; }
 
 .studio-resource-field > input:not([type="file"]) {
   flex: 1 1 280px;

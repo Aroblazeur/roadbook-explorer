@@ -14,6 +14,10 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
   const [gpxCustom, setGpxCustom] = useState(null);
   const [gpxByStage, setGpxByStage] = useState({});
   const [gpxByVariant, setGpxByVariant] = useState({});
+  const [gpxRoutesByStage, setGpxRoutesByStage] = useState({});
+  const [gpxRoutesByVariant, setGpxRoutesByVariant] = useState({});
+  const [startGpxRoutes, setStartGpxRoutes] = useState([]);
+  const [returnGpxRoutes, setReturnGpxRoutes] = useState([]);
   const [metricsLoading, setMetricsLoading] = useState(null);
   const [locationsLoading, setLocationsLoading] = useState(null);
 
@@ -32,16 +36,32 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
 
       const byStage = {};
       const byVariant = {};
+      const routesByStage = {};
+      const routesByVariant = {};
+      const startRoutes = [];
+      const returnRoutes = [];
       for (const { media, classification } of selection.unique.values()) {
         if (classification.scope === "stage" && classification.stageId) {
-          byStage[classification.stageId] = media;
+          if (!routesByStage[classification.stageId]) routesByStage[classification.stageId] = [];
+          routesByStage[classification.stageId].push(media);
+          if (!byStage[classification.stageId]) byStage[classification.stageId] = media;
         } else if (classification.scope === "variant" && classification.stageId && classification.variantId) {
           if (!byVariant[classification.stageId]) byVariant[classification.stageId] = {};
-          byVariant[classification.stageId][classification.variantId] = media;
+          if (!routesByVariant[classification.variantId]) routesByVariant[classification.variantId] = [];
+          routesByVariant[classification.variantId].push(media);
+          if (!byVariant[classification.stageId][classification.variantId]) byVariant[classification.stageId][classification.variantId] = media;
+        } else if (classification.scope === "start") {
+          startRoutes.push(media);
+        } else if (classification.scope === "return") {
+          returnRoutes.push(media);
         }
       }
       setGpxByStage(byStage);
       setGpxByVariant(byVariant);
+      setGpxRoutesByStage(routesByStage);
+      setGpxRoutesByVariant(routesByVariant);
+      setStartGpxRoutes(startRoutes);
+      setReturnGpxRoutes(returnRoutes);
 
       if (selection.duplicates.length > 0) {
         setGpxError("Certains GPX ne peuvent pas être chargés car plusieurs médias existent pour la même cible.");
@@ -53,15 +73,15 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     }
   }, [supabase, roadbookId, userId]);
 
-  const uploadGpx = useCallback(async (file, { scope, role, stageId, variantId }) => {
+  const uploadGpx = useCallback(async (file, { scope, role, stageId, variantId, routeId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
-    let built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, existingMetadata: { original_name: file.name, original_size: file.size } });
+    let built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, routeId, existingMetadata: { original_name: file.name, original_size: file.size } });
     if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
     let existingMedia = null;
     try {
       const rows = await loadGpxRows(supabase, roadbookId);
-      const existing = selectGpxMedia(rows, { roadbookId: Number(roadbookId), stageId: stageId ?? null, variantId: variantId ?? null, scope, role });
+      const existing = selectGpxMedia(rows, { roadbookId: Number(roadbookId), stageId: stageId ?? null, variantId: variantId ?? null, routeId: routeId ?? null, scope, role });
       if (existing.status === "selected") {
         existingMedia = existing.media;
         built = buildCanonicalGpxMediaInput({
@@ -70,6 +90,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
           role,
           stageId,
           variantId,
+          routeId,
           existingMetadata: {
             ...existingMedia.metadata,
             original_name: file.name,
@@ -117,7 +138,7 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
   const replaceGpx = useCallback(async (file, mediaRow, { scope, role, stageId, variantId }) => {
     const valErr = validateGpx(file);
     if (valErr) { setGpxError(valErr); return; }
-    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, existingMetadata: { ...mediaRow.metadata, original_name: file.name, original_size: file.size } });
+    const built = buildCanonicalGpxMediaInput({ roadbookId: Number(roadbookId), scope, role, stageId, variantId, routeId: mediaRow.metadata?.route_id, existingMetadata: { ...mediaRow.metadata, original_name: file.name, original_size: file.size } });
     if (!built.ok) { setGpxError(built.errors.join(" ; ")); return; }
     const rowClass = classifyGpxMedia(mediaRow);
     if (!rowClass || rowClass.status === "ambiguous" || rowClass.status === "invalid") {
@@ -237,6 +258,8 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
 
   return {
     gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant,
+    gpxRoutesByStage, setGpxRoutesByStage, gpxRoutesByVariant, setGpxRoutesByVariant,
+    startGpxRoutes, setStartGpxRoutes, returnGpxRoutes, setReturnGpxRoutes,
     gpxUploading, metricsLoading, locationsLoading,
     gpxError, setGpxError,
     reloadGpx,

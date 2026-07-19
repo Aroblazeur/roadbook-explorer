@@ -1,4 +1,4 @@
-const GPX_SCOPES = new Set(["roadbook", "stage", "variant"]);
+const GPX_SCOPES = new Set(["roadbook", "stage", "variant", "start", "return"]);
 const GPX_ROLES = new Set(["official", "custom"]);
 
 function isPositiveInteger(value) {
@@ -17,6 +17,7 @@ function result(media, overrides) {
     roadbookId: media?.roadbook_id ?? null,
     stageId: media?.stage_id ?? null,
     variantId: media?.metadata?.variant_id ?? null,
+    routeId: media?.metadata?.route_id ?? null,
     source: "unknown",
     reason: null,
     ...overrides,
@@ -34,6 +35,7 @@ export function classifyGpxMedia(media) {
   const rawScope = metadata.scope ?? null;
   const rawRole = metadata.role ?? null;
   const variantId = metadata.variant_id ?? null;
+  const routeId = typeof metadata.route_id === "string" && metadata.route_id.trim() ? metadata.route_id.trim() : null;
   const variantIdPresent = hasOwn(metadata, "variant_id");
 
   if (!isPositiveInteger(roadbookId)) {
@@ -71,9 +73,9 @@ export function classifyGpxMedia(media) {
     return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "variant-id-not-allowed-for-scope" });
   }
 
-  if (scope === "roadbook") {
+  if (["roadbook", "start", "return"].includes(scope)) {
     if (stageId != null) {
-      return result(media, { roadbookId, stageId, variantId, source, scope, role, reason: "roadbook-scope-must-not-have-stage-id" });
+      return result(media, { roadbookId, stageId, variantId, routeId, source, scope, role, reason: "journey-scope-must-not-have-stage-id" });
     }
   } else if (scope === "stage") {
     if (!isPositiveInteger(stageId)) {
@@ -88,12 +90,12 @@ export function classifyGpxMedia(media) {
     }
   }
 
-  return result(media, { status, roadbookId, stageId, variantId, source, scope, role, reason: null });
+  return result(media, { status, roadbookId, stageId, variantId, routeId, source, scope, role, reason: null });
 }
 
 const ALLOWED_META_FIELDS = new Set(["caption", "description", "original_name", "original_size"]);
 
-export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, scope, role, existingMetadata } = {}) {
+export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, routeId, scope, role, existingMetadata } = {}) {
   const errors = [];
 
   if (!isPositiveInteger(roadbookId)) errors.push("roadbookId doit être un entier positif");
@@ -103,8 +105,8 @@ export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, sc
 
   if (errors.length > 0) return { ok: false, errors };
 
-  if (scope === "roadbook") {
-    if (stageId != null) return { ok: false, errors: ["stageId interdit pour scope roadbook"] };
+  if (["roadbook", "start", "return"].includes(scope)) {
+    if (stageId != null) return { ok: false, errors: [`stageId interdit pour scope ${scope}`] };
   } else if (scope === "stage") {
     if (!isPositiveInteger(stageId)) return { ok: false, errors: ["stageId requis pour scope stage"] };
   } else if (scope === "variant") {
@@ -115,6 +117,7 @@ export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, sc
   const metadata = { scope, role };
 
   if (scope === "variant" && isPositiveInteger(variantId)) metadata.variant_id = variantId;
+  if (typeof routeId === "string" && routeId.trim()) metadata.route_id = routeId.trim();
 
   if (existingMetadata && typeof existingMetadata === "object") {
     for (const key of ALLOWED_META_FIELDS) {
@@ -125,7 +128,7 @@ export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, sc
   const record = {
     type: "gpx",
     roadbook_id: roadbookId,
-    stage_id: scope === "roadbook" ? null : (isPositiveInteger(stageId) ? stageId : null),
+    stage_id: ["roadbook", "start", "return"].includes(scope) ? null : (isPositiveInteger(stageId) ? stageId : null),
     metadata,
   };
 
@@ -134,13 +137,14 @@ export function buildCanonicalGpxMediaInput({ roadbookId, stageId, variantId, sc
 
 export function buildGpxBusinessIdentity(classification) {
   if (!classification || classification.status !== "canonical") return null;
-  const { roadbookId, stageId, variantId, scope, role } = classification;
+  const { roadbookId, stageId, variantId, routeId, scope, role } = classification;
   if (!isPositiveInteger(roadbookId) || !GPX_SCOPES.has(scope) || !GPX_ROLES.has(role)) return null;
-  if (scope === "roadbook") return `roadbook:${roadbookId}:${scope}:${role}`;
+  const routeSuffix = routeId ? `:route:${routeId}` : "";
+  if (["roadbook", "start", "return"].includes(scope)) return `roadbook:${roadbookId}:${scope}:${role}${routeSuffix}`;
   if (!isPositiveInteger(stageId)) return null;
-  if (scope === "stage") return `roadbook:${roadbookId}:stage:${stageId}:${role}`;
+  if (scope === "stage") return `roadbook:${roadbookId}:stage:${stageId}:${role}${routeSuffix}`;
   if (!isPositiveInteger(variantId)) return null;
-  return `roadbook:${roadbookId}:stage:${stageId}:variant:${variantId}:${role}`;
+  return `roadbook:${roadbookId}:stage:${stageId}:variant:${variantId}:${role}${routeSuffix}`;
 }
 
 export function isExplorerUsableGpx(classification) {
@@ -214,6 +218,7 @@ export function gpxDiagnosticDetails(media, classification, overrides = {}) {
     roadbookId: classification?.roadbookId ?? media?.roadbook_id ?? null,
     stageId: classification?.stageId ?? media?.stage_id ?? null,
     variantId: classification?.variantId ?? media?.metadata?.variant_id ?? null,
+    routeId: classification?.routeId ?? media?.metadata?.route_id ?? null,
     status: overrides.status ?? classification?.status ?? "invalid",
     reason: overrides.reason ?? classification?.reason ?? null,
   };

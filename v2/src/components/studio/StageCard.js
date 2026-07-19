@@ -5,6 +5,7 @@ import PoiForm from "./PoiForm";
 import AccommSection from "./AccommSection";
 import NoteForm from "./NoteForm";
 import VariantForm from "./VariantForm";
+import RouteMapFields, { normalizeRouteMaps } from "./RouteMapFields";
 import { buildStageTitle, isRoadbookItemDraft, resolveStageTitle } from "@/lib/roadbooks/stage-order";
 
 export default function StageCard({
@@ -53,7 +54,7 @@ export default function StageCard({
   } = stageCrud;
 
   const {
-    gpxByStage, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
+    gpxByStage, gpxRoutesByStage, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
     handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
     handleGpxRecalculate, handleGpxExtractLocations, handleGoogleMapsRecalculate,
   } = gpx;
@@ -62,7 +63,10 @@ export default function StageCard({
   const isDraft = meta.status === "draft" || meta.isDraft === true;
   const change = (updates) => onStageChange(stage.id, updates);
   const changeMeta = (updates) => change({ metadata: { ...meta, ...updates } });
+  const routeMaps = normalizeRouteMaps(meta.route_maps, stage.map_embed_url);
+  const changeRouteMaps = maps => change({ map_embed_url: maps[0]?.url || null, metadata: { ...meta, route_maps: maps } });
   const stageGpx = gpxByStage[stage.id] ?? null;
+  const stageGpxRoutes = gpxRoutesByStage?.[stage.id] ?? (stageGpx ? [stageGpx] : []);
   const isExtractingLocations = locationsLoading === `stage:${stage.id}`;
   const isCalculatingGoogleMetrics = googleMetricsLoading === `stage:${stage.id}`;
   const stageHasVariants = hasChildVariants ?? (variantsByStage?.[stage.id]?.length > 0);
@@ -181,23 +185,13 @@ export default function StageCard({
               <div className="studio-stage-extra__header">
                 <h5>GPX et carte</h5>
               </div>
-              <div className="studio-form-grid studio-form-grid--compact">
-                <div className="studio-form-grid__full">
-                  <label htmlFor={`stage-map-${stage.id}`}>Carte (lien Google Maps ou intégration)</label>
-                  <div className="studio-resource-field">
-                    <input id={`stage-map-${stage.id}`} type="url" value={stage.map_embed_url ?? ""} onChange={e => change({ map_embed_url: e.target.value })} />
-                    <button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" onClick={() => handleGoogleMapsRecalculate(stage, "stage")} disabled={googleMetricsLoading != null || (!stage.map_embed_url && !(stage.departure && stage.arrival))}>
-                      {isCalculatingGoogleMetrics ? "Calcul…" : "Calculer l’itinéraire"}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <RouteMapFields maps={routeMaps} onChange={changeRouteMaps} idPrefix={`stage-map-${stage.id}`} onRecalculate={() => handleGoogleMapsRecalculate({ ...stage, map_embed_url: routeMaps[0]?.url }, "stage")} recalculating={googleMetricsLoading != null || isCalculatingGoogleMetrics} />
             </div>
 
             <div className="studio-stage-extra">
               <h5>GPX d'étape</h5>
               <GpxBlock
-                label="GPX" mediaRow={stageGpx}
+                label="GPX" mediaRows={stageGpxRoutes}
                 scope="stage" role="official" stageId={stage.id}
                 target={stage}
                 gpxUploading={gpxUploading}
