@@ -1796,7 +1796,7 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .studio-start-point .studio-subitem-card + .studio-subitem-card { margin-top: .65rem; }
 .studio-journey-photo-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr)); gap: .65rem; }
 .studio-journey-photo { display: grid; align-content: start; gap: .65rem; }
-.studio-journey-photo__preview { display: block; width: 100%; height: 160px; border-radius: 9px; background: var(--studio-surface); object-fit: cover; }
+.studio-journey-photo__preview { display: block; width: 100%; height: 160px; border-radius: 9px; background: var(--studio-surface); object-fit: contain; }
 .studio-journey-photo__actions, .studio-journey-photo__add-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
 
 .roadbook-start-point {
@@ -1830,14 +1830,14 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 .roadbook-start-point__map-placeholder { display: grid; height: 100%; min-height: 118px; place-items: center; color: var(--primary); font-size: 2rem; }
 .roadbook-start-point__map-label { position: absolute; right: .45rem; bottom: .45rem; padding: .25rem .48rem; border-radius: 999px; background: rgba(20, 24, 20, .82); color: #fff; font-size: .68rem; font-weight: 750; line-height: 1.2; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
 .roadbook-start-point__photos { display: flex; grid-column: 1 / -1; gap: .4rem; overflow: hidden; }
-.roadbook-start-point__photos img { width: 72px; height: 52px; border-radius: 7px; object-fit: cover; }
+.roadbook-start-point__photos img { width: 72px; height: 52px; border-radius: 7px; background: color-mix(in srgb, var(--surface) 88%, var(--primary) 12%); object-fit: contain; }
 .roadbook-start-point__photo-count { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 7px; background: color-mix(in srgb, var(--surface) 82%, var(--primary) 18%); color: var(--primary-dark); font-size: .78rem; font-weight: 800; }
 .roadbook-start-point__resources { margin-top: 1.1rem; }
 .roadbook-start-point__resources h3 { margin-bottom: .65rem; }
 .stage-detail-map--start-point { height: clamp(320px, 52vw, 520px); }
 .journey-photo-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 12px; margin-top: 18px; }
 .journey-photo-gallery figure { margin: 0; overflow: hidden; border: 1px solid rgba(46, 125, 50, .14); border-radius: 12px; background: #e7eee8; }
-.journey-photo-gallery img { display: block; width: 100%; height: clamp(190px, 28vw, 330px); object-fit: cover; }
+.journey-photo-gallery img { display: block; width: 100%; height: clamp(190px, 28vw, 330px); object-fit: contain; }
 .journey-photo-gallery figcaption { padding: 9px 11px; color: var(--text-light); font-size: .82rem; line-height: 1.4; }
 
 .studio-section-block {
