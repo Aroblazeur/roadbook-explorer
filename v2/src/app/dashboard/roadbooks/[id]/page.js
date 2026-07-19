@@ -68,7 +68,7 @@ export default function RoadbookDetailPage() {
   const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxUploading, metricsLoading, locationsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, downloadGpx, computeStageMetrics, analyzeStageGpx, extractStageLocations } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
 
   const { coverUrl, setCoverUrl, coverMediaId, setCoverMediaId, coverPreview, setCoverPreview, coverMode, setCoverMode } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
-  const { startPoint, setStartPoint, startPointLoading, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
+  const { startPoint, setStartPoint, returnPoint, setReturnPoint, startPointLoading, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
 
   const analyzeGoogleMapsRoute = useCallback(async target => {
     const normalizedActivity = String(activity ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -351,6 +351,7 @@ export default function RoadbookDetailPage() {
               </div>
             </div>
           </div>
+          <StartPointSection kind="return" value={returnPoint} onChange={setReturnPoint} images={images} uploadLoading={uploadLoading} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "return" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "return" } })} />
       </section>
     </StudioShell>
   );

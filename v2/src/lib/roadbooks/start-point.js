@@ -2,39 +2,50 @@ import { normalizeAccommodation } from "./accommodations.js";
 
 export const START_POINT_MAX_WAYPOINTS = 9;
 
-export function createEmptyStartPoint() {
+export const TRANSPORT_OPTIONS = [
+  ["car", "Voiture"],
+  ["train", "Train / transports en commun"],
+  ["bicycle", "Vélo"],
+  ["walk", "À pied"],
+  ["motorcycle", "Moto"],
+  ["other", "Autre"],
+];
+
+export function transportLabel(mode) {
+  return Object.fromEntries(TRANSPORT_OPTIONS)[mode] || String(mode ?? "");
+}
+
+export function createEmptyTransportSegment() {
   return {
     departure_city: "",
     arrival_city: "",
     waypoints: [],
     transport_mode: "car",
-    description: "",
     distance_km: "",
     duration: "",
     google_maps_url: "",
-    accommodations: [],
-    pois: [],
   };
 }
 
-export function normalizeStartPoint(value) {
+export function normalizeTransportSegment(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
-    ...createEmptyStartPoint(),
+    ...createEmptyTransportSegment(),
     departure_city: String(source.departure_city ?? ""),
     arrival_city: String(source.arrival_city ?? ""),
-    waypoints: Array.isArray(source.waypoints) ? source.waypoints.map(item => String(item ?? "")) : [],
+    waypoints: Array.isArray(source.waypoints) ? source.waypoints.map(item => String(item ?? "")).slice(0, START_POINT_MAX_WAYPOINTS) : [],
     transport_mode: String(source.transport_mode ?? "car") || "car",
-    description: String(source.description ?? ""),
     distance_km: source.distance_km == null ? "" : String(source.distance_km),
     duration: String(source.duration ?? ""),
     google_maps_url: String(source.google_maps_url ?? ""),
-    accommodations: Array.isArray(source.accommodations) ? source.accommodations.map(normalizeAccommodation) : [],
-    pois: Array.isArray(source.pois) ? source.pois.map(normalizeStartPointPoi) : [],
   };
 }
 
-export function normalizeStartPointPoi(value) {
+export function createEmptyJourney() {
+  return { transport_segments: [], description: "", accommodations: [], pois: [] };
+}
+
+function normalizeStartPointPoi(value) {
   const source = value && typeof value === "object" ? value : {};
   return {
     name: String(source.name ?? ""),
@@ -47,60 +58,156 @@ export function normalizeStartPointPoi(value) {
   };
 }
 
+function hasLegacyRoute(source) {
+  return Boolean(
+    String(source?.departure_city ?? "").trim() || String(source?.arrival_city ?? "").trim() ||
+    (Array.isArray(source?.waypoints) && source.waypoints.some(item => String(item ?? "").trim())) ||
+    source?.distance_km != null || String(source?.duration ?? "").trim() || String(source?.google_maps_url ?? "").trim()
+  );
+}
+
+export function normalizeJourney(value, { acceptLegacy = true } = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  let segments = Array.isArray(source.transport_segments)
+    ? source.transport_segments.map(normalizeTransportSegment)
+    : Array.isArray(source.segments)
+      ? source.segments.map(normalizeTransportSegment)
+      : [];
+  if (!segments.length && acceptLegacy && hasLegacyRoute(source)) segments = [normalizeTransportSegment(source)];
+  return {
+    ...createEmptyJourney(),
+    transport_segments: segments,
+    description: String(source.description ?? ""),
+    accommodations: Array.isArray(source.accommodations) ? source.accommodations.map(normalizeAccommodation) : [],
+    pois: Array.isArray(source.pois) ? source.pois.map(normalizeStartPointPoi) : [],
+  };
+}
+
+export function createEmptyStartPoint() {
+  return { ...createEmptyJourney(), return_trip: createEmptyJourney() };
+}
+
+export function normalizeStartPoint(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    ...normalizeJourney(source),
+    return_trip: normalizeJourney(source.return_trip, { acceptLegacy: false }),
+  };
+}
+
 function mapsTravelMode(mode) {
   return ({ car: "driving", train: "transit", transit: "transit", bicycle: "bicycling", walk: "walking", motorcycle: "two-wheeler" })[mode] ?? null;
 }
 
 export function buildGoogleMapsDirectionsUrl(value) {
-  const point = normalizeStartPoint(value);
-  const origin = point.departure_city.trim();
-  const destination = point.arrival_city.trim();
+  const segment = normalizeTransportSegment(value?.transport_segments?.[0] ?? value);
+  const origin = segment.departure_city.trim();
+  const destination = segment.arrival_city.trim();
   if (!origin || !destination) return "";
   const params = new URLSearchParams({ api: "1", origin, destination });
-  const travelMode = mapsTravelMode(point.transport_mode);
+  const travelMode = mapsTravelMode(segment.transport_mode);
   if (travelMode) params.set("travelmode", travelMode);
-  const waypoints = point.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS);
+  const waypoints = segment.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS);
   if (waypoints.length) params.set("waypoints", waypoints.join("|"));
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
-export function hasStartPoint(value) {
-  const point = normalizeStartPoint(value);
+export function journeySegments(value) {
+  return normalizeJourney(value).transport_segments;
+}
+
+export function journeyCities(value) {
+  const cities = [];
+  journeySegments(value).forEach(segment => {
+    [segment.departure_city, ...segment.waypoints, segment.arrival_city].filter(Boolean).forEach(city => {
+      if (city.trim() && cities.at(-1) !== city.trim()) cities.push(city.trim());
+    });
+  });
+  return cities;
+}
+
+export function journeyTransportModes(value) {
+  return [...new Set(journeySegments(value).map(segment => segment.transport_mode).filter(Boolean))];
+}
+
+export function journeyDistance(value) {
+  const distances = journeySegments(value).map(segment => String(segment.distance_km).trim()).filter(Boolean).map(Number).filter(Number.isFinite);
+  if (!distances.length) return "";
+  return Math.round(distances.reduce((sum, distance) => sum + distance, 0) * 100) / 100;
+}
+
+export function hasJourney(value) {
+  const journey = normalizeJourney(value);
   return Boolean(
-    point.departure_city.trim() || point.arrival_city.trim() || point.waypoints.some(item => item.trim()) ||
-    point.description.trim() || point.distance_km !== "" || point.duration.trim() ||
-    point.accommodations.length || point.pois.length
+    journey.transport_segments.some(segment => hasLegacyRoute(segment)) || journey.description.trim() ||
+    journey.accommodations.length || journey.pois.length
   );
 }
 
-export function buildStartPointRecord(value, roadbookId) {
+export function hasStartJourney(value) {
+  return hasJourney(normalizeStartPoint(value));
+}
+
+export function hasReturnTrip(value) {
+  return hasJourney(normalizeStartPoint(value).return_trip);
+}
+
+export function hasStartPoint(value) {
   const point = normalizeStartPoint(value);
-  const distance = String(point.distance_km).trim();
+  return hasJourney(point) || hasJourney(point.return_trip);
+}
+
+function buildJourneyValue(value) {
+  const journey = normalizeJourney(value);
   return {
-    roadbook_id: Number(roadbookId),
-    departure_city: point.departure_city.trim() || null,
-    arrival_city: point.arrival_city.trim() || null,
-    waypoints: point.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS),
-    transport_mode: point.transport_mode.trim() || null,
-    description: point.description.trim() || null,
-    distance_km: distance === "" || !Number.isFinite(Number(distance)) ? null : Number(distance),
-    duration: point.duration.trim() || null,
-    google_maps_url: buildGoogleMapsDirectionsUrl(point) || null,
-    accommodations: point.accommodations.map(normalizeAccommodation).filter(item => item.name || item.url || item.photo || item.photoMediaId || item.type || item.price || item.note || item.description),
-    pois: point.pois.map(normalizeStartPointPoi).filter(item => item.name || item.region || item.link_url || item.description || item.photo_url || item.photoMediaId).map(item => ({
+    transport_segments: journey.transport_segments.map(segment => ({
+      ...normalizeTransportSegment(segment),
+      departure_city: segment.departure_city.trim(),
+      arrival_city: segment.arrival_city.trim(),
+      waypoints: segment.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS),
+      distance_km: String(segment.distance_km).trim() === "" || !Number.isFinite(Number(segment.distance_km)) ? null : Number(segment.distance_km),
+      google_maps_url: buildGoogleMapsDirectionsUrl(segment) || null,
+    })).filter(segment => hasLegacyRoute(segment)),
+    description: journey.description.trim() || null,
+    accommodations: journey.accommodations.map(normalizeAccommodation).filter(item => item.name || item.url || item.photo || item.photoMediaId || item.type || item.price || item.note || item.description),
+    pois: journey.pois.map(normalizeStartPointPoi).filter(item => item.name || item.region || item.link_url || item.description || item.photo_url || item.photoMediaId).map(item => ({
       ...item,
       link_url: item.link_url.trim() || (item.name.trim() ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([item.name, item.region].filter(Boolean).join(" "))}` : ""),
     })),
   };
 }
 
-export function startPointRoutePayload(value, roadbookId) {
+export function buildStartPointRecord(value, roadbookId) {
   const point = normalizeStartPoint(value);
+  const start = buildJourneyValue(point);
+  const first = start.transport_segments[0] ?? normalizeTransportSegment({});
+  const last = start.transport_segments.at(-1) ?? first;
+  const distance = journeyDistance(start);
+  const modes = journeyTransportModes(start);
+  return {
+    roadbook_id: Number(roadbookId),
+    departure_city: first.departure_city || null,
+    arrival_city: last.arrival_city || null,
+    waypoints: start.transport_segments.flatMap(segment => segment.waypoints),
+    transport_mode: modes.length > 1 ? "multimodal" : modes[0] || null,
+    description: start.description,
+    distance_km: distance === "" ? null : distance,
+    duration: start.transport_segments.length === 1 ? start.transport_segments[0].duration || null : null,
+    google_maps_url: start.transport_segments.length === 1 ? start.transport_segments[0].google_maps_url : null,
+    accommodations: start.accommodations,
+    pois: start.pois,
+    transport_segments: start.transport_segments,
+    return_trip: buildJourneyValue(point.return_trip),
+  };
+}
+
+export function startPointRoutePayload(value, roadbookId) {
+  const segment = normalizeTransportSegment(value);
   return {
     roadbookId: Number(roadbookId),
-    origin: point.departure_city.trim(),
-    destination: point.arrival_city.trim(),
-    waypoints: point.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS),
-    transportMode: point.transport_mode,
+    origin: segment.departure_city.trim(),
+    destination: segment.arrival_city.trim(),
+    waypoints: segment.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS),
+    transportMode: segment.transport_mode,
   };
 }

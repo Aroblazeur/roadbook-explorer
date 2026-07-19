@@ -6,7 +6,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { getSignedMediaAccess, loadExplorerGpxMedia } from "@/lib/roadbooks/loaders";
 import { resolveExplorerGpxUrl } from "@/lib/roadbooks/gpx-media";
 import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
-import { buildGoogleMapsDirectionsUrl, hasStartPoint, normalizeStartPoint } from "@/lib/roadbooks/start-point";
+import { buildGoogleMapsDirectionsUrl, hasJourney, hasReturnTrip, hasStartJourney, journeyCities, journeyDistance, journeyTransportModes, normalizeJourney, normalizeStartPoint, transportLabel } from "@/lib/roadbooks/start-point";
 import { googleMapsEmbedUrl, resolveMapDisplay } from "@/lib/google-map-links";
 import { isRoadbookItemDraft, withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
 import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
@@ -122,6 +122,7 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
 
   const { roadbook, startPoint, stages, pois, variants, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, coverSignedUrl, totals } = result;
   const startParam = searchParams?.start === "1";
+  const returnParam = searchParams?.return === "1";
   const stageParam = searchParams?.stage ? Number(searchParams.stage) : null;
   const variantParam = searchParams?.variant ? String(searchParams.variant) : null;
 
@@ -144,8 +145,10 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
   const currentVariant = variantParam == null
     ? null
     : variants.find(variant => String(variant.id) === variantParam) ?? null;
-  const currentEntryIndex = startParam && hasStartPoint(startPoint)
+  const currentEntryIndex = startParam && hasStartJourney(startPoint)
     ? entries.findIndex(entry => entry.type === "start")
+    : returnParam && hasReturnTrip(startPoint)
+      ? entries.findIndex(entry => entry.type === "return")
     : currentVariant
       ? entries.findIndex(entry => entry.type === "variant" && entry.item.id === currentVariant.id)
       : currentStageIdx == null
@@ -176,12 +179,13 @@ export default async function RoadbookViewPage({ params, searchParams: sp }) {
             <span />
           </nav>
         </>
-      ) : currentEntry.type === "start" ? (
-        <StartPointDetailPage
+      ) : currentEntry.type === "start" || currentEntry.type === "return" ? (
+        <JourneyDetailPage
           roadbook={roadbook}
           entries={entries}
           currentEntryIndex={currentEntryIndex}
-          value={startPoint}
+          value={currentEntry.item}
+          kind={currentEntry.type}
           images={images}
         />
       ) : currentEntry.type === "stage" ? (
@@ -291,8 +295,9 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
         mapTitle="Carte interactive de l'itinéraire officiel"
         downloadLabel="Télécharger le tracé officiel"
       />
-      <StartPointOverview value={startPoint} roadbookSlug={roadbook.slug} />
+      <JourneyOverview value={startPoint} roadbookSlug={roadbook.slug} kind="start" />
       <StageOverviewList roadbookSlug={roadbook.slug} stages={stages} variantsByStage={variantsByStage} />
+      <JourneyOverview value={normalizeStartPoint(startPoint).return_trip} roadbookSlug={roadbook.slug} kind="return" />
       <RouteSummary
         className="roadbook-current-summary"
         heading="Tracé total actuel"
@@ -305,32 +310,37 @@ function RoadbookOverview({ roadbook, startPoint, stages, variantsByStage, total
   );
 }
 
-function StartPointOverview({ value, roadbookSlug }) {
-  if (!hasStartPoint(value)) return null;
-  const point = normalizeStartPoint(value);
-  const mapsUrl = safeResourceUrl(point.google_maps_url || buildGoogleMapsDirectionsUrl(point), { relative: false });
+function JourneyOverview({ value, roadbookSlug, kind }) {
+  const point = normalizeJourney(value);
+  if (!hasJourney(point)) return null;
+  const isReturn = kind === "return";
+  const firstSegment = point.transport_segments[0];
+  const mapsUrl = firstSegment ? safeResourceUrl(firstSegment.google_maps_url || buildGoogleMapsDirectionsUrl(firstSegment), { relative: false }) : null;
   const mapPreviewUrl = mapsUrl ? googleMapsEmbedUrl(mapsUrl) : null;
-  const routeCities = [point.departure_city, ...point.waypoints.filter(Boolean), point.arrival_city].filter(Boolean);
-  const transport = ({ car: "Voiture", train: "Train / transports en commun", transit: "Transports en commun", bicycle: "Vélo", walk: "À pied", motorcycle: "Moto", other: "Autre" })[point.transport_mode] || point.transport_mode;
-  return <section className="roadbook-start-point" aria-labelledby="roadbook-start-point-title">
-    <Link className="roadbook-start-point__detail-link" href={`/roadbooks/${roadbookSlug}?start=1`} aria-label="Consulter le point de départ" />
+  const routeCities = journeyCities(point);
+  const transport = journeyTransportModes(point).map(transportLabel).join(" + ");
+  const distance = journeyDistance(point);
+  const duration = point.transport_segments.map(segment => segment.duration).filter(Boolean).join(" + ");
+  const titleId = `roadbook-${kind}-point-title`;
+  return <section className="roadbook-start-point" aria-labelledby={titleId}>
+    <Link className="roadbook-start-point__detail-link" href={`/roadbooks/${roadbookSlug}?${isReturn ? "return" : "start"}=1`} aria-label={`Consulter ${isReturn ? "le retour" : "le point de départ"}`} />
     <div className={`roadbook-start-point__summary${mapsUrl ? " roadbook-start-point__summary--with-map" : ""}`}>
       <div className="roadbook-start-point__content">
         <div className="roadbook-start-point__header">
-          <span className="roadbook-start-point__eyebrow">Avant la première étape</span>
-          <h2 id="roadbook-start-point-title">Point de départ</h2>
+          <span className="roadbook-start-point__eyebrow">{isReturn ? "Après la dernière étape" : "Avant la première étape"}</span>
+          <h2 id={titleId}>{isReturn ? "Retour" : "Point de départ"}</h2>
         </div>
         {routeCities.length > 0 && <p className="roadbook-start-point__route">{routeCities.join(" → ")}</p>}
         <div className="roadbook-start-point__stats">
           {transport && <span><small>Transport</small><strong>{transport}</strong></span>}
-          {point.distance_km !== "" && <span><small>Distance</small><strong>{point.distance_km} km</strong></span>}
-          {point.duration && <span><small>Durée</small><strong>{point.duration}</strong></span>}
+          {distance !== "" && <span><small>Distance</small><strong>{distance} km</strong></span>}
+          {duration && <span><small>Durée</small><strong>{duration}</strong></span>}
         </div>
         {point.description && <p className="roadbook-start-point__description">{point.description}</p>}
       </div>
       {mapsUrl && <a className="roadbook-start-point__map-preview" href={mapsUrl} target="_blank" rel="noreferrer" aria-label="Ouvrir cet itinéraire dans Google Maps">
         {mapPreviewUrl
-          ? <iframe src={mapPreviewUrl} title="Aperçu de l’itinéraire vers le point de départ" loading="lazy" tabIndex="-1" aria-hidden="true" />
+          ? <iframe src={mapPreviewUrl} title={`Aperçu de l’itinéraire ${isReturn ? "de retour" : "vers le point de départ"}`} loading="lazy" tabIndex="-1" aria-hidden="true" />
           : <span className="roadbook-start-point__map-placeholder" aria-hidden="true">⌁</span>}
         <span className="roadbook-start-point__map-label">Google Maps <span aria-hidden="true">↗</span></span>
       </a>}
@@ -381,12 +391,19 @@ function buildRoadbookEntries(stages, variantsByStage, startPoint = null) {
       variantIndex,
     })),
   ]);
-  return hasStartPoint(startPoint) ? [{ type: "start", item: startPoint }, ...stageEntries] : stageEntries;
+  const point = normalizeStartPoint(startPoint);
+  return [
+    ...(hasStartJourney(point) ? [{ type: "start", item: point }] : []),
+    ...stageEntries,
+    ...(hasReturnTrip(point) ? [{ type: "return", item: point.return_trip }] : []),
+  ];
 }
 
 function roadbookEntryHref(roadbookSlug, entry) {
   return entry.type === "start"
     ? `/roadbooks/${roadbookSlug}?start=1`
+    : entry.type === "return"
+    ? `/roadbooks/${roadbookSlug}?return=1`
     : entry.type === "variant"
     ? `/roadbooks/${roadbookSlug}?variant=${entry.item.id}`
     : `/roadbooks/${roadbookSlug}?stage=${entry.stageIndex}`;
@@ -591,6 +608,8 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   const stageNumber = currentEntry.parentStage?.stage_display_label ?? currentEntry.parentStage?.stage_number ?? currentEntry.item.stage_display_label ?? currentEntry.item.stage_number ?? (currentEntry.stageIndex ?? 0) + 1;
   const currentLabel = currentEntry.type === "start"
     ? "Point de départ"
+    : currentEntry.type === "return"
+    ? "Retour"
     : currentEntry.type === "variant"
     ? currentEntry.item.label || `Variante de l'étape ${stageNumber}`
     : currentEntry.item.title || (currentEntry.item.day ? String(currentEntry.item.day) : `Étape ${stageNumber}`);
@@ -620,54 +639,46 @@ function StageDetailNavigation({ roadbook, entries, currentEntryIndex }) {
   );
 }
 
-function StartPointDetailPage({ roadbook, entries, currentEntryIndex, value, images }) {
-  const point = normalizeStartPoint(value);
-  const mapsUrl = safeResourceUrl(point.google_maps_url || buildGoogleMapsDirectionsUrl(point), { relative: false });
-  const routeCities = [point.departure_city, ...point.waypoints.filter(Boolean), point.arrival_city].filter(Boolean);
-  const transport = ({ car: "Voiture", train: "Train / transports en commun", transit: "Transports en commun", bicycle: "Vélo", walk: "À pied", motorcycle: "Moto", other: "Autre" })[point.transport_mode] || point.transport_mode;
+function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, images }) {
+  const point = normalizeJourney(value);
+  const isReturn = kind === "return";
+  const title = isReturn ? "Retour" : "Point de départ";
+  const routeCities = journeyCities(point);
+  const contextCity = point.transport_segments.at(-1)?.arrival_city || point.transport_segments[0]?.departure_city || "";
 
   return (
-    <section className="stage-detail-page" aria-label="Fiche détaillée du point de départ">
+    <section className="stage-detail-page" aria-label={`Fiche détaillée : ${title}`}>
       <StageDetailNavigation roadbook={roadbook} entries={entries} currentEntryIndex={currentEntryIndex} />
       <article className="stage-detail-card stage-detail-card--primary card">
         <header className="stage-detail-heading">
-          <span className="stage-detail-heading__number" aria-hidden="true">⌖</span>
-          <div>
-            <h2>Point de départ</h2>
-            {routeCities.length > 0 && <p className="stage-detail-route">{routeCities.join(" → ")}</p>}
-          </div>
+          <span className="stage-detail-heading__number" aria-hidden="true">{isReturn ? "↩" : "⌖"}</span>
+          <div><h2>{title}</h2>{routeCities.length > 0 && <p className="stage-detail-route">{routeCities.join(" → ")}</p>}</div>
         </header>
-        <div className="stage-detail-stats" aria-label="Informations sur le trajet vers le point de départ">
-          {transport && <div className="stage-detail-stat"><span aria-hidden="true">◆</span><span className="stage-detail-stat__label">Transport</span><strong>{transport}</strong></div>}
-          {point.distance_km !== "" && <div className="stage-detail-stat"><StatIconDistance /><span className="stage-detail-stat__label">Distance</span><strong>{point.distance_km} km</strong></div>}
-          {point.duration && <div className="stage-detail-stat"><StatIconDuration /><span className="stage-detail-stat__label">Durée</span><strong>{point.duration}</strong></div>}
-        </div>
         {point.description && <p className="stage-detail-description">{point.description}</p>}
       </article>
 
-      {mapsUrl && <section className="stage-detail-card stage-detail-map-card card" aria-labelledby="start-point-map-title">
-        <h2 id="start-point-map-title">Itinéraire vers le départ</h2>
-        <div className="stage-detail-map stage-detail-map--start-point">
-          <FullscreenMap><GoogleMapDisplay url={mapsUrl} title="Itinéraire vers le point de départ" /></FullscreenMap>
-        </div>
-      </section>}
-
-      <section className="stage-detail-card stage-detail-accommodations card" aria-labelledby="start-point-accommodations-title">
-        <h2 id="start-point-accommodations-title">Hébergements</h2>
-        {point.accommodations.filter(hasAccommodation).length > 0 ? (
-          <div className="stage-detail-accommodation-list">
-            {point.accommodations.filter(hasAccommodation).map((item, index) => <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={point.arrival_city || point.departure_city} images={images} />)}
+      {point.transport_segments.map((segment, index) => {
+        const mapsUrl = safeResourceUrl(segment.google_maps_url || buildGoogleMapsDirectionsUrl(segment), { relative: false });
+        return <section className="stage-detail-card stage-detail-map-card card" key={`${kind}-segment-${index}`}>
+          <div className="stage-detail-section-heading"><h2>Trajet {index + 1} · {transportLabel(segment.transport_mode)}</h2></div>
+          <p className="stage-detail-route">{[segment.departure_city, ...segment.waypoints.filter(Boolean), segment.arrival_city].filter(Boolean).join(" → ")}</p>
+          <div className="stage-detail-stats" aria-label={`Informations du trajet ${index + 1}`}>
+            <div className="stage-detail-stat"><span aria-hidden="true">◆</span><span className="stage-detail-stat__label">Transport</span><strong>{transportLabel(segment.transport_mode)}</strong></div>
+            {segment.distance_km !== "" && <div className="stage-detail-stat"><StatIconDistance /><span className="stage-detail-stat__label">Distance</span><strong>{segment.distance_km} km</strong></div>}
+            {segment.duration && <div className="stage-detail-stat"><StatIconDuration /><span className="stage-detail-stat__label">Durée</span><strong>{segment.duration}</strong></div>}
           </div>
-        ) : <p className="stage-detail-empty">Aucun hébergement renseigné.</p>}
+          {mapsUrl && <div className="stage-detail-map stage-detail-map--start-point"><FullscreenMap><GoogleMapDisplay url={mapsUrl} title={`${title}, trajet ${index + 1}`} /></FullscreenMap></div>}
+        </section>;
+      })}
+
+      <section className="stage-detail-card stage-detail-accommodations card">
+        <h2>Hébergements</h2>
+        {point.accommodations.filter(hasAccommodation).length > 0 ? <div className="stage-detail-accommodation-list">{point.accommodations.filter(hasAccommodation).map((item, index) => <AccommodationResource key={`${item.name}-${item.url}-${index}`} accommodation={item} contextCity={contextCity} images={images} />)}</div> : <p className="stage-detail-empty">Aucun hébergement renseigné.</p>}
       </section>
 
-      <section className="stage-detail-card stage-detail-pois card" aria-labelledby="start-point-pois-title">
-        <h2 id="start-point-pois-title">Points d&apos;intérêt</h2>
-        {point.pois.length > 0 ? (
-          <ul className="stage-detail-poi-list">
-            {point.pois.map((poi, index) => <PoiCard key={`${poi.name}-${index}`} poi={{ ...poi, metadata: { poiPhotoMediaId: poi.photoMediaId, linkPreview: poi.preview } }} images={images} />)}
-          </ul>
-        ) : <p className="stage-detail-empty">Aucun point d&apos;intérêt renseigné.</p>}
+      <section className="stage-detail-card stage-detail-pois card">
+        <h2>Points d&apos;intérêt</h2>
+        {point.pois.length > 0 ? <ul className="stage-detail-poi-list">{point.pois.map((poi, index) => <PoiCard key={`${poi.name}-${index}`} poi={{ ...poi, metadata: { poiPhotoMediaId: poi.photoMediaId, linkPreview: poi.preview } }} images={images} />)}</ul> : <p className="stage-detail-empty">Aucun point d&apos;intérêt renseigné.</p>}
       </section>
     </section>
   );
