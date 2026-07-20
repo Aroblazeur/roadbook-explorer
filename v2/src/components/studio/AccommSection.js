@@ -11,6 +11,7 @@ import {
 } from "@/lib/roadbooks/accommodations";
 import { resolveStageTitle, resolveVariantTitle, stageDisplayLabel } from "@/lib/roadbooks/stage-order";
 import useRevealForm from "@/hooks/studio/useRevealForm";
+import StudioCollapsibleZone from "./StudioCollapsibleZone";
 
 const PRIMARY_FIELDS = {
   name: "accommodation_name",
@@ -172,8 +173,7 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
 
   return (
     <>
-      <div className="studio-zone studio-zone--accommodation">
-        <h4 className="studio-zone__title">Hébergement principal</h4>
+      <StudioCollapsibleZone tone="accommodation" title="Hébergement principal" summary={[primary.name, primary.type].filter(Boolean).join(" · ")}>
         <AccommodationFields accommodation={primary} onChange={changePrimary} idPrefix={`${targetPrefix}-accommodation-primary`} photoMedia={mediaById(primary.photoMediaId)} onUploadPhoto={uploadPrimaryPhoto} uploadLoading={uploadLoading} />
         {hasAccommodation(primary) && (
           <>
@@ -186,11 +186,10 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
             <DuplicateAccommodationControl accommodation={primary} sourceKind="primary" stageId={stageId} variantId={variantId} stages={stages} variantsByStage={variantsByStage} onDuplicate={onDuplicate} />
           </>
         )}
-      </div>
+      </StudioCollapsibleZone>
 
-      <div className="studio-zone studio-zone--alternatives">
-        <div className="studio-stage-extra__header">
-          <h4 className="studio-zone__title">Hébergements alternatifs</h4>
+      <StudioCollapsibleZone tone="alternatives" title="Hébergements alternatifs" summary={alternatives.map(item => item.name || item.type).filter(Boolean).join(" · ") || (alternatives.length ? `${alternatives.length} hébergement${alternatives.length > 1 ? "s" : ""}` : "Aucun hébergement alternatif")}>
+        <div className="studio-stage-extra__header studio-collapsible-zone__actions">
           <button type="button" className="terrain-button terrain-button--secondary" onClick={addAlternative}>Ajouter un hébergement alternatif</button>
         </div>
         {alternatives.length ? alternatives.map((alternative, index) => (
@@ -210,7 +209,7 @@ export default function AccommSection({ stageId, variantId = null, stage, onChan
             {hasAccommodation(alternative) && <DuplicateAccommodationControl accommodation={alternative} sourceKind="alternative" stageId={stageId} variantId={variantId} stages={stages} variantsByStage={variantsByStage} onDuplicate={onDuplicate} />}
           </article>
         )) : <p className="studio-detail--empty">Aucun hébergement alternatif.</p>}
-      </div>
+      </StudioCollapsibleZone>
     </>
   );
 }

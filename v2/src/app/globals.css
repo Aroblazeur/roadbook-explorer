@@ -636,6 +636,16 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+.studio-collapsible-zone > summary { list-style: none; }
+.studio-collapsible-zone > summary::-webkit-details-marker { display: none; }
+.studio-collapsible-zone__summary { display: grid; grid-template-columns: minmax(150px, auto) minmax(0, 1fr) auto; align-items: center; gap: .65rem; cursor: pointer; user-select: none; }
+.studio-collapsible-zone__summary::after { content: "▾"; color: var(--studio-muted); font-size: .9rem; transition: transform .15s ease; }
+.studio-collapsible-zone[open] > .studio-collapsible-zone__summary::after { transform: rotate(180deg); }
+.studio-collapsible-zone__summary:hover, .studio-collapsible-zone__summary:focus-visible { outline: none; }
+.studio-collapsible-zone__summary .studio-zone__title { margin: 0; }
+.studio-collapsible-zone__preview { min-width: 0; overflow: hidden; color: var(--studio-muted); font-size: .82rem; font-weight: 600; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.studio-collapsible-zone__body { padding-top: .7rem; }
+.studio-collapsible-zone__actions { justify-content: flex-end; }
 .studio-zone .studio-form-grid,
 .studio-zone .studio-form-grid--compact { margin-top: 0.4rem; }
 .studio-zone .studio-stage-extra:first-child { margin-top: 0; padding-top: 0; border-top: none; }
@@ -1957,6 +1967,9 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .studio-editor-header { display: grid; }
   .studio-editor-actions { justify-content: flex-start; }
   .studio-inline-row { align-items: stretch; flex-direction: column; }
+  .studio-collapsible-zone__summary { grid-template-columns: minmax(0, 1fr) auto; gap: .25rem .5rem; }
+  .studio-collapsible-zone__preview { grid-column: 1 / -1; grid-row: 2; text-align: left; }
+  .studio-collapsible-zone__summary::after { grid-column: 2; grid-row: 1; }
   .roadbook-start-point__summary--with-map { grid-template-columns: 1fr; }
   .roadbook-start-point__map-preview, .roadbook-start-point__map-preview iframe { min-height: 135px; }
 }
@@ -1977,8 +1990,9 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
   .stage-detail-stats { gap: 8px; }
   .stage-detail-stat { min-height: 40px; padding: 8px 11px; }
   .stage-detail-poi { grid-template-columns: 1fr; gap: 12px; }
-  .stage-detail-poi > img { height: 160px; }
+  .stage-detail-poi > .zoomable-image { height: 160px; }
   .stage-detail-accommodation-list { grid-template-columns: 1fr; }
+  .stage-detail-accommodation__image-wrap,
   .stage-detail-accommodation__image,
   .stage-detail-accommodation__placeholder { height: 160px; }
   .stage-detail-accommodation__actions { flex-direction: column; }

@@ -8,6 +8,7 @@ import PoiForm from "./PoiForm";
 import { buildVariantTitle, resolveVariantTitle } from "@/lib/roadbooks/stage-order";
 import useRevealForm from "@/hooks/studio/useRevealForm";
 import RouteMapFields, { normalizeRouteMaps } from "./RouteMapFields";
+import StudioCollapsibleZone from "./StudioCollapsibleZone";
 
 export default function VariantForm({
   stageId,
@@ -68,6 +69,10 @@ export default function VariantForm({
         const isExtractingLocations = locationsLoading === `variant:${variant.id}`;
         const isCalculatingGoogleMetrics = googleMetricsLoading === `variant:${variant.id}`;
         const displayedTitle = resolveVariantTitle(variant, stageDisplayLabel);
+        const variantPois = poisByVariant[variant.id] ?? [];
+        const infoSummary = [variant.day, [variant.departure, variant.arrival].filter(Boolean).join(" → "), variant.distance_km != null ? `${variant.distance_km} km` : "", variant.elevation_gain_m != null ? `${variant.elevation_gain_m} m D+` : "", meta.type].filter(Boolean).join(" · ");
+        const poiSummary = variantPois.length ? `POI : ${variantPois.slice(0, 2).map(poi => poi.name).filter(Boolean).join(", ") || variantPois.length}${variantPois.length > 2 ? ` +${variantPois.length - 2}` : ""}` : "";
+        const traceSummary = [routeMaps.length ? `${routeMaps.length} carte${routeMaps.length > 1 ? "s" : ""}` : "", variantGpxRoutes.length ? `${variantGpxRoutes.length} GPX` : "", poiSummary].filter(Boolean).join(" · ");
         const variantIndex = stageVariants.findIndex(item => item.id === variant.id);
         const isDragging = dragHandlers?.draggingVariantId === variant.id;
         const isDragOver = dragHandlers?.dragOverVariantId === variant.id && !isDragging;
@@ -119,8 +124,7 @@ export default function VariantForm({
 
             {expanded && (
               <div className="studio-variant-card__body">
-                <div className="studio-zone studio-zone--info">
-                  <h4 className="studio-zone__title">Infos sous-étape</h4>
+                <StudioCollapsibleZone tone="info" title="Infos sous-étape" summary={infoSummary}>
                   <div className="studio-form-grid studio-form-grid--compact">
                     <label>Numéro<input type="text" value={`↳ ${variant.sort_order ?? 1}`} readOnly className="studio-input--readonly" /></label>
                     <label>Jour<input type="text" value={variant.day ?? ""} onChange={event => change({ day: event.target.value })} /></label>
@@ -148,10 +152,9 @@ export default function VariantForm({
                     <label>Durée (automatique si vide)<input type="text" value={variant.duration ?? ""} onChange={event => change({ duration: event.target.value })} /></label>
                     <label>Type de variante<input type="text" value={meta.type ?? ""} onChange={event => changeMeta({ type: event.target.value })} /></label>
                   </div>
-                </div>
+                </StudioCollapsibleZone>
 
-                <div className="studio-zone studio-zone--trace">
-                  <h4 className="studio-zone__title">Tracé · Carte · Points d&apos;intérêt</h4>
+                <StudioCollapsibleZone tone="trace" title="Tracé · Carte · Points d'intérêt" summary={traceSummary}>
                   <div className="studio-stage-extra">
                     <div className="studio-stage-extra__header"><h5>GPX et carte</h5></div>
                     <RouteMapFields maps={routeMaps} onChange={changeRouteMaps} idPrefix={`variant-map-${variant.id}`} onRecalculate={() => handleGoogleMapsRecalculate({ ...variant, map_embed_url: routeMaps[0]?.url }, "variant")} recalculating={googleMetricsLoading != null || isCalculatingGoogleMetrics} />
@@ -178,7 +181,7 @@ export default function VariantForm({
                   <PoiForm
                     stageId={stageId}
                     variantId={variant.id}
-                    stagePois={poisByVariant[variant.id] ?? []}
+                    stagePois={variantPois}
                     poiForm={poiForm}
                     setPoiForm={setPoiForm}
                     clearPoiForm={clearPoiForm}
@@ -188,7 +191,7 @@ export default function VariantForm({
                     onUploadPhoto={onUploadPoiPhoto}
                     uploadLoading={uploadLoading}
                   />
-                </div>
+                </StudioCollapsibleZone>
 
                 <AccommSection
                   stageId={stageId}

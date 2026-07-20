@@ -3,6 +3,7 @@
 import ZoomableImage from "@/components/ZoomableImage";
 
 import useRevealForm from "@/hooks/studio/useRevealForm";
+import StudioCollapsibleZone from "./StudioCollapsibleZone";
 
 export default function NoteForm({
   stageId,
@@ -18,9 +19,8 @@ export default function NoteForm({
   const isEditingHere = noteForm.stage_id === stageId && (noteForm.variant_id ?? null) === variantId;
   const formRef = useRevealForm(isEditingHere ? `${stageId}:${variantId ?? "stage"}:${noteForm.editing ?? "new"}` : null);
   return (
-    <div className="studio-stage-extra">
-      <div className="studio-stage-extra__header">
-        <h5>Notes ({notes.length})</h5>
+    <StudioCollapsibleZone tone="notes" title={`Notes (${notes.length})`} summary={notes.length ? String(notes[0]?.text ?? notes[0]).slice(0, 110) : "Aucune note"}>
+      <div className="studio-stage-extra__header studio-collapsible-zone__actions">
         <button type="button" className="terrain-button terrain-button--secondary" onClick={() => setNoteForm({ ...noteForm, stage_id: stageId, variant_id: variantId })}>Ajouter une note</button>
       </div>
       <div className="studio-sublist__list">
@@ -52,6 +52,6 @@ export default function NoteForm({
           </div>
         </form>
       )}
-    </div>
+    </StudioCollapsibleZone>
   );
 }

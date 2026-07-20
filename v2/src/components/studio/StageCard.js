@@ -7,6 +7,7 @@ import NoteForm from "./NoteForm";
 import VariantForm from "./VariantForm";
 import RouteMapFields, { normalizeRouteMaps } from "./RouteMapFields";
 import { buildStageTitle, isRoadbookItemDraft, resolveStageTitle } from "@/lib/roadbooks/stage-order";
+import StudioCollapsibleZone from "./StudioCollapsibleZone";
 
 export default function StageCard({
   stage,
@@ -76,6 +77,9 @@ export default function StageCard({
   const effectiveCanMoveDown = movableIndex >= 0 && movableIndex < movableStages.length - 1;
   const generatedTitle = buildStageTitle(stage, displayLabel);
   const displayedTitle = resolveStageTitle(stage, displayLabel);
+  const infoSummary = [stage.day, [stage.departure, stage.arrival].filter(Boolean).join(" → "), stage.distance_km != null ? `${stage.distance_km} km` : "", stage.elevation_gain_m != null ? `${stage.elevation_gain_m} m D+` : ""].filter(Boolean).join(" · ");
+  const poiSummary = stagePois.length ? `POI : ${stagePois.slice(0, 2).map(poi => poi.name).filter(Boolean).join(", ") || stagePois.length}${stagePois.length > 2 ? ` +${stagePois.length - 2}` : ""}` : "";
+  const traceSummary = [routeMaps.length ? `${routeMaps.length} carte${routeMaps.length > 1 ? "s" : ""}` : "", stageGpxRoutes.length ? `${stageGpxRoutes.length} GPX` : "", poiSummary].filter(Boolean).join(" · ");
   const changeTitle = (value) => {
     const custom = value.trim() !== "";
     change({
@@ -146,8 +150,7 @@ export default function StageCard({
       {expanded && (
         <div className="studio-stage-card__body">
           {/* ZONE 1 — Infos étape */}
-          <div className="studio-zone studio-zone--info">
-            <h4 className="studio-zone__title">Infos étape</h4>
+          <StudioCollapsibleZone tone="info" title="Infos étape" summary={infoSummary}>
             <div className="studio-form-grid studio-form-grid--compact">
               <label>Numéro<input type="number" min="1" step="1" value={stage.stage_number ?? ""} onChange={e => onStageNumberChange?.(e.target.value)} onBlur={e => onStageNumberChange?.(e.target.value)} /></label>
               <label>Jour<input type="text" value={stage.day ?? ""} onChange={e => change({ day: e.target.value })} /></label>
@@ -175,11 +178,10 @@ export default function StageCard({
               <label className="studio-form-grid__full">Description<textarea value={meta.description ?? ""} onChange={e => changeMeta({ description: e.target.value })} /></label>
               <label>Durée (automatique si vide)<input type="text" value={stage.duration ?? ""} onChange={e => change({ duration: e.target.value })} /></label>
             </div>
-          </div>
+          </StudioCollapsibleZone>
 
           {/* ZONE 2 — Tracé · Carte · Points d'intérêt */}
-          <div className="studio-zone studio-zone--trace">
-            <h4 className="studio-zone__title">Tracé · Carte · Points d'intérêt</h4>
+          <StudioCollapsibleZone tone="trace" title="Tracé · Carte · Points d'intérêt" summary={traceSummary}>
 
             <div className="studio-stage-extra">
               <div className="studio-stage-extra__header">
@@ -216,7 +218,7 @@ export default function StageCard({
               onUploadPhoto={onUploadPoiPhoto}
               uploadLoading={uploadLoading}
             />
-          </div>
+          </StudioCollapsibleZone>
 
           <AccommSection
             stageId={stage.id}
