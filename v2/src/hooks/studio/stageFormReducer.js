@@ -8,7 +8,7 @@ const defaultStageForm = {
   loss: "",
   description: "",
   notes: "",
-  mapEmbed: "",
+  gpxFile: null,
   photoUrl: "",
   day: "",
   duration: "",

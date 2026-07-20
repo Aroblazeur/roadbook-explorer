@@ -41,7 +41,23 @@ export default function StageForm({
               </div>
               <small className="text-muted">L'import de fichier sera disponible après la création de l'étape.</small>
             </div>
-            <label className="studio-form-grid__full">Carte (lien Google Maps ou intégration)<input type="url" value={stageForm.mapEmbed} onChange={e => stageFormDispatch({ type: "SET_FIELD", field: "mapEmbed", value: e.target.value })} /></label>
+            <div className="studio-form-grid__full">
+              <label htmlFor="stage-create-gpx">Fichier GPX</label>
+              <div className="studio-resource-field">
+                {stageForm.gpxFile && <span className="studio-resource-field__file" title={stageForm.gpxFile.name}>{stageForm.gpxFile.name}</span>}
+                <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
+                  {stageForm.gpxFile ? "Remplacer" : "Choisir un GPX"}
+                  <input
+                    key={stageForm.gpxFile ? `${stageForm.gpxFile.name}-${stageForm.gpxFile.size}-${stageForm.gpxFile.lastModified}` : "empty-gpx"}
+                    id="stage-create-gpx"
+                    type="file"
+                    accept=".gpx,application/gpx+xml,application/xml,text/xml"
+                    onChange={event => stageFormDispatch({ type: "SET_FIELD", field: "gpxFile", value: event.target.files?.[0] ?? null })}
+                  />
+                </label>
+                {stageForm.gpxFile && <button type="button" className="terrain-button--danger studio-action-button--compact" onClick={() => stageFormDispatch({ type: "SET_FIELD", field: "gpxFile", value: null })}>Retirer</button>}
+              </div>
+            </div>
           </div>
           <div className="studio-create-form__actions">
             <button type="submit">Créer l'étape</button>

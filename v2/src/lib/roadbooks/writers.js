@@ -1,8 +1,10 @@
 import { buildStartPointRecord, hasStartPoint } from "./start-point.js";
 
 export async function insertStage(supabase, record) {
-  const { error } = await supabase.from("stages").insert(record);
+  const { data, error } = await supabase.from("stages").insert(record).select("*").single();
   if (error) throw new Error(error.message);
+  if (!data) throw new Error("L'étape n'a pas été créée.");
+  return data;
 }
 
 export async function updateStage(supabase, stageId, updates) {

@@ -7,7 +7,7 @@ import {
   updateStageNotes, updateVariantNotes,
 } from "@/lib/roadbooks/writers";
 import { defaultStageForm, stageFormReducer } from "./stageFormReducer";
-import { buildPoiRecord, buildVariantRecord } from "@/lib/roadbooks/validators";
+import { buildPoiRecord, buildVariantRecord, validateGpx } from "@/lib/roadbooks/validators";
 import { buildStageTitle, synchronizeStagePresentation } from "@/lib/roadbooks/stage-order";
 
 const EMPTY_VARIANT_FORM = {
@@ -55,6 +55,10 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
     setStageError(null); setStageSuccess(null);
     const dayNumber = Number(stageForm.dayNumber);
     if (!dayNumber) { setStageError("Le numéro d'étape est obligatoire."); return; }
+    if (stageForm.gpxFile) {
+      const gpxValidationError = validateGpx(stageForm.gpxFile);
+      if (gpxValidationError) { setStageError(gpxValidationError); return null; }
+    }
     const notes = stageForm.notes.split("\n").map(l => l.trim()).filter(Boolean).map(text => ({ text }));
     const metadata = { titleMode: stageForm.title.trim() ? "custom" : "auto" };
     if (stageForm.description) metadata.description = stageForm.description;
@@ -66,19 +70,25 @@ export function useStageCrud({ supabase, roadbookId, stages, setStages, variants
       distance_km: stageForm.dist ? Number(stageForm.dist) : null,
       elevation_gain_m: stageForm.gain ? Number(stageForm.gain) : null,
       elevation_loss_m: stageForm.loss ? Number(stageForm.loss) : null,
-      map_embed_url: stageForm.mapEmbed || null,
+      map_embed_url: null,
       stage_photo_url: stageForm.photoUrl || null,
       day: stageForm.day || null,
       duration: stageForm.duration || null,
       notes: notes.length ? notes : [], metadata,
     };
 
-    await insertStage(supabase, record);
-    setStageSuccess("Étape créée.");
-    clearStageForm();
-    const stagesData = await loadStages(supabase, roadbookId);
-    setStages(stagesData);
-    await refreshRoadbookVersion?.();
+    try {
+      const createdStage = await insertStage(supabase, record);
+      setStageSuccess("Étape créée.");
+      clearStageForm();
+      const stagesData = await loadStages(supabase, roadbookId);
+      setStages(stagesData);
+      await refreshRoadbookVersion?.();
+      return createdStage;
+    } catch (err) {
+      setStageError(err.message ?? String(err));
+      return null;
+    }
   }, [supabase, roadbookId, stageForm, stages, clearStageForm, setStages, refreshRoadbookVersion]);
 
   const handleDeleteStage = useCallback(async (stageId) => {

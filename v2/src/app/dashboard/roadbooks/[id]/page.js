@@ -289,6 +289,19 @@ export default function RoadbookDetailPage() {
 
   const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
   const gpx = { gpxByStage, gpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId, routeId) => uploadGpxFile(file, { scope, role, stageId, variantId, routeId }), handleGpxRecalculate: handleRecalculateGpxMetrics, handleGpxExtractLocations: handleExtractGpxLocations, handleGoogleMapsRecalculate: handleRecalculateGoogleMapsMetrics };
+  const handleCreateStage = async (event) => {
+    const gpxFile = stageForm.gpxFile;
+    const createdStage = await handleStageSubmit(event);
+    if (createdStage && gpxFile) {
+      await uploadGpxFile(gpxFile, {
+        scope: "stage",
+        role: "official",
+        stageId: createdStage.id,
+        variantId: null,
+        routeId: crypto.randomUUID(),
+      });
+    }
+  };
 
   const activeStages = stages.filter(stage => !isRoadbookItemDraft(stage));
   const draftStages = stages.filter(isRoadbookItemDraft);
@@ -341,7 +354,7 @@ export default function RoadbookDetailPage() {
             <div className="studio-card__body">
               {stageSuccess && <p className="page-success">{stageSuccess}</p>}
               {stageError && <p className="page-error">{stageError}</p>}
-              <StageForm showStageForm={showStageForm} setShowStageForm={setShowStageForm} stageForm={stageForm} stageFormDispatch={stageFormDispatch} clearStageForm={clearStageForm} handleStageSubmit={handleStageSubmit} />
+              <StageForm showStageForm={showStageForm} setShowStageForm={setShowStageForm} stageForm={stageForm} stageFormDispatch={stageFormDispatch} clearStageForm={clearStageForm} handleStageSubmit={handleCreateStage} />
               {stages.length === 0 && <p className="studio-detail--empty">Aucune étape.</p>}
               <div className="studio-stage-list">
                 {activeStages.map(renderStageCard)}
