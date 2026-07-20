@@ -8,7 +8,6 @@ export default function RouteForm({
   gpxUploading,
   handleGpxUpload,
   handleGpxReplace,
-  handleGpxDownload,
   handleGpxDelete,
   embedded = false,
 }) {
@@ -38,7 +37,6 @@ export default function RouteForm({
               {mediaRow ? (
                 <>
                   <span className="studio-resource-field__file" title={mediaRow.file_name}>{mediaRow.file_name}</span>
-                  <button type="button" className="terrain-button--secondary studio-action-button--compact" onClick={() => handleGpxDownload(mediaRow)} disabled={!!gpxUploading}>Télécharger</button>
                   <label className="terrain-button--secondary studio-action-button--compact studio-file-button">
                     {gpxUploading === role ? "Remplacement..." : "Remplacer"}
                     <input type="file" accept={accept} disabled={!!gpxUploading} onChange={event => selectFile(event, file => handleGpxReplace(file, mediaRow, "roadbook", role, null))} />

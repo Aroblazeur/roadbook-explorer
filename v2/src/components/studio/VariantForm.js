@@ -39,7 +39,7 @@ export default function VariantForm({
   } = stageCrud;
   const {
     gpxByVariant, gpxRoutesByVariant, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
-    handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
+    handleGpxReplace, handleGpxDelete, handleGpxUpload,
     handleGpxRecalculate, handleGpxExtractLocations, handleGoogleMapsRecalculate,
   } = gpx;
   const isCreatingHere = variantForm.stage_id === stageId;
@@ -171,7 +171,6 @@ export default function VariantForm({
                       target={variant}
                       gpxUploading={gpxUploading}
                       metricsLoading={metricsLoading}
-                      handleGpxDownload={handleGpxDownload}
                       handleGpxReplace={handleGpxReplace}
                       handleGpxDelete={handleGpxDelete}
                       handleGpxUpload={handleGpxUpload}

@@ -171,16 +171,6 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     finally { setGpxUploading(null); }
   }, [supabase, reloadGpx, onMutation]);
 
-  const downloadGpx = useCallback(async (mediaRow) => {
-    try {
-      const signedUrl = await getSignedUrl(supabase, GPX_BUCKET, mediaRow.path, 3600);
-      if (!signedUrl) return;
-      const a = document.createElement("a"); a.href = signedUrl; a.download = mediaRow.file_name; a.click();
-    } catch (err) {
-      setGpxError(formatGpxUserError(err, "Impossible de télécharger le GPX."));
-    }
-  }, [supabase]);
-
   const computeStageMetrics = useCallback(async (mediaRow, stage, loadingKey = stage?.id) => {
     if (!mediaRow || !stage) return null;
     setMetricsLoading(loadingKey);
@@ -266,7 +256,6 @@ export function useGpxManager({ supabase, roadbookId, userId, activity, reloadSt
     uploadGpx,
     replaceGpx,
     deleteGpx,
-    downloadGpx,
     computeStageMetrics,
     analyzeStageGpx,
     extractStageLocations,

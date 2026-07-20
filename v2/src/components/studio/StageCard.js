@@ -56,7 +56,7 @@ export default function StageCard({
 
   const {
     gpxByStage, gpxRoutesByStage, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading,
-    handleGpxDownload, handleGpxReplace, handleGpxDelete, handleGpxUpload,
+    handleGpxReplace, handleGpxDelete, handleGpxUpload,
     handleGpxRecalculate, handleGpxExtractLocations, handleGoogleMapsRecalculate,
   } = gpx;
 
@@ -198,7 +198,6 @@ export default function StageCard({
                 target={stage}
                 gpxUploading={gpxUploading}
                 metricsLoading={metricsLoading}
-                handleGpxDownload={handleGpxDownload}
                 handleGpxReplace={handleGpxReplace}
                 handleGpxDelete={handleGpxDelete}
                 handleGpxUpload={handleGpxUpload}

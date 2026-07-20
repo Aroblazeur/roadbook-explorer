@@ -7,7 +7,6 @@ export default function GpxSection({
   gpxOfficial,
   gpxCustom,
   gpxUploading,
-  handleGpxDownload,
   handleGpxReplace,
   handleGpxDelete,
   handleGpxUpload,
@@ -23,7 +22,6 @@ export default function GpxSection({
           label="GPX officiel" mediaRow={gpxOfficial}
           scope="roadbook" role="official" stageId={null}
           gpxUploading={gpxUploading}
-          handleGpxDownload={handleGpxDownload}
           handleGpxReplace={handleGpxReplace}
           handleGpxDelete={handleGpxDelete}
           handleGpxUpload={handleGpxUpload}
@@ -32,7 +30,6 @@ export default function GpxSection({
           label="GPX personnalisé" mediaRow={gpxCustom}
           scope="roadbook" role="custom" stageId={null}
           gpxUploading={gpxUploading}
-          handleGpxDownload={handleGpxDownload}
           handleGpxReplace={handleGpxReplace}
           handleGpxDelete={handleGpxDelete}
           handleGpxUpload={handleGpxUpload}

@@ -147,7 +147,7 @@ export default function StartPointSection({
       <section className="studio-section-block">
         <div className="studio-stage-extra__header"><h4>Cartes et fichiers GPX</h4></div>
         <RouteMapFields maps={point.route_maps} onChange={maps => update({ route_maps: maps })} idPrefix={`${scope}-route-map`} />
-        {gpx && <GpxBlock label="GPX" mediaRows={isReturn ? gpx.returnGpxRoutes : gpx.startGpxRoutes} scope={scope} role="official" gpxUploading={gpx.gpxUploading} metricsLoading={gpx.metricsLoading} handleGpxDownload={gpx.handleGpxDownload} handleGpxReplace={gpx.handleGpxReplace} handleGpxDelete={gpx.handleGpxDelete} handleGpxUpload={gpx.handleGpxUpload} />}
+        {gpx && <GpxBlock label="GPX" mediaRows={isReturn ? gpx.returnGpxRoutes : gpx.startGpxRoutes} scope={scope} role="official" gpxUploading={gpx.gpxUploading} metricsLoading={gpx.metricsLoading} handleGpxReplace={gpx.handleGpxReplace} handleGpxDelete={gpx.handleGpxDelete} handleGpxUpload={gpx.handleGpxUpload} />}
       </section>
 
       <label className="studio-form-grid__full">Description<textarea value={point.description} onChange={e => update({ description: e.target.value })} /></label>
