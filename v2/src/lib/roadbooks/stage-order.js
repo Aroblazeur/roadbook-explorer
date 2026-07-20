@@ -110,6 +110,41 @@ export function synchronizeStagePresentation(stages, { normalizePositions = true
   }));
 }
 
+export function mergeRemoteStagesIntoDraft(remoteStages, draftStages) {
+  const remote = Array.isArray(remoteStages) ? remoteStages : [];
+  if (!Array.isArray(draftStages)) return synchronizeStagePresentation(remote);
+
+  const remoteById = new Map(remote.map(stage => [String(stage.id), stage]));
+  const merged = draftStages.map(stage => {
+    const remoteStage = remoteById.get(String(stage.id));
+    if (!remoteStage) return stage;
+    return {
+      ...remoteStage,
+      ...stage,
+      metadata: { ...(remoteStage.metadata ?? {}), ...(stage.metadata ?? {}) },
+    };
+  });
+  const knownIds = new Set(merged.map(stage => String(stage.id)));
+
+  for (const remoteStage of remote) {
+    if (knownIds.has(String(remoteStage.id))) continue;
+
+    const remoteIsDraft = isRoadbookItemDraft(remoteStage);
+    const remoteOrder = Number(remoteStage.sort_order) || Number.MAX_SAFE_INTEGER;
+    const insertionIndex = merged.findIndex(stage => {
+      const stageIsDraft = isRoadbookItemDraft(stage);
+      if (stageIsDraft !== remoteIsDraft) return !remoteIsDraft && stageIsDraft;
+      const stageOrder = Number(stage.sort_order) || Number.MAX_SAFE_INTEGER;
+      return stageOrder >= remoteOrder;
+    });
+
+    merged.splice(insertionIndex < 0 ? merged.length : insertionIndex, 0, remoteStage);
+    knownIds.add(String(remoteStage.id));
+  }
+
+  return synchronizeStagePresentation(merged);
+}
+
 export function updateStageFields(stages, stageId, updates) {
   const next = (stages ?? []).map(stage => sameStageId(stage.id, stageId) ? { ...stage, ...updates } : stage);
   return synchronizeStagePresentation(next);

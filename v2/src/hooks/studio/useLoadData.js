@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { loadCoverMedia, getSignedUrl } from "@/lib/roadbooks/loaders";
+import { mergeRemoteStagesIntoDraft } from "@/lib/roadbooks/stage-order";
 
 export default function useLoadData({
   user, id, supabase, loadAll,
@@ -73,7 +74,7 @@ export default function useLoadData({
     if (p.destination != null) setDestination(p.destination);
     if (p.project != null) setProject(p.project);
     if (p.roadbook) setRoadbook(p.roadbook);
-    if (p.stages) setStages(p.stages);
+    if (p.stages) setStages(remoteStages => mergeRemoteStagesIntoDraft(remoteStages, p.stages));
     if (p.poisByStage) setPoisByStage(p.poisByStage);
     if (p.variantsByStage) setVariantsByStage(p.variantsByStage);
     if (p.images) setImages(p.images);
