@@ -45,6 +45,31 @@ function directionFlag(url) {
   return "d";
 }
 
+function embedTravelMode(url) {
+  const flag = directionFlag(url);
+  if (flag === "b") return "bicycling";
+  if (flag === "w") return "walking";
+  if (flag === "r") return "transit";
+  return "driving";
+}
+
+function officialEmbedUrl({ apiKey, locations, mode = "directions" }) {
+  const key = String(apiKey ?? "").trim();
+  if (!key || !Array.isArray(locations) || locations.length === 0) return null;
+
+  const embed = new URL(`https://www.google.com/maps/embed/v1/${mode}`);
+  embed.searchParams.set("key", key);
+  if (mode === "directions") {
+    if (locations.length < 2) return null;
+    embed.searchParams.set("origin", locations[0]);
+    embed.searchParams.set("destination", locations.at(-1));
+    if (locations.length > 2) embed.searchParams.set("waypoints", locations.slice(1, -1).join("|"));
+  } else {
+    embed.searchParams.set("q", locations[0]);
+  }
+  return embed;
+}
+
 function unwrapConsentUrl(url) {
   if (!url || url.hostname.toLowerCase() !== "consent.google.com") return url;
   return safeHttpUrl(url.searchParams.get("continue"));
@@ -108,13 +133,18 @@ export async function resolveGoogleMapsRoute(value) {
   return routeFromUrl(expanded);
 }
 
-export function googleMapsEmbedUrl(value) {
+export function googleMapsEmbedUrl(value, apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY) {
   const url = safeHttpUrl(value);
   if (!url || !GOOGLE_MAP_HOSTS.has(url.hostname.toLowerCase())) return null;
   if (url.pathname.startsWith("/maps/embed") || url.searchParams.get("output") === "embed") return url.toString();
 
   const locations = routeSegments(url);
   if (locations.length >= 2) {
+    const officialEmbed = officialEmbedUrl({ apiKey, locations });
+    if (officialEmbed) {
+      officialEmbed.searchParams.set("mode", embedTravelMode(url));
+      return officialEmbed.toString();
+    }
     const embed = new URL("https://www.google.com/maps");
     embed.searchParams.set("output", "embed");
     embed.searchParams.set("saddr", locations[0]);
@@ -127,6 +157,11 @@ export function googleMapsEmbedUrl(value) {
   const destination = url.searchParams.get("destination");
   if (origin && destination) {
     const waypoints = (url.searchParams.get("waypoints") || "").split("|").filter(Boolean);
+    const officialEmbed = officialEmbedUrl({ apiKey, locations: [origin, ...waypoints, destination] });
+    if (officialEmbed) {
+      officialEmbed.searchParams.set("mode", embedTravelMode(url));
+      return officialEmbed.toString();
+    }
     const embed = new URL("https://www.google.com/maps");
     embed.searchParams.set("output", "embed");
     embed.searchParams.set("saddr", origin);
@@ -138,6 +173,8 @@ export function googleMapsEmbedUrl(value) {
   const placeMatch = url.pathname.match(/\/maps\/(?:place|search)\/([^/]+)/);
   const query = placeMatch ? decodeMapSegment(placeMatch[1]) : url.searchParams.get("q");
   if (query) {
+    const officialEmbed = officialEmbedUrl({ apiKey, locations: [query], mode: "place" });
+    if (officialEmbed) return officialEmbed.toString();
     const embed = new URL("https://www.google.com/maps");
     embed.searchParams.set("q", query);
     embed.searchParams.set("output", "embed");

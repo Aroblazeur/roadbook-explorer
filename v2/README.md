@@ -27,9 +27,10 @@ cp .env.example .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
 GOOGLE_MAPS_API_KEY=AIza...
+NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY=AIza...
 ```
 
-`GOOGLE_MAPS_API_KEY` reste côté serveur. Elle est nécessaire uniquement au calcul automatique de la distance et de la durée du « point de départ » ; le lien d’itinéraire Google Maps reste disponible sans cette clé. Activez l’API Routes dans le projet Google Cloud associé.
+`GOOGLE_MAPS_API_KEY` reste côté serveur et sert aux calculs d’itinéraire. Activez l’API Routes pour cette clé. `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY` est une clé publique dédiée aux aperçus intégrés : limitez-la à l’API Maps Embed et aux domaines autorisés. Sans cette seconde clé, le rendu utilise l’ancien format d’intégration comme solution de secours.
 
 ## Lancer en local
 

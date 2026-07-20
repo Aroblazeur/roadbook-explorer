@@ -1234,7 +1234,13 @@ async function GoogleMapDisplay({ url, title }) {
   if (display.embedUrl) {
     return (
       <div className="google-map-display">
-        <iframe src={display.embedUrl} title={title} allowFullScreen loading="lazy" />
+        <iframe
+          src={display.embedUrl}
+          title={title}
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
         {display.converted && display.externalUrl && (
           <a className="google-map-display__external" href={display.externalUrl} target="_blank" rel="noopener noreferrer">
             Ouvrir dans Google Maps
