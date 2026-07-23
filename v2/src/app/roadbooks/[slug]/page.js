@@ -9,7 +9,7 @@ import DuplicateRoadbookButton from "@/components/DuplicateRoadbookButton";
 import { buildGoogleMapsDirectionsUrl, hasJourney, hasReturnTrip, hasStartJourney, journeyCities, journeyDistance, journeyTransportModes, normalizeJourney, normalizeStartPoint, transportLabel } from "@/lib/roadbooks/start-point";
 import { googleMapsEmbedUrl, resolveMapDisplay } from "@/lib/google-map-links";
 import { isRoadbookItemDraft, withStageDisplayLabels, withVariantDisplayTitles } from "@/lib/roadbooks/stage-order";
-import { accommodationKind, accommodationKindsFromStage } from "@/lib/roadbooks/accommodations";
+import { accommodationKind, accommodationKindsByPlacement } from "@/lib/roadbooks/accommodations";
 import { shortDayLabel } from "@/lib/roadbooks/dates";
 import QuickAddEditor from "@/components/QuickAddEditor";
 import ZoomableImage from "@/components/ZoomableImage";
@@ -454,7 +454,8 @@ function StageOverviewList({ roadbookSlug, stages, variantsByStage }) {
 function StageOverviewCard({ roadbookSlug, stage, index }) {
   const metadata = stage.metadata ?? {};
   const isSubstep = Boolean(stage.is_substep ?? metadata.isSubstep ?? metadata.is_substep);
-  const accommodationKinds = accommodationKindsFromStage(stage);
+  const accommodationKinds = accommodationKindsByPlacement(stage);
+  const hasAccommodationKinds = Boolean(accommodationKinds.primary || accommodationKinds.alternatives.length);
   const shortDay = shortDayLabel(stage.day);
   const route = stage.title
     || [stage.departure, stage.arrival].filter(Boolean).join(" → ")
@@ -481,14 +482,10 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
           </span>
         )}
       </span>
-      {(shortDay || accommodationKinds.length > 0) && (
+      {(shortDay || hasAccommodationKinds) && (
         <span className="home-stage-card__meta">
           {shortDay && <span className="home-stage-card__day" aria-label={`Jour : ${stage.day}`}>{shortDay}</span>}
-          {accommodationKinds.length > 0 && (
-            <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
-              {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
-            </span>
-          )}
+          {hasAccommodationKinds && <AccommodationOverviewIcons kinds={accommodationKinds} />}
         </span>
       )}
     </Link>
@@ -498,7 +495,8 @@ function StageOverviewCard({ roadbookSlug, stage, index }) {
 function VariantOverviewCard({ roadbookSlug, entry }) {
   const { item: variant, parentStage } = entry;
   const metadata = variant.metadata ?? {};
-  const accommodationKinds = accommodationKindsFromStage(variant);
+  const accommodationKinds = accommodationKindsByPlacement(variant);
+  const hasAccommodationKinds = Boolean(accommodationKinds.primary || accommodationKinds.alternatives.length);
   const displayedDay = variant.day || parentStage?.day;
   const shortDay = shortDayLabel(displayedDay);
   const type = metadata.type || metadata.itemType || "Variante";
@@ -529,14 +527,10 @@ function VariantOverviewCard({ roadbookSlug, entry }) {
           </span>
         )}
       </span>
-      {(shortDay || accommodationKinds.length > 0) && (
+      {(shortDay || hasAccommodationKinds) && (
         <span className="home-stage-card__meta">
           {shortDay && <span className="home-stage-card__day" aria-label={`Jour : ${displayedDay}`}>{shortDay}</span>}
-          {accommodationKinds.length > 0 && (
-            <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles : ${accommodationKinds.map(accommodationKindLabel).join(", ")}`}>
-              {accommodationKinds.map(kind => <span key={kind} aria-hidden="true">{accommodationKindIcon(kind)}</span>)}
-            </span>
-          )}
+          {hasAccommodationKinds && <AccommodationOverviewIcons kinds={accommodationKinds} />}
         </span>
       )}
     </Link>
@@ -572,6 +566,24 @@ function accommodationKindLabel(kind) {
   if (kind === "house") return "gîte ou maison";
   if (kind === "hostel") return "auberge ou refuge";
   return "hébergement";
+}
+
+function AccommodationOverviewIcons({ kinds }) {
+  const labels = [
+    kinds.primary ? `principal : ${accommodationKindLabel(kinds.primary)}` : null,
+    kinds.alternatives.length ? `alternatif : ${kinds.alternatives.map(accommodationKindLabel).join(", ")}` : null,
+  ].filter(Boolean).join(" ; ");
+
+  return (
+    <span className="home-stage-card__accommodation" aria-label={`Hébergements possibles — ${labels}`}>
+      {kinds.primary && <span aria-hidden="true">{accommodationKindIcon(kinds.primary)}</span>}
+      {kinds.alternatives.length > 0 && (
+        <span className="home-stage-card__accommodation-alternatives" aria-hidden="true">
+          ({kinds.alternatives.map(kind => <span key={kind}>{accommodationKindIcon(kind)}</span>)})
+        </span>
+      )}
+    </span>
+  );
 }
 
 function ImagesSection({ images }) {

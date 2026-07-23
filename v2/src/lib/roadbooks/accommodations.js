@@ -70,6 +70,15 @@ export function accommodationKindsFromStage(stage) {
   return [...new Set(accommodations.filter(hasAccommodation).map(accommodationKind))];
 }
 
+export function accommodationKindsByPlacement(stage) {
+  const primary = primaryAccommodationFromStage(stage);
+  const alternatives = alternativesFromStage(stage).filter(hasAccommodation);
+  return {
+    primary: hasAccommodation(primary) ? accommodationKind(primary) : null,
+    alternatives: [...new Set(alternatives.map(accommodationKind))],
+  };
+}
+
 export function primaryAccommodationFromStage(stage) {
   return accommodationValue({
     name: stage?.accommodation_name,
