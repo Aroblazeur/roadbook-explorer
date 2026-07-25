@@ -96,6 +96,7 @@ export default function StartPointSection({
   const isReturn = kind === "return";
   const scope = isReturn ? "return" : "start";
   const [newItem, setNewItem] = useState({ type: null, index: null, sequence: 0 });
+  const [photoBatchProgress, setPhotoBatchProgress] = useState(null);
   const point = normalizeJourney(value);
   const update = patch => onChange(previous => ({ ...normalizeJourney(previous), ...patch }));
   const newItemRef = useRevealForm(newItem.type ? `${scope}:${newItem.type}:${newItem.sequence}` : null);
@@ -121,6 +122,27 @@ export default function StartPointSection({
       return { ...journey, photos: journey.photos.map((item, itemIndex) => itemIndex === index ? { ...item, url: "", photoMediaId: media.id } : item) };
     });
     if (previousMedia) await onRemoveJourneyPhoto?.(previousMedia);
+  };
+  const addJourneyPhotos = async event => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (!files.length) return;
+
+    setPhotoBatchProgress({ current: 0, total: files.length });
+    try {
+      for (const [index, file] of files.entries()) {
+        const media = await onUploadJourneyPhoto?.(file);
+        if (media?.id) {
+          onChange(previous => {
+            const journey = normalizeJourney(previous);
+            return { ...journey, photos: [...journey.photos, { url: "", photoMediaId: media.id, caption: "" }] };
+          });
+        }
+        setPhotoBatchProgress({ current: index + 1, total: files.length });
+      }
+    } finally {
+      setPhotoBatchProgress(null);
+    }
   };
   const removeJourneyPhoto = async index => {
     const media = images.find(image => Number(image.id) === Number(point.photos[index]?.photoMediaId)) ?? null;
@@ -154,9 +176,15 @@ export default function StartPointSection({
 
       <section className="studio-section-block">
         <div className="studio-stage-extra__header"><h4>Photos</h4><div className="studio-journey-photo__add-actions">
-          <button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("photo", point.photos.length); update({ photos: [...point.photos, { url: "", photoMediaId: null, caption: "" }] }); }}>Ajouter par URL</button>
-          <label className="terrain-button terrain-button--secondary studio-file-button">{uploadLoading ? "Import…" : "Importer des photos"}<input type="file" accept="image/*" multiple disabled={uploadLoading} onChange={async event => { const files = Array.from(event.target.files ?? []); event.target.value = ""; for (const file of files) { const media = await onUploadJourneyPhoto?.(file); if (media?.id) onChange(previous => { const journey = normalizeJourney(previous); return { ...journey, photos: [...journey.photos, { url: "", photoMediaId: media.id, caption: "" }] }; }); } }} /></label>
+          <button type="button" className="terrain-button terrain-button--secondary" onClick={() => { revealNewItem("photo", point.photos.length); update({ photos: [...point.photos, { url: "", photoMediaId: null, caption: "" }] }); }}>Ajouter une photo par URL</button>
+          <label className="terrain-button terrain-button--secondary studio-file-button">
+            {photoBatchProgress
+              ? `Import ${photoBatchProgress.current}/${photoBatchProgress.total}…`
+              : point.photos.length ? "Ajouter d’autres photos" : "Ajouter plusieurs photos"}
+            <input type="file" accept="image/*" multiple disabled={uploadLoading || Boolean(photoBatchProgress)} onChange={addJourneyPhotos} />
+          </label>
         </div></div>
+        <p className="studio-help">Vous pouvez sélectionner plusieurs fichiers en une fois, puis utiliser de nouveau le bouton pour en ajouter d’autres.</p>
         <div className="studio-journey-photo-list">
           {point.photos.map((item, index) => <JourneyPhotoFields key={`${scope}-photo-${item.photoMediaId ?? "url"}-${index}`} item={item} index={index} scope={scope} media={images.find(image => Number(image.id) === Number(item.photoMediaId)) ?? null} initialRef={newItem.type === "photo" && newItem.index === index ? newItemRef : null} uploadLoading={uploadLoading} onChange={patch => changeJourneyPhoto(index, patch)} onUpload={file => uploadJourneyPhoto(file, index)} onRemove={() => removeJourneyPhoto(index)} />)}
         </div>
