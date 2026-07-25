@@ -23,6 +23,7 @@ export default function VariantForm({
   stages,
   variantsByStage,
   onDuplicateAccommodation,
+  onDuplicatePoi,
   onUploadAccommodationPhoto,
   onUploadPoiPhoto,
   uploadLoading,
@@ -34,7 +35,7 @@ export default function VariantForm({
   const [expandedVariants, setExpandedVariants] = useState(() => new Set());
   const {
     variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant,
-    poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi,
+    poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, handleDuplicatePoi: duplicatePoi,
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
   } = stageCrud;
   const {
@@ -189,6 +190,9 @@ export default function VariantForm({
                     images={images}
                     onUploadPhoto={onUploadPoiPhoto}
                     uploadLoading={uploadLoading}
+                    stages={stages}
+                    variantsByStage={variantsByStage}
+                    onDuplicate={onDuplicatePoi ?? duplicatePoi}
                   />
                 </StudioCollapsibleZone>
 

@@ -33,7 +33,7 @@ import StudioShell from "@/components/studio/StudioShell";
 import ContributorsSection from "@/components/studio/ContributorsSection";
 import StartPointSection from "@/components/studio/StartPointSection";
 import useStartPoint from "@/hooks/studio/useStartPoint";
-import { demoteStageToVariant, duplicateRoadbook, moveStageVariant, promoteStageVariant, setStageDraft, updateMediaRecord } from "@/lib/roadbooks/writers";
+import { demoteStageToVariant, duplicateRoadbook, insertPoi, moveStageVariant, promoteStageVariant, setStageDraft, updateMediaRecord } from "@/lib/roadbooks/writers";
 import { buildDuplicateAccommodationUpdate } from "@/lib/roadbooks/accommodations";
 import { buildGpxConfirmMessage, buildGpxMetricsSuccessMessage, buildGpxStageUpdate } from "@/lib/roadbooks/mutations";
 import { isRoadbookItemDraft, stageDisplayLabel, updateStageFields, updateStageNumberAndOrder, withDraftStatus } from "@/lib/roadbooks/stage-order";
@@ -226,6 +226,61 @@ export default function RoadbookDetailPage() {
     }
   };
 
+  const handleDuplicatePoi = async (target, poi) => {
+    const targetStage = target?.type === "variant"
+      ? stages.find(stage => String(stage.id) === String(target.stageId))
+      : stages.find(stage => String(stage.id) === String(target?.id));
+    const targetVariant = target?.type === "variant"
+      ? Object.values(variantsByStage).flat().find(variant => String(variant.id) === String(target.id))
+      : null;
+    if (!targetStage || (target?.type === "variant" && !targetVariant)) {
+      setError(target?.type === "variant" ? "Variante de destination introuvable." : "Étape de destination introuvable.");
+      return false;
+    }
+
+    try {
+      const targetPois = target.type === "variant" ? (poisByVariant[target.id] ?? []) : (poisByStage[target.id] ?? []);
+      const sortOrder = Math.max(0, ...targetPois.map(item => Number(item.sort_order) || 0)) + 1;
+      const duplicatedPoi = await insertPoi(supabase, {
+        stage_id: targetStage.id,
+        variant_id: target.type === "variant" ? target.id : null,
+        name: poi.name,
+        lat: poi.lat ?? null,
+        lng: poi.lng ?? null,
+        poi_type: poi.poi_type ?? null,
+        description: poi.description ?? null,
+        photo_url: poi.photo_url ?? null,
+        link_url: poi.link_url ?? null,
+        region: poi.region ?? null,
+        sort_order: sortOrder,
+        metadata: { ...(poi.metadata ?? {}) },
+      });
+
+      const photoMediaId = Number(poi.metadata?.poiPhotoMediaId);
+      if (Number.isInteger(photoMediaId) && photoMediaId > 0) {
+        const photoMedia = images.find(image => Number(image.id) === photoMediaId);
+        if (photoMedia?.stage_id != null) {
+          const sharedMedia = await updateMediaRecord(supabase, photoMediaId, { stage_id: null });
+          setImages(previous => previous.map(image => Number(image.id) === photoMediaId
+            ? { ...image, ...sharedMedia }
+            : image));
+        }
+      }
+
+      if (target.type === "variant") {
+        setPoisByVariant(previous => ({ ...previous, [target.id]: [...(previous[target.id] ?? []), duplicatedPoi] }));
+      } else {
+        setPoisByStage(previous => ({ ...previous, [target.id]: [...(previous[target.id] ?? []), duplicatedPoi] }));
+      }
+      await refreshRoadbookVersion?.();
+      setSuccess(`POI dupliqué sur ${target.type === "variant" ? "la variante" : "l'étape"}.`);
+      return true;
+    } catch (duplicateError) {
+      setError(`Le POI n'a pas été dupliqué : ${duplicateError.message ?? String(duplicateError)}`);
+      return false;
+    }
+  };
+
   const handleRecalculateGpxMetrics = async (mediaRow, target, scope) => {
     const result = await computeStageMetrics(mediaRow, target, `${scope}:${target.id}`);
     if (!result) return false;
@@ -291,7 +346,7 @@ export default function RoadbookDetailPage() {
     }
   };
 
-  const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
+  const stageCrud = { stageForm, stageFormDispatch, stageError, stageSuccess, deleting, clearStageForm, handleStageSubmit, handleDeleteStage, poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, handleDuplicatePoi, variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant, noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote };
   const gpx = { gpxByStage, gpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes, gpxUploading, metricsLoading, locationsLoading, googleMetricsLoading, handleGpxDelete: (row) => { if (!window.confirm("Supprimer ce GPX ?")) return; deleteGpx(row); }, handleGpxReplace: (file, row, scope, role, stageId, variantId) => replaceGpx(file, row, { scope, role, stageId, variantId }), handleGpxUpload: (file, scope, role, stageId, variantId, routeId) => uploadGpxFile(file, { scope, role, stageId, variantId, routeId }), handleGpxRecalculate: handleRecalculateGpxMetrics, handleGpxExtractLocations: handleExtractGpxLocations, handleGoogleMapsRecalculate: handleRecalculateGoogleMapsMetrics };
   const handleCreateStage = async (event) => {
     const gpxFile = stageForm.gpxFile;

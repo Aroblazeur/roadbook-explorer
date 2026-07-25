@@ -33,6 +33,7 @@ export default function StageCard({
   stages,
   variantsByStage,
   onDuplicateAccommodation,
+  onDuplicatePoi,
   onStageChange,
   onUploadStagePhoto,
   onUploadAccommodationPhoto,
@@ -49,7 +50,7 @@ export default function StageCard({
 }) {
   const {
     handleDeleteStage, deleting,
-    poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi,
+    poiForm, setPoiForm, clearPoiForm, handlePoiSubmit, handleDeletePoi, handleDuplicatePoi: duplicatePoi,
     variantForm, setVariantForm, clearVariantForm, handleVariantSubmit, handleDeleteVariant,
     noteForm, setNoteForm, clearNoteForm, handleNoteSubmit, handleDeleteNote,
   } = stageCrud;
@@ -216,6 +217,9 @@ export default function StageCard({
               images={images}
               onUploadPhoto={onUploadPoiPhoto}
               uploadLoading={uploadLoading}
+              stages={stages}
+              variantsByStage={variantsByStage}
+              onDuplicate={onDuplicatePoi ?? duplicatePoi}
             />
           </StudioCollapsibleZone>
 
@@ -257,6 +261,7 @@ export default function StageCard({
       stages={stages}
       variantsByStage={variantsByStage}
       onDuplicateAccommodation={onDuplicateAccommodation}
+      onDuplicatePoi={onDuplicatePoi ?? duplicatePoi}
       onUploadAccommodationPhoto={onUploadAccommodationPhoto}
       onUploadPoiPhoto={onUploadPoiPhoto}
       uploadLoading={uploadLoading}
