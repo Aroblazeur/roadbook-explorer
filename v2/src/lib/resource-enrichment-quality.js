@@ -40,7 +40,7 @@ function resourceLocations(item) {
     .filter(location => location.length >= 3);
 }
 
-export function evaluateResourceCandidate(item, candidate) {
+export function evaluateResourceCandidate(item, candidate, { requireLocation = true } = {}) {
   const evidence = [candidate?.title, candidate?.description, candidate?.evidence, candidate?.preview?.title, candidate?.preview?.description]
     .filter(Boolean)
     .join(" ");
@@ -48,12 +48,15 @@ export function evaluateResourceCandidate(item, candidate) {
   const identity = identityScore(item?.name, evidence, locations);
   const normalizedEvidence = normalizeEvidence(evidence);
   const location = locations.some(value => normalizedEvidence.includes(value)) ? 1 : 0;
-  const accepted = identity >= 2 && (!locations.length || location > 0);
+  const exactIdentity = identity === 3;
+  const accepted = identity >= 2 && (exactIdentity || !requireLocation || !locations.length || location > 0);
   return {
     accepted,
     identity,
     location,
-    reason: accepted ? "identity-and-location-match" : identity < 2 ? "identity-uncertain" : "location-uncertain",
+    reason: accepted
+      ? exactIdentity ? "exact-identity-match" : requireLocation ? "identity-and-location-match" : "identity-match"
+      : identity < 2 ? "identity-uncertain" : "location-uncertain",
   };
 }
 

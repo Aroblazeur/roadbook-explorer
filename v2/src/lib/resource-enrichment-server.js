@@ -40,17 +40,23 @@ function relevantPageImage(html, pageUrl, item) {
     const tag = match[0];
     const source = tag.match(/(?:src|data-src|data-lazy-src)\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
     const raw = source?.[1] ?? source?.[2] ?? source?.[3] ?? "";
-    if (!raw || /(?:logo|favicon|icon|spinner|avatar|\.svg(?:\?|$))/i.test(raw)) continue;
+    if (!raw || /(?:logo|favicon|icon|picto|spinner|avatar|meteo|weather|sprite|tracking|pixel|\.svg(?:\?|$))/i.test(raw)) continue;
     const alt = tag.match(/alt\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
     const evidence = `${alt?.[1] ?? alt?.[2] ?? ""} ${raw}`.toLowerCase();
+    if (/(?:logo|favicon|icon|picto|meteo|weather|sprite)/i.test(evidence)) continue;
     try {
       const url = new URL(raw, pageUrl);
       if (!["http:", "https:"].includes(url.protocol)) continue;
-      images.push({ url: url.toString(), score: nameTerms.filter(term => evidence.includes(term)).length });
+      const termScore = nameTerms.filter(term => evidence.includes(term)).length * 100;
+      const width = Number(tag.match(/(?:width\s*=\s*["']?|width\s*:\s*)(\d+)/i)?.[1] ?? 0);
+      const height = Number(tag.match(/(?:height\s*=\s*["']?|height\s*:\s*)(\d+)/i)?.[1] ?? 0);
+      const sizeScore = width >= 200 && height >= 120 ? 20 : 0;
+      const photoScore = /\.(?:jpe?g|webp|avif)(?:\?|$)/i.test(url.pathname) ? 10 : 0;
+      images.push({ url: url.toString(), score: termScore + sizeScore + photoScore });
     } catch {}
   }
   images.sort((left, right) => right.score - left.score);
-  return images[0]?.score > 0 ? images[0].url : "";
+  return images[0]?.score >= 100 ? images[0].url : "";
 }
 
 function privateIp(address) {
@@ -239,18 +245,23 @@ function fallbackPreview(item) {
 
 export async function enrichResource(item) {
   const fallback = fallbackPreview(item);
+  let acceptedLink = null;
   if (item.url) {
     const linkResult = await enrichFromLink(item).catch(() => null);
-    const quality = evaluateResourceCandidate(item, linkResult);
-    if (linkResult && quality.accepted) {
-      return {
-        id: item.id,
-        image: linkResult.image,
-        description: linkResult.description,
-        preview: linkResult.preview ?? fallback,
-        confidence: "high",
-        source: "link",
-      };
+    // A URL entered by the editor is authoritative: its own page is the
+    // preview source, even without a name or outside the stage's cities.
+    if (linkResult) {
+      acceptedLink = linkResult;
+      if (linkResult.image && linkResult.description) {
+        return {
+          id: item.id,
+          image: linkResult.image,
+          description: linkResult.description,
+          preview: linkResult.preview ?? fallback,
+          confidence: "high",
+          source: "link",
+        };
+      }
     }
   }
   if (item.name) {
@@ -260,14 +271,24 @@ export async function enrichResource(item) {
       if (quality.accepted) {
         return {
           id: item.id,
-          image: wikiResult.image,
-          description: wikiResult.description,
-          preview: wikiResult.preview ?? fallback,
+          image: acceptedLink?.image || wikiResult.image,
+          description: acceptedLink?.description || wikiResult.description,
+          preview: acceptedLink?.preview ?? wikiResult.preview ?? fallback,
           confidence: "high",
-          source: "wikipedia",
+          source: acceptedLink ? "link+wikipedia" : "wikipedia",
         };
       }
     }
+  }
+  if (acceptedLink) {
+    return {
+      id: item.id,
+      image: acceptedLink.image,
+      description: acceptedLink.description,
+      preview: acceptedLink.preview ?? fallback,
+      confidence: "high",
+      source: "link",
+    };
   }
   return { id: item.id, image: "", description: "", preview: fallback, confidence: "low", source: null };
 }
