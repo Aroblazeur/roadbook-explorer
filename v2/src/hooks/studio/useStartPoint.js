@@ -8,17 +8,29 @@ import { completeAccommodationValue, isMissingAutomationValue } from "@/lib/road
 export default function useStartPoint({ supabase, roadbookId, user }) {
   const [startPoint, setStartPoint] = useState(createEmptyStartPoint);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [reloadSequence, setReloadSequence] = useState(0);
 
   useEffect(() => {
     if (!user || !roadbookId) return;
     let active = true;
     setLoading(true);
+    setLoaded(false);
+    setLoadError(null);
     loadStartPoint(supabase, roadbookId)
-      .then(data => { if (active) setStartPoint(normalizeStartPoint(data)); })
-      .catch(() => { if (active) setStartPoint(createEmptyStartPoint()); })
+      .then(data => {
+        if (!active) return;
+        setStartPoint(normalizeStartPoint(data));
+        setLoaded(true);
+      })
+      .catch(error => {
+        console.error("[studio:start-point] loading failed", { roadbookId, error });
+        if (active) setLoadError("Point de départ et retour indisponibles. Réessayez avant d’enregistrer.");
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [supabase, roadbookId, user?.id]);
+  }, [supabase, roadbookId, user?.id, reloadSequence]);
 
   const setReturnPoint = useCallback(updater => {
     setStartPoint(previous => {
@@ -29,6 +41,7 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
   }, []);
 
   const prepareForSave = useCallback(async () => {
+    if (!loaded) throw new Error(loadError || "Point de départ et retour ne sont pas encore chargés.");
     const point = normalizeStartPoint(startPoint);
     const warnings = [];
     let fields = 0;
@@ -92,11 +105,12 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
     const completedStart = await completeJourney(point, "start");
     const completedReturn = await completeJourney(point.return_trip, "return");
     return { value: { ...completedStart, return_trip: completedReturn }, report: { fields, warnings } };
-  }, [startPoint, roadbookId]);
+  }, [startPoint, roadbookId, loaded, loadError]);
 
   const persist = useCallback(async value => {
+    if (!loaded) throw new Error(loadError || "Enregistrement du point de départ et du retour bloqué : données non chargées.");
     await saveStartPoint(supabase, roadbookId, buildStartPointRecord(value, roadbookId), hasStartPoint(value));
-  }, [supabase, roadbookId]);
+  }, [supabase, roadbookId, loaded, loadError]);
 
   return {
     startPoint,
@@ -104,6 +118,8 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
     returnPoint: normalizeStartPoint(startPoint).return_trip,
     setReturnPoint,
     startPointLoading: loading,
+    startPointError: loadError,
+    reloadStartPoint: () => setReloadSequence(sequence => sequence + 1),
     prepareStartPointForSave: prepareForSave,
     persistStartPoint: persist,
   };

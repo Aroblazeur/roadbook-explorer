@@ -68,7 +68,7 @@ export default function RoadbookDetailPage() {
   const { gpxOfficial, setGpxOfficial, gpxCustom, setGpxCustom, gpxByStage, setGpxByStage, gpxByVariant, setGpxByVariant, gpxRoutesByStage, gpxRoutesByVariant, startGpxRoutes, returnGpxRoutes, gpxUploading, metricsLoading, locationsLoading, gpxError, setGpxError, reloadGpx, uploadGpx: uploadGpxFile, replaceGpx, deleteGpx, computeStageMetrics, analyzeStageGpx, extractStageLocations } = useGpxManager({ supabase, roadbookId: id, userId: user?.id, activity, reloadStages, onMutation: refreshRoadbookVersion });
 
   const { coverUrl, setCoverUrl, coverMediaId, setCoverMediaId, coverPreview, setCoverPreview, coverMode, setCoverMode } = useCoverManager({ supabase, roadbookId: id, roadbook, setRoadbook, onError: setError, onSuccess: setSuccess });
-  const { startPoint, setStartPoint, returnPoint, setReturnPoint, startPointLoading, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
+  const { startPoint, setStartPoint, returnPoint, setReturnPoint, startPointLoading, startPointError, reloadStartPoint, prepareStartPointForSave, persistStartPoint } = useStartPoint({ supabase, roadbookId: id, user });
 
   const analyzeGoogleMapsRoute = useCallback(async target => {
     const normalizedActivity = String(activity ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -119,6 +119,10 @@ export default function RoadbookDetailPage() {
   const { handleSaveAll, handleToggleVisibility, handleDeleteRoadbook, deletingRoadbook } = useSaveActions({ supabase, id, roadbook, setRoadbook, title, description, activity, destination, project, isPublic, setIsPublic, officialRoute, traceRoute, setTraceRoute, coverMode, coverUrl, coverMediaId, stages, setStages, poisByStage, setPoisByStage, poisByVariant, setPoisByVariant, variantsByStage, setVariantsByStage, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint, setError, setSuccess, markRemoteConflict, saveWithLock, clearDraft, onDeleted: () => router.replace("/dashboard/roadbooks") });
 
   const handleSaveStudio = async () => {
+    if (startPointLoading || startPointError) {
+      setError(startPointError || "Point de départ et retour sont encore en cours de chargement.");
+      return false;
+    }
     if (poiForm.stage_id != null) {
       const poiSaved = await handlePoiSubmit();
       if (!poiSaved) return false;
@@ -344,7 +348,9 @@ export default function RoadbookDetailPage() {
               <RouteForm embedded mode="trace" values={{ dist: traceRoute.traceDist, gain: traceRoute.traceGain, loss: traceRoute.traceLoss, gpx: traceRoute.traceGpx, map: traceRoute.traceMap }} setValues={fn => setTraceRoute(previous => { const next = fn({ dist: previous.traceDist, gain: previous.traceGain, loss: previous.traceLoss, gpx: previous.traceGpx, map: previous.traceMap }); return { traceDist: next.dist, traceGain: next.gain, traceLoss: next.loss, traceGpx: next.gpx, traceMap: next.map }; })} mediaRow={gpxCustom} gpxUploading={gpxUploading} handleGpxReplace={gpx.handleGpxReplace} handleGpxDelete={gpx.handleGpxDelete} handleGpxUpload={gpx.handleGpxUpload} />
             </div>
           </details>
-          <StartPointSection value={startPoint} onChange={setStartPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadJourneyPhoto={(file) => uploadMedia(file, { metadata: { purpose: "journey-photo", journey_scope: "start" } })} onRemoveJourneyPhoto={removeMedia} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "start-point" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "start-point" } })} />
+          {startPointLoading && <p className="studio-detail--empty">Chargement du point de départ et du retour…</p>}
+          {startPointError && <div className="page-error"><p>{startPointError}</p><button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" onClick={reloadStartPoint}>Réessayer</button></div>}
+          {!startPointLoading && !startPointError && <StartPointSection value={startPoint} onChange={setStartPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadJourneyPhoto={(file) => uploadMedia(file, { metadata: { purpose: "journey-photo", journey_scope: "start" } })} onRemoveJourneyPhoto={removeMedia} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "start-point" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "start-point" } })} />}
           {gpxError && <p className="page-error">{gpxError}</p>}
           <StudioInfoCard roadbook={roadbook} />
           <div className="studio-card">
@@ -364,7 +370,7 @@ export default function RoadbookDetailPage() {
               </div>
             </div>
           </div>
-          <StartPointSection kind="return" value={returnPoint} onChange={setReturnPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadJourneyPhoto={(file) => uploadMedia(file, { metadata: { purpose: "journey-photo", journey_scope: "return" } })} onRemoveJourneyPhoto={removeMedia} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "return" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "return" } })} />
+          {!startPointLoading && !startPointError && <StartPointSection kind="return" value={returnPoint} onChange={setReturnPoint} gpx={gpx} images={images} uploadLoading={uploadLoading} onUploadJourneyPhoto={(file) => uploadMedia(file, { metadata: { purpose: "journey-photo", journey_scope: "return" } })} onRemoveJourneyPhoto={removeMedia} onUploadAccommodationPhoto={(file) => uploadMedia(file, { metadata: { purpose: "accommodation", accommodation_scope: "return" } })} onUploadPoiPhoto={(file) => uploadMedia(file, { metadata: { purpose: "poi", poi_scope: "return" } })} />}
       </section>
     </StudioShell>
   );
