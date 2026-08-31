@@ -7,30 +7,8 @@ export const metadata = {
   description: "Catalogue des roadbooks publics",
 };
 
-function resolveProjectGroup(rb) {
-  const value = rb.projectStatus || rb.project || "";
-  const normalized = String(value).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (["done", "deja fait", "deja faits", "deja-fait", "fait", "termine", "voyage realise", "voyage-realise", "realise", "realized"].includes(normalized)) return "done";
-  if (["todo", "a faire", "a-faire", "planned", "en projet", "en-projet", "projet"].includes(normalized)) return "todo";
-  return "other";
-}
-
-function groupRoadbooks(roadbooks) {
-  const groups = [
-    { key: "todo", title: "En projet", items: [] },
-    { key: "done", title: "Voyage réalisé", items: [] },
-    { key: "other", title: "Autres roadbooks", items: [] },
-  ];
-  const byKey = new Map(groups.map(group => [group.key, group]));
-  for (const roadbook of roadbooks) {
-    byKey.get(resolveProjectGroup(roadbook)).items.push(roadbook);
-  }
-  return groups.filter(group => group.items.length > 0);
-}
-
 export default async function ExplorePage() {
   const roadbooks = await getPublicRoadbooks();
-  const groups = groupRoadbooks(roadbooks);
 
   return (
     <>
@@ -46,15 +24,8 @@ export default async function ExplorePage() {
           </section>
         )}
         <div className="roadbook-library-grid">
-          {groups.map(group => (
-            <section key={group.key} className="roadbook-library-group" aria-labelledby={`rlg-${group.key}`}>
-              <h3 id={`rlg-${group.key}`} className="roadbook-library-group__title">{group.title}</h3>
-              <div className="roadbook-library-group__items">
-                {group.items.map(roadbook => (
-                  <RoadbookCard key={roadbook.id} roadbook={roadbook} />
-                ))}
-              </div>
-            </section>
+          {roadbooks.map(roadbook => (
+            <RoadbookCard key={roadbook.id} roadbook={roadbook} />
           ))}
         </div>
       </main>

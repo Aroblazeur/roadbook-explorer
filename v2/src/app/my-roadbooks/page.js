@@ -3,6 +3,7 @@ import { getOwnedRoadbooks } from "@/lib/getPublicRoadbooks";
 import { createServerSupabase } from "@/lib/supabase-server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { groupPersonalRoadbooks } from "@/lib/roadbook-project";
 
 export const metadata = {
   title: "Mes roadbooks — RoadBook Explorer",
@@ -16,6 +17,7 @@ export default async function MyRoadbooksPage() {
   if (!user) redirect("/login?next=/my-roadbooks");
 
   const roadbooks = await getOwnedRoadbooks(user.id);
+  const groups = groupPersonalRoadbooks(roadbooks, user.id);
 
   return (
     <>
@@ -40,8 +42,15 @@ export default async function MyRoadbooksPage() {
         )}
 
         <div className="roadbook-library-grid">
-          {roadbooks.map(roadbook => (
-            <PersonalRoadbookCard key={roadbook.id} roadbook={roadbook} userId={user.id} />
+          {groups.map(group => (
+            <section key={group.key} className="roadbook-library-group" aria-labelledby={`personal-roadbooks-${group.key}`}>
+              <h3 id={`personal-roadbooks-${group.key}`} className="roadbook-library-group__title">{group.title}</h3>
+              <div className="roadbook-library-group__items">
+                {group.items.map(roadbook => (
+                  <PersonalRoadbookCard key={roadbook.id} roadbook={roadbook} userId={user.id} />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       </main>

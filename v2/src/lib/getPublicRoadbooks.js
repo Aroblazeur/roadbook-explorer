@@ -1,7 +1,7 @@
 import { createServerSupabase } from "./supabase-server";
 import { getSignedMediaAccess } from "./roadbooks/loaders";
 
-async function getRoadbooksCatalog(filterQuery) {
+async function getRoadbooksCatalog(filterQuery, { includePersonalProject = false, personalOwnerId = null } = {}) {
   const supabase = await createServerSupabase();
 
   let query = supabase
@@ -48,8 +48,8 @@ async function getRoadbooksCatalog(filterQuery) {
       metadata: undefined,
       activity: meta.activity || null,
       destination: meta.destination || null,
-      project: meta.project || null,
-      projectStatus: meta.projectStatus || null,
+      project: includePersonalProject && rb.owner_id === personalOwnerId ? meta.project || null : null,
+      projectStatus: includePersonalProject && rb.owner_id === personalOwnerId ? meta.projectStatus || null : null,
       stage_count: countMap[rb.id] ?? 0,
       coverSignedUrl: coverAccess.signedUrl,
       coverMediaAccess: coverAccess,
@@ -70,5 +70,5 @@ export function getOwnedRoadbooks(ownerId) {
     const sharedIds = (memberships ?? []).map(item => Number(item.roadbook_id)).filter(Number.isFinite);
     if (sharedIds.length) query.or(`owner_id.eq.${ownerId},id.in.(${sharedIds.join(",")})`);
     else query.eq("owner_id", ownerId);
-  });
+  }, { includePersonalProject: true, personalOwnerId: ownerId });
 }
