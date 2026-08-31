@@ -264,6 +264,7 @@ function RoadbookHeader({ roadbook, startPoint, stages, pois, variants, user, ca
         </div>
         {roadbook.description && <p className="roadbook-header__description">{roadbook.description}</p>}
         <nav className="header-nav" aria-label="Navigation du roadbook">
+          <Link href="/">Accueil</Link>
           <Link href="/explore">Retour aux roadbooks</Link>
           {canEdit && <Link href={`/dashboard/roadbooks/${roadbook.id}`}>✏️ Studio</Link>}
           {user ? (
