@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { buildStartPointRecord, createEmptyStartPoint, hasStartPoint, normalizeJourney, normalizeStartPoint, startPointRoutePayload } from "@/lib/roadbooks/start-point";
 import { loadStartPoint } from "@/lib/roadbooks/loaders";
 import { saveStartPoint } from "@/lib/roadbooks/writers";
@@ -11,6 +11,7 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
   const [loadError, setLoadError] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [reloadSequence, setReloadSequence] = useState(0);
+  const loadedUpdatedAtRef = useRef(null);
 
   useEffect(() => {
     if (!user || !roadbookId) return;
@@ -22,6 +23,7 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
       .then(data => {
         if (!active) return;
         setStartPoint(normalizeStartPoint(data));
+        loadedUpdatedAtRef.current = data?.updated_at ?? null;
         setLoaded(true);
       })
       .catch(error => {
@@ -109,7 +111,15 @@ export default function useStartPoint({ supabase, roadbookId, user }) {
 
   const persist = useCallback(async value => {
     if (!loaded) throw new Error(loadError || "Enregistrement du point de départ et du retour bloqué : données non chargées.");
-    await saveStartPoint(supabase, roadbookId, buildStartPointRecord(value, roadbookId), hasStartPoint(value));
+    const result = await saveStartPoint(
+      supabase,
+      roadbookId,
+      buildStartPointRecord(value, roadbookId),
+      hasStartPoint(value),
+      { expectedUpdatedAt: loadedUpdatedAtRef.current },
+    );
+    loadedUpdatedAtRef.current = result.data?.updated_at ?? null;
+    return result;
   }, [supabase, roadbookId, loaded, loadError]);
 
   return {

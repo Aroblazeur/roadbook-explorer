@@ -178,6 +178,18 @@ export function hasStartPoint(value) {
   return hasJourney(point) || hasJourney(point.return_trip);
 }
 
+export function mergeStartPointPreservingExisting(incoming, existing) {
+  const next = normalizeStartPoint(incoming);
+  const current = normalizeStartPoint(existing);
+  const merged = hasStartJourney(current) && !hasStartJourney(next)
+    ? { ...current, return_trip: next.return_trip }
+    : next;
+  if (hasReturnTrip(current) && !hasReturnTrip(next)) {
+    merged.return_trip = current.return_trip;
+  }
+  return merged;
+}
+
 function buildJourneyValue(value) {
   const journey = normalizeJourney(value);
   return {

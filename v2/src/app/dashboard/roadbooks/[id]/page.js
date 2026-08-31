@@ -103,7 +103,7 @@ export default function RoadbookDetailPage() {
 
   const { officialRoute, setOfficialRoute, traceRoute, setTraceRoute, restoreDraft } = useLoadData({ user, id, supabase, loadAll, setTitle, setDescription, setIsPublic, setActivity, setDestination, setProject, setCoverUrl, setCoverMediaId, setCoverPreview, setCoverMode, setFetchError, loadEnrichmentIndices, reloadMedia, reloadGpx, setRoadbook, setStages, setPoisByStage, setVariantsByStage, setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant, setStartPoint });
 
-  const { draftStatus, draftError, restoredInfo, restoredDraft, finishDraftRestore, saveImmediate, markSynced, markRemoteConflict, dismissConflict, clearDraft, resetRestoredInfo, tabId } = useStudioDraft({ user, roadbookId: id, roadbook, stages, poisByStage, variantsByStage, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, title, description, isPublic, activity, destination, project, ...officialRoute, ...traceRoute, coverMode, coverUrl, coverMediaId, startPoint, loaded: !loading && !startPointLoading && !!roadbook });
+  const { draftStatus, draftError, restoredInfo, restoredDraft, finishDraftRestore, saveImmediate, markSynced, markRemoteConflict, clearDraft, resetRestoredInfo, tabId } = useStudioDraft({ user, roadbookId: id, roadbook, stages, poisByStage, variantsByStage, images, gpxOfficial, gpxCustom, gpxByStage, gpxByVariant, title, description, isPublic, activity, destination, project, ...officialRoute, ...traceRoute, coverMode, coverUrl, coverMediaId, startPoint, loaded: !loading && !startPointLoading && !!roadbook });
 
   useEffect(() => {
     if (!restoredDraft) return;
@@ -389,7 +389,11 @@ export default function RoadbookDetailPage() {
     <StudioShell>
       <StudioCatalog selectedId={id} />
       <section className="card studio-panel studio-editor-panel" aria-labelledby="studio-detail-title">
-      <DraftStatus status={draftStatus} error={draftError} restoredInfo={restoredInfo} onResetInfo={resetRestoredInfo} onDismissConflict={async () => { dismissConflict(); await handleSaveStudio(); }} onClearDraft={clearDraft} />
+      <DraftStatus status={draftStatus} error={draftError} restoredInfo={restoredInfo} onResetInfo={resetRestoredInfo} onReloadConflict={() => {
+        if (!window.confirm("Recharger la version du serveur ? Le brouillon local en conflit sera abandonné pour éviter d’écraser des données plus récentes.")) return;
+        clearDraft();
+        window.location.reload();
+      }} onClearDraft={clearDraft} />
       <StudioHeader roadbook={roadbook} isPublic={isPublic} activity={activity} destination={destination} project={project} duplicating={duplicating} saving={saving} deletingRoadbook={deletingRoadbook} canManage={canManage} onSaveAll={handleSaveStudio} onView={async () => { const saved = await handleSaveStudio(); if (saved) router.push(`/roadbooks/${roadbook.slug}`); }} onDeleteRoadbook={handleDeleteRoadbook} onAddStage={() => { clearStageForm(); setShowStageForm(true); }} onToggleVisibility={handleToggleVisibility} handleDuplicate={async () => { if (!window.confirm("Dupliquer ce roadbook ? Les fichiers (images, GPX) ne seront pas copiés.")) return; setDuplicating(true); setError(null); try { const newId = await duplicateRoadbook(supabase, roadbook, stages, poisByStage, variantsByStage, `${roadbook.slug}-copie-${Date.now()}`, user.id, poisByVariant, startPoint); setSuccess("Roadbook dupliqué ! Redirection..."); setTimeout(() => router.push(`/dashboard/roadbooks/${newId}`), 1000); } catch (err) { setError(err.message); } finally { setDuplicating(false); } }} />
       {error && <p className="page-error">{error}</p>}
       {success && <p className="page-success">{success}</p>}

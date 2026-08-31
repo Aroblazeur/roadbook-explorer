@@ -71,11 +71,12 @@ export default function useSaveActions({
     const automatedFields = (automation.report?.fields ?? 0) + (startPointAutomation.report?.fields ?? 0);
     let persistedStages = null;
     let persistedVariants = null;
+    let persistedStartPoint = null;
     const saved = await saveWithLock({
       getUpdateFields: () => updateFields,
       getUpdatedRoadbook: (prev, data) => ({ ...prev, ...updateFields, updated_at: data.updated_at }),
       persistRelated: async () => {
-        const [stageRows, variantRows] = await Promise.all([
+        const [stageRows, variantRows, , startPointResult] = await Promise.all([
           updateStages(supabase, completedStages, buildEditableStageUpdate),
           updateVariants(supabase, completedVariantsByStage, buildEditableVariantUpdate),
           updatePois(supabase, automation.poiUpdates ?? []),
@@ -83,6 +84,7 @@ export default function useSaveActions({
         ]);
         persistedStages = stageRows;
         persistedVariants = variantRows;
+        persistedStartPoint = startPointResult?.value ?? null;
       },
       successMessage: `Toutes les modifications ont été enregistrées.${automatedFields ? ` ${automatedFields} champ(s) complété(s) automatiquement.` : ""}${warningCount ? ` ${warningCount} automatisation(s) indisponible(s).` : ""}`,
     });
@@ -105,7 +107,7 @@ export default function useSaveActions({
         traceGain: traceGain != null ? String(traceGain) : "",
         traceLoss: traceLoss != null ? String(traceLoss) : "",
       }));
-      if (startPointAutomation.value) setStartPoint?.(startPointAutomation.value);
+      if (startPointAutomation.value) setStartPoint?.(persistedStartPoint ?? startPointAutomation.value);
     }
     return saved;
   }, [title, description, activity, destination, project, roadbook, officialRoute, traceRoute, coverMode, coverUrl, coverMediaId, stages, poisByStage, poisByVariant, variantsByStage, supabase, saveWithLock, setError, setStages, setVariantsByStage, setPoisByStage, setPoisByVariant, setTraceRoute, prepareAutomaticCompletion, prepareStartPointForSave, persistStartPoint, setStartPoint]);

@@ -128,6 +128,13 @@ export function useStudioDraft({
     }
 
     const remoteUpdatedAt = roadbook?.updated_at;
+    const draftBaseUpdatedAt = draft.baseRemoteUpdatedAt;
+    if (draftBaseUpdatedAt && remoteUpdatedAt && draftBaseUpdatedAt !== remoteUpdatedAt) {
+      setDraftStatus("conflict");
+      setDraftError("Ce brouillon a été créé depuis une ancienne version du roadbook. Rechargez la version serveur pour éviter d’écraser des données plus récentes.");
+      initDoneRef.current = true;
+      return;
+    }
     const draftIsNewer = isDraftNewerThanRemote(draft, remoteUpdatedAt);
 
     if (!draftIsNewer) {

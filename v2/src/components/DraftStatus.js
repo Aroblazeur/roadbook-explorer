@@ -18,7 +18,7 @@ const STATUS_COLORS = {
   conflict: "#e74c3c",
 };
 
-export default function DraftStatus({ status, error, restoredInfo, onResetInfo, onDismissConflict, onClearDraft }) {
+export default function DraftStatus({ status, error, restoredInfo, onResetInfo, onReloadConflict, onClearDraft }) {
   if (status === "idle" && !restoredInfo) return null;
 
   return (
@@ -46,13 +46,8 @@ export default function DraftStatus({ status, error, restoredInfo, onResetInfo, 
       {status === "conflict" && (
         <>
           <span style={{ color: "#e74c3c", fontSize: "0.8rem" }}>{error}</span>
-          {onDismissConflict && (
-            <button type="button" onClick={onDismissConflict} style={{ cursor: "pointer", background: "none", border: "1px solid #e74c3c", borderRadius: 4, padding: "2px 8px", fontSize: "0.8rem" }}>
-              Conserver et enregistrer ma version
-            </button>
-          )}
-          <button type="button" onClick={() => window.location.reload()} style={{ cursor: "pointer", background: "none", border: "1px solid #3498db", borderRadius: 4, padding: "2px 8px", fontSize: "0.8rem" }}>
-            Recharger
+          <button type="button" onClick={onReloadConflict ?? (() => window.location.reload())} style={{ cursor: "pointer", background: "none", border: "1px solid #3498db", borderRadius: 4, padding: "2px 8px", fontSize: "0.8rem" }}>
+            Recharger la version serveur
           </button>
         </>
       )}

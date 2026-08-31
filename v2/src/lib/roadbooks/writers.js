@@ -1,4 +1,4 @@
-import { buildStartPointRecord, hasStartPoint } from "./start-point.js";
+import { buildStartPointRecord, hasStartPoint, mergeStartPointPreservingExisting, normalizeStartPoint } from "./start-point.js";
 
 export async function insertStage(supabase, record) {
   const { data, error } = await supabase.from("stages").insert(record).select("*").single();
@@ -50,14 +50,66 @@ export async function updatePois(supabase, operations) {
   await Promise.all(operations.map(operation => updatePoi(supabase, operation.id, operation.updates)));
 }
 
-export async function saveStartPoint(supabase, roadbookId, record, present) {
-  if (!present) {
-    const { error } = await supabase.from("roadbook_start_points").delete().eq("roadbook_id", roadbookId);
+function startPointConflictError() {
+  const error = new Error("Le point de départ ou le retour a été modifié dans un autre onglet. Rechargez le studio avant de réessayer.");
+  error.code = "start_point_conflict";
+  return error;
+}
+
+export async function saveStartPoint(supabase, roadbookId, record, present, { expectedUpdatedAt } = {}) {
+  const { data: current, error: loadError } = await supabase
+    .from("roadbook_start_points")
+    .select("*")
+    .eq("roadbook_id", roadbookId)
+    .maybeSingle();
+  if (loadError) throw new Error(loadError.message);
+
+  const expected = expectedUpdatedAt ?? null;
+  const actual = current?.updated_at ?? null;
+  if (expected !== actual) throw startPointConflictError();
+
+  const safeValue = current ? mergeStartPointPreservingExisting(record, current) : normalizeStartPoint(record);
+  const safeRecord = buildStartPointRecord(safeValue, roadbookId);
+  const safePresent = present || hasStartPoint(safeValue);
+
+  if (!safePresent) {
+    if (!current) return { data: null, value: normalizeStartPoint(null), preserved: false };
+    const { data, error } = await supabase
+      .from("roadbook_start_points")
+      .delete()
+      .eq("roadbook_id", roadbookId)
+      .eq("updated_at", actual)
+      .select("roadbook_id")
+      .maybeSingle();
     if (error) throw new Error(error.message);
-    return;
+    if (!data) throw startPointConflictError();
+    return { data: null, value: normalizeStartPoint(null), preserved: false };
   }
-  const { error } = await supabase.from("roadbook_start_points").upsert(record, { onConflict: "roadbook_id" });
+
+  if (!current) {
+    const { data, error } = await supabase
+      .from("roadbook_start_points")
+      .insert(safeRecord)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return { data, value: normalizeStartPoint(data), preserved: false };
+  }
+
+  const { data, error } = await supabase
+    .from("roadbook_start_points")
+    .update(safeRecord)
+    .eq("roadbook_id", roadbookId)
+    .eq("updated_at", actual)
+    .select("*")
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) throw startPointConflictError();
+  return {
+    data,
+    value: normalizeStartPoint(data),
+    preserved: JSON.stringify(normalizeStartPoint(record)) !== JSON.stringify(safeValue),
+  };
 }
 
 export async function deletePoi(supabase, poiId) {

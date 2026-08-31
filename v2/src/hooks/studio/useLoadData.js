@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { loadCoverMedia, getSignedUrl } from "@/lib/roadbooks/loaders";
 import { mergeRemoteStagesIntoDraft } from "@/lib/roadbooks/stage-order";
+import { mergeStartPointPreservingExisting } from "@/lib/roadbooks/start-point";
 
 export default function useLoadData({
   user, id, supabase, loadAll,
@@ -87,7 +88,7 @@ export default function useLoadData({
     if (p.coverMode !== undefined) setCoverMode(p.coverMode);
     if (p.coverUrl != null) setCoverUrl(p.coverUrl);
     if (p.coverMediaId !== undefined) setCoverMediaId(p.coverMediaId);
-    if (p.startPoint) setStartPoint(p.startPoint);
+    if (p.startPoint) setStartPoint(current => mergeStartPointPreservingExisting(p.startPoint, current));
   }, [setTitle, setDescription, setIsPublic, setActivity, setDestination, setProject, setRoadbook, setStages, setPoisByStage, setVariantsByStage, setImages, setGpxOfficial, setGpxCustom, setGpxByStage, setGpxByVariant, setCoverMode, setCoverUrl, setCoverMediaId, setStartPoint]);
 
   return { officialRoute, setOfficialRoute, traceRoute, setTraceRoute, restoreDraft };
