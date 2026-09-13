@@ -46,6 +46,7 @@ function TransportSegment({ segment, index, scope, onChange, onRemove, initialRe
       <label>Mode de transport<select value={segment.transport_mode} onChange={e => update({ transport_mode: e.target.value })}>{TRANSPORT_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <label>Distance (km)<input type="number" min="0" step="0.1" value={segment.distance_km} onChange={e => update({ distance_km: e.target.value })} /></label>
       <label>Durée<input value={segment.duration} onChange={e => update({ duration: e.target.value })} /></label>
+      <label className="studio-form-grid__full">Description du trajet<textarea value={segment.description} onChange={e => update({ description: e.target.value })} /></label>
     </div>
     <section className="studio-section-block studio-transport-segment__waypoints">
       <div className="studio-stage-extra__header"><h5>Villes étapes</h5><button type="button" className="terrain-button terrain-button--secondary studio-action-button--compact" disabled={segment.waypoints.length >= START_POINT_MAX_WAYPOINTS} onClick={() => update({ waypoints: [...segment.waypoints, ""] })}>Ajouter</button></div>
@@ -172,7 +173,7 @@ export default function StartPointSection({
         {gpx && <GpxBlock label="GPX" mediaRows={isReturn ? gpx.returnGpxRoutes : gpx.startGpxRoutes} scope={scope} role="official" gpxUploading={gpx.gpxUploading} metricsLoading={gpx.metricsLoading} handleGpxReplace={gpx.handleGpxReplace} handleGpxDelete={gpx.handleGpxDelete} handleGpxUpload={gpx.handleGpxUpload} />}
       </section>
 
-      <label className="studio-form-grid__full">Description<textarea value={point.description} onChange={e => update({ description: e.target.value })} /></label>
+      <label className="studio-form-grid__full">Description générale<textarea value={point.description} onChange={e => update({ description: e.target.value })} /></label>
 
       <section className="studio-section-block">
         <div className="studio-stage-extra__header"><h4>Photos</h4><div className="studio-journey-photo__add-actions">

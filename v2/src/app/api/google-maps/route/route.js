@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 const ROUTES_API_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
-const TRAVEL_MODES = { car: "DRIVE", train: "TRANSIT", transit: "TRANSIT", bicycle: "BICYCLE", walk: "WALK", motorcycle: "TWO_WHEELER" };
+const TRAVEL_MODES = { car: "DRIVE", ferry: "DRIVE", train: "TRANSIT", transit: "TRANSIT", bicycle: "BICYCLE", walk: "WALK", motorcycle: "TWO_WHEELER" };
 
 function cleanLocation(value) {
   return typeof value === "string" ? value.trim().slice(0, 240) : "";

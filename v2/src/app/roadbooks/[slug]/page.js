@@ -702,6 +702,7 @@ function JourneyDetailPage({ roadbook, entries, currentEntryIndex, value, kind, 
         return <section className="stage-detail-card stage-detail-map-card card" key={`${kind}-segment-${index}`}>
           <div className="stage-detail-section-heading"><h2>Trajet {index + 1} · {transportLabel(segment.transport_mode)}</h2></div>
           <p className="stage-detail-route">{[segment.departure_city, ...segment.waypoints.filter(Boolean), segment.arrival_city].filter(Boolean).join(" → ")}</p>
+          {segment.description && <p className="stage-detail-description">{segment.description}</p>}
           <div className="stage-detail-stats" aria-label={`Informations du trajet ${index + 1}`}>
             <div className="stage-detail-stat"><span aria-hidden="true">◆</span><span className="stage-detail-stat__label">Transport</span><strong>{transportLabel(segment.transport_mode)}</strong></div>
             {segment.distance_km !== "" && <div className="stage-detail-stat"><StatIconDistance /><span className="stage-detail-stat__label">Distance</span><strong>{segment.distance_km} km</strong></div>}

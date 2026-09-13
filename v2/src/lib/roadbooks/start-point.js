@@ -4,6 +4,7 @@ export const START_POINT_MAX_WAYPOINTS = 9;
 
 export const TRANSPORT_OPTIONS = [
   ["car", "Voiture"],
+  ["ferry", "Ferry"],
   ["train", "Train / transports en commun"],
   ["bicycle", "Vélo"],
   ["walk", "À pied"],
@@ -24,6 +25,7 @@ export function createEmptyTransportSegment() {
     distance_km: "",
     duration: "",
     google_maps_url: "",
+    description: "",
   };
 }
 
@@ -38,6 +40,7 @@ export function normalizeTransportSegment(value) {
     distance_km: source.distance_km == null ? "" : String(source.distance_km),
     duration: String(source.duration ?? ""),
     google_maps_url: String(source.google_maps_url ?? ""),
+    description: String(source.description ?? ""),
   };
 }
 
@@ -80,7 +83,8 @@ function hasLegacyRoute(source) {
   return Boolean(
     String(source?.departure_city ?? "").trim() || String(source?.arrival_city ?? "").trim() ||
     (Array.isArray(source?.waypoints) && source.waypoints.some(item => String(item ?? "").trim())) ||
-    source?.distance_km != null || String(source?.duration ?? "").trim() || String(source?.google_maps_url ?? "").trim()
+    source?.distance_km != null || String(source?.duration ?? "").trim() || String(source?.google_maps_url ?? "").trim() ||
+    String(source?.description ?? "").trim()
   );
 }
 
@@ -116,7 +120,7 @@ export function normalizeStartPoint(value) {
 }
 
 function mapsTravelMode(mode) {
-  return ({ car: "driving", train: "transit", transit: "transit", bicycle: "bicycling", walk: "walking", motorcycle: "two-wheeler" })[mode] ?? null;
+  return ({ car: "driving", ferry: "driving", train: "transit", transit: "transit", bicycle: "bicycling", walk: "walking", motorcycle: "two-wheeler" })[mode] ?? null;
 }
 
 export function buildGoogleMapsDirectionsUrl(value) {
@@ -200,6 +204,7 @@ function buildJourneyValue(value) {
       waypoints: segment.waypoints.map(item => item.trim()).filter(Boolean).slice(0, START_POINT_MAX_WAYPOINTS),
       distance_km: String(segment.distance_km).trim() === "" || !Number.isFinite(Number(segment.distance_km)) ? null : Number(segment.distance_km),
       google_maps_url: buildGoogleMapsDirectionsUrl(segment) || null,
+      description: segment.description.trim() || null,
     })).filter(segment => hasLegacyRoute(segment)),
     route_maps: journey.route_maps.map(item => ({ label: item.label.trim(), url: item.url.trim() })).filter(item => item.url),
     photos: journey.photos.map(item => ({ url: item.url.trim(), photoMediaId: item.photoMediaId, caption: item.caption.trim() })).filter(item => item.url || item.photoMediaId),
