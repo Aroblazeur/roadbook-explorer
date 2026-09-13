@@ -296,8 +296,30 @@ export default function StudioCatalog({ selectedId = null }) {
             <label>Itinéraire officiel · distance (km)<input type="number" step="0.1" value={officialDistance} onChange={event => setOfficialDistance(event.target.value)} /></label>
             <label>Itinéraire officiel · D+ (m)<input type="number" step="1" value={officialElevationGain} onChange={event => setOfficialElevationGain(event.target.value)} /></label>
             <label>Itinéraire officiel · D− (m)<input type="number" step="1" value={officialElevationLoss} onChange={event => setOfficialElevationLoss(event.target.value)} /></label>
-            <label>Itinéraire officiel · fichier GPX<input type="file" accept={GPX_ACCEPT} onChange={event => selectGpxFile(event, setOfficialGpxFile)} /></label>
-            <label>Tracé actuel · fichier GPX<input type="file" accept={GPX_ACCEPT} onChange={event => selectGpxFile(event, setCurrentGpxFile)} /></label>
+            <div className="studio-create-gpx-field">
+              <span className="studio-create-gpx-field__label">Itinéraire officiel · fichier GPX</span>
+              <div className="studio-resource-field">
+                <label className="terrain-button terrain-button--secondary studio-file-button studio-action-button--compact">
+                  {officialGpxFile ? "Changer le fichier GPX" : "Ajouter un fichier GPX"}
+                  <input type="file" accept={GPX_ACCEPT} disabled={creating} onChange={event => selectGpxFile(event, setOfficialGpxFile)} />
+                </label>
+                <span className="studio-resource-field__file" title={officialGpxFile?.name}>
+                  {officialGpxFile?.name ?? "Aucun fichier sélectionné"}
+                </span>
+              </div>
+            </div>
+            <div className="studio-create-gpx-field">
+              <span className="studio-create-gpx-field__label">Tracé actuel · fichier GPX</span>
+              <div className="studio-resource-field">
+                <label className="terrain-button terrain-button--secondary studio-file-button studio-action-button--compact">
+                  {currentGpxFile ? "Changer le fichier GPX" : "Ajouter un fichier GPX"}
+                  <input type="file" accept={GPX_ACCEPT} disabled={creating} onChange={event => selectGpxFile(event, setCurrentGpxFile)} />
+                </label>
+                <span className="studio-resource-field__file" title={currentGpxFile?.name}>
+                  {currentGpxFile?.name ?? "Aucun fichier sélectionné"}
+                </span>
+              </div>
+            </div>
             <label className="studio-checkbox studio-form-grid__full"><input type="checkbox" checked={isPublic} onChange={event => setIsPublic(event.target.checked)} /> Public</label>
           </div>
           <div className="studio-actions studio-create-form__actions">

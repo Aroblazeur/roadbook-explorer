@@ -417,6 +417,8 @@ label { display: grid; gap: 0.35rem; font-weight: 600; font-size: 0.85rem; color
 }
 .studio-create-form h3 { margin: 0 0 0.75rem; }
 .studio-create-form__actions { margin-top: 0.85rem; }
+.studio-create-gpx-field { display: grid; align-content: start; gap: .35rem; }
+.studio-create-gpx-field__label { color: var(--text-light); font-size: .85rem; font-weight: 600; }
 .studio-stage-list,
 .studio-global-section { margin-bottom: 1rem; }
 
