@@ -12,6 +12,12 @@ import {
   removeNewDraft,
   saveNewDraft,
 } from "@/lib/studio-drafts";
+import { buildCanonicalGpxMediaInput } from "@/lib/roadbooks/gpx-media";
+import { uploadGpx } from "@/lib/roadbooks/writers";
+import { buildGpxPath, validateGpx } from "@/lib/roadbooks/validators";
+
+const GPX_ACCEPT = ".gpx,application/gpx+xml,application/xml,text/xml";
+const GPX_BUCKET = "roadbook-gpx";
 
 export default function StudioCatalog({ selectedId = null }) {
   const { user, loading, supabase } = useAuth();
@@ -27,8 +33,8 @@ export default function StudioCatalog({ selectedId = null }) {
   const [officialDistance, setOfficialDistance] = useState("");
   const [officialElevationGain, setOfficialElevationGain] = useState("");
   const [officialElevationLoss, setOfficialElevationLoss] = useState("");
-  const [officialGpx, setOfficialGpx] = useState("");
-  const [currentGpx, setCurrentGpx] = useState("");
+  const [officialGpxFile, setOfficialGpxFile] = useState(null);
+  const [currentGpxFile, setCurrentGpxFile] = useState(null);
   const [error, setError] = useState(null);
   const [creating, setCreating] = useState(false);
   const [pendingDraft, setPendingDraft] = useState(null);
@@ -96,8 +102,6 @@ export default function StudioCatalog({ selectedId = null }) {
       setOfficialDistance(payload.officialDistance ?? "");
       setOfficialElevationGain(payload.officialElevationGain ?? "");
       setOfficialElevationLoss(payload.officialElevationLoss ?? "");
-      setOfficialGpx(payload.officialGpx ?? "");
-      setCurrentGpx(payload.currentGpx ?? "");
       setShowCreate(true);
     }
   }, [userId, userRole, supabase]);
@@ -115,8 +119,6 @@ export default function StudioCatalog({ selectedId = null }) {
       officialDistance,
       officialElevationGain,
       officialElevationLoss,
-      officialGpx,
-      currentGpx,
     }));
   }
 
@@ -126,14 +128,56 @@ export default function StudioCatalog({ selectedId = null }) {
     };
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [user?.id, title, description, isPublic, project, officialDistance, officialElevationGain, officialElevationLoss, officialGpx, currentGpx]);
+  }, [user?.id, title, description, isPublic, project, officialDistance, officialElevationGain, officialElevationLoss]);
+
+  function selectGpxFile(event, setter) {
+    const file = event.target.files?.[0] ?? null;
+    const validationError = file ? validateGpx(file) : null;
+    if (validationError) {
+      setError(validationError);
+      setter(null);
+      event.target.value = "";
+      return;
+    }
+    setError(null);
+    setter(file ?? null);
+  }
+
+  async function uploadRoadbookGpx(file, role, roadbookId) {
+    if (!file) return;
+    const validationError = validateGpx(file);
+    if (validationError) throw new Error(validationError);
+
+    const mediaInput = buildCanonicalGpxMediaInput({
+      roadbookId: Number(roadbookId),
+      scope: "roadbook",
+      role,
+      existingMetadata: { original_name: file.name, original_size: file.size },
+    });
+    if (!mediaInput.ok) throw new Error(mediaInput.errors.join(" ; "));
+
+    const path = `${buildGpxPath(user.id, Number(roadbookId), "roadbook", role)}-${file.name}`;
+    await uploadGpx(supabase, GPX_BUCKET, path, file, {
+      record: {
+        ...mediaInput.record,
+        file_name: file.name,
+        mime_type: "application/gpx+xml",
+        uploaded_by: user.id,
+      },
+    });
+  }
 
   async function handleCreate(event) {
     event.preventDefault();
     setError(null);
     setCreating(true);
     const cleanSlug = title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || `roadbook-${Date.now()}`;
-    const { data: existing } = await supabase.from("roadbooks").select("id").eq("slug", cleanSlug).maybeSingle();
+    const { data: existing, error: existingError } = await supabase.from("roadbooks").select("id").eq("slug", cleanSlug).maybeSingle();
+    if (existingError) {
+      setError(existingError.message);
+      setCreating(false);
+      return;
+    }
     if (existing) {
       setError(`Un roadbook utilise déjà l'identifiant « ${cleanSlug} ». Modifiez légèrement le titre.`);
       setCreating(false);
@@ -148,14 +192,14 @@ export default function StudioCatalog({ selectedId = null }) {
         distance: numberOrNull(officialDistance),
         elevationGain: numberOrNull(officialElevationGain),
         elevationLoss: numberOrNull(officialElevationLoss),
-        gpx: officialGpx || null,
+        gpx: null,
         mapEmbedUrl: null,
       },
       stagesTotal: {
         distance: null,
         elevationGain: null,
         elevationLoss: null,
-        gpx: currentGpx || null,
+        gpx: null,
         mapEmbedUrl: null,
       },
     };
@@ -174,6 +218,26 @@ export default function StudioCatalog({ selectedId = null }) {
     }
     migrateNewDraftKey(user.id, localDraftIdRef.current, newRoadbook.id);
     localDraftIdRef.current = generateLocalDraftId();
+    try {
+      await uploadRoadbookGpx(officialGpxFile, "official", newRoadbook.id);
+      await uploadRoadbookGpx(currentGpxFile, "custom", newRoadbook.id);
+    } catch (uploadError) {
+      setCreating(false);
+      setShowCreate(false);
+      setPendingDraft(null);
+      setTitle("");
+      setDescription("");
+      setIsPublic(false);
+      setProject("En projet");
+      setOfficialDistance("");
+      setOfficialElevationGain("");
+      setOfficialElevationLoss("");
+      setOfficialGpxFile(null);
+      setCurrentGpxFile(null);
+      await loadRoadbooks();
+      setError(`Le roadbook a été créé, mais un fichier GPX n'a pas pu être importé : ${uploadError.message}. Ouvrez le roadbook pour réessayer.`);
+      return;
+    }
     setPendingDraft(null);
     setTitle("");
     setDescription("");
@@ -182,8 +246,8 @@ export default function StudioCatalog({ selectedId = null }) {
     setOfficialDistance("");
     setOfficialElevationGain("");
     setOfficialElevationLoss("");
-    setOfficialGpx("");
-    setCurrentGpx("");
+    setOfficialGpxFile(null);
+    setCurrentGpxFile(null);
     setShowCreate(false);
     await loadRoadbooks();
     router.push(`/dashboard/roadbooks/${newRoadbook.id}`);
@@ -201,8 +265,8 @@ export default function StudioCatalog({ selectedId = null }) {
     setOfficialDistance("");
     setOfficialElevationGain("");
     setOfficialElevationLoss("");
-    setOfficialGpx("");
-    setCurrentGpx("");
+    setOfficialGpxFile(null);
+    setCurrentGpxFile(null);
     setShowCreate(false);
   }
 
@@ -232,8 +296,8 @@ export default function StudioCatalog({ selectedId = null }) {
             <label>Itinéraire officiel · distance (km)<input type="number" step="0.1" value={officialDistance} onChange={event => setOfficialDistance(event.target.value)} /></label>
             <label>Itinéraire officiel · D+ (m)<input type="number" step="1" value={officialElevationGain} onChange={event => setOfficialElevationGain(event.target.value)} /></label>
             <label>Itinéraire officiel · D− (m)<input type="number" step="1" value={officialElevationLoss} onChange={event => setOfficialElevationLoss(event.target.value)} /></label>
-            <label>Itinéraire officiel · GPX<input type="text" value={officialGpx} onChange={event => setOfficialGpx(event.target.value)} /></label>
-            <label>Tracé actuel · GPX<input type="text" value={currentGpx} onChange={event => setCurrentGpx(event.target.value)} /></label>
+            <label>Itinéraire officiel · fichier GPX<input type="file" accept={GPX_ACCEPT} onChange={event => selectGpxFile(event, setOfficialGpxFile)} /></label>
+            <label>Tracé actuel · fichier GPX<input type="file" accept={GPX_ACCEPT} onChange={event => selectGpxFile(event, setCurrentGpxFile)} /></label>
             <label className="studio-checkbox studio-form-grid__full"><input type="checkbox" checked={isPublic} onChange={event => setIsPublic(event.target.checked)} /> Public</label>
           </div>
           <div className="studio-actions studio-create-form__actions">
