@@ -1,0 +1,31 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "23 6,14,22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keep-alive-roadbook-explorer
+  cancel-in-progress: false
+
+jobs:
+  database-read:
+    name: Read Roadbook Explorer database
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Query a public table through PostgREST
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --location --max-time 30 --retry 2 --retry-delay 5 --output /dev/null --write-out '%{http_code}' \
+            -H 'apikey: sb_publishable_TJPHgwk95H_wpvcLhJlwTg_NZyzNLw-' \
+            'https://wuberwxheznzntdyqwyj.supabase.co/rest/v1/roadbooks?select=id&limit=1')"
+          echo "Roadbook Explorer PostgREST returned HTTP ${code}"
+          if [[ "${code}" != 2* ]]; then
+            exit 1
+          fi
